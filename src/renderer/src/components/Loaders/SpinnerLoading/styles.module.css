@@ -1,0 +1,36 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  backdrop-filter: blur(2px);
+  padding: 3px;
+}
+
+.container.absolute {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.loader {
+  width: var(--size);
+  height: var(--size);
+  border: var(--thickness) solid var(--color);
+  border-radius: 50%;
+  border-top: 3px solid transparent;
+
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

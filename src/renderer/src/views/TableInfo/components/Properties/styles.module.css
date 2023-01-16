@@ -1,0 +1,15 @@
+.propertiesContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.propertiesHeader {
+  padding: 20px;
+}
+
+.propertiesContent {
+  display: flex;
+  border-top: 2px solid var(--color-border);
+  flex: 1;
+}

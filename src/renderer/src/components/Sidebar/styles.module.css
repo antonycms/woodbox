@@ -1,0 +1,29 @@
+.container {
+  height: 100%;
+  background-color: var(--color-dark);
+  display: flex;
+  position: relative;
+}
+
+.container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background-color: var(--color-border);
+  pointer-events: none;
+}
+
+.menuContainer {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  padding: 10px;
+  overflow: auto;
+}
+
+.menuContainer.active {
+  display: flex;
+}

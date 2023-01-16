@@ -1,0 +1,56 @@
+.container {
+  user-select: none;
+  flex: 1;
+}
+
+.container .ignorePointerEvents {
+  pointer-events: none;
+}
+
+.containerItem {
+  margin-top: 2px;
+  margin-left: 14px;
+}
+
+.containerItem.first {
+  margin-left: 0;
+}
+
+.containerItemInfo {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  padding-left: 0;
+  background-color: transparent;
+  border-radius: 4px;
+}
+
+.containerItemInfo.focused {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.containerItemLabel {
+  color: var(--color-white);
+  margin-left: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.icon {
+  color: var(--color-white);
+  margin-left: 4px;
+  font-size: 16px;
+  min-width: 16px;
+}
+
+.icon.arrow {
+  margin: 0px;
+  cursor: pointer;
+}
+
+.icon2 {
+  color: var(--color-white);
+  margin-left: 2px;
+  font-size: 20px;
+  min-width: 20px;
+}

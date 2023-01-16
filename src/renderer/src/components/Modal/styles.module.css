@@ -1,0 +1,30 @@
+.overlay {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.container {
+  padding: 20px;
+  background-color: var(--color-dark);
+  width: 100%;
+  border-radius: 8px;
+  position: relative;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  animation: blowUp 0.5s forwards;
+}
+
+@keyframes blowUp {
+  0% {
+    transform: translateX(-50%) translateY(-50%) scale(0);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-50%) scale(1);
+  }
+}

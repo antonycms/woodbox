@@ -1,0 +1,10 @@
+.bar {
+  height: 32px;
+  width: 100%;
+  background-color: #1f1f26;
+  border-top: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 14px;
+}

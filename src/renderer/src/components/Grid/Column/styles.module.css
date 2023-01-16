@@ -1,0 +1,35 @@
+.column {
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 1904px) {
+  .column {
+    width: var(--xlWidth);
+  }
+}
+
+@media (max-width: 1904px) {
+  .column {
+    width: var(--lgWidth);
+  }
+}
+
+@media (max-width: 1264px) {
+  .column {
+    width: var(--mdWidth);
+  }
+}
+
+@media (max-width: 960px) {
+  .column {
+    width: var(--smWidth);
+  }
+}
+
+@media (max-width: 600px) {
+  .column {
+    width: var(--xsWidth);
+  }
+}

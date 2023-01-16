@@ -1,0 +1,101 @@
+import React from 'react';
+import Table from '@renderer/components/Table2';
+import { Spacer } from '@renderer/components/Spacer';
+import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
+import { Bar } from '@renderer/components/Bar';
+import { Button } from '@renderer/components/Button';
+import { Text } from '@renderer/components/Text';
+import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { toDateTime } from '@renderer/utils/date';
+
+const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
+  const { columns, loadTableColumns, lastFetchDate, loading } = useTableInfoContext();
+  const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
+
+  const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
+
+  const contextMenuOptions = React.useMemo(() => {
+    return [
+      {
+        text: 'Nova coluna',
+        onClick: () => null,
+      },
+      {
+        text: 'Duplicar itens selecionados',
+        onClick: () => null,
+      },
+      {
+        text: 'Excluir itens selecionados',
+        onClick: () => null,
+      },
+    ];
+  }, []);
+
+  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    setContextMenuPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  React.useEffect(() => {
+    loadTableColumns(id_connection, { schema, table });
+  }, []);
+
+  return (
+    <>
+      <ContextMenu
+        position={contextMenuPosition}
+        options={contextMenuOptions}
+        onClose={() => setContextMenuPosition(null)}
+      />
+
+      <Table
+        selectable
+        loading={loading.columns}
+        rowKeyExtractor={(item) => item.column_name}
+        onContextMenu={onContextMenuTable}
+        rows={columns}
+        columns={[
+          { label: 'Nome da coluna', attribute: 'column_name', editable: true },
+          { label: 'Tipo', attribute: 'data_type', editable: true },
+          { label: 'Nulável', attribute: 'is_nullable', editable: true },
+          { label: 'Padrão', attribute: 'column_default', editable: true },
+          { label: 'Comentário', attribute: 'description', editable: true },
+        ]}
+      />
+
+      <Bar>
+        <Button title="Salvar" text smallIcon>
+          <SaveIcon size={16} />
+        </Button>
+
+        <Button title="Adicionar" text smallIcon>
+          <AddIcon size={14} />
+        </Button>
+
+        <Button title="Duplicar itens selecionados" text smallIcon>
+          <DuplicateIcon size={20} />
+        </Button>
+
+        <Button title="Remover itens selecionados" text smallIcon>
+          <RemoveIcon size={16} />
+        </Button>
+
+        <Button title="Atualizar dados" text smallIcon>
+          <IconRefresh size={18} />
+        </Button>
+
+        <Spacer />
+
+        <Text userSelect={false} title="Data da última atualização">
+          Atualizado em {lastFetchDateSerialized}
+        </Text>
+      </Bar>
+    </>
+  );
+};
+
+export default Columns;

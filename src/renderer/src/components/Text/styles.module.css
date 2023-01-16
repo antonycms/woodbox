@@ -1,0 +1,23 @@
+.text {
+  cursor: default;
+  font-size: 14px;
+  color: var(--color-white);
+}
+
+.text.small {
+  font-size: 12px;
+}
+
+.text.bold {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.text.bold.small {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.text.removeUserSelect {
+  user-select: none;
+}

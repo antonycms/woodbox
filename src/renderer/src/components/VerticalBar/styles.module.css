@@ -1,0 +1,38 @@
+.categoryBarButton {
+  width: 100%;
+  padding: 10px 10px;
+  position: relative;
+  cursor: pointer;
+  color: var(--color-white);
+}
+
+.categoryBarButton svg {
+  color: var(--color-white);
+}
+
+.categoryBarButton:hover {
+  color: var(--color-green-dark);
+}
+
+.categoryBarButton:hover:not(.active) svg {
+  opacity: 0.8;
+}
+
+.categoryBarButton.active::before {
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 2px;
+  background-color: var(--color-green-dark);
+  top: 0;
+  left: 0;
+}
+
+.categoryBarButton.active svg {
+  color: var(--color-green-dark);
+}
+
+.categoryBar {
+  display: flex;
+  flex-direction: column;
+}

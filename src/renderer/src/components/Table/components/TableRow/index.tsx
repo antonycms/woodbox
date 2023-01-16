@@ -1,0 +1,23 @@
+import React from 'react';
+import clsx from 'clsx';
+import styles from '../../styles.module.css';
+
+interface ITableRowProps {
+  isSelected?: boolean;
+  isHeader?: boolean;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  children: React.ReactNode;
+}
+
+const TableRow = ({ isSelected, isHeader, onClick, children }: ITableRowProps) => {
+  return (
+    <div
+      className={clsx(styles.table_row, isSelected && styles.selected, isHeader && styles.header)}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+};
+
+export default React.memo(TableRow);

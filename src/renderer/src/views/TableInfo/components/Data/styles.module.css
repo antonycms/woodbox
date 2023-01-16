@@ -1,0 +1,17 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.bottomBarInfoContainer {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rowsInfoText {
+  color: var(--color-white);
+  user-select: none;
+}

@@ -1,0 +1,12 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.icon {
+  color: var(--color-white);
+  margin-right: 4px;
+  font-size: 12px;
+  min-width: 12px;
+}

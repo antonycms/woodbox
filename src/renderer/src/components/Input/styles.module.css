@@ -1,0 +1,41 @@
+.inputContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+
+  background-color: var(--color-dark-light2);
+  border-radius: 4px;
+}
+
+.isRequired label::after {
+  content: '*';
+  margin-left: 1px;
+  color: var(--color-red);
+  font-size: 14px;
+}
+
+.input {
+  width: 100%;
+  color: var(--color-white);
+  border: 0;
+  background-color: transparent;
+  height: 28px;
+  outline: transparent;
+  padding: 0 10px;
+}
+
+.input[type='color'] {
+  padding: 2px 4px;
+}
+
+.input.centerText {
+  text-align: center;
+}
+
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+}

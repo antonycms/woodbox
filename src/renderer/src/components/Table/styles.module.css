@@ -1,0 +1,75 @@
+.table_outside_container {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: auto;
+}
+
+.table_container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  flex: 1;
+  display: grid;
+  width: var(--width);
+  grid-template-rows: var(--rowHeight) repeat(var(--totalRows), var(--rowHeight));
+  grid-template-columns: var(--columnsSize);
+  min-height: var(--height);
+}
+
+.table_row {
+  display: contents;
+}
+
+.table_row .table_column {
+  position: relative;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 8px;
+
+  grid-row-start: calc(var(--rowIndex) + 2);
+  grid-column-start: calc(var(--columnIndex) + 1);
+  line-height: var(--rowHeight);
+
+  border: 0;
+  border-bottom: 1px solid #3838387f;
+  border-right: 1px solid #3838387f;
+  cursor: default;
+  color: white;
+  font-size: 14px;
+}
+
+.table_column.disableSelection {
+  user-select: none;
+}
+
+.table_row input.table_column {
+  cursor: text;
+}
+
+.table_row .table_column.even {
+  background-color: #1c1b22;
+}
+
+.table_row .table_column.odd {
+  background-color: #242329;
+}
+
+.table_row .table_column.edited {
+  background-color: #ffca85;
+  color: #1c1b22;
+}
+
+.table_row.selected .table_column {
+  background-color: #72a1ff59 !important;
+  color: white !important;
+}
+
+.header.table_row .table_column {
+  position: sticky;
+  z-index: 3;
+  inset-block-start: 0;
+  grid-row-start: 1;
+  background-color: #1c1b22;
+}

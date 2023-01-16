@@ -1,0 +1,35 @@
+.container {
+  position: relative;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.content.vertical {
+  width: 100%;
+}
+
+.resizeBar {
+  border-collapse: none;
+  user-select: none;
+  position: absolute;
+  background-color: transparent;
+}
+
+.resizeBar.horizontal {
+  cursor: ew-resize;
+  right: -2px;
+  top: 0;
+  height: 100%;
+  width: 4px;
+}
+
+.resizeBar.vertical {
+  cursor: n-resize;
+  top: 0;
+  height: 4px;
+  width: 100%;
+}

@@ -1,0 +1,210 @@
+:root {
+  --border-tab: 2px solid var(--color-border);
+}
+
+.outsideBar {
+  overflow-x: hidden;
+  background-color: var(--color-dark);
+}
+
+.outsideBar:hover, .outsideBar:active, .outsideBar:focus {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.outsideBar.noContent {
+  border: 0;
+}
+
+.outsideBar.borderBottom {
+  border-bottom: var(--border-tab);
+}
+
+.outsideBar.borderTop {
+  border-top: var(--border-tab);
+}
+
+.outsideBar.borderLeft {
+  border-left: var(--border-tab);
+}
+
+.outsideBar.borderRight {
+  border-right: var(--border-tab);
+}
+
+
+.tabBar {
+  display: flex;
+  flex-direction: row;
+  min-height: 32px;
+  box-sizing: content-box;
+}
+
+.tabBar.reverse {
+  flex-direction: row-reverse;
+}
+
+/* .tabBar.noContent {
+  border: 0;
+}
+
+.tabBar.borderBottom {
+  border-bottom: var(--border-tab);
+}
+
+.tabBar.borderTop {
+  border-top: var(--border-tab);
+}
+
+.tabBar.borderLeft {
+  border-left: var(--border-tab);
+}
+
+.tabBar.borderRight {
+  border-right: var(--border-tab);
+} */
+
+.tabBar.vertical {
+  flex-direction: column;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-right: 2px solid var(--color-border);
+  padding: 0 10px;
+
+  background-color: var(--color-dark);
+  user-select: none;
+  cursor: pointer;
+}
+
+.tabBar.reverse .tab {
+  border-right: unset;
+  border-left: 2px solid var(--color-border);
+}
+
+.tab:not(.active):hover {
+  opacity: 0.8;
+}
+
+.tab.active .tabCloseBtn,
+.tab:not(.active):hover .tabCloseBtn,
+.tab .tabCloseBtn.unsaved {
+  display: flex;
+  z-index: 0;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  height: 1px;
+  width: 100%;
+  top: 0;
+  left: 0;
+  background-color: var(--ascentColor);
+}
+.tab.active::before {
+  display: none;
+  content: '';
+  position: absolute;
+  height: 1px;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: var(--ascentColor);
+}
+
+.tab.vertical.active::before {
+  display: flex;
+}
+
+.tab.active p,
+.tab.active svg {
+  color: var(--ascentColor);
+}
+
+.tab .title {
+  margin-right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 15.33px;
+  min-height: 15.33px;
+  padding: 1px;
+  border: 0;
+  z-index: -1;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.tabCloseBtn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.tabCloseBtn:hover::after {
+  display: none;
+}
+
+.tabCloseBtn:hover svg {
+  display: block !important;
+}
+
+.tabCloseBtn.unsaved::after {
+  z-index: 2;
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%); /* adicionamos o valor translateY(-50%) */
+  border-radius: 50%;
+  padding: 4px;
+  background-color: var(--color-white);
+}
+
+.tabCloseBtn.unsaved svg {
+  display: none !important;
+}
+
+.tabCloseBtn.unsaved:hover svg {
+  display: block !important;
+}
+
+.tabBar.vertical > .tab {
+  border-right: 0;
+  justify-content: flex-start;
+}
+
+.tabContent {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+}
+
+.tabContent.active {
+  display: flex;
+}
+
+.tabWindow {
+  display: flex;
+  flex: 1;
+}
+
+.tabIsDragging {
+  background-color: #3d3b50;
+}
+
+.ignoreTabDrag {
+  pointer-events: none;
+  cursor: unset !important;
+}

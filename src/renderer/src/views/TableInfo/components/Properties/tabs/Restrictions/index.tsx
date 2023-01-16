@@ -1,0 +1,92 @@
+import React from 'react';
+import Table from '@renderer/components/Table2';
+import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { Spacer } from '@renderer/components/Spacer';
+import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
+import { Bar } from '@renderer/components/Bar';
+import { Button } from '@renderer/components/Button';
+import { Text } from '@renderer/components/Text';
+import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { toDateTime } from '@renderer/utils/date';
+
+const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
+  const { restrictions, loadTableRestrictions, lastFetchDate, loading } = useTableInfoContext();
+  const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
+
+  const lastFetchDateSerialized = toDateTime(lastFetchDate.restrictions);
+
+  const contextMenuOptions = React.useMemo(() => {
+    return [
+      {
+        text: 'Nova restrição',
+        onClick: () => null,
+      },
+    ];
+  }, []);
+
+  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    setContextMenuPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  React.useEffect(() => {
+    loadTableRestrictions(id_connection, { schema, table });
+  }, []);
+
+  return (
+    <>
+      <ContextMenu
+        position={contextMenuPosition}
+        options={contextMenuOptions}
+        onClose={() => setContextMenuPosition(null)}
+      />
+
+      <Table
+        selectable
+        rows={restrictions}
+        loading={loading.restrictions}
+        rowKeyExtractor={(item) => item.constraint_name}
+        onContextMenu={onContextMenuTable}
+        columns={[
+          { label: 'Nome', attribute: 'constraint_name' },
+          { label: 'Tipo', attribute: 'constraint_type' },
+          { label: 'Expressão', attribute: 'expression' },
+          { label: 'Comentário', attribute: 'comment' },
+        ]}
+      />
+
+      <Bar>
+        <Button title="Salvar" text smallIcon>
+          <SaveIcon size={16} />
+        </Button>
+
+        <Button title="Adicionar" text smallIcon>
+          <AddIcon size={14} />
+        </Button>
+
+        <Button title="Duplicar itens selecionados" text smallIcon>
+          <DuplicateIcon size={20} />
+        </Button>
+
+        <Button title="Remover itens selecionados" text smallIcon>
+          <RemoveIcon size={16} />
+        </Button>
+
+        <Button title="Atualizar dados" text smallIcon>
+          <IconRefresh size={18} />
+        </Button>
+
+        <Spacer />
+
+        <Text userSelect={false} title="Data da última atualização">
+          Atualizado em {lastFetchDateSerialized}
+        </Text>
+      </Bar>
+    </>
+  );
+};
+
+export default Restrictios;
