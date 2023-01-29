@@ -7,34 +7,13 @@ editor.defineTheme('default-theme', {
   base: 'vs-dark',
   inherit: true,
   rules: [
-    {
-      background: colors.dark,
-      token: '',
-    },
-    {
-      foreground: colors.purple,
-      token: 'keyword.sql',
-    },
-    {
-      foreground: colors.orange,
-      token: 'identifier.sql',
-    },
-    {
-      foreground: colors.green,
-      token: 'string.sql',
-    },
-    {
-      foreground: colors.pink,
-      token: 'number.sql',
-    },
-    {
-      foreground: colors.orange,
-      token: 'identifier.quote.sql',
-    },
-    {
-      foreground: colors.blueTransparent,
-      token: 'delimiter.sql',
-    },
+    { token: '', background: colors.dark },
+    { token: 'keyword.sql', foreground: colors.purple },
+    { token: 'identifier.sql', foreground: colors.orange },
+    { token: 'string.sql', foreground: colors.green },
+    { token: 'number.sql', foreground: colors.pink },
+    { token: 'identifier.quote.sql', foreground: colors.orange },
+    { token: 'delimiter.sql', foreground: colors.blueTransparent },
   ],
   colors: {
     'editor.foreground': colors.white,
