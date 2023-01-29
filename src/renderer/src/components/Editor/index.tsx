@@ -1,5 +1,5 @@
 import React from 'react';
-import * as monaco from 'monaco-editor';
+import { editor as monacoEditor, KeyMod, KeyCode, Selection, IDisposable } from 'monaco-editor';
 
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
@@ -9,7 +9,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
   ({ initialValue = '', selections = [], ...props }, ref) => {
     const containerRef = React.useRef<HTMLDivElement>();
     const { width, height } = useResize({ HTMLElement: containerRef.current });
-    const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
+    const [editor, setEditor] = React.useState<monacoEditor.IStandaloneCodeEditor>();
 
     const resize = useDebounce(() => editor?.layout?.(), 10);
 
@@ -28,21 +28,21 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       return { scrollTop, scrollLeft };
     };
 
-    const setSelections = (selections: monaco.Selection[]) => {
+    const setSelections = (selections: Selection[]) => {
       if (!selections?.length) return;
 
       editor?.setSelections?.(selections);
     };
 
     const getSelections = () => {
-      return (editor?.getSelections?.() || []) as monaco.Selection[];
+      return (editor?.getSelections?.() || []) as Selection[];
     };
 
     const getSelection = () => {
       return editor?.getSelection?.();
     };
 
-    const getSelectionValue = (selection: monaco.Selection) => {
+    const getSelectionValue = (selection: Selection) => {
       return editor?.getModel?.()?.getValueInRange?.(selection) || '';
     };
 
@@ -55,7 +55,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     };
 
     const initEditor = () => {
-      const currentEditor = monaco.editor.create(
+      const currentEditor = monacoEditor.create(
         containerRef.current,
         {
           value: initialValue,
@@ -74,7 +74,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       currentEditor.addAction({
         id: 'ctrl+enter',
         label: 'ctrl+enter Shortcut',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+        keybindings: [KeyMod.CtrlCmd | KeyCode.Enter],
         run: () => {},
       });
 
@@ -134,7 +134,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     }, [editor, selections]);
 
     React.useEffect(() => {
-      const monacoListeners: monaco.IDisposable[] = [];
+      const monacoListeners: IDisposable[] = [];
 
       if (props.onChangeSelections) {
         const listenerSelections = editor?.onDidChangeCursorSelection?.((e) => {
@@ -175,10 +175,10 @@ export interface IEditorProps {
   value?: string;
   initialValue?: string;
   scroll?: IScroll;
-  selections?: monaco.Selection[];
+  selections?: Selection[];
   onUmounted?: (data: IDataUmounted) => void;
   onChange?: (value: string) => void;
-  onChangeSelections?(selections: monaco.Selection[]): void;
+  onChangeSelections?(selections: Selection[]): void;
 }
 
 export interface IScroll {
@@ -189,15 +189,15 @@ export interface IScroll {
 export interface IDataUmounted {
   value: string;
   scroll: IScroll;
-  selections: monaco.Selection[];
+  selections: Selection[];
 }
 
 export interface IEditorRef {
   getValue(): string;
   setValue(value: string): void;
-  getSelections(): monaco.Selection[];
-  setSelections(selections: monaco.Selection[]): void;
-  getSelectionValue(selection: monaco.Selection): string;
+  getSelections(): Selection[];
+  setSelections(selections: Selection[]): void;
+  getSelectionValue(selection: Selection): string;
   getScroll(): IScroll;
   setScroll(scroll: IScroll): void;
   element?: HTMLElement;

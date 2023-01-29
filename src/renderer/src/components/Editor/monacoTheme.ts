@@ -1,13 +1,9 @@
-import * as monaco from 'monaco-editor';
+import { editor } from 'monaco-editor';
 import { getHexadecimalColors } from '@renderer/styles/theme2';
 
 const colors = getHexadecimalColors();
 
-window.addEventListener('on-change-theme', (e: CustomEvent) => {
-  console.log('oiii>> ', e.detail);
-});
-
-monaco.editor.defineTheme('default-theme', {
+editor.defineTheme('default-theme', {
   base: 'vs-dark',
   inherit: true,
   rules: [
