@@ -181,7 +181,7 @@ const Table = (props: ITableProps) => {
       const keyRow = row.__key_row;
       const w = window as any;
 
-      if (!w.shiftPressed || !lastSelectedIndex.current) {
+      if (!w.shiftPressed || typeof lastSelectedIndex.current !== 'number') {
         lastSelectedIndex.current = indexRow;
       }
 

@@ -1,18 +1,39 @@
 import React from 'react';
-import { ThemeProvider as StyledComponentThemeProvider } from 'styled-components';
-import { ITheme } from '@renderer/styles/theme';
-import themes from '@renderer/styles/theme';
+import useStorage from '@renderer/hooks/useStorage';
 
 const ThemeContext = React.createContext<IThemeContext>({} as IThemeContext);
 
 const ThemeProvider = ({ children }: IThemeProviderProps) => {
-  const [activeTheme, setActiveTheme] = React.useState<ITheme>('dark');
+  const [activeThemeName, setActiveThemeName] = useStorage<string>('@theme:active','default-theme');
+  const [availableThemes, setAvailableThemes] = useStorage<ITheme[]>('@theme:available', []);
+
+  const activeTheme = React.useMemo(() => {
+    return availableThemes.find(theme => theme.name === activeThemeName);
+  }, [activeThemeName]);
+
+  const addTheme = (theme: ITheme) => {
+    const checkNameConflict = availableThemes.find(({ name }) => name === theme.name);
+
+    if (checkNameConflict) {
+      throw new Error('Já existe um tema com esse nome.');
+    }
+
+    setAvailableThemes(prevState => [...prevState, theme]);
+  };
+
+  const changeTheme = (themeName: string) => {
+    const checkThemeExists = availableThemes.find(({ name }) => name === themeName);
+
+    if (!checkThemeExists) {
+      throw new Error('Tema inválido.');
+    }
+
+    setActiveThemeName(themeName);
+  };
 
   return (
-    <ThemeContext.Provider value={{ activeTheme, setActiveTheme }}>
-      <StyledComponentThemeProvider theme={themes[activeTheme]}>
-        {children}
-      </StyledComponentThemeProvider>
+    <ThemeContext.Provider value={{ activeTheme, availableThemes, addTheme, changeTheme }}>
+      {children}
     </ThemeContext.Provider>
   );
 };
@@ -29,5 +50,11 @@ interface IThemeProviderProps {
 
 interface IThemeContext {
   activeTheme: ITheme;
-  setActiveTheme: React.Dispatch<ITheme>;
+  availableThemes: ITheme[];
+  addTheme(theme: ITheme): void;
+  changeTheme(themeName: string): void;
+}
+
+interface ITheme {
+  name: string;
 }

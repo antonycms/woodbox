@@ -25,6 +25,28 @@ const defaultColors = {
   transparent: 'transparent',
 };
 
+export const defaultTheme = {
+  // sidebar
+  sidebarTextColor: '',
+  sidebarBackgroundColor: '',
+  sidebarInputBackgroundColor: '',
+  sidebarInputColor: '',
+  sidebarInputPlaceholderColor: '',
+
+  // main tabs
+  mainTabBackgroundColor: '',
+  mainTabTextColor: '',
+  mainTabAscentColor: '',
+
+  // table info
+  tableInfoTopContainerBackgroundColor: '',
+  tableInfoTopContainerInputBackgroundColor: '',
+  tableInfoTopContainerInputColor: '',
+  tableInfoTabAscentColor: '',
+  tableInfoTabTextColor: '',
+  tableInfoTabBackgroundColor: '',
+};
+
 export type IColors = typeof defaultColors;
 
 const serializeCssVarName = (colorName: string) => {
@@ -62,6 +84,8 @@ const theme = Object.keys(defaultColors).reduce((acc, colorName) => {
   return { ...acc, [colorName]: serializedCssVarName };
 }, {} as IColors);
 
-applyCssColors(defaultColors);
+export const initDefaultTheme = () => {
+  applyCssColors(defaultColors);
+}
 
 export default theme;

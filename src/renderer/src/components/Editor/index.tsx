@@ -4,9 +4,11 @@ import { editor as monacoEditor, KeyMod, KeyCode, Selection, IDisposable } from 
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Editor = React.forwardRef<IEditorRef, IEditorProps>(
   ({ initialValue = '', selections = [], ...props }, ref) => {
+    const { activeTheme } = useThemeContext();
     const containerRef = React.useRef<HTMLDivElement>();
     const { width, height } = useResize({ HTMLElement: containerRef.current });
     const [editor, setEditor] = React.useState<monacoEditor.IStandaloneCodeEditor>();
@@ -60,7 +62,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         {
           value: initialValue,
           language: 'sql',
-          theme: 'default-theme',
+          theme: activeTheme.name,
           lineNumbersMinChars: 3,
           tabSize: 2,
         },
@@ -99,6 +101,20 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     );
 
     React.useEffect(() => {
+      const currentEditor = initEditor();
+      setEditor(currentEditor);
+
+      return () => {
+        currentEditor?.dispose?.();
+      };
+    }, []);
+
+    React.useEffect(() => {
+      if (!editor) return;
+      // monacoEditor.setTheme();
+    }, [activeTheme, editor]);
+
+    React.useEffect(() => {
       if (!editor || !props.onUmounted) return;
 
       return () => {
@@ -109,15 +125,6 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         props.onUmounted?.({ value, selections, scroll });
       };
     }, [editor, props.onUmounted]);
-
-    React.useEffect(() => {
-      const currentEditor = initEditor();
-      setEditor(currentEditor);
-
-      return () => {
-        currentEditor?.dispose?.();
-      };
-    }, []);
 
     React.useEffect(resize, [width, height]);
 

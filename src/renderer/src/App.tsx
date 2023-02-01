@@ -6,23 +6,26 @@ import { ContainerApp } from '@renderer/components/ContainerApp';
 import { Sidebar } from '@renderer/components/Sidebar';
 import { MainContent } from '@renderer/components/MainContent';
 
-import AppTabProvider from './contexts/AppTab';
-import StoreContextProvider from './contexts/Store';
-import ToastProvider from './contexts/Toast';
+import AppTabProvider from '@renderer/contexts/AppTab';
+import StoreContextProvider from '@renderer/contexts/Store';
+import ToastProvider from '@renderer/contexts/Toast';
+import ThemeProvider from '@renderer/contexts/Theme';
 
 const App = () => {
   return (
-    <StoreContextProvider>
-      <ContainerApp>
-        <ToastProvider>
-          <AppTabProvider>
-            <Sidebar />
+    <ThemeProvider>
+      <StoreContextProvider>
+        <ContainerApp>
+          <ToastProvider>
+            <AppTabProvider>
+              <Sidebar />
 
-            <MainContent />
-          </AppTabProvider>
-        </ToastProvider>
-      </ContainerApp>
-    </StoreContextProvider>
+              <MainContent />
+            </AppTabProvider>
+          </ToastProvider>
+        </ContainerApp>
+      </StoreContextProvider>
+    </ThemeProvider>
   );
 };
 
