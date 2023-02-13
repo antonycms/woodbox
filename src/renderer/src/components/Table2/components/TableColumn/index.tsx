@@ -23,7 +23,7 @@ interface ITableColumnProps {
   name?: string;
   rowColumnKey?: string;
   width: number;
-  type: 'string' | 'number' | 'boolean';
+  // type: 'string' | 'number' | 'boolean';
 }
 
 const TableColumn = ({

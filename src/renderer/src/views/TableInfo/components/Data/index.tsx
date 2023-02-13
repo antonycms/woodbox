@@ -20,6 +20,7 @@ import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
+import { IColumn } from '@renderer/components/Table2/dtos';
 
 const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const { columns, loading: loadingTableInfo } = useTableInfoContext();
@@ -27,9 +28,9 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const { getTableData } = useStoreContext();
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState([]);
-  const lastRefreshIsEmpty = React.useRef(false);
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
+  const lastPageSearch = React.useRef(page);
   const [limit, setLimit] = React.useState(200);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
@@ -38,13 +39,17 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate);
 
-  const columnsSerialized = columns.map((column) => ({
+  const columnsSerialized = columns.map<IColumn>((column) => ({
     label: column.column_name,
     attribute: column.column_name,
-    type: column.data_type,
+    // type: column.data_type,
     required: !!column.is_nullable,
     sortable: true,
   }));
+
+  const handleChangeLimit = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setLimit(Number(e.target.value));
+  }, []);
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -79,10 +84,10 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     // ]);
   };
 
-  const loadData = async () => {
-    if (loading || lastRefreshIsEmpty.current) return;
-
+  const loadData = React.useCallback(async () => {
     const newPage = page + 1;
+
+    if (loading || newPage === lastPageSearch.current) return;
 
     setLoading(true);
     const { data } = await getTableData(id_connection, { schema, table, limit, page: newPage });
@@ -90,14 +95,25 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
 
     setLastFetchDate(new Date());
 
-    if (!data.length) {
-      lastRefreshIsEmpty.current = true;
-      return;
-    }
+    lastPageSearch.current = newPage;
+
+    if (!data.length) return;
 
     setPage(newPage);
     setItems((prevState) => [...prevState, ...data]);
-  };
+  }, [id_connection, loading, schema, table, limit, page]);
+
+  const handleRefresh = React.useCallback(async () => {
+    if (loading) return;
+
+    setLoading(true);
+    const { data } = await getTableData(id_connection, { schema, table, limit: items.length, page: 1 });
+    setLoading(false);
+
+    lastPageSearch.current = 0;
+    setLastFetchDate(new Date());
+    setItems(data);
+  }, [id_connection, items, loading, schema, table, limit, page]);
 
   const columnsFake = [
     {
@@ -222,11 +238,18 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
           <PanelFile size={16} />
         </Button>
 
-        <Button title="Atualizar dados" text smallIcon>
+        <Button title="Atualizar dados" text smallIcon onClick={handleRefresh}>
           <IconRefresh size={18} />
         </Button>
 
-        <Input title="Offset" centerText defaultValue="200" type="number" maxWidth="80px" />
+        <Input
+          centerText
+          title="Limite por busca"
+          type="number"
+          maxWidth="80px"
+          value={limit}
+          onChange={handleChangeLimit}
+        />
 
         <Spacer />
 

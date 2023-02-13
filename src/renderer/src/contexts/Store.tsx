@@ -136,7 +136,9 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_restrictions', idConnection, { table, schema });
   };
 
-  const getTableData = async (idConnection: string, { table, schema, page = 1, limit = 200 }) => {
+  const getTableData = async (idConnection: string, params: IParamsGetTableData) => {
+    const { table, schema, page = 1, limit = 200 } = params;
+
     return await call('@get:table_data', idConnection, { table, schema, page, limit });
   };
 
@@ -248,6 +250,13 @@ export interface IDataTable {
   data: any[];
 }
 
+interface IParamsGetTableData {
+  table: string;
+  schema?: string;
+  page: number;
+  limit: number;
+}
+
 export interface IStoreContext {
   connections: IConnection[];
   addConnection(data: IConnectionCreate): Promise<void>;
@@ -266,10 +275,7 @@ export interface IStoreContext {
 
   loadConnectionInfo(id: string): Promise<void>;
   testConnection(data: IConnectionCreate): Promise<boolean>;
-  getTableData(
-    idConnection: string,
-    filter: { table: string; schema?: string; page: number; limit: number },
-  ): Promise<IDataTable>;
+  getTableData(idConnection: string, params: IParamsGetTableData): Promise<IDataTable>;
 
   getTableColumns(
     idConnection: string,

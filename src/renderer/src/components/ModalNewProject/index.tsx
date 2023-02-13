@@ -6,9 +6,14 @@ import { Input } from '../Input';
 import { Modal } from '../Modal';
 import { Spacer } from '../Spacer';
 import { useStoreContext } from '@renderer/contexts/Store';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectProps) => {
   const { projects, addProject, editProject } = useStoreContext();
+  const {
+    activeTheme: { modal: colors },
+  } = useThemeContext();
+
   const { register, handleSubmit, reset, setState } = useForm({ description: '' });
 
   const close = () => {
@@ -44,7 +49,14 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
       <form onSubmit={onSubmit}>
         <Row>
           <Column md={12}>
-            <Input required label="Descrição" {...register('description')} />
+            <Input
+              required
+              backgroundColor={colors.fieldBackgroundColor}
+              color={colors.fieldColor}
+              label="Descrição"
+              labelColor={colors.fieldLabelColor}
+              {...register('description')}
+            />
           </Column>
         </Row>
 
@@ -52,13 +64,21 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
           <Spacer />
 
           <Column xs={6} sm={4} md={3}>
-            <Button color="dark" backgroundColor="red" onClick={close}>
+            <Button
+              color={colors.cancelButtonColor}
+              backgroundColor={colors.cancelButtonBackgroundColor}
+              onClick={close}
+            >
               Cancelar
             </Button>
           </Column>
 
           <Column xs={6} sm={4} md={3}>
-            <Button color="dark" backgroundColor="green" type="submit">
+            <Button
+              color={colors.saveButtonColor}
+              backgroundColor={colors.saveButtonBackgroundColor}
+              type="submit"
+            >
               Salvar
             </Button>
           </Column>

@@ -1,33 +1,33 @@
 import React from 'react';
-import theme, { IColors } from '@renderer/styles/theme2';
 import styles from './styles.module.css';
 import clsx from 'clsx';
+import { toCssProperties } from '@renderer/styles/theme';
 
 export interface IPropsSpinner {
-  color?: keyof IColors;
+  color: string;
   size?: number;
   absolute?: boolean;
   thickness?: number;
-  background?: keyof IColors;
+  background?: string;
 }
 
 const SpinnerLoading = (props: IPropsSpinner) => {
-  const { absolute, background, color = 'purple', size = 60, thickness = 3 } = props;
+  const {
+    absolute,
+    color,
+    size = 60,
+    thickness = 3,
+    background: backgroundColor = 'rgba(0, 0, 0, 0.1)',
+  } = props;
 
   return (
     <div
       className={clsx(styles.container, absolute && styles.absolute)}
-      style={{ backgroundColor: background || 'rgba(0, 0, 0, 0.1)' }}
+      style={{ backgroundColor }}
     >
       <div
         className={styles.loader}
-        style={
-          {
-            '--color': theme[color],
-            '--size': `${size}px`,
-            '--thickness': `${thickness}px`,
-          } as React.CSSProperties
-        }
+        style={toCssProperties({ color, size: `${size}px`, thickness: `${thickness}px` })}
       />
     </div>
   );

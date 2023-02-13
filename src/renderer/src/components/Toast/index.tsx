@@ -1,29 +1,33 @@
 import React from 'react';
 import { MdCheckCircle, MdClose, MdOutlineError, MdOutlineWarning } from 'react-icons/md';
-import theme from '@renderer/styles/theme2';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
-
-const typeConfig: { [key in ToastType]: ITypeConfig } = {
-  success: {
-    icon: () => <MdCheckCircle size={18} />,
-    background: theme.greenDark,
-    color: theme.white,
-  },
-  warn: {
-    icon: () => <MdOutlineWarning size={18} />,
-    background: theme.orange2,
-    color: theme.white,
-  },
-  error: {
-    icon: () => <MdOutlineError size={18} />,
-    background: theme.red2,
-    color: theme.white,
-  },
-};
 
 export const Toast = ({ close, title, description, type, delay }: IToastProps) => {
   const handleClose = React.useRef(close);
   handleClose.current = close;
+
+  const {
+    activeTheme: { toast: colors },
+  } = useThemeContext();
+
+  const typeConfig: { [key in ToastType]: ITypeConfig } = {
+    success: {
+      icon: () => <MdCheckCircle size={18} />,
+      background: colors.success.backgroundColor,
+      color: colors.success.color,
+    },
+    warn: {
+      icon: () => <MdOutlineWarning size={18} />,
+      background: colors.warn.backgroundColor,
+      color: colors.warn.color,
+    },
+    error: {
+      icon: () => <MdOutlineError size={18} />,
+      background: colors.error.backgroundColor,
+      color: colors.error.color,
+    },
+  };
 
   const config = typeConfig[type];
 

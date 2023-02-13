@@ -1,27 +1,32 @@
 import React from 'react';
+import clsx from 'clsx';
+import { toCssProperties } from '@renderer/styles/theme';
 import Tab from '../Tab';
 import styles from '../../styles.module.css';
-import clsx from 'clsx';
-import { IColors } from '@renderer/styles/theme2';
 
-const TabsBar = ({
-  tabs = [],
-  idTabBar,
-  reverse,
-  activeTabId,
-  onActiveTab,
-  onRemoveTab,
-  borderTop,
-  borderBottom,
-  borderLeft,
-  borderRight,
-  allowClose,
-  draggable,
-  height = '30px',
-  width = '100%',
-  ascentColor = 'green',
-  vertical,
-}: ITabsBarProps) => {
+const TabsBar = (props: ITabsBarProps) => {
+  const {
+    tabs = [],
+    idTabBar,
+    reverse,
+    activeTabId,
+    onActiveTab,
+    onRemoveTab,
+    borderTop,
+    borderBottom,
+    borderLeft,
+    borderRight,
+    allowClose,
+    draggable,
+    vertical,
+    backgroundColorBar,
+    color,
+    backgroundColor,
+    ascentColor,
+    height = '30px',
+    width = '100%',
+  } = props;
+
   const ref = React.useRef<HTMLDivElement>();
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
   const noHasContent = !tabs.length;
@@ -132,7 +137,7 @@ const TabsBar = ({
         ref={ref}
         onDrop={draggable ? onDrop : undefined}
         onDragOver={(e) => e.preventDefault()}
-        style={{ width }}
+        style={{ ...toCssProperties({ backgroundColorBar }), width }}
         className={classes}
       >
         {tabs.map((tab) => (
@@ -141,6 +146,8 @@ const TabsBar = ({
             id={`tab_${idTabBar}_${tab.idTab}`}
             title={tab.title || 'Sem título'}
             ascentColor={ascentColor}
+            color={color}
+            backgroundColor={backgroundColor}
             allowClose={allowClose}
             active={tab.idTab === activeTabId}
             icon={tab.icon}
@@ -183,8 +190,11 @@ export interface ITabsBarProps {
   borderBottom?: boolean;
   borderLeft?: boolean;
   borderRight?: boolean;
-  ascentColor?: keyof IColors;
   vertical?: boolean;
   draggable?: boolean;
   reverse?: boolean;
+  ascentColor: string;
+  color: string;
+  backgroundColor: string;
+  backgroundColorBar: string;
 }

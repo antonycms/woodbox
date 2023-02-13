@@ -113,11 +113,14 @@ export function toCssVar(cssVars: any = {}): React.CSSProperties {
   return Object.keys(cssVars).reduce((acc, key) => ({ ...acc, [`--${key}`]: cssVars[key] }), {});
 }
 
-export function serializeToSnakeCase(text: string, replaceString = '_') {
+export function serializeToSnakeCase(text: string, replaceString = '_', prefix?: string) {
   if (typeof text !== 'string') return text;
 
-  return text
+  const serializedTextArr = text
     .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
-    .map((s) => s.toLowerCase().trim())
-    .join(replaceString);
+    .map((s) => s.toLowerCase().trim());
+
+  prefix && serializedTextArr.unshift(prefix);
+
+  return serializedTextArr.join(replaceString);
 }

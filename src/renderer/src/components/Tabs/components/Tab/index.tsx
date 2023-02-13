@@ -1,33 +1,39 @@
 import React from 'react';
-import styles from '../../styles.module.css';
-import theme, { IColors } from '@renderer/styles/theme2';
+import { CgClose } from 'react-icons/cg';
 import clsx from 'clsx';
 import { Text } from '@renderer/components/Text';
-import { CgClose } from 'react-icons/cg';
+import { toCssProperties } from '@renderer/styles/theme';
+import styles from '@renderer/components/Tabs/styles.module.css';
 
-const Tab = ({
-  id,
-  active,
-  title,
-  isDraging,
-  onDragStart,
-  onDragEnter,
-  onDragEnd,
-  onClick,
-  onRemove,
-  unsaved,
-  draggable,
-  ascentColor,
-  allowClose,
-  height,
-  vertical,
-  icon: Icon,
-}: ITabProps) => {
+const Tab = (props: ITabProps) => {
+  const {
+    id,
+    active,
+    title,
+    isDraging,
+    onDragStart,
+    onDragEnter,
+    onDragEnd,
+    onClick,
+    onRemove,
+    unsaved,
+    draggable,
+    allowClose,
+    height,
+    vertical,
+    color,
+    ascentColor,
+    backgroundColor,
+    icon: Icon,
+  } = props;
+
+  const stylesVar = toCssProperties({ color, ascentColor, backgroundColor });
+
   return (
     <div
       className={clsx(styles.tab, active && styles.active, vertical && styles.vertical)}
       id={id}
-      style={{ '--ascentColor': theme[ascentColor], height } as React.CSSProperties}
+      style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
@@ -38,7 +44,7 @@ const Tab = ({
       {!!Icon && <Icon />}
       <Text
         userSelect={false}
-        color={active ? ascentColor : undefined}
+        color={active ? ascentColor : color}
         className={clsx(styles.ignoreTabDrag, styles.title)}
       >
         {title}
@@ -57,11 +63,7 @@ const Tab = ({
             onRemove?.(e);
           }}
         >
-          <CgClose
-            className={styles.ignoreTabDrag}
-            color={active ? theme[ascentColor] : theme.white}
-          />
-          {/* CgClose */}
+          <CgClose className={styles.ignoreTabDrag} color={active ? ascentColor : color} />
         </button>
       )}
     </div>
@@ -87,7 +89,9 @@ export interface ITabProps {
   vertical?: boolean;
   icon?(): JSX.Element;
   active?: boolean;
-  ascentColor: keyof IColors;
+  color: string;
+  ascentColor: string;
+  backgroundColor: string;
 }
 
 export type TabComponent = (props: ITabProps) => JSX.Element;

@@ -2,7 +2,6 @@ import React from 'react';
 import clsx from 'clsx';
 import styles from './styles.module.css';
 import { Column, IGridSystem } from '@renderer/components/Grid';
-import theme, { IColors } from '@renderer/styles/theme2';
 
 export const TextCp = (props: ITextProps) => {
   const {
@@ -26,7 +25,7 @@ export const TextCp = (props: ITextProps) => {
 
   return (
     <Column {...gridProps}>
-      <p title={title} className={classes} style={{ color: theme[color] }}>
+      <p title={title} className={classes} style={{ color }}>
         {children}
       </p>
     </Column>
@@ -40,7 +39,7 @@ export interface ITextProps extends IGridSystem {
   className?: string;
   small?: boolean;
   bold?: boolean;
-  color?: keyof IColors;
+  color: string;
   title?: string;
   userSelect?: boolean;
 }

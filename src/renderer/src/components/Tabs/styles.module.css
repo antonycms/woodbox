@@ -7,7 +7,9 @@
   background-color: var(--color-dark);
 }
 
-.outsideBar:hover, .outsideBar:active, .outsideBar:focus {
+.outsideBar:hover,
+.outsideBar:active,
+.outsideBar:focus {
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -32,12 +34,11 @@
   border-right: var(--border-tab);
 }
 
-
 .tabBar {
   display: flex;
   flex-direction: row;
-  min-height: 32px;
   box-sizing: content-box;
+  background-color: var(--backgroundColorBar);
 }
 
 .tabBar.reverse {

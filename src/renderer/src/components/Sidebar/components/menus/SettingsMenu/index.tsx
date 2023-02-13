@@ -7,15 +7,15 @@ const SettingsMenu = () => {
   return (
     <>
       <Text bold userSelect={false}>Configurações Gerais</Text>
-      <Divider color="transparent" />
+      <Divider />
 
       <Input label="Tamanho da Fonte" type="number" min="8" />
       <Input label="Cor do Texto" type="color" />
 
-      <Divider color="transparent" />
+      <Divider />
 
       <Text bold userSelect={false}>Configurações do Editor</Text>
-      <Divider color="transparent" />
+      <Divider />
 
       <Input label="Tamanho da Fonte" type="number" min="8" />
       <Input label="Cor do Cursor" type="color" />

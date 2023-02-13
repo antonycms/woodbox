@@ -1,12 +1,19 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Divider } from '../Divider';
-import { Row } from '../Grid';
-import { Text } from '../Text';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { Divider } from '@renderer/components/Divider';
+import { Row } from '@renderer/components/Grid';
+import { Text } from '@renderer/components/Text';
 import styles from './styles.module.css';
 
 export const Modal = React.memo((props: IModalProps) => {
   const { show, title, onClose, justHide, children, closeOutside = false, width = '800px' } = props;
+
+  const {
+    activeTheme: {
+      modal: { backgroundColor },
+    },
+  } = useThemeContext();
 
   const [container, setContainer] = React.useState<HTMLDivElement>();
 
@@ -33,14 +40,16 @@ export const Modal = React.memo((props: IModalProps) => {
       onClick={emitCloseOutside}
       style={{ display: justHide && !show ? 'none' : 'unset' }}
     >
-      <div className={styles.container} style={{ maxWidth: width }}>
+      <div className={styles.container} style={{ backgroundColor, maxWidth: width }}>
         {!!title && (
           <>
             <Row>
-              <Text bold userSelect={false}>{title}</Text>
+              <Text bold userSelect={false}>
+                {title}
+              </Text>
             </Row>
 
-            <Divider color="transparent" />
+            <Divider />
           </>
         )}
 

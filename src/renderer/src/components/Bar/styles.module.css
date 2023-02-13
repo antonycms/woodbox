@@ -1,10 +1,19 @@
 .bar {
   height: 32px;
   width: 100%;
-  background-color: #1f1f26;
   border-top: 2px solid var(--color-border);
   display: flex;
   align-items: center;
   padding: 0 10px;
   gap: 14px;
+}
+
+.bar.vertical {
+  height: 100%;
+  width: 32px;
+  border: 0;
+  border-right: 2px solid var(--color-border);
+  flex-direction: column;
+  padding: 22px 0 20px 0;
+  justify-content: flex-end;
 }

@@ -1,9 +1,8 @@
 import React from 'react';
 import clsx from 'clsx';
 import { Column, IGridSystem } from '@renderer/components/Grid';
-import theme, { IColors } from '@renderer/styles/theme2';
+import { SpinnerLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
-import { SpinnerLoading } from '../Loaders';
 
 export const Button = React.memo((props: IButtonProps) => {
   const {
@@ -19,14 +18,22 @@ export const Button = React.memo((props: IButtonProps) => {
     onClick,
     onDoubleClick,
     form,
-    type = 'button',
-    icon: Icon,
     loading,
     disabled,
+    icon: Icon,
+    type = 'button',
     ...gridProps
   } = props;
 
+  const classes = clsx(
+    styles.button,
+    className,
+    text && styles.text,
+    smallIcon && styles.smallIcon,
+  );
+
   const isDisabled = !!(loading || disabled);
+  const style = { color, backgroundColor, width, justifyContent: alignContent };
 
   return (
     <Column {...gridProps}>
@@ -37,18 +44,8 @@ export const Button = React.memo((props: IButtonProps) => {
         form={form}
         disabled={isDisabled}
         onDoubleClick={onDoubleClick}
-        className={clsx(
-          styles.button,
-          className,
-          text && styles.text,
-          smallIcon && styles.smallIcon,
-        )}
-        style={{
-          width,
-          justifyContent: alignContent,
-          backgroundColor: backgroundColor ? theme[backgroundColor] : undefined,
-          color: color ? theme[color] : undefined,
-        }}
+        style={style}
+        className={classes}
       >
         {!loading && (
           <>
@@ -80,8 +77,8 @@ export interface IButtonProps extends IGridSystem {
   title?: string;
   className?: string;
   text?: boolean;
-  backgroundColor?: keyof IColors;
-  color?: keyof IColors;
+  backgroundColor?: string;
+  color?: string;
   smallIcon?: boolean;
   width?: string | number;
   alignContent?: 'center' | 'start';

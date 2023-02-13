@@ -176,7 +176,7 @@ const Table = (props: ITableProps) => {
   }, [columns, columnsDetails, minColumnsSize]);
 
   const onSelectRow = React.useCallback(
-    (row, isSelected) => {
+    (row, isSelected: boolean) => {
       const indexRow = row.__index_row;
       const keyRow = row.__key_row;
       const w = window as any;

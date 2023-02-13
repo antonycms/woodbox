@@ -1,35 +1,45 @@
 import React from 'react';
 import useStorage from '@renderer/hooks/useStorage';
+import defaultTheme, { applyMonacoTheme, serializeTheme, ITheme } from '@renderer/styles/theme';
 
 const ThemeContext = React.createContext<IThemeContext>({} as IThemeContext);
 
 const ThemeProvider = ({ children }: IThemeProviderProps) => {
-  const [activeThemeName, setActiveThemeName] = useStorage<string>('@theme:active','default-theme');
-  const [availableThemes, setAvailableThemes] = useStorage<ITheme[]>('@theme:available', []);
+  const [activeThemeName, setActiveThemeName] = useStorage<string>(
+    '@theme:active',
+    defaultTheme.name,
+  );
+  const [availableThemes, setAvailableThemes] = useStorage<ITheme<string>[]>('@theme:available', [
+    defaultTheme,
+  ]);
 
   const activeTheme = React.useMemo(() => {
-    return availableThemes.find(theme => theme.name === activeThemeName);
-  }, [activeThemeName]);
+    return availableThemes.find((theme) => theme.name === activeThemeName);
+  }, [availableThemes, activeThemeName]);
 
-  const addTheme = (theme: ITheme) => {
-    const checkNameConflict = availableThemes.find(({ name }) => name === theme.name);
+  const addTheme = React.useCallback((theme: ITheme) => {
+    setAvailableThemes((prevState) => [
+      ...prevState.filter((t) => t.name !== theme.name),
+      serializeTheme(theme),
+    ]);
+  }, []);
 
-    if (checkNameConflict) {
-      throw new Error('Já existe um tema com esse nome.');
-    }
+  const changeTheme = React.useCallback(
+    (themeName: string) => {
+      const themeExists = availableThemes.find(({ name }) => name === themeName);
 
-    setAvailableThemes(prevState => [...prevState, theme]);
-  };
+      if (!themeExists) {
+        throw new Error('Tema inválido.');
+      }
 
-  const changeTheme = (themeName: string) => {
-    const checkThemeExists = availableThemes.find(({ name }) => name === themeName);
+      setActiveThemeName(themeName);
+    },
+    [availableThemes],
+  );
 
-    if (!checkThemeExists) {
-      throw new Error('Tema inválido.');
-    }
-
-    setActiveThemeName(themeName);
-  };
+  React.useEffect(() => {
+    applyMonacoTheme(activeTheme);
+  }, [activeTheme]);
 
   return (
     <ThemeContext.Provider value={{ activeTheme, availableThemes, addTheme, changeTheme }}>
@@ -49,12 +59,8 @@ interface IThemeProviderProps {
 }
 
 interface IThemeContext {
-  activeTheme: ITheme;
+  activeTheme: ITheme<string>;
   availableThemes: ITheme[];
   addTheme(theme: ITheme): void;
   changeTheme(themeName: string): void;
-}
-
-interface ITheme {
-  name: string;
 }

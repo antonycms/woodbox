@@ -5,9 +5,10 @@ import clsx from 'clsx';
 import { Column, IGridSystem } from '../Grid';
 import { Label } from '../Label';
 import styles from './styles.module.css';
+import { toCssProperties } from '@renderer/styles/theme';
 
-export const Select = React.memo(
-  ({
+export const Select = React.memo((props: ISelectProps) => {
+  const {
     id: externalId,
     name,
     value,
@@ -16,71 +17,76 @@ export const Select = React.memo(
     label,
     items = [],
     required,
+    labelColor,
+    color: selectColor,
+    backgroundColor: selectBackgroundColor,
     extractItemInfo = (item) => ({ key: item, text: item, value: item }),
     ...gridSystem
-  }: ISelectProps) => {
-    const id = React.useMemo(() => externalId || generateHash(), [externalId]);
+  } = props;
 
-    const itemsSerialized = React.useMemo(() => {
-      const optGroupsItems = {};
-      const itemsWithoutOptGroups = [];
+  const id = React.useMemo(() => externalId || generateHash(), [externalId]);
 
-      items.forEach((item) => {
-        const { key: optionKey, text: optionText, value: optionValue } = extractItemInfo(item);
-        const optGroup = item.optgroup;
+  const styleVars = toCssProperties({ selectColor, selectBackgroundColor });
 
-        const OptionComponent = (
-          <option key={optionKey} value={optionValue}>
-            {optionText}
-          </option>
-        );
+  const itemsSerialized = React.useMemo(() => {
+    const optGroupsItems = {};
+    const itemsWithoutOptGroups = [];
 
-        if (!optGroup) {
-          itemsWithoutOptGroups.push(OptionComponent);
-          return;
-        }
+    items.forEach((item) => {
+      const { key: optionKey, text: optionText, value: optionValue } = extractItemInfo(item);
+      const optGroup = item.optgroup;
 
-        const groupItems = optGroupsItems[optGroup] || [];
-        optGroupsItems[optGroup] = [...groupItems, OptionComponent];
-      });
-
-      const optGroups = Object.keys(optGroupsItems).map((group) => (
-        <optgroup key={`group_${group}`} label={group}>
-          {optGroupsItems[group]}
-        </optgroup>
-      ));
-
-      return (
-        <>
-          {itemsWithoutOptGroups}
-          {optGroups}
-        </>
+      const OptionComponent = (
+        <option key={optionKey} value={optionValue}>
+          {optionText}
+        </option>
       );
-    }, [items, extractItemInfo]);
+
+      if (!optGroup) {
+        itemsWithoutOptGroups.push(OptionComponent);
+        return;
+      }
+
+      const groupItems = optGroupsItems[optGroup] || [];
+      optGroupsItems[optGroup] = [...groupItems, OptionComponent];
+    });
+
+    const optGroups = Object.keys(optGroupsItems).map((group) => (
+      <optgroup key={`group_${group}`} label={group}>
+        {optGroupsItems[group]}
+      </optgroup>
+    ));
 
     return (
-      <Column {...gridSystem}>
-        <div className={clsx(styles.container, required && styles.isRequired)}>
-          {!!label && <Label htmlFor={id}>{label}</Label>}
-
-          <select
-            className={styles.select}
-            id={id}
-            name={name}
-            value={value}
-            onChange={onChange}
-            defaultValue={defaultValue}
-            required={required}
-          >
-            {itemsSerialized}
-          </select>
-
-          <MdKeyboardArrowDown className={styles.icon} />
-        </div>
-      </Column>
+      <>
+        {itemsWithoutOptGroups}
+        {optGroups}
+      </>
     );
-  },
-);
+  }, [items, extractItemInfo]);
+
+  return (
+    <Column {...gridSystem}>
+      <div style={styleVars} className={clsx(styles.container, required && styles.isRequired)}>
+        {!!label && <Label color={labelColor} htmlFor={id}>{label}</Label>}
+
+        <select
+          className={styles.select}
+          id={id}
+          name={name}
+          value={value}
+          onChange={onChange}
+          defaultValue={defaultValue}
+          required={required}
+        >
+          {itemsSerialized}
+        </select>
+
+        <MdKeyboardArrowDown className={styles.icon} />
+      </div>
+    </Column>
+  );
+});
 
 Select.displayName = 'Select';
 
@@ -98,6 +104,9 @@ interface ISelectProps extends IGridSystem {
   defaultValue?: string | number;
   required?: boolean;
   onChange?(e: React.ChangeEvent<HTMLSelectElement>): void;
+  backgroundColor: string;
+  color: string;
+  labelColor?: string;
 
   items: any[];
   extractItemInfo?(item): IItemInfo;

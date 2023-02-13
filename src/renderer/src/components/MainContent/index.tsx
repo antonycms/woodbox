@@ -2,15 +2,15 @@ import React from 'react';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
 import { QueryEditor } from '@renderer/views/QueryEditor';
-import TableInfo from '@renderer/views/TableInfo';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
 
 export const MainContent = () => {
   const { tabs, removeTab, addTab, activeTabId, setActiveTabId } = useAppTabContext();
+  const { activeTheme } = useThemeContext();
 
   React.useEffect(() => {
-    // addTab({ component: QueryEditor });
-    // addTab({ component: () => <TableInfo id_connection="teste" table="teste" />, unsaved: true });
+    addTab({ component: QueryEditor });
   }, []);
 
   return (
@@ -18,12 +18,16 @@ export const MainContent = () => {
       <TabBar
         allowClose
         draggable
+        borderBottom
+        color={activeTheme.mainTab.color}
+        ascentColor={activeTheme.mainTab.ascentColor}
+        backgroundColor={activeTheme.mainTab.backgroundColor}
+        backgroundColorBar={activeTheme.mainTab.bar.backgroundColor}
         activeTabId={activeTabId}
         onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
         idTabBar="app_tabs"
         onRemoveTab={(tab) => removeTab(tab.idTab)}
         tabs={tabs.map(({ id: idTab, title, unsaved }) => ({ idTab, title, unsaved }))}
-        borderBottom
       />
 
       <TabWindow idTabBar="app_tabs">

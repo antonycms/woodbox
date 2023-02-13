@@ -6,6 +6,7 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 interface IColumn {
   label: string;
@@ -43,6 +44,8 @@ const Table = (props: ITableProps) => {
       <div className={styles.table_outside_container}>{!!loading && <MultiplesBarLoading />}</div>
     );
   }
+
+  const { activeTheme } = useThemeContext();
 
   const lastSelectedIndex = React.useRef<number>(null);
   const refBodyContainer = React.useRef<HTMLDivElement>();
@@ -305,6 +308,7 @@ const Table = (props: ITableProps) => {
       onScroll={onScroll}
       ref={refBodyContainer}
       onContextMenu={onContextMenu}
+      style={{ backgroundColor: activeTheme.table.backgroundColor }}
     >
       {!!loading && <MultiplesBarLoading />}
 

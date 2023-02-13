@@ -2,26 +2,27 @@
   flex: 1;
   display: flex;
   align-items: center;
-
-  background-color: var(--color-dark-light2);
   border-radius: 4px;
 }
 
 .isRequired label::after {
   content: '*';
   margin-left: 1px;
-  color: var(--color-red);
+  color: #ff6767;
   font-size: 14px;
 }
 
 .input {
   width: 100%;
-  color: var(--color-white);
   border: 0;
   background-color: transparent;
   height: 28px;
   outline: transparent;
   padding: 0 10px;
+}
+
+.input::-webkit-input-placeholder {
+  color: var(--placeholderColor);
 }
 
 .input[type='color'] {

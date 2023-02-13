@@ -1,10 +1,22 @@
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { toCssProperties } from '@renderer/styles/theme';
 import clsx from 'clsx';
 import React from 'react';
 import styles from './styles.module.css';
 
-export const VerticalBar = ({ onChange, value, items }: IVerticalBarProps) => {
+export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
+  const { activeTheme } = useThemeContext();
+
+  const {
+    ascentColor: ascentColorMenuBar,
+    backgroundColor: backgroundColorMenuBar,
+    color: colorMenuBar,
+  } = activeTheme.sideBar.menuBar;
+
+  const stylesVar = toCssProperties({ ascentColorMenuBar, backgroundColorMenuBar, colorMenuBar });
+
   return (
-    <div className={styles.categoryBar}>
+    <div className={styles.categoryBar} style={stylesVar}>
       {items.map((item) => (
         <div
           key={item.id}
@@ -25,7 +37,7 @@ export interface IItemBar {
   icon(): JSX.Element;
 }
 
-export interface IVerticalBarProps {
+export interface IMenuBarProps {
   /**
    * @default true
    */

@@ -151,7 +151,6 @@ const TreeView = (props: ITreeViewProps) => {
       onDoubleClick={handleDoubleClick}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
-      style={{ marginLeft: props.fixMargin ? '-4px' : null }}
     >
       {props.items.map((item) => (
         <ItemTreeView
@@ -192,7 +191,6 @@ export interface IItem extends IItemTreeViewData {
 
 interface ITreeViewProps {
   items: IItem[];
-  fixMargin?: boolean;
   color?: string;
   onClick?(itemData: IItemTreeViewData): void;
   onDoubleClick?(itemData: IItemTreeViewData): void;

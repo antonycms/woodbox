@@ -10,7 +10,6 @@
 
 .container {
   padding: 20px;
-  background-color: var(--color-dark);
   width: 100%;
   border-radius: 8px;
   position: relative;

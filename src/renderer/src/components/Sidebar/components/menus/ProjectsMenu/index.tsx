@@ -16,6 +16,7 @@ import styles from './styles.module.css';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import { ReactComponent as WholeWordIcon } from '@renderer/assets/icons/whole-word.svg';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 const ProjectsMenu = () => {
   const {
@@ -25,6 +26,10 @@ const ProjectsMenu = () => {
     loadConnectionInfo,
     connectionsInfo,
   } = useStoreContext();
+
+  const {
+    activeTheme: { sideBar: colors },
+  } = useThemeContext();
 
   const { showToast } = useToast();
   const { addTab, getTab, setActiveTabId } = useAppTabContext();
@@ -49,7 +54,7 @@ const ProjectsMenu = () => {
     if (isWholeWordFilter) {
       return text?.toLowerCase?.() === filterTextSerialized;
     }
-    return text?.toLowerCase?.()?.includes?.(filterTextSerialized)
+    return text?.toLowerCase?.()?.includes?.(filterTextSerialized);
   };
 
   const refreshConnectionInfo = async (id: string, force?: boolean) => {
@@ -275,7 +280,9 @@ const ProjectsMenu = () => {
       />
 
       <Row>
-        <Text bold userSelect={false}>Projetos</Text>
+        <Text bold color={colors.color} userSelect={false}>
+          Projetos
+        </Text>
 
         <Spacer />
 
@@ -283,17 +290,21 @@ const ProjectsMenu = () => {
           smallIcon
           text
           title="Adicionar Novo Projeto"
+          color={colors.color}
           icon={() => <AddIcon size={12} />}
           onClick={() => setIsNewProject(true)}
         />
       </Row>
 
-      <Divider color="transparent" />
+      <Divider />
 
       <Input
         placeholder="Filtrar"
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
+        color={colors.fieldColor}
+        backgroundColor={colors.fieldBackgroundColor}
+        placeholderColor={colors.fieldPlaceholderColor}
         icon={() => (
           <Button
             smallIcon
@@ -301,16 +312,15 @@ const ProjectsMenu = () => {
             title="Adicionar Novo Projeto"
             icon={() => <WholeWordIcon />}
             color={isWholeWordFilter ? 'white' : 'gray'}
-            onClick={() => setIsWholeWordFilter(prevState => !prevState)}
+            onClick={() => setIsWholeWordFilter((prevState) => !prevState)}
           />
         )}
       />
 
-      <Divider color="transparent" />
+      <Divider />
 
       <div className={styles.containerTreeViewProjects}>
         <TreeView
-          fixMargin
           onContextMenu={onContextMenuTreeView}
           onSwitchItem={handleOpemItemTreeView}
           onDoubleClick={handleDoubleClickItemThreeView}

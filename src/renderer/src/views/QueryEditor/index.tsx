@@ -6,8 +6,14 @@ import { generateHash } from '@renderer/utils/methods';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import Table from '@renderer/components/Table';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
+import { Input } from '@renderer/components/Input';
+import { Button } from '@renderer/components/Button';
+import { Spacer } from '@renderer/components/Spacer';
+import { Text } from '@renderer/components/Text';
+import { Bar } from '@renderer/components/Bar';
 import {
   ExportIcon,
   IconFileWrited,
@@ -17,11 +23,6 @@ import {
   SaveIcon,
 } from '@renderer/styles/icons';
 import { RunSelectionIcon } from '../../styles/icons';
-import { Input } from '@renderer/components/Input';
-import { Button } from '@renderer/components/Button';
-import { Spacer } from '@renderer/components/Spacer';
-import { Text } from '@renderer/components/Text';
-import { Bar } from '@renderer/components/Bar';
 
 interface IQueryResult {
   idTab: string;
@@ -39,8 +40,10 @@ interface IDataNewTabResult {
 }
 
 export const QueryEditor = () => {
-  const refEditor = React.useRef<IEditorRef>();
+  const { activeTheme } = useThemeContext();
+
   const id = React.useMemo(() => generateHash(), []);
+  const refEditor = React.useRef<IEditorRef>();
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 100);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
@@ -166,33 +169,37 @@ export const QueryEditor = () => {
 
   return (
     <div className={styles.queryEditorContainer}>
-      <div style={{ flex: 1, display: 'flex' }}>
-        <div
-          style={{
-            height: '100%',
-            width: '28px',
-            backgroundColor: '#1f1f26',
-            borderRight: '2px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '22px 0 20px 0',
-            gap: '14px',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <Button text smallIcon title="Executar script SQL" onClick={runAllSQL}>
+      <div style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}>
+        <Bar vertical backgroundColor={activeTheme.queryEditor.bar.backgroundColor}>
+          <Button
+            text
+            smallIcon
+            title="Executar script SQL"
+            onClick={runAllSQL}
+            color={activeTheme.queryEditor.bar.color}
+          >
             <RunIcon size={16} />
           </Button>
 
-          <Button text smallIcon title="Executar seleção" onClick={runSelectionsSQL}>
+          <Button
+            text
+            smallIcon
+            title="Executar seleção"
+            onClick={runSelectionsSQL}
+            color={activeTheme.queryEditor.bar.color}
+          >
             <RunSelectionIcon size={20} />
           </Button>
 
-          <Button text smallIcon title="Mostrar saída do servidor">
+          <Button
+            text
+            smallIcon
+            title="Mostrar saída do servidor"
+            color={activeTheme.queryEditor.bar.color}
+          >
             <IconFileWrited size={16} />
           </Button>
-        </div>
+        </Bar>
 
         <Editor ref={refEditor} dialect="postgres" />
       </div>
@@ -207,7 +214,6 @@ export const QueryEditor = () => {
         >
           <TabBar
             borderTop
-            ascentColor="orange"
             allowClose
             borderBottom
             activeTabId={activeTabId}
@@ -215,6 +221,10 @@ export const QueryEditor = () => {
             onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
             idTabBar={`bottomTabEditor_${id}`}
             onRemoveTab={(tab) => removeTabResult(tab.idTab)}
+            ascentColor={activeTheme.queryEditor.tab.ascentColor}
+            backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+            backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
+            color={activeTheme.queryEditor.tab.color}
           />
 
           <TabWindow idTabBar={`bottomTabEditor_${id}`}>
@@ -234,34 +244,51 @@ export const QueryEditor = () => {
                         }))}
                       />
 
-                      <Bar>
-                        <Button title="Salvar" text smallIcon>
+                      <Bar backgroundColor={activeTheme.queryEditor.bar.backgroundColor}>
+                        <Button text smallIcon title="Salvar" color={activeTheme.queryEditor.bar.color}>
                           <SaveIcon size={16} />
                         </Button>
 
-                        <Button title="Exportar" text smallIcon>
+                        <Button text smallIcon title="Exportar" color={activeTheme.queryEditor.bar.color}>
                           <ExportIcon size={16} />
                         </Button>
 
-                        <Button title="Mostrar dados do vínculo" text smallIcon>
+                        <Button
+                          text
+                          smallIcon
+                          title="Mostrar dados do vínculo"
+                          color={activeTheme.queryEditor.bar.color}
+                        >
                           <PanelFile size={16} />
                         </Button>
 
-                        <Button title="Atualizar dados" text smallIcon>
+                        <Button
+                          text
+                          smallIcon
+                          title="Atualizar dados"
+                          color={activeTheme.queryEditor.bar.color}
+                        >
                           <IconRefresh size={18} />
                         </Button>
 
                         <Input
-                          title="Offset"
                           centerText
+                          title="Limite"
                           defaultValue="200"
                           type="number"
                           maxWidth="80px"
+                          color={activeTheme.queryEditor.bar.color}
+                          backgroundColor={activeTheme.queryEditor.bar.fieldBackgroundColor}
+                          placeholderColor={activeTheme.queryEditor.bar.fieldPlaceholderColor}
                         />
 
                         <Spacer />
 
-                        <Text userSelect={false} title="Data da última atualização">
+                        <Text
+                          title="Data da última atualização"
+                          userSelect={false}
+                          color={activeTheme.queryEditor.bar.color}
+                        >
                           Atualizado em 25 de set. as 09:18
                         </Text>
                       </Bar>

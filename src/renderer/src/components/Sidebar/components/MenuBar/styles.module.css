@@ -3,15 +3,11 @@
   padding: 10px 10px;
   position: relative;
   cursor: pointer;
-  color: var(--color-white);
+  color: var(--colorMenuBar);
 }
 
 .categoryBarButton svg {
-  color: var(--color-white);
-}
-
-.categoryBarButton:hover {
-  color: var(--color-green-dark);
+  color: var(--colorMenuBar);
 }
 
 .categoryBarButton:hover:not(.active) svg {
@@ -23,16 +19,17 @@
   position: absolute;
   height: 100%;
   width: 2px;
-  background-color: var(--color-green-dark);
+  background-color: var(--ascentColorMenuBar);
   top: 0;
   left: 0;
 }
 
 .categoryBarButton.active svg {
-  color: var(--color-green-dark);
+  color: var(--ascentColorMenuBar);
 }
 
 .categoryBar {
   display: flex;
   flex-direction: column;
+  background-color: var(--backgroundColorMenuBar);
 }

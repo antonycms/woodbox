@@ -1,6 +1,5 @@
 .container {
   height: 100%;
-  background-color: var(--color-dark);
   display: flex;
   position: relative;
 }
@@ -12,7 +11,8 @@
   top: 0;
   height: 100%;
   width: 2px;
-  background-color: var(--color-border);
+  /* TODO ver depois */
+  /* background-color: var(--color-border); */
   pointer-events: none;
 }
 
@@ -22,6 +22,7 @@
   flex: 1;
   padding: 10px;
   overflow: auto;
+  background-color: var(--backgroundColorSidebar);
 }
 
 .menuContainer.active {

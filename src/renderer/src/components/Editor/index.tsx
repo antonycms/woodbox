@@ -7,7 +7,7 @@ import styles from './styles.module.css';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Editor = React.forwardRef<IEditorRef, IEditorProps>(
-  ({ initialValue = '', selections = [], ...props }, ref) => {
+  ({ initialValue = '', selections = [], language = 'sql',...props }, ref) => {
     const { activeTheme } = useThemeContext();
     const containerRef = React.useRef<HTMLDivElement>();
     const { width, height } = useResize({ HTMLElement: containerRef.current });
@@ -60,11 +60,11 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       const currentEditor = monacoEditor.create(
         containerRef.current,
         {
-          value: initialValue,
-          language: 'sql',
-          theme: activeTheme.name,
-          lineNumbersMinChars: 3,
+          language,
           tabSize: 2,
+          lineNumbersMinChars: 3,
+          value: initialValue,
+          theme: 'active-theme',
         },
         {
           contextMenuService: {
@@ -80,7 +80,6 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         run: () => {},
       });
 
-      currentEditor.focus();
       return currentEditor;
     };
 
@@ -110,8 +109,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     }, []);
 
     React.useEffect(() => {
-      if (!editor) return;
-      // monacoEditor.setTheme();
+      monacoEditor.setTheme('active-theme');
     }, [activeTheme, editor]);
 
     React.useEffect(() => {
@@ -178,6 +176,7 @@ Editor.displayName = 'Editor';
 export default Editor;
 
 export interface IEditorProps {
+  language?: 'sql' | 'json';
   dialect: 'postgres';
   value?: string;
   initialValue?: string;

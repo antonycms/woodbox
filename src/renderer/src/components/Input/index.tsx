@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { generateHash } from '@renderer/utils/methods';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
+import { toCssProperties } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
 export const Input = React.memo((props: IInputProps) => {
@@ -23,23 +24,31 @@ export const Input = React.memo((props: IInputProps) => {
     centerText,
     title,
     required,
+    labelColor,
+    color,
+    backgroundColor,
+    placeholderColor,
     icon: Icon,
     id: externalId,
     ...gridSystem
   } = props;
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
-
   const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;
 
   return (
     <Column {...gridSystem}>
       <div className={clsx(required && styles.isRequired)}>
-        {!!label && <Label htmlFor={id}>{label}</Label>}
-        <div className={styles.inputContainer}>
+        {!!label && (
+          <Label color={labelColor} htmlFor={id}>
+            {label}
+          </Label>
+        )}
+        <div className={styles.inputContainer} style={{ backgroundColor }}>
           <input
             id={id}
             name={name}
+            title={inputTitle}
             min={min}
             max={max}
             maxLength={maxLength}
@@ -51,8 +60,7 @@ export const Input = React.memo((props: IInputProps) => {
             required={required}
             onChange={onChange}
             className={clsx(className, styles.input, centerText && styles.centerText)}
-            style={{ maxWidth }}
-            title={inputTitle}
+            style={{ ...toCssProperties({ placeholderColor }), maxWidth, color }}
           />
 
           {!!Icon && (
@@ -92,7 +100,7 @@ export type InputTypes =
   | 'url'
   | 'week';
 
-export interface IInputProps extends IGridSystem {
+export type IInputProps = IGridSystem & {
   value?: string | number;
   placeholder?: string;
   onChange?(event: React.ChangeEvent<HTMLInputElement>): void;
@@ -100,7 +108,6 @@ export interface IInputProps extends IGridSystem {
   max?: string | number;
   maxLength?: number;
   minLength?: number;
-  label?: string;
   name?: string;
   id?: string;
   defaultValue?: string;
@@ -111,4 +118,9 @@ export interface IInputProps extends IGridSystem {
   required?: boolean;
   title?: string;
   icon?(): JSX.Element;
-}
+  color: string;
+  backgroundColor: string;
+  placeholderColor?: string;
+  label?: string;
+  labelColor?: string;
+};

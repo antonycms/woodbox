@@ -10,12 +10,16 @@ import { Select } from '../Select';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { Form } from '../Form';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
     const { showToast } = useToast();
     const { connections, addConnection, editConnection, connectionTypes, testConnection } =
       useStoreContext();
+    const {
+      activeTheme: { modal: colors },
+    } = useThemeContext();
 
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
     const { register, handleSubmit, reset, setState, state } = useForm<IDataNewConnection>({
@@ -86,7 +90,16 @@ export const ModalNewConnection = React.memo(
       <Modal title="Nova Conexão" width="500px" show={show}>
         <Form id="formNewConnection" onSubmit={onSubmit}>
           <Row>
-            <Input required label="Descrição" xs={12} sm={6} md={8} {...register('description')} />
+            <Input
+              required
+              label="Descrição"
+              xs={12}
+              sm={6}
+              md={8}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              {...register('description')}
+            />
             <Select
               required
               label="Dialeto"
@@ -94,45 +107,93 @@ export const ModalNewConnection = React.memo(
               sm={6}
               md={4}
               items={connectionTypes}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
               {...register('dialect')}
             />
-            <Input required label="Host" sm={8} md={10} {...register('host')} />
-            <Input required label="Porta" sm={4} md={2} type="number" {...register('port')} />
-            <Input required label="Base de dados" md={12} {...register('database')} />
-            <Input label="Usuário" xs={12} md={6} {...register('username')} />
-            <Input label="Senha" type="password" xs={12} md={6} {...register('password')} />
+            <Input
+              required
+              label="Host"
+              sm={8}
+              md={10}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              {...register('host')}
+            />
+            <Input
+              required
+              label="Porta"
+              sm={4}
+              md={2}
+              type="number"
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              {...register('port')}
+            />
+            <Input
+              required
+              label="Base de dados"
+              md={12}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              {...register('database')}
+            />
+            <Input
+              label="Usuário"
+              xs={12}
+              md={6}
+              backgroundColor={colors.fieldBackgroundColor}
+              color={colors.fieldColor}
+              {...register('username')}
+            />
+            <Input
+              label="Senha"
+              type="password"
+              xs={12}
+              md={6}
+              backgroundColor={colors.fieldBackgroundColor}
+              color={colors.fieldColor}
+              {...register('password')}
+            />
           </Row>
         </Form>
 
-        <Divider color="transparent" size={4} />
+        <Divider size={4} />
 
         <Row>
           <Button
-            backgroundColor="orange"
-            color="dark"
-            onClick={checkConnection}
-            loading={loadingTestConnection}
             xs={6}
             sm={4}
             md={3}
+            onClick={checkConnection}
+            loading={loadingTestConnection}
+            color={colors.testButtonColor}
+            backgroundColor={colors.testButtonBackgroundColor}
           >
             Testar
           </Button>
 
           <Spacer />
 
-          <Button backgroundColor="red" color="dark" onClick={close} xs={6} sm={4} md={3}>
+          <Button
+            xs={6}
+            sm={4}
+            md={3}
+            onClick={close}
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+          >
             Cancelar
           </Button>
 
           <Button
-            form="formNewConnection"
-            backgroundColor="green"
-            color="dark"
-            type="submit"
             xs={6}
             sm={4}
             md={3}
+            type="submit"
+            form="formNewConnection"
+            color={colors.saveButtonColor}
+            backgroundColor={colors.saveButtonBackgroundColor}
           >
             Salvar
           </Button>

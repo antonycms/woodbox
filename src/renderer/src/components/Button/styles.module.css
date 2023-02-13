@@ -1,7 +1,4 @@
 .button {
-  color: var(--color-white);
-  background-color: var(--color-purple);
-
   border: 0;
   border-radius: 4px;
   height: 28px;

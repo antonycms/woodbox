@@ -1,13 +1,13 @@
 import React from 'react';
 import ResizableContainer from '@renderer/components/ResizableContainer';
-import { VerticalBar } from '@renderer/components/VerticalBar';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase, IconSettings } from '@renderer/styles/icons';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import SettingsMenu from './components/menus/SettingsMenu';
-import styles from './styles.module.css';
+import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
+import styles from './styles.module.css';
 
 type Menu = 'projects' | 'settings';
 
@@ -18,7 +18,7 @@ export const Sidebar = React.memo(() => {
 
   return (
     <div className={styles.container}>
-      <VerticalBar
+      <MenuBar
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
         items={[

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import styles from './styles.module.css';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { toCssProperties } from '@renderer/styles/theme';
 
 export interface IContextMenuOption {
   text: string;
@@ -18,8 +20,11 @@ export interface IContextMenuProps {
   onClose?(): void;
 }
 
-export const ContextMenu = ({ position, onClose, options }: IContextMenuProps) => {
+export const ContextMenu = (props: IContextMenuProps) => {
+  const { activeTheme } = useThemeContext();
+  const { position, onClose, options } = props;
   const { x: positionX, y: positionY } = position || {};
+
   const isInvalidPosition = typeof positionX !== 'number' || typeof positionY !== 'number';
 
   React.useEffect(() => {
@@ -37,9 +42,12 @@ export const ContextMenu = ({ position, onClose, options }: IContextMenuProps) =
   if (isInvalidPosition) return null;
 
   return (
-    <div className={styles.container} style={{ top: positionY, left: positionX }}>
+    <div
+      className={styles.container}
+      style={{ ...toCssProperties(activeTheme.contextMenu), top: positionY, left: positionX }}
+    >
       {options?.map?.((option, index) => (
-        <Button key={index} onClick={() => option.onClick?.()} alignContent="start" text>
+        <Button text key={index} onClick={() => option.onClick?.()} alignContent="start">
           {option.text}
         </Button>
       ))}
