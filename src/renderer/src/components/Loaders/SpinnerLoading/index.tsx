@@ -1,7 +1,6 @@
 import React from 'react';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
-import clsx from 'clsx';
-import { toCssProperties } from '@renderer/styles/theme';
 
 export interface IPropsSpinner {
   color: string;
@@ -22,7 +21,7 @@ const SpinnerLoading = (props: IPropsSpinner) => {
 
   return (
     <div
-      className={clsx(styles.container, absolute && styles.absolute)}
+      className={classes(styles.container, absolute && styles.absolute)}
       style={{ backgroundColor }}
     >
       <div

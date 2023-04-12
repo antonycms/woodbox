@@ -2,9 +2,9 @@ import React from 'react';
 import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
 import { FaFolder, FaDatabase, FaTable } from 'react-icons/fa';
 import { CgFileDocument } from 'react-icons/cg';
+import { classes } from '@renderer/styles/theme';
+import { SpinnerLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
-import clsx from 'clsx';
-import { SpinnerLoading } from '../Loaders';
 
 const Icon = ({ icon, ...props }: IIcon) => {
   const availableIcons = {
@@ -15,10 +15,15 @@ const Icon = ({ icon, ...props }: IIcon) => {
     table: FaTable,
   };
 
-  const classes = clsx(styles.icon, icon === 'file' && styles.icon2);
   const Cp = availableIcons[icon] || availableIcons.defalt;
 
-  return <Cp {...props} className={classes} style={{ pointerEvents: 'none' }} />;
+  return (
+    <Cp
+      {...props}
+      className={classes(styles.icon, icon === 'file' && styles.icon2)}
+      style={{ pointerEvents: 'none' }}
+    />
+  );
 };
 
 const ItemTreeView = (props: IItemTreeViewProps) => {
@@ -27,10 +32,13 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
   const isOpen = () => openedItemsId.some((id) => id === props.id);
 
   return (
-    <div title={props.label} className={clsx(styles.containerItem, props.isFirst && styles.first)}>
+    <div
+      title={props.label}
+      className={classes(styles.containerItem, props.isFirst && styles.first)}
+    >
       <div
         id={`item_treeview_id_${props.id}`}
-        className={clsx(
+        className={classes(
           styles.containerItemInfo,
           props.focusedItemId === props.id && styles.focused,
         )}
@@ -39,13 +47,13 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
           <SpinnerLoading thickness={2} size={10} color="white" />
         ) : isOpen() ? (
           <MdKeyboardArrowDown
-            className={clsx(styles.icon, styles.arrow)}
+            className={classes(styles.icon, styles.arrow)}
             color={color}
             onClick={() => props.onSwitch(props)}
           />
         ) : (
           <MdKeyboardArrowRight
-            className={clsx(styles.icon, styles.arrow)}
+            className={classes(styles.icon, styles.arrow)}
             color={color}
             onClick={() => props.onSwitch(props)}
           />
@@ -56,7 +64,7 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
         )}
 
         <span
-          className={clsx(styles.containerItemLabel, styles.ignorePointerEvents)}
+          className={classes(styles.containerItemLabel, styles.ignorePointerEvents)}
           style={{ color }}
         >
           {props.label}
@@ -147,7 +155,7 @@ const TreeView = (props: ITreeViewProps) => {
 
   return (
     <div
-      className={clsx(styles.container)}
+      className={classes(styles.container)}
       onDoubleClick={handleDoubleClick}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

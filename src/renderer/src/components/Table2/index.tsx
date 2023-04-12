@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
+import { toCssProperties } from '@renderer/styles/theme';
 
 interface IColumn {
   label: string;
@@ -28,6 +29,16 @@ interface ITableProps {
   columns: IColumn[];
   selectable?: boolean;
   loading?: boolean;
+  borderColor: string;
+  backgroundColorHeader: string;
+  colorHeader: string;
+  backgroundColorRowOdd: string;
+  colorRowOdd: string;
+  backgroundColorRowEven: string;
+  colorRowEven: string;
+  backgroundColorColumnEdited?: string;
+  colorColumnEdited?: string;
+  backgroundColor: string;
 }
 
 const Table = (props: ITableProps) => {
@@ -41,6 +52,7 @@ const Table = (props: ITableProps) => {
     onScrollEnd,
     editedRows,
     onEditRow,
+    ...stylesProps
   } = props;
 
   const refBodyContainer = React.useRef<HTMLDivElement>();
@@ -287,6 +299,15 @@ const Table = (props: ITableProps) => {
     });
   })();
 
+  const cssVars = toCssProperties({
+    ...stylesProps,
+    height: `${rows.length * rowHeight}px`,
+    width: `${tableDetails.width}px`,
+    rowHeight: `${rowHeight}px`,
+    totalRows: rows.length,
+    columnsSize: tableDetails.columnsSizeStr,
+  });
+
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
       return Math.ceil(calculateTextHtmlWidth(column.label) + 40);
@@ -313,21 +334,11 @@ const Table = (props: ITableProps) => {
       onScroll={onScroll}
       className={styles.table_outside_container}
       onContextMenu={onContextMenu}
+      style={cssVars}
     >
       {!!loading && <MultiplesBarLoading />}
 
-      <div
-        className={styles.table_container}
-        style={
-          {
-            '--height': `${rows.length * rowHeight}px`,
-            '--width': `${tableDetails.width}px`,
-            '--rowHeight': `${rowHeight}px`,
-            '--totalRows': rows.length,
-            '--columnsSize': tableDetails.columnsSizeStr,
-          } as React.CSSProperties
-        }
-      >
+      <div className={styles.table_container}>
         {virtualHeader}
         {virtualRows}
       </div>

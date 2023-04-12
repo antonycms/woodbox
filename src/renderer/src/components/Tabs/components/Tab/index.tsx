@@ -1,8 +1,7 @@
 import React from 'react';
 import { CgClose } from 'react-icons/cg';
-import clsx from 'clsx';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import { Text } from '@renderer/components/Text';
-import { toCssProperties } from '@renderer/styles/theme';
 import styles from '@renderer/components/Tabs/styles.module.css';
 
 const Tab = (props: ITabProps) => {
@@ -31,7 +30,7 @@ const Tab = (props: ITabProps) => {
 
   return (
     <div
-      className={clsx(styles.tab, active && styles.active, vertical && styles.vertical)}
+      className={classes(styles.tab, active && styles.active, vertical && styles.vertical)}
       id={id}
       style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
@@ -45,7 +44,7 @@ const Tab = (props: ITabProps) => {
       <Text
         userSelect={false}
         color={active ? ascentColor : color}
-        className={clsx(styles.ignoreTabDrag, styles.title)}
+        className={classes(styles.ignoreTabDrag, styles.title)}
       >
         {title}
       </Text>
@@ -53,7 +52,7 @@ const Tab = (props: ITabProps) => {
       {!!allowClose && (
         <button
           title="Fechar"
-          className={clsx(
+          className={classes(
             styles.tabCloseBtn,
             unsaved && styles.unsaved,
             isDraging && styles.ignoreTabDrag,

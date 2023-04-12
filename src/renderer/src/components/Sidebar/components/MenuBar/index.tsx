@@ -1,7 +1,6 @@
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { toCssProperties } from '@renderer/styles/theme';
-import clsx from 'clsx';
 import React from 'react';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
@@ -22,7 +21,7 @@ export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
           key={item.id}
           title={item.title}
           onClick={() => onChange?.(item.id)}
-          className={clsx(styles.categoryBarButton, item.id === value && styles.active)}
+          className={classes(styles.categoryBarButton, item.id === value && styles.active)}
         >
           <item.icon />
         </div>

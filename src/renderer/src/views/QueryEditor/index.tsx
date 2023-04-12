@@ -9,7 +9,6 @@ import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import Table from '@renderer/components/Table';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
-import { Input } from '@renderer/components/Input';
 import { Button } from '@renderer/components/Button';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
@@ -23,6 +22,7 @@ import {
   SaveIcon,
 } from '@renderer/styles/icons';
 import { RunSelectionIcon } from '../../styles/icons';
+import { useStoreContext } from '@renderer/contexts/Store';
 
 interface IQueryResult {
   idTab: string;
@@ -39,7 +39,12 @@ interface IDataNewTabResult {
   title?: string;
 }
 
-export const QueryEditor = () => {
+interface IQueryEditorProps {
+  id_connection: string;
+};
+
+export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
+  const { runSql } = useStoreContext();
   const { activeTheme } = useThemeContext();
 
   const id = React.useMemo(() => generateHash(), []);
@@ -100,26 +105,38 @@ export const QueryEditor = () => {
     return selectionsValue;
   };
 
-  const runSelectionsSQL = () => {
+  const runSelectionsSQL = async () => {
     const selectionsValue = getSelectionsValues();
     const value = selectionsValue.join('\n');
 
     if (!value) return;
 
-    return true;
+    const rows = await runSql(id_connection, value);
+
+    const [firstItem] = rows;
+
+    const columns = Object.keys(firstItem);
+
+    makeNewTabResult({ type: 'select', columns, rows });
   };
 
-  const runAllSQL = () => {
+  const runAllSQL = async () => {
     const value = refEditor.current?.getValue?.();
 
     if (!value) return;
 
-    return true;
+    const rows = await runSql(id_connection, value);
+
+    const [firstItem] = rows;
+
+    const columns = Object.keys(firstItem);
+
+    makeNewTabResult({ type: 'select', columns, rows });
   };
 
-  const runSQL = () => {
-    const promise = runSelectionsSQL() || runAllSQL();
-  };
+  // const runSQL = () => {
+  //   const promise = runSelectionsSQL() || runAllSQL();
+  // };
 
   React.useEffect(() => {
     if (tabsResult.length) {
@@ -128,19 +145,19 @@ export const QueryEditor = () => {
     }
   }, [tabsResult]);
 
-  // apagar dps
-  React.useEffect(() => {
-    const columns = ['id', 'name'];
-    const rows = [
-      { name: 'Fulano 1', id: 1 },
-      { name: 'Fulano 2', id: 2 },
-      { name: 'Fulano 3', id: 3 },
-    ];
+  // // apagar dps
+  // React.useEffect(() => {
+  //   const columns = ['id', 'name'];
+  //   const rows = [
+  //     { name: 'Fulano 1', id: 1 },
+  //     { name: 'Fulano 2', id: 2 },
+  //     { name: 'Fulano 3', id: 3 },
+  //   ];
 
-    makeNewTabResult({ type: 'select', columns, rows });
-    makeNewTabResult({ type: 'select', columns, rows });
-    makeNewTabResult({ type: 'select', columns, rows });
-  }, []);
+  //   makeNewTabResult({ type: 'select', columns, rows });
+  //   makeNewTabResult({ type: 'select', columns, rows });
+  //   makeNewTabResult({ type: 'select', columns, rows });
+  // }, []);
 
   React.useEffect(() => {
     if (!refEditor.current?.element) return;
@@ -170,7 +187,11 @@ export const QueryEditor = () => {
   return (
     <div className={styles.queryEditorContainer}>
       <div style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}>
-        <Bar vertical backgroundColor={activeTheme.queryEditor.bar.backgroundColor}>
+        <Bar
+          vertical
+          backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
+          borderColor={activeTheme.queryEditor.bar.borderColor}
+        >
           <Button
             text
             smallIcon
@@ -200,7 +221,6 @@ export const QueryEditor = () => {
             <IconFileWrited size={16} />
           </Button>
         </Bar>
-
         <Editor ref={refEditor} dialect="postgres" />
       </div>
 
@@ -225,6 +245,7 @@ export const QueryEditor = () => {
             backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
             backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
             color={activeTheme.queryEditor.tab.color}
+            borderColor={activeTheme.queryEditor.tab.borderColor}
           />
 
           <TabWindow idTabBar={`bottomTabEditor_${id}`}>
@@ -244,12 +265,25 @@ export const QueryEditor = () => {
                         }))}
                       />
 
-                      <Bar backgroundColor={activeTheme.queryEditor.bar.backgroundColor}>
-                        <Button text smallIcon title="Salvar" color={activeTheme.queryEditor.bar.color}>
+                      <Bar
+                        backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
+                        borderColor={activeTheme.queryEditor.bar.borderColor}
+                      >
+                        <Button
+                          text
+                          smallIcon
+                          title="Salvar"
+                          color={activeTheme.queryEditor.bar.color}
+                        >
                           <SaveIcon size={16} />
                         </Button>
 
-                        <Button text smallIcon title="Exportar" color={activeTheme.queryEditor.bar.color}>
+                        <Button
+                          text
+                          smallIcon
+                          title="Exportar"
+                          color={activeTheme.queryEditor.bar.color}
+                        >
                           <ExportIcon size={16} />
                         </Button>
 
@@ -270,17 +304,6 @@ export const QueryEditor = () => {
                         >
                           <IconRefresh size={18} />
                         </Button>
-
-                        <Input
-                          centerText
-                          title="Limite"
-                          defaultValue="200"
-                          type="number"
-                          maxWidth="80px"
-                          color={activeTheme.queryEditor.bar.color}
-                          backgroundColor={activeTheme.queryEditor.bar.fieldBackgroundColor}
-                          placeholderColor={activeTheme.queryEditor.bar.fieldPlaceholderColor}
-                        />
 
                         <Spacer />
 

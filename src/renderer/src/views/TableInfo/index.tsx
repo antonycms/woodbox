@@ -8,19 +8,25 @@ import Data from './components/Data';
 import Properties from './components/Properties';
 import styles from './styles.module.css';
 import { ITableInfoProps } from './dtos';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 const TableInfo = (props: ITableInfoProps) => {
+  const { activeTheme: { tableInfo: theme } } = useThemeContext();
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState('tabProperties');
 
   return (
     <div className={styles.container}>
       <TabBar
+        borderBottom
         idTabBar={id}
         activeTabId={activeTabId}
         onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
-        ascentColor="purple"
-        borderBottom
+        ascentColor={theme.tab.ascentColor}
+        backgroundColor={theme.tab.backgroundColor}
+        backgroundColorBar={theme.tab.bar.backgroundColor}
+        borderColor={theme.tab.borderColor}
+        color={theme.tab.color}
         tabs={[
           {
             idTab: 'tabProperties',

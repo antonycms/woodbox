@@ -3,6 +3,7 @@
   display: flex;
   position: relative;
   overflow: auto;
+  background-color: var(--backgroundColor);
 }
 
 .table_container {
@@ -32,10 +33,9 @@
   line-height: var(--rowHeight);
 
   border: 0;
-  border-bottom: 1px solid #3838387f;
-  border-right: 1px solid #3838387f;
+  border-bottom: 1px solid var(--borderColor);
+  border-right: 1px solid var(--borderColor);
   cursor: default;
-  color: white;
   font-size: 14px;
   user-select: none;
 }
@@ -49,16 +49,18 @@
 }
 
 .table_row .table_column.even {
-  background-color: #1c1b22;
+  background-color: var(--backgroundColorRowEven);
+  color: var(--colorRowEven);
 }
 
 .table_row .table_column.odd {
-  background-color: #242329;
+  background-color: var(--backgroundColorRowOdd);
+  color: var(--colorRowOdd);
 }
 
 .table_row .table_column.edited {
-  background-color: #ffca85;
-  color: #1c1b22;
+  background-color: var(--backgroundColorColumnEdited);
+  color: var(--colorColumnEdited);
 }
 
 .table_row.selected .table_column {
@@ -71,5 +73,6 @@
   z-index: 3;
   inset-block-start: 0;
   grid-row-start: 1;
-  background-color: #1c1b22;
+  background-color: var(--backgroundColorHeader);
+  color: var(--colorHeader);
 }

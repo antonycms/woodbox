@@ -1,11 +1,10 @@
-import { generateHash } from '@renderer/utils/methods';
 import React from 'react';
+import { generateHash } from '@renderer/utils/methods';
 import { MdKeyboardArrowDown } from 'react-icons/md';
-import clsx from 'clsx';
-import { Column, IGridSystem } from '../Grid';
-import { Label } from '../Label';
+import { Column, IGridSystem } from '@renderer/components/Grid';
+import { Label } from '@renderer/components/Label';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
-import { toCssProperties } from '@renderer/styles/theme';
 
 export const Select = React.memo((props: ISelectProps) => {
   const {
@@ -67,7 +66,7 @@ export const Select = React.memo((props: ISelectProps) => {
 
   return (
     <Column {...gridSystem}>
-      <div style={styleVars} className={clsx(styles.container, required && styles.isRequired)}>
+      <div style={styleVars} className={classes(styles.container, required && styles.isRequired)}>
         {!!label && <Label color={labelColor} htmlFor={id}>{label}</Label>}
 
         <select

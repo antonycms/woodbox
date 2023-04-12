@@ -7,7 +7,7 @@ import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
-import { AddIcon } from '@renderer/styles/icons';
+import { AddIcon, AddSqlIcon } from '@renderer/styles/icons';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import TreeView, { IItemTreeViewData } from '@renderer/components/TreeView';
 import { useStoreContext } from '@renderer/contexts/Store';
@@ -17,6 +17,8 @@ import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import { ReactComponent as WholeWordIcon } from '@renderer/assets/icons/whole-word.svg';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { generateHash } from '@renderer/utils/methods';
+import { QueryEditor } from '@renderer/views/QueryEditor';
 
 const ProjectsMenu = () => {
   const {
@@ -41,6 +43,7 @@ const ProjectsMenu = () => {
   const [isNewProject, setIsNewProject] = React.useState(false);
   const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
   const [projectNewConnection, setProjectNewConnection] = React.useState<IItemTreeViewData>();
+  const [selectedConnection, setSelectedConnection] = React.useState(null);
   const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
 
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
@@ -113,7 +116,11 @@ const ProjectsMenu = () => {
     }
   };
 
-  const handleDoubleClickItemThreeView = async (item: IItemTreeViewData) => {
+  const handleClickItemThreeView = (item: IItemTreeViewData) => {
+    setSelectedConnection(item?.data?.id_connection && item?.data);
+  };
+
+  const handleDoubleClickItemThreeView = (item: IItemTreeViewData) => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;
@@ -133,6 +140,18 @@ const ProjectsMenu = () => {
       }
     }
   };
+
+  const handleOpenNewSqlFile = () => {
+    const { id_connection, description_connection } = selectedConnection;
+
+    addTab({
+      id: generateHash(),
+      title: `Sem título [${description_connection}]`,
+      component: () => (
+        <QueryEditor id_connection={id_connection} />
+      ),
+    });
+  }
 
   const contextOptions = React.useMemo(() => {
     const optionsAvailable = {
@@ -209,6 +228,7 @@ const ProjectsMenu = () => {
             const dataTable = {
               ...table,
               id_connection: connection.id,
+              description_connection: connection.description,
             };
 
             return {
@@ -230,6 +250,7 @@ const ProjectsMenu = () => {
 
             const dataSchema = {
               id_connection: connection.id,
+              description_connection: connection.description,
             };
 
             return {
@@ -256,6 +277,7 @@ const ProjectsMenu = () => {
           loading: loadingConnectionsId.includes(connection.id),
           icon: 'database' as const,
           type: 'connection' as const,
+          data: { id_connection: connection.id, description_connection: connection.description },
           childs: schemasOrTables,
         };
       }),
@@ -285,6 +307,17 @@ const ProjectsMenu = () => {
         </Text>
 
         <Spacer />
+
+        {!!selectedConnection && (
+          <Button
+            smallIcon
+            text
+            title="Novo SQL"
+            color={colors.color}
+            icon={() => <AddSqlIcon size={14} />}
+            onClick={handleOpenNewSqlFile}
+          />
+        )}
 
         <Button
           smallIcon
@@ -324,6 +357,7 @@ const ProjectsMenu = () => {
           onContextMenu={onContextMenuTreeView}
           onSwitchItem={handleOpemItemTreeView}
           onDoubleClick={handleDoubleClickItemThreeView}
+          onClick={handleClickItemThreeView}
           items={
             filterTextSerialized
               ? projectsSerialized.filter((project) => project.hasTableWithFilterText)

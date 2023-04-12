@@ -1,12 +1,12 @@
-import clsx from 'clsx';
 import React from 'react';
+import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 export const Label = (props: ILabelProps) => {
   const { color, children, ...othersProps } = props;
 
   return (
-    <label {...othersProps} className={clsx(styles.label, props.className)} style={{ color }}>
+    <label {...othersProps} className={classes(styles.label, props.className)} style={{ color }}>
       {children}
     </label>
   );

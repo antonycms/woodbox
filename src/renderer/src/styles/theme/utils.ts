@@ -74,3 +74,31 @@ export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
     },
   });
 };
+
+export const classes = (...params) => {
+  let v = '';
+
+  const add = (str) => {
+    if (!str) return;
+    v && (v += ' ');
+    v += str;
+  };
+
+  for (const param of params) {
+    if (!param) continue;
+
+    if (typeof param === 'string' || typeof params === 'number') {
+      add(param);
+    } //
+    else if (Array.isArray(param)) {
+      param.forEach((subParam) => add(classes(subParam)));
+    } //
+    else {
+      for (const attributeObj in param) {
+        param[attributeObj] && add(attributeObj);
+      }
+    }
+  }
+
+  return v;
+};

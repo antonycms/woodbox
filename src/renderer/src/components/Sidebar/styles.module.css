@@ -11,8 +11,7 @@
   top: 0;
   height: 100%;
   width: 2px;
-  /* TODO ver depois */
-  /* background-color: var(--color-border); */
+  background-color: var(--borderColor);
   pointer-events: none;
 }
 

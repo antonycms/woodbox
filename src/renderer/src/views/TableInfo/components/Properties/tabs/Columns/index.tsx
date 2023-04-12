@@ -9,8 +9,10 @@ import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
+  const { activeTheme: { tableInfo: { properties: theme }, table: themeTable } } = useThemeContext();
   const { columns, loadTableColumns, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
 
@@ -53,6 +55,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Table
+        {...themeTable}
         selectable
         loading={loading.columns}
         rowKeyExtractor={(item) => item.column_name}
@@ -67,30 +70,30 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         ]}
       />
 
-      <Bar>
-        <Button title="Salvar" text smallIcon>
+      <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
+        <Button title="Salvar" text smallIcon color={theme.bar.color}>
           <SaveIcon size={16} />
         </Button>
 
-        <Button title="Adicionar" text smallIcon>
+        <Button title="Adicionar" text smallIcon color={theme.bar.color}>
           <AddIcon size={14} />
         </Button>
 
-        <Button title="Duplicar itens selecionados" text smallIcon>
+        <Button title="Duplicar itens selecionados" text smallIcon color={theme.bar.color}>
           <DuplicateIcon size={20} />
         </Button>
 
-        <Button title="Remover itens selecionados" text smallIcon>
+        <Button title="Remover itens selecionados" text smallIcon color={theme.bar.color}>
           <RemoveIcon size={16} />
         </Button>
 
-        <Button title="Atualizar dados" text smallIcon>
+        <Button title="Atualizar dados" text smallIcon color={theme.bar.color}>
           <IconRefresh size={18} />
         </Button>
 
         <Spacer />
 
-        <Text userSelect={false} title="Data da última atualização">
+        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
         </Text>
       </Bar>

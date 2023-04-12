@@ -142,6 +142,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_data', idConnection, { table, schema, page, limit });
   };
 
+  const runSql = async (idConnection: string, sql: string) => {
+    return await call('@post:run_sql', idConnection, sql);
+  }
+
   React.useEffect(() => {
     loadConnectionTypes();
     loadConnections();
@@ -175,6 +179,7 @@ const StoreContextProvider = ({ children }) => {
         getTableColumns,
         getTableReferences,
         getTableRestrictions,
+        runSql,
       }}
     >
       {children}
@@ -291,6 +296,8 @@ export interface IStoreContext {
     idConnection: string,
     filters: { table: string; schema: string },
   ): Promise<IColumnRestrictionsInfo[]>;
+
+  runSql(idConnection: string, sql: string): Promise<any>;
 }
 
 export interface IConnectionsGroupPerProject extends IProject {

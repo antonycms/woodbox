@@ -9,7 +9,7 @@ import { useForm } from '@renderer/hooks/useForm';
 import { Select } from '../Select';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
-import { Form } from '../Form';
+import { Form } from '@renderer/components/Form';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 export const ModalNewConnection = React.memo(

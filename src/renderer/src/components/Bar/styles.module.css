@@ -1,7 +1,7 @@
 .bar {
   height: 32px;
   width: 100%;
-  border-top: 2px solid var(--color-border);
+  border-top: 2px solid var(--borderColor);
   display: flex;
   align-items: center;
   padding: 0 10px;
@@ -12,7 +12,7 @@
   height: 100%;
   width: 32px;
   border: 0;
-  border-right: 2px solid var(--color-border);
+  border-right: 2px solid var(--borderColor);
   flex-direction: column;
   padding: 22px 0 20px 0;
   justify-content: flex-end;

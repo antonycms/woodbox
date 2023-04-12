@@ -4,14 +4,20 @@ import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { generateHash } from '@renderer/utils/methods';
 import { useForm } from '@renderer/hooks/useForm';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { ITableInfoProps } from '../../dtos';
 import Columns from './tabs/Columns';
 import ForeingKeys from './tabs/ForeingKeys';
 import Restrictios from './tabs/Restrictions';
 import styles from './styles.module.css';
-import { ITableInfoProps } from '../../dtos';
 
 const Properties = (props: ITableInfoProps) => {
   const { table } = props;
+  const {
+    activeTheme: {
+      tableInfo: { properties: theme },
+    },
+  } = useThemeContext();
 
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState<string>('1');
@@ -23,20 +29,46 @@ const Properties = (props: ITableInfoProps) => {
 
   return (
     <div className={styles.propertiesContainer}>
-      <div className={styles.propertiesHeader}>
+      <div
+        className={styles.propertiesHeader}
+        style={{ backgroundColor: theme.header.backgroundColor }}
+      >
         <Row>
-          <Input required label="Tabela" md={6} {...registerFormData('table')} />
-          <Input label="Comentário" md={6} {...registerFormData('comment')} />
+          <Input
+            md={6}
+            required
+            label="Tabela"
+            backgroundColor={theme.header.fieldBackgroundColor}
+            color={theme.header.fieldColor}
+            {...registerFormData('table')}
+          />
+          <Input
+            md={6}
+            label="Comentário"
+            backgroundColor={theme.header.fieldBackgroundColor}
+            color={theme.header.fieldColor}
+            {...registerFormData('comment')}
+          />
         </Row>
       </div>
 
-      <div className={styles.propertiesContent}>
+      <div
+        className={styles.propertiesContent}
+        style={{
+          border: `1px solid ${theme.bar.borderColor}`,
+          backgroundColor: theme.tab.backgroundColor,
+        }}
+      >
         <TabBar
           vertical
           borderRight
           width="auto"
           idTabBar={id}
-          ascentColor="orange"
+          ascentColor={theme.tab.ascentColor}
+          backgroundColor={theme.tab.backgroundColor}
+          backgroundColorBar={theme.tab.backgroundColor}
+          borderColor={theme.tab.borderColor}
+          color={theme.bar.color}
           activeTabId={activeTabId}
           onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
           tabs={[

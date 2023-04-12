@@ -1,10 +1,10 @@
 import React from 'react';
-import clsx from 'clsx';
-import styles from '../../styles.module.css';
+import { classes } from '@renderer/styles/theme';
 import ResizableContainer, {
   IResizableDivProps,
   OnResizeCallback,
 } from '@renderer/components/ResizableContainer';
+import styles from '../../styles.module.css';
 
 interface ITableColumnProps {
   indexRow?: number;
@@ -48,7 +48,7 @@ const TableColumn = ({
   const isHeaderColumn = indexRow === undefined;
 
   const className = (() => {
-    return clsx(
+    return classes(
       styles.table_column,
       indexRow % 2 ? styles.even : styles.odd,
       resizable && styles.resizable,

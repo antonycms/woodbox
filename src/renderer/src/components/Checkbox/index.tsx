@@ -1,8 +1,8 @@
 import React from 'react';
-import clsx from 'clsx';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
 import { generateHash } from '@renderer/utils/methods';
+import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 interface ICheckboxProps extends IGridSystem {
@@ -11,10 +11,23 @@ interface ICheckboxProps extends IGridSystem {
   required?: boolean;
   checked?: boolean;
   onChecked?(checked: boolean): void;
+  backgroundColor: string;
+  color: string;
+  labelColor?: string;
 }
 
 export const Checkbox = (props: ICheckboxProps) => {
-  const { label, required, checked, onChecked, id: externalId, ...gridSystem } = props;
+  const {
+    label,
+    required,
+    checked,
+    onChecked,
+    backgroundColor,
+    color,
+    labelColor,
+    id: externalId,
+    ...gridSystem
+  } = props;
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
 
@@ -25,9 +38,13 @@ export const Checkbox = (props: ICheckboxProps) => {
 
   return (
     <Column {...gridSystem}>
-      <div className={clsx(required && styles.isRequired)}>
-        {!!label && <Label htmlFor={id}>{label}</Label>}
-        <input checked={checked} type="checkbox" onChange={handleChecked} />
+      <div className={classes(required && styles.isRequired)}>
+        {!!label && (
+          <Label htmlFor={id} color={labelColor}>
+            {label}
+          </Label>
+        )}
+        <input style={{ backgroundColor, color }} checked={checked} type="checkbox" onChange={handleChecked} />
       </div>
     </Column>
   );

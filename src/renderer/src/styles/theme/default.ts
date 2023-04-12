@@ -32,6 +32,11 @@ const defaultTheme: ITheme<Color> = {
 
   __colors,
 
+  welcome: {
+    color: '__colors.white',
+    backgroundColor: '__colors.dark',
+  },
+
   sideBar: {
     menuBar: {
       color: '__colors.white',
@@ -44,15 +49,18 @@ const defaultTheme: ITheme<Color> = {
     fieldPlaceholderColor: '__colors.white',
     fieldBackgroundColor: '__colors.darkLightDeep',
     fieldLabelColor: '__colors.white',
+    borderColor: '__colors.border',
   },
 
   mainTab: {
     bar: {
       backgroundColor: '__colors.dark',
+      borderColor: '__colors.border',
     },
     color: '__colors.white',
     backgroundColor: '__colors.dark',
     ascentColor: '__colors.green',
+    borderColor: '__colors.border',
   },
 
   toast: {
@@ -92,17 +100,20 @@ const defaultTheme: ITheme<Color> = {
   },
 
   table: {
+    borderColor: '__colors.lightGray',
+    colorHeader: '__colors.white',
+    backgroundColorHeader: '__colors.dark',
     backgroundColor: '__colors.dark',
-    headerBackgroundColor: '__colors.dark',
-    headerColor: '__colors.white',
-    headerSeparatorColor: '__colors.darkLightDeep',
-    rowBackgroundColor: '__colors.dark',
-    rowOddBackgroundColor: '__colors.gray',
-    rowColor: '__colors.white',
-    rowSeparatorColor: '__colors.darkLightDeep',
+    backgroundColorRowEven: '__colors.dark',
+    colorRowEven: '__colors.white',
+    colorRowOdd: '__colors.white',
+    backgroundColorRowOdd: '__colors.darkLightDeep',
+    backgroundColorColumnEdited: '__colors.orange',
+    colorColumnEdited: '__colors.dark',
   },
 
   modal: {
+    color: '__colors.white',
     backgroundColor: '__colors.dark',
     fieldColor: '__colors.white',
     fieldBackgroundColor: '__colors.darkLightDeep',
@@ -121,20 +132,24 @@ const defaultTheme: ITheme<Color> = {
     tab: {
       bar: {
         backgroundColor: '__colors.dark',
+        borderColor: '__colors.border',
       },
       color: '__colors.white',
       backgroundColor: '__colors.dark',
       ascentColor: '__colors.purple',
+      borderColor: '__colors.border',
     },
 
     properties: {
       tab: {
         bar: {
           backgroundColor: '__colors.dark',
+          borderColor: '__colors.border',
         },
         color: '__colors.white',
         backgroundColor: '__colors.dark',
         ascentColor: '__colors.orange',
+        borderColor: '__colors.border',
       },
 
       header: {
@@ -147,6 +162,7 @@ const defaultTheme: ITheme<Color> = {
       bar: {
         backgroundColor: '__colors.dark',
         color: '__colors.white',
+        borderColor: '__colors.border',
       },
     },
 
@@ -156,6 +172,7 @@ const defaultTheme: ITheme<Color> = {
         backgroundColor: '__colors.darkLightBar',
         fieldColor: '__colors.white',
         fieldBackgroundColor: '__colors.darkLightDeep',
+        borderColor: '__colors.border',
       },
     },
   },
@@ -164,10 +181,12 @@ const defaultTheme: ITheme<Color> = {
     tab: {
       bar: {
         backgroundColor: '__colors.dark',
+        borderColor: '__colors.border',
       },
       color: '__colors.white',
       backgroundColor: '__colors.dark',
       ascentColor: '__colors.orange',
+      borderColor: '__colors.border',
     },
 
     bar: {
@@ -176,6 +195,7 @@ const defaultTheme: ITheme<Color> = {
       color: '__colors.white',
       fieldBackgroundColor: '__colors.darkLightDeep',
       fieldPlaceholderColor: '__colors.white',
+      borderColor: '__colors.border',
     },
   }
 };

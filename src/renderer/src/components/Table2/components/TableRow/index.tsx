@@ -1,5 +1,5 @@
 import React from 'react';
-import clsx from 'clsx';
+import { classes } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
 
 interface ITableRowProps {
@@ -18,7 +18,7 @@ const TableRow = ({ children, isSelected, isHeader, onClick, row }: ITableRowPro
 
   return (
     <div
-      className={clsx(styles.table_row, isSelected && styles.selected, isHeader && styles.header)}
+      className={classes(styles.table_row, isSelected && styles.selected, isHeader && styles.header)}
       onClick={handleClick}
     >
       {children}

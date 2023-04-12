@@ -1,9 +1,8 @@
 import React from 'react';
-import clsx from 'clsx';
 import { generateHash } from '@renderer/utils/methods';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
-import { toCssProperties } from '@renderer/styles/theme/utils';
+import { classes, toCssProperties } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
 export const Input = React.memo((props: IInputProps) => {
@@ -38,7 +37,7 @@ export const Input = React.memo((props: IInputProps) => {
 
   return (
     <Column {...gridSystem}>
-      <div className={clsx(required && styles.isRequired)}>
+      <div className={classes(required && styles.isRequired)}>
         {!!label && (
           <Label color={labelColor} htmlFor={id}>
             {label}
@@ -59,7 +58,7 @@ export const Input = React.memo((props: IInputProps) => {
             type={type}
             required={required}
             onChange={onChange}
-            className={clsx(className, styles.input, centerText && styles.centerText)}
+            className={classes(className, styles.input, centerText && styles.centerText)}
             style={{ ...toCssProperties({ placeholderColor }), maxWidth, color }}
           />
 

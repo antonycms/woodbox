@@ -1,7 +1,7 @@
 import React from 'react';
-import clsx from 'clsx';
-import styles from './styles.module.css';
 import { Column, IGridSystem } from '@renderer/components/Grid';
+import { classes } from '@renderer/styles/theme';
+import styles from './styles.module.css';
 
 export const TextCp = (props: ITextProps) => {
   const {
@@ -15,7 +15,7 @@ export const TextCp = (props: ITextProps) => {
     ...gridProps
   } = props;
 
-  const classes = clsx(
+  const classesText = classes(
     className,
     styles.text,
     bold && styles.bold,
@@ -25,7 +25,7 @@ export const TextCp = (props: ITextProps) => {
 
   return (
     <Column {...gridProps}>
-      <p title={title} className={classes} style={{ color }}>
+      <p title={title} className={classesText} style={{ color }}>
         {children}
       </p>
     </Column>

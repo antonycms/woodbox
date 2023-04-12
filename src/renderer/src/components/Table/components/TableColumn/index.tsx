@@ -1,7 +1,7 @@
 import React from 'react';
-import clsx from 'clsx';
 import styles from '../../styles.module.css';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
+import { classes } from '@renderer/styles/theme';
 
 interface ITableColumnProps {
   indexRow?: number;
@@ -32,11 +32,13 @@ const TableColumn = ({
   onSave,
   style: styleExternal = {},
 }: ITableColumnProps) => {
+  const serializedValue = typeof value === 'object' ? JSON.stringify(value) : value;
+
   const editedValue = React.useRef(value);
   const isHeaderColumn = indexRow === undefined;
 
   const className = React.useMemo(() => {
-    return clsx(
+    return classes(
       styles.table_column,
       indexRow % 2 ? styles.even : styles.odd,
       resizable && styles.resizable,
@@ -56,7 +58,7 @@ const TableColumn = ({
           <input
             {...props}
             autoFocus
-            defaultValue={value}
+            defaultValue={serializedValue}
             onBlur={() => onSave?.(editedValue.current)}
             onChange={(e) => {
               editedValue.current = e.target.value;
@@ -82,12 +84,12 @@ const TableColumn = ({
 
   return (
     <ColumnComponent
-      title={value}
+      title={typeof serializedValue === 'string' ? serializedValue.slice(0, 20) : serializedValue}
       className={className}
       style={style}
       onDoubleClick={onDoubleClick}
     >
-      {isEditing ? null : value}
+      {isEditing ? null : serializedValue}
     </ColumnComponent>
   );
 };

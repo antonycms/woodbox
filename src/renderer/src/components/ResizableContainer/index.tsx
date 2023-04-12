@@ -1,5 +1,5 @@
-import clsx from 'clsx';
 import React from 'react';
+import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 export type OnResizeCallback = (size: { width?: number; height?: number }) => void;
@@ -104,13 +104,13 @@ const ResizableContainer = ({
     <div
       draggable="false"
       title={title}
-      className={clsx(styles.container, className, direction === 'vertical' && styles.vertical)}
+      className={classes(styles.container, className, direction === 'vertical' && styles.vertical)}
       style={style}
     >
       {direction === 'vertical' && (
         <div
           draggable="false"
-          className={clsx(styles.resizeBar, styles.vertical)}
+          className={classes(styles.resizeBar, styles.vertical)}
           onDoubleClick={onDoubleClick}
           onPointerDown={handleResizeVertical}
         />
@@ -118,7 +118,7 @@ const ResizableContainer = ({
 
       <div
         draggable="false"
-        className={clsx(styles.content, direction === 'vertical' && styles.vertical)}
+        className={classes(styles.content, direction === 'vertical' && styles.vertical)}
         ref={refContentDiv}
         style={{
           width: width ? `${width}px` : undefined,
@@ -131,7 +131,7 @@ const ResizableContainer = ({
       {direction === 'horizontal' && (
         <div
           draggable="false"
-          className={clsx(styles.resizeBar, styles.horizontal)}
+          className={classes(styles.resizeBar, styles.horizontal)}
           onDoubleClick={onDoubleClick}
           onPointerDown={handleResizeHorizontal}
         />

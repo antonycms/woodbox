@@ -1,10 +1,10 @@
 import React from 'react';
 import { useForm } from '@renderer/hooks/useForm';
-import { Button } from '../Button';
-import { Column, Row } from '../Grid';
-import { Input } from '../Input';
-import { Modal } from '../Modal';
-import { Spacer } from '../Spacer';
+import { Button } from '@renderer/components/Button';
+import { Column, Row } from '@renderer/components/Grid';
+import { Input } from '@renderer/components/Input';
+import { Modal } from '@renderer/components/Modal';
+import { Spacer } from '@renderer/components/Spacer';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 

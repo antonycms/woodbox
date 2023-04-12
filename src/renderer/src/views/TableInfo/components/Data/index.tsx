@@ -21,8 +21,10 @@ import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { IColumn } from '@renderer/components/Table2/dtos';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
+  const { activeTheme: { tableInfo: { data: theme }, table: themeTable } } = useThemeContext();
   const { columns, loading: loadingTableInfo } = useTableInfoContext();
 
   const { getTableData } = useStoreContext();
@@ -195,6 +197,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   return (
     <div className={styles.container}>
       <Table
+        {...themeTable}
         selectable
         columns={columnsSerialized}
         rows={serializedData}
@@ -217,28 +220,28 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
         }}
       />
 
-      <Bar>
-        <Button title="Salvar" text smallIcon>
+      <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
+        <Button title="Salvar" text smallIcon color={theme.bar.color}>
           <SaveIcon size={16} />
         </Button>
 
-        <Button title="Adicionar" text smallIcon>
+        <Button title="Adicionar" text smallIcon color={theme.bar.color}>
           <AddIcon size={14} />
         </Button>
 
-        <Button title="Duplicar itens selecionados" text smallIcon>
+        <Button title="Duplicar itens selecionados" text smallIcon color={theme.bar.color}>
           <DuplicateIcon size={20} />
         </Button>
 
-        <Button title="Remover itens selecionados" text smallIcon>
+        <Button title="Remover itens selecionados" text smallIcon color={theme.bar.color}>
           <RemoveIcon size={16} />
         </Button>
 
-        <Button title="Mostrar dados do vínculo" text smallIcon>
+        <Button title="Mostrar dados do vínculo" text smallIcon color={theme.bar.color}>
           <PanelFile size={16} />
         </Button>
 
-        <Button title="Atualizar dados" text smallIcon onClick={handleRefresh}>
+        <Button title="Atualizar dados" text smallIcon color={theme.bar.color} onClick={handleRefresh}>
           <IconRefresh size={18} />
         </Button>
 
@@ -249,11 +252,14 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
           maxWidth="80px"
           value={limit}
           onChange={handleChangeLimit}
+          backgroundColor={theme.bar.fieldBackgroundColor}
+          color={theme.bar.fieldColor}
+          placeholderColor={theme.bar.fieldPlaceholderColor}
         />
 
         <Spacer />
 
-        <Text userSelect={false} title="Data da última atualização">
+        <Text userSelect={false} color={theme.bar.color} title="Data da última atualização">
           Atualizado em {lastFetchDateSerialized}
         </Text>
       </Bar>

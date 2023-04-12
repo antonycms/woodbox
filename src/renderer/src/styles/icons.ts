@@ -3,6 +3,7 @@ import { FiSave } from 'react-icons/fi';
 import { FaDatabase, FaFileAlt, FaFolderPlus, FaPlus, FaRegSun } from 'react-icons/fa';
 import { CgExport, CgTrash } from 'react-icons/cg';
 import { BiListPlus } from 'react-icons/bi';
+import { BsFiletypeSql } from 'react-icons/bs';
 import { makeIcon } from '@renderer/components/Icon';
 import {
   MdOutlineChromeReaderMode,
@@ -12,6 +13,7 @@ import {
 } from 'react-icons/md';
 
 export const AddIcon = makeIcon(FaPlus, 20, 6);
+export const AddSqlIcon = makeIcon(BsFiletypeSql);
 export const SaveIcon = makeIcon(FiSave);
 export const RemoveIcon = makeIcon(CgTrash);
 export const RunIcon = makeIcon(IoMdPlay);

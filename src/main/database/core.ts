@@ -4,12 +4,17 @@ import { getConnectionsSaved } from '../storage/store';
 
 const activeConnections: IConnection[] = [];
 
+export const closeAllConnections = async () => {
+  await Promise.all(activeConnections.map((connection) => connection?.instance?.destroy?.()));
+};
+
 const makeConnectionInstance = async (config: IConnectionConfig) => {
   const { dialect, database, host, port, username: user, password } = config;
 
   let instance: null | Knex<any, unknown[]>;
 
   instance = knex({
+    debug: process.env.NODE_ENV === 'development',
     client: dialect,
     connection: {
       host,
@@ -17,6 +22,16 @@ const makeConnectionInstance = async (config: IConnectionConfig) => {
       user,
       password,
       database,
+    },
+    pool: {
+      min: 0,
+      max: 6,
+      createTimeoutMillis: 3000,
+      acquireTimeoutMillis: 30000,
+      idleTimeoutMillis: 30000,
+      reapIntervalMillis: 1000,
+      createRetryIntervalMillis: 100,
+      propagateCreateError: false,
     },
   });
 
@@ -189,4 +204,15 @@ export const getTableData = async (
   ).map((raw) => raw?.rows || []);
 
   return { count, data };
+};
+
+export const runSql = async (connectionId: string, sql) => {
+  const connection = await getConnection(connectionId);
+  const { instance } = connection;
+
+  const data = await instance.raw(sql);
+
+  console.log('>>', data);
+
+  return data?.rows || [];
 };

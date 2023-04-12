@@ -1,7 +1,7 @@
 import React from 'react';
-import clsx from 'clsx';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { SpinnerLoading } from '@renderer/components/Loaders';
+import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 export const Button = React.memo((props: IButtonProps) => {
@@ -25,7 +25,7 @@ export const Button = React.memo((props: IButtonProps) => {
     ...gridProps
   } = props;
 
-  const classes = clsx(
+  const classesButton = classes(
     styles.button,
     className,
     text && styles.text,
@@ -45,7 +45,7 @@ export const Button = React.memo((props: IButtonProps) => {
         disabled={isDisabled}
         onDoubleClick={onDoubleClick}
         style={style}
-        className={classes}
+        className={classesButton}
       >
         {!loading && (
           <>

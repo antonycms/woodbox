@@ -1,10 +1,10 @@
-:root {
-  --border-tab: 2px solid var(--color-border);
+:root .outsideBar {
+  --borderTab: 2px solid var(--colorBorder);
 }
 
 .outsideBar {
   overflow-x: hidden;
-  background-color: var(--color-dark);
+  display: flex;
 }
 
 .outsideBar:hover,
@@ -19,19 +19,19 @@
 }
 
 .outsideBar.borderBottom {
-  border-bottom: var(--border-tab);
+  border-bottom: var(--borderTab);
 }
 
 .outsideBar.borderTop {
-  border-top: var(--border-tab);
+  border-top: var(--borderTab);
 }
 
 .outsideBar.borderLeft {
-  border-left: var(--border-tab);
+  border-left: var(--borderTab);
 }
 
 .outsideBar.borderRight {
-  border-right: var(--border-tab);
+  border-right: var(--borderTab);
 }
 
 .tabBar {
@@ -39,31 +39,32 @@
   flex-direction: row;
   box-sizing: content-box;
   background-color: var(--backgroundColorBar);
+  flex: 1;
 }
 
 .tabBar.reverse {
   flex-direction: row-reverse;
 }
 
-/* .tabBar.noContent {
+.tabBar.noContent {
   border: 0;
 }
 
 .tabBar.borderBottom {
-  border-bottom: var(--border-tab);
+  border-bottom: var(--borderTab);
 }
 
 .tabBar.borderTop {
-  border-top: var(--border-tab);
+  border-top: var(--borderTab);
 }
 
 .tabBar.borderLeft {
-  border-left: var(--border-tab);
+  border-left: var(--borderTab);
 }
 
 .tabBar.borderRight {
-  border-right: var(--border-tab);
-} */
+  border-right: var(--borderTab);
+}
 
 .tabBar.vertical {
   flex-direction: column;
@@ -74,17 +75,17 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  border-right: 2px solid var(--color-border);
+  border-right: var(--borderTab);
   padding: 0 10px;
 
-  background-color: var(--color-dark);
+  /* background-color: var(--color-dark); */
   user-select: none;
   cursor: pointer;
 }
 
 .tabBar.reverse .tab {
   border-right: unset;
-  border-left: 2px solid var(--color-border);
+  border-left: var(--borderTab);
 }
 
 .tab:not(.active):hover {

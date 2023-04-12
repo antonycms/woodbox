@@ -1,17 +1,16 @@
 import React from 'react';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
+import { Welcolme } from '@renderer/components/Welcome';
 import { QueryEditor } from '@renderer/views/QueryEditor';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
 
 export const MainContent = () => {
-  const { tabs, removeTab, addTab, activeTabId, setActiveTabId } = useAppTabContext();
-  const { activeTheme } = useThemeContext();
+  const { tabs, removeTab, activeTabId, setActiveTabId } = useAppTabContext();
+  const { activeTheme: { mainTab: theme } } = useThemeContext();
 
-  React.useEffect(() => {
-    addTab({ component: QueryEditor });
-  }, []);
+  if (!tabs.length) return <Welcolme />;
 
   return (
     <div className={styles.container}>
@@ -19,10 +18,11 @@ export const MainContent = () => {
         allowClose
         draggable
         borderBottom
-        color={activeTheme.mainTab.color}
-        ascentColor={activeTheme.mainTab.ascentColor}
-        backgroundColor={activeTheme.mainTab.backgroundColor}
-        backgroundColorBar={activeTheme.mainTab.bar.backgroundColor}
+        color={theme.color}
+        ascentColor={theme.ascentColor}
+        backgroundColor={theme.backgroundColor}
+        backgroundColorBar={theme.bar.backgroundColor}
+        borderColor={theme.bar.borderColor}
         activeTabId={activeTabId}
         onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
         idTabBar="app_tabs"

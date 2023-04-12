@@ -11,7 +11,7 @@ export const Modal = React.memo((props: IModalProps) => {
 
   const {
     activeTheme: {
-      modal: { backgroundColor },
+      modal: { backgroundColor, color },
     },
   } = useThemeContext();
 
@@ -44,7 +44,7 @@ export const Modal = React.memo((props: IModalProps) => {
         {!!title && (
           <>
             <Row>
-              <Text bold userSelect={false}>
+              <Text bold userSelect={false} color={color}>
                 {title}
               </Text>
             </Row>

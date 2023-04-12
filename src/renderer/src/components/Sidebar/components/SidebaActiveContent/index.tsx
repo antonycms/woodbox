@@ -1,7 +1,6 @@
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { toCssProperties } from '@renderer/styles/theme';
-import clsx from 'clsx';
 import React from 'react';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
 
 interface ISidebarActiveContentProps {
@@ -17,7 +16,7 @@ export const SidebarActiveContent = React.memo((props: ISidebarActiveContentProp
 
   const stylesVar = toCssProperties({ backgroundColorSidebar: colors.backgroundColor });
 
-  return <div style={stylesVar} className={clsx(styles.menuContainer, active && styles.active)}>{children}</div>;
+  return <div style={stylesVar} className={classes(styles.menuContainer, active && styles.active)}>{children}</div>;
 });
 
 SidebarActiveContent.displayName = 'SidebarActiveContent';

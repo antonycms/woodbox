@@ -15,6 +15,11 @@ interface MenuBar<Colors> {
   ascentColor?: Colors;
 }
 
+interface Welcome<Colors> {
+  color?: Colors;
+  backgroundColor?: Colors;
+}
+
 interface SideBar<Colors> {
   color?: Colors;
   backgroundColor?: Colors;
@@ -23,6 +28,7 @@ interface SideBar<Colors> {
   fieldBackgroundColor?: Colors;
   fieldLabelColor?: Colors;
   menuBar?: MenuBar<Colors>;
+  borderColor?: Colors;
 }
 
 interface Editor<Colors> {
@@ -35,24 +41,26 @@ interface Editor<Colors> {
   selectionColor?: Colors;
   keywordColor?: Colors;
   identifierColor?: Colors;
-  ColorsColor?: Colors;
   numberColor?: Colors;
   delimiterColor?: Colors;
   stringColor?: Colors;
 }
 
 interface Table<Colors> {
-  backgroundColor?: Colors;
-  headerBackgroundColor?: Colors;
-  headerColor?: Colors;
-  headerSeparatorColor?: Colors;
-  rowBackgroundColor?: Colors;
-  rowOddBackgroundColor?: Colors;
-  rowColor?: Colors;
-  rowSeparatorColor?: Colors;
+  borderColor: Colors;
+  backgroundColorHeader: Colors;
+  colorHeader: Colors;
+  backgroundColorRowOdd: Colors;
+  colorRowOdd: Colors;
+  backgroundColorRowEven: Colors;
+  colorRowEven: Colors;
+  backgroundColorColumnEdited: Colors;
+  colorColumnEdited: Colors;
+  backgroundColor: Colors;
 }
 
 interface Modal<Colors> {
+  color?: Colors;
   backgroundColor?: Colors;
   fieldColor?: Colors;
   fieldBackgroundColor?: Colors;
@@ -68,10 +76,12 @@ interface Modal<Colors> {
 interface Tab<Colors> {
   bar?: {
     backgroundColor?: Colors;
+    borderColor?: Colors;
   };
   color?: Colors;
   backgroundColor?: Colors;
   ascentColor?: Colors;
+  borderColor?: Colors;
 }
 
 interface TableInfo<Colors> {
@@ -83,6 +93,7 @@ interface TableInfo<Colors> {
     bar: {
       backgroundColor?: Colors;
       color?: Colors;
+      borderColor?: Colors;
     };
   };
 
@@ -93,6 +104,7 @@ interface TableInfo<Colors> {
       fieldBackgroundColor?: Colors;
       fieldColor?: Colors;
       fieldPlaceholderColor?: Colors;
+      borderColor?: Colors;
     };
   };
 }
@@ -101,10 +113,12 @@ interface QueryEditor<Colors> {
   tab?: {
     bar?: {
       backgroundColor?: Colors;
+      borderColor?: Colors;
     };
     color?: Colors;
     backgroundColor?: Colors;
     ascentColor?: Colors;
+    borderColor?: Colors;
   };
 
   bar?: {
@@ -113,6 +127,7 @@ interface QueryEditor<Colors> {
     fieldColor?: Colors;
     fieldBackgroundColor?: Colors;
     fieldPlaceholderColor?: Colors;
+    borderColor?: Colors;
   };
 }
 
@@ -136,6 +151,7 @@ export interface ITheme<Colors = unknown> {
     [key: string]: string;
   };
 
+  welcome?: Welcome<Colors>;
   toast?: Toast<Colors>;
   sideBar?: SideBar<Colors>;
   editor?: Editor<Colors>;

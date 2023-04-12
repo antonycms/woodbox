@@ -1,6 +1,5 @@
 import React from 'react';
-import clsx from 'clsx';
-import { toCssProperties } from '@renderer/styles/theme';
+import { classes, toCssProperties } from '@renderer/styles/theme';
 import Tab from '../Tab';
 import styles from '../../styles.module.css';
 
@@ -23,6 +22,7 @@ const TabsBar = (props: ITabsBarProps) => {
     color,
     backgroundColor,
     ascentColor,
+    borderColor,
     height = '30px',
     width = '100%',
   } = props;
@@ -92,7 +92,7 @@ const TabsBar = (props: ITabsBarProps) => {
     onActiveTab(tab);
   };
 
-  const classes = clsx(
+  const classesTabBar = classes(
     styles.tabBar,
     noHasContent && styles.noContent,
     borderTop && styles.borderTop,
@@ -125,20 +125,23 @@ const TabsBar = (props: ITabsBarProps) => {
 
     const activeTab = tabs.find((t) => t.idTab === activeTabId);
 
-    if (activeTab?.idTab != activeTabId) {
+    if (!activeTab) {
+      onActiveTab(tabs[tabs.length - 1]);
+    } //
+    else if (activeTab?.idTab != activeTabId) {
       onActiveTab(activeTab);
     }
   }, [tabs, activeTabId]);
 
   return (
-    <div className={clsx(styles.outsideBar, classes)}>
+    <div className={classes(styles.outsideBar, classes)} style={toCssProperties({ colorBorder: borderColor })}>
       <div
         id={`tab_bar_${idTabBar}`}
         ref={ref}
         onDrop={draggable ? onDrop : undefined}
         onDragOver={(e) => e.preventDefault()}
         style={{ ...toCssProperties({ backgroundColorBar }), width }}
-        className={classes}
+        className={classesTabBar}
       >
         {tabs.map((tab) => (
           <Tab
@@ -197,4 +200,5 @@ export interface ITabsBarProps {
   color: string;
   backgroundColor: string;
   backgroundColorBar: string;
+  borderColor: string;
 }
