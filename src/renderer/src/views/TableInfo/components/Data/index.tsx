@@ -24,7 +24,7 @@ import { IColumn } from '@renderer/components/Table2/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: { data: theme }, table: themeTable } } = useThemeContext();
+  const { activeTheme: { tableInfo: { data: theme } } } = useThemeContext();
   const { columns, loading: loadingTableInfo } = useTableInfoContext();
 
   const { getTableData } = useStoreContext();
@@ -197,7 +197,6 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   return (
     <div className={styles.container}>
       <Table
-        {...themeTable}
         selectable
         columns={columnsSerialized}
         rows={serializedData}

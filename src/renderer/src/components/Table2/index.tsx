@@ -8,6 +8,7 @@ import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { toCssProperties } from '@renderer/styles/theme';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
 interface IColumn {
   label: string;
@@ -29,16 +30,6 @@ interface ITableProps {
   columns: IColumn[];
   selectable?: boolean;
   loading?: boolean;
-  borderColor: string;
-  backgroundColorHeader: string;
-  colorHeader: string;
-  backgroundColorRowOdd: string;
-  colorRowOdd: string;
-  backgroundColorRowEven: string;
-  colorRowEven: string;
-  backgroundColorColumnEdited?: string;
-  colorColumnEdited?: string;
-  backgroundColor: string;
 }
 
 const Table = (props: ITableProps) => {
@@ -52,9 +43,9 @@ const Table = (props: ITableProps) => {
     onScrollEnd,
     editedRows,
     onEditRow,
-    ...stylesProps
   } = props;
 
+  const { activeTheme: { table: theme } } = useThemeContext();
   const refBodyContainer = React.useRef<HTMLDivElement>();
   const rowHeight = React.useMemo(() => 35, []);
   const maxColumnSize = React.useMemo(() => 760, []);
@@ -300,7 +291,7 @@ const Table = (props: ITableProps) => {
   })();
 
   const cssVars = toCssProperties({
-    ...stylesProps,
+    ...theme,
     height: `${rows.length * rowHeight}px`,
     width: `${tableDetails.width}px`,
     rowHeight: `${rowHeight}px`,
@@ -324,7 +315,7 @@ const Table = (props: ITableProps) => {
 
   if (!columns?.length) {
     return (
-      <div className={styles.table_outside_container}>{!!loading && <MultiplesBarLoading />}</div>
+      <div className={styles.table_outside_container} style={cssVars}>{!!loading && <MultiplesBarLoading />}</div>
     );
   }
 

@@ -60,13 +60,20 @@ const TableColumn = ({
   // minify string lenght in cell to improve performance
   const serializedValue = (() => {
     if (isEditing) return null;
-    if (typeof value === 'boolean' || typeof value === null) return `${value}`.toUpperCase();
-    if (typeof value !== 'string') return value;
+    let v = value;
+
+    if (typeof value === 'boolean' || typeof value === null) {
+      v = `${v}`.toUpperCase();
+    }
+    if (typeof value === 'object') {
+      v = JSON.stringify(v);
+    }
+    if (typeof v !==  'string') return v;
 
     const maxValueLenght = Math.ceil(width / 5);
-    const valueLenght = maxValueLenght > value.length ? value.length : maxValueLenght;
+    const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
 
-    return value.slice(0, valueLenght);
+    return v.slice(0, valueLenght);
   })();
 
   const style = React.useMemo(() => {

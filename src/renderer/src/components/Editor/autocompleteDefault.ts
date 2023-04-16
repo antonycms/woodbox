@@ -23,29 +23,93 @@ const keywordsItems = keywords
   .filter((word) => !operators.includes(word) && !builtinFunctions.includes(word))
   .map(makeItem('Reserved Word SQL', languages.CompletionItemKind.Variable));
 
-const allWords = [...keywordsItems, ...operatorsItems, ...builtinFunctionsItems];
+const sqlWords = [...keywordsItems, ...operatorsItems, ...builtinFunctionsItems];
 
-languages.registerCompletionItemProvider('sql', {
-  provideCompletionItems: (model, position) => {
-    const word = model.getWordUntilPosition(position);
+interface IDefineSQlAutocompleteParams {
+  schemas?: { name: string }[];
+  tables: { name: string; schema?: string }[];
+  columns?: { name: string; alias?: string }[];
+  aliases?: { name: string }[];
+}
 
-    const range = {
-      startLineNumber: position.lineNumber,
-      endLineNumber: position.lineNumber,
-      startColumn: word.startColumn,
-      endColumn: word.endColumn,
-    };
+export const defineSQlAutocomplete = ({
+  schemas,
+  aliases,
+  columns = [],
+  tables = [],
+}: IDefineSQlAutocompleteParams) => {
+  return languages.registerCompletionItemProvider('sql', {
+    triggerCharacters: [' ', '.'],
+    provideCompletionItems: (model, position) => {
+      let availableWords: Omit<languages.CompletionItem, 'range'>[] = [...sqlWords];
 
-    const suggestions = allWords.map((item) => ({
-      ...item,
-      range,
-    }));
+      const currentWord = model.getWordAtPosition({
+        lineNumber: position.lineNumber,
+        column: Math.max(position.column - 1, 0),
+      })?.word;
 
-    return {
-      suggestions,
-    };
-  },
-});
+      const currentCharacter = model.getValueInRange({
+        startLineNumber: position.lineNumber,
+        endColumn: position.column,
+        endLineNumber: position.lineNumber,
+        startColumn: position.column - 1,
+      });
+
+      const isFromOrJoin = ['from', 'join'].includes(currentWord?.toLowerCase?.());
+
+      if (currentCharacter === '.') {
+        const isSchema = schemas?.some?.((schema) => schema.name === currentWord);
+        const isAlias = aliases?.some?.((alias) => alias.name === currentWord);
+
+        if (isSchema) {
+          const tablesWords = tables
+            .filter(({ schema }) => currentWord === schema)
+            .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
+
+          availableWords = [...tablesWords];
+        }
+
+        if (isAlias) {
+          const columnsWords = columns
+            .filter(({ alias }) => currentWord === alias)
+            .map(({ name }) => makeItem('Alias', languages.CompletionItemKind.Variable)(name));
+
+          availableWords = [...columnsWords];
+        }
+      } //
+      else if (isFromOrJoin) {
+        if (schemas) {
+          const schemasWords = schemas.map(({ name }) =>
+            makeItem('Esquema', languages.CompletionItemKind.Variable)(name),
+          );
+
+          availableWords = [...schemasWords];
+        } //
+        else {
+          const tablesWords = tables.map(({ name }) =>
+            makeItem('Tabela', languages.CompletionItemKind.Variable)(name),
+          );
+
+          availableWords = [...tablesWords];
+        }
+      }
+
+      const { lineNumber } = position;
+      const { endColumn, startColumn } = model.getWordUntilPosition(position);
+
+      const range = {
+        startLineNumber: lineNumber,
+        endLineNumber: lineNumber,
+        startColumn,
+        endColumn,
+      };
+
+      const suggestions = availableWords.map((item) => ({ ...item, range }));
+
+      return { suggestions };
+    },
+  });
+};
 
 interface ILanguage {
   defaultToken: string;

@@ -206,13 +206,17 @@ export const getTableData = async (
   return { count, data };
 };
 
-export const runSql = async (connectionId: string, sql) => {
+export const runSql = async (connectionId: string, sql: string) => {
   const connection = await getConnection(connectionId);
   const { instance } = connection;
 
-  const data = await instance.raw(sql);
+  const raw = await instance.raw(sql);
 
-  console.log('>>', data);
+  const { command: type, fields: columns, rows = [] } = raw;
 
-  return data?.rows || [];
+  return {
+    type,
+    rows: JSON.parse(JSON.stringify(rows)),
+    columns: columns?.map?.((field) => field.name) || [],
+  };
 };

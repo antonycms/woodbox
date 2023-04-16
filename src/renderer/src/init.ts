@@ -1,5 +1,4 @@
 import '@renderer/components/Editor/monacoWorkers';
-import '@renderer/components/Editor/autocompleteDefault';
 import { applyMonacoTheme } from './styles/theme';
 
 applyMonacoTheme();

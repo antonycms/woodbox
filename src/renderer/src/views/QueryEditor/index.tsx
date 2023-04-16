@@ -7,7 +7,7 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import Table from '@renderer/components/Table';
+import Table from '@renderer/components/Table2';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Button } from '@renderer/components/Button';
 import { Spacer } from '@renderer/components/Spacer';
@@ -25,30 +25,26 @@ import { RunSelectionIcon } from '../../styles/icons';
 import { useStoreContext } from '@renderer/contexts/Store';
 
 interface IQueryResult {
-  idTab: string;
-  type: 'select';
+  type?: string;
   rows?: any[];
   columns?: string[];
   title?: string;
+  loading?: boolean;
 }
 
-interface IDataNewTabResult {
-  type: 'select';
-  rows?: any[];
-  columns?: string[];
-  title?: string;
-}
+type IDataUpdateabResult = Partial<IQueryResult>;
 
 interface IQueryEditorProps {
   id_connection: string;
-};
+}
 
 export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
-  const { runSql } = useStoreContext();
+  const { runSql, connectionsInfo } = useStoreContext();
   const { activeTheme } = useThemeContext();
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>();
+  const [connectionInfo, setConnectionInfo] = React.useState(connectionsInfo.get(id_connection));
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 100);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
@@ -58,8 +54,14 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     new Map(),
   );
 
-  const makeNewTabResult = (data: IDataNewTabResult) => {
-    const { type, columns = [], rows = [], title = `Result ${tabsResult.length + 1}` } = data;
+  const makeNewTabResult = (data: IQueryResult) => {
+    const {
+      loading,
+      type,
+      columns = [],
+      rows = [],
+      title = `Result ${tabsResult.length + 1}`,
+    } = data;
 
     const idTab = generateHash();
 
@@ -69,19 +71,36 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     };
 
     const queryResultData: IQueryResult = {
-      idTab,
       type,
       columns,
-      rows: rows.map((row) => ({ ...row, __hash_rowTable: generateHash() })),
+      rows,
       title,
+      loading,
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
 
-    setQuerysResultData((prevState) => {
-      prevState.set(idTab, queryResultData);
-      return new Map(prevState);
-    });
+    const updateTabResultData = (params: IDataUpdateabResult) => {
+      setQuerysResultData((prevState) => {
+        const newMap = new Map(prevState);
+
+        const prevTabResultData = prevState.get(idTab) || {};
+        const newTabResultData = { type, ...prevTabResultData, ...params };
+
+        newTabResultData.rows = newTabResultData.rows?.map?.((row) => ({
+          ...row,
+          __hash_rowTable: generateHash(),
+        }));
+
+        newMap.set(idTab, newTabResultData);
+
+        return newMap;
+      });
+    };
+
+    updateTabResultData(queryResultData);
+
+    return updateTabResultData;
   };
 
   const removeTabResult = (idTab: string) => {
@@ -111,13 +130,16 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
     if (!value) return;
 
-    const rows = await runSql(id_connection, value);
+    const updateTabResultData = makeNewTabResult({
+      columns: [],
+      rows: [],
+      type: 'SELECT',
+      loading: true,
+    });
 
-    const [firstItem] = rows;
+    const { type, rows, columns } = await runSql(id_connection, value);
 
-    const columns = Object.keys(firstItem);
-
-    makeNewTabResult({ type: 'select', columns, rows });
+    updateTabResultData({ columns, rows, type, loading: false });
   };
 
   const runAllSQL = async () => {
@@ -125,18 +147,18 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
     if (!value) return;
 
-    const rows = await runSql(id_connection, value);
+    const updateTabResultData = makeNewTabResult({
+      columns: [],
+      rows: [],
+      type: 'SELECT',
+      loading: true,
+    });
 
-    const [firstItem] = rows;
+    const { type, rows, columns } = await runSql(id_connection, value);
+    console.log(rows);
 
-    const columns = Object.keys(firstItem);
-
-    makeNewTabResult({ type: 'select', columns, rows });
+    updateTabResultData({ columns, rows, type, loading: false });
   };
-
-  // const runSQL = () => {
-  //   const promise = runSelectionsSQL() || runAllSQL();
-  // };
 
   React.useEffect(() => {
     if (tabsResult.length) {
@@ -186,7 +208,9 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
   return (
     <div className={styles.queryEditorContainer}>
-      <div style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}>
+      <div
+        style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}
+      >
         <Bar
           vertical
           backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
@@ -221,6 +245,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
             <IconFileWrited size={16} />
           </Button>
         </Bar>
+
         <Editor ref={refEditor} dialect="postgres" />
       </div>
 
@@ -252,11 +277,14 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
             {tabsResult.map((tabResult) => {
               const data = querysResultData.get(tabResult.idTab);
 
+              if (!data) return null;
+
               return (
                 <TabContent key={tabResult.idTab} idTab={tabResult.idTab}>
-                  {data.type === 'select' && (
+                  {data.type === 'SELECT' && (
                     <>
                       <Table
+                        loading={!!data.loading}
                         rowKeyExtractor={(item) => item.__hash_rowTable}
                         rows={data.rows}
                         columns={data.columns.map((column) => ({

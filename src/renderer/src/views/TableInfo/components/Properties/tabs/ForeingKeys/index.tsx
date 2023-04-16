@@ -12,7 +12,7 @@ import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const ForeingKeys = ({ id_connection, schema, table }: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: { properties: theme }, table: themeTable } } = useThemeContext();
+  const { activeTheme: { tableInfo: { properties: theme } } } = useThemeContext();
   const { references, loadTableReferences, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
 
@@ -54,7 +54,6 @@ const ForeingKeys = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Table
-        {...themeTable}
         selectable
         rowKeyExtractor={(item) => item.constraint_name}
         onContextMenu={onContextMenuTable}

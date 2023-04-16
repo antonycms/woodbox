@@ -1,17 +1,18 @@
 import React from 'react';
-import { editor as monacoEditor, KeyMod, KeyCode, Selection, IDisposable } from 'monaco-editor';
+import * as monaco from 'monaco-editor';
 
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { defineSQlAutocomplete } from './autocompleteDefault';
 
 const Editor = React.forwardRef<IEditorRef, IEditorProps>(
-  ({ initialValue = '', selections = [], language = 'sql',...props }, ref) => {
+  ({ initialValue = '', selections = [], language = 'sql', ...props }, ref) => {
     const { activeTheme } = useThemeContext();
     const containerRef = React.useRef<HTMLDivElement>();
     const { width, height } = useResize({ HTMLElement: containerRef.current });
-    const [editor, setEditor] = React.useState<monacoEditor.IStandaloneCodeEditor>();
+    const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
 
     const resize = useDebounce(() => editor?.layout?.(), 10);
 
@@ -30,21 +31,21 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       return { scrollTop, scrollLeft };
     };
 
-    const setSelections = (selections: Selection[]) => {
+    const setSelections = (selections: monaco.Selection[]) => {
       if (!selections?.length) return;
 
       editor?.setSelections?.(selections);
     };
 
     const getSelections = () => {
-      return (editor?.getSelections?.() || []) as Selection[];
+      return (editor?.getSelections?.() || []) as monaco.Selection[];
     };
 
     const getSelection = () => {
       return editor?.getSelection?.();
     };
 
-    const getSelectionValue = (selection: Selection) => {
+    const getSelectionValue = (selection: monaco.Selection) => {
       return editor?.getModel?.()?.getValueInRange?.(selection) || '';
     };
 
@@ -57,7 +58,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     };
 
     const initEditor = () => {
-      const currentEditor = monacoEditor.create(
+      const currentEditor = monaco.editor.create(
         containerRef.current,
         {
           language,
@@ -76,7 +77,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       currentEditor.addAction({
         id: 'ctrl+enter',
         label: 'ctrl+enter Shortcut',
-        keybindings: [KeyMod.CtrlCmd | KeyCode.Enter],
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
         run: () => {},
       });
 
@@ -109,7 +110,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     }, []);
 
     React.useEffect(() => {
-      monacoEditor.setTheme('active-theme');
+      monaco.editor.setTheme('active-theme');
     }, [activeTheme, editor]);
 
     React.useEffect(() => {
@@ -139,7 +140,7 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     }, [editor, selections]);
 
     React.useEffect(() => {
-      const monacoListeners: IDisposable[] = [];
+      const monacoListeners: monaco.IDisposable[] = [];
 
       if (props.onChangeSelections) {
         const listenerSelections = editor?.onDidChangeCursorSelection?.((e) => {
@@ -163,6 +164,37 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       };
     }, [editor, props.onChange]);
 
+    React.useEffect(() => {
+      if (!editor) return;
+
+      const schemas = [
+        { name: 'sistema' },
+        { name: 'recursos_humanos' },
+      ];
+      const tables = [
+        { name: 'usuario', schema: 'sistema' },
+        { name: 'pessoa', schema: 'recursos_humanos' },
+      ];
+
+      const aliases = [
+        { name: 'u' },
+        { name: 'p' },
+      ]
+
+      const columns = [
+        { name: 'seq_usuario', alias: 'u' },
+        { name: 'cod_pessoa', alias: 'u' },
+        { name: 'ind_status', alias: 'u' },
+        { name: 'seq_pessoa', alias: 'p' },
+        { name: 'nom_pessoa', alias: 'p' },
+        { name: 'nom_email', alias: 'p' },
+      ]
+
+      const disposable = defineSQlAutocomplete({ schemas, tables, aliases, columns });
+
+      return () => disposable?.dispose();
+    }, [editor, /* tables */]);
+
     return (
       <div className={styles.outsideContainer}>
         <div className={styles.container} ref={containerRef} />
@@ -181,10 +213,10 @@ export interface IEditorProps {
   value?: string;
   initialValue?: string;
   scroll?: IScroll;
-  selections?: Selection[];
+  selections?: monaco.Selection[];
   onUmounted?: (data: IDataUmounted) => void;
   onChange?: (value: string) => void;
-  onChangeSelections?(selections: Selection[]): void;
+  onChangeSelections?(selections: monaco.Selection[]): void;
 }
 
 export interface IScroll {
@@ -195,15 +227,15 @@ export interface IScroll {
 export interface IDataUmounted {
   value: string;
   scroll: IScroll;
-  selections: Selection[];
+  selections: monaco.Selection[];
 }
 
 export interface IEditorRef {
   getValue(): string;
   setValue(value: string): void;
-  getSelections(): Selection[];
-  setSelections(selections: Selection[]): void;
-  getSelectionValue(selection: Selection): string;
+  getSelections(): monaco.Selection[];
+  setSelections(selections: monaco.Selection[]): void;
+  getSelectionValue(selection: monaco.Selection): string;
   getScroll(): IScroll;
   setScroll(scroll: IScroll): void;
   element?: HTMLElement;
