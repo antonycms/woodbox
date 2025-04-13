@@ -1,7 +1,7 @@
 export const toDateTime = (date: Date | string = new Date()) => {
   const localDate = new Date(date);
 
-  return localDate.toLocaleString('pt-BR', {
+  return localDate.toLocaleString(navigator.language, {
     day: 'numeric',
     month: 'numeric',
     year: 'numeric',
