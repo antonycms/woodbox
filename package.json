@@ -5,6 +5,7 @@
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://www.electronjs.org",
+  "license": "MIT",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
@@ -25,7 +26,9 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^5.3.0",
     "knex": "^2.3.0",
-    "pg": "^8.8.0"
+    "mysql2": "^3.4.3",
+    "pg": "^8.8.0",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
@@ -39,6 +42,7 @@
     "@vitejs/plugin-react": "^2.2.0",
     "electron": "^21.3.0",
     "electron-builder": "^23.6.0",
+    "electron-extension-installer": "^1.2.0",
     "electron-vite": "^1.0.14",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
