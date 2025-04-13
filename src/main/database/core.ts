@@ -8,12 +8,26 @@ export const closeAllConnections = async () => {
   await Promise.all(activeConnections.map((connection) => connection?.instance?.destroy?.()));
 };
 
-const makeConnectionInstance = async (config: IConnectionConfig) => {
+const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
   const { dialect, database, host, port, username: user, password } = config;
 
   let instance: null | Knex<any, unknown[]>;
 
+  const pool = noPool
+    ? undefined
+    : {
+        min: 0,
+        max: 6,
+        createTimeoutMillis: 3000,
+        acquireTimeoutMillis: 30000,
+        idleTimeoutMillis: 30000,
+        reapIntervalMillis: 1000,
+        createRetryIntervalMillis: 100,
+        propagateCreateError: false,
+      };
+
   instance = knex({
+    pool,
     debug: process.env.NODE_ENV === 'development',
     client: dialect,
     connection: {
@@ -22,16 +36,6 @@ const makeConnectionInstance = async (config: IConnectionConfig) => {
       user,
       password,
       database,
-    },
-    pool: {
-      min: 0,
-      max: 6,
-      createTimeoutMillis: 3000,
-      acquireTimeoutMillis: 30000,
-      idleTimeoutMillis: 30000,
-      reapIntervalMillis: 1000,
-      createRetryIntervalMillis: 100,
-      propagateCreateError: false,
     },
   });
 
@@ -79,7 +83,7 @@ const makeConnectionInstance = async (config: IConnectionConfig) => {
 };
 
 export const testConnection = async (config: IConnectionConfig) => {
-  const instance = await makeConnectionInstance(config);
+  const instance = await makeConnectionInstance(config, true);
   await instance.destroy();
 };
 
@@ -212,11 +216,20 @@ export const runSql = async (connectionId: string, sql: string) => {
 
   const raw = await instance.raw(sql);
 
-  const { command: type, fields: columns, rows = [] } = raw;
+  const rawArray = Array.isArray(raw) ? raw : [raw];
 
-  return {
-    type,
-    rows: JSON.parse(JSON.stringify(rows)),
-    columns: columns?.map?.((field) => field.name) || [],
-  };
+  const serializedData = rawArray.map((rawResult) => {
+    const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
+
+    console.log(rawResult);
+
+    return {
+      type,
+      affected_rows,
+      rows: JSON.parse(JSON.stringify(rows)),
+      columns: columns?.map?.((field) => field.name) || [],
+    };
+  });
+
+  return serializedData;
 };
