@@ -1,11 +1,12 @@
 import './storage';
-import { app, shell, BrowserWindow } from 'electron';
 import * as path from 'path';
+import { app, shell, BrowserWindow } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-extension-installer';
 
-import { closeAllConnections } from  './database';
+import { closeAllConnections } from './database';
 
-function createWindow(): void {
+function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1000,
     height: 675,
@@ -36,6 +37,8 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  return mainWindow;
 }
 
 app.whenReady().then(() => {
@@ -51,7 +54,15 @@ app.whenReady().then(() => {
    */
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
 
-  createWindow();
+  const mainWindow = createWindow();
+
+  if (is.dev) {
+    installExtension(REACT_DEVELOPER_TOOLS, { loadExtensionOptions: { allowFileAccess: true } })
+      .then((name) => console.log(`Added Extension:  ${name}`))
+      .catch((err) => console.log('An error occurred: ', err)).finally(() => {
+        mainWindow.webContents.openDevTools();
+      })
+  }
 });
 
 /**
@@ -59,13 +70,13 @@ app.whenReady().then(() => {
  */
 app.on('before-quit', async () => {
   await closeAllConnections();
-})
+});
 
- /**
-  * Quit when all windows are closed, except on macOS.
-  * There, it's common for applications and their menu bar to
-  * stay active until the user quits explicitly with Cmd + Q.
-  */
+/**
+ * Quit when all windows are closed, except on macOS.
+ * There, it's common for applications and their menu bar to
+ * stay active until the user quits explicitly with Cmd + Q.
+ */
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
