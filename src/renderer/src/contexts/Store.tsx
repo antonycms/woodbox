@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import call from '../utils/call';
 
 const StoreContext = React.createContext<IStoreContext>({} as IStoreContext);

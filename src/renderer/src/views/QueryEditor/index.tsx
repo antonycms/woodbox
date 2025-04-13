@@ -2,7 +2,7 @@ import React from 'react';
 import Editor, { IEditorRef } from '@renderer/components/Editor';
 import styles from './styles.module.css';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';

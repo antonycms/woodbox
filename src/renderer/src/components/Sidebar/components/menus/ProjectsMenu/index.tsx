@@ -17,7 +17,7 @@ import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import { ReactComponent as WholeWordIcon } from '@renderer/assets/icons/whole-word.svg';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 
 const ProjectsMenu = () => {

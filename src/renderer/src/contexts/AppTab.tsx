@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 
 const AppTabContext = React.createContext<ITabContext>({} as any);
 

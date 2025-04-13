@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
 import { classes, toCssProperties } from '@renderer/styles/theme/utils';

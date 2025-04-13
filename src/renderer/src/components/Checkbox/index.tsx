@@ -1,7 +1,7 @@
 import React from 'react';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 

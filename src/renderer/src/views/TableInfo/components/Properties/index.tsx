@@ -2,7 +2,7 @@ import React from 'react';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import { useForm } from '@renderer/hooks/useForm';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITableInfoProps } from '../../dtos';
