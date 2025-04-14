@@ -2,7 +2,6 @@ import './storage';
 import * as path from 'path';
 import { app, shell, BrowserWindow } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
-import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-extension-installer';
 
 import { closeAllConnections } from './database';
 
@@ -57,11 +56,7 @@ app.whenReady().then(() => {
   const mainWindow = createWindow();
 
   if (is.dev) {
-    installExtension(REACT_DEVELOPER_TOOLS, { loadExtensionOptions: { allowFileAccess: true } })
-      .then((name) => console.log(`Added Extension:  ${name}`))
-      .catch((err) => console.log('An error occurred: ', err)).finally(() => {
-        mainWindow.webContents.openDevTools();
-      })
+    mainWindow.webContents.openDevTools();
   }
 });
 

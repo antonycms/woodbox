@@ -15,7 +15,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import styles from './styles.module.css';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
-import { ReactComponent as WholeWordIcon } from '@renderer/assets/icons/whole-word.svg';
+import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { generateHash } from '@renderer/utils/string';
 import { QueryEditor } from '@renderer/views/QueryEditor';
