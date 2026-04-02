@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
 import { Input } from '@renderer/components/Input';
@@ -9,20 +9,23 @@ import { useForm } from '@renderer/hooks/useForm';
 import { Select } from '../Select';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
-import { Form } from '@renderer/components/Form';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
     const { showToast } = useToast();
+
     const { connections, addConnection, editConnection, connectionTypes, testConnection } =
       useStoreContext();
+
     const {
       activeTheme: { modal: colors },
     } = useThemeContext();
 
+    const formRef = React.useRef<HTMLFormElement>();
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
-    const { register, handleSubmit, reset, setState, state } = useForm<IDataNewConnection>({
+
+    const { register, handleSubmit, reset, setState, getValue } = useForm<IDataNewConnection>({
       dialect: 'postgres',
       description: '',
       host: '',
@@ -32,33 +35,42 @@ export const ModalNewConnection = React.memo(
       password: '',
     });
 
-    const close = () => {
+    const close = React.useCallback(() => {
       reset();
       onClose?.();
-    };
+    }, [reset, onClose]);
 
-    const onSubmit = handleSubmit(async (data) => {
+    const onSubmit = React.useCallback(
+      handleSubmit(async (data) => {
+        const connection = {
+          ...data,
+          port: Number(data.port),
+          id_project: idProject || data.id_project,
+        };
+
+        if (idConnection) {
+          await editConnection(idConnection, connection);
+        } //
+        else {
+          await addConnection(connection);
+        }
+
+        close();
+      }),
+      [idProject, idConnection],
+    );
+
+    const checkConnection = useCallback(async () => {
+      const checkDataForm = formRef.current.reportValidity();
+
+      if (!checkDataForm) return;
+
+      const formValue = getValue();
+
       const connection = {
-        ...data,
-        port: Number(data.port),
-        id_project: idProject || data.id_project,
-      };
-
-      if (idConnection) {
-        await editConnection(idConnection, connection);
-      } //
-      else {
-        await addConnection(connection);
-      }
-
-      close();
-    });
-
-    const checkConnection = async () => {
-      const connection = {
-        ...state,
-        port: Number(state.port),
-        id_project: idProject || state.id_project,
+        ...formValue,
+        port: Number(formValue.port),
+        id_project: idProject || formValue.id_project,
       };
 
       try {
@@ -72,7 +84,7 @@ export const ModalNewConnection = React.memo(
       } finally {
         setLoadingTestConnection(false);
       }
-    };
+    }, []);
 
     const loadConnectionEditingData = async () => {
       if (!idConnection) return;
@@ -88,7 +100,7 @@ export const ModalNewConnection = React.memo(
 
     return (
       <Modal title="Nova Conexão" width="500px" show={show}>
-        <Form id="formNewConnection" onSubmit={onSubmit}>
+        <form id="formNewConnection" onSubmit={onSubmit} ref={formRef}>
           <Row>
             <Input
               required
@@ -156,48 +168,47 @@ export const ModalNewConnection = React.memo(
               {...register('password')}
             />
           </Row>
-        </Form>
 
-        <Divider size={4} />
+          <Divider size={4} />
 
-        <Row>
-          <Button
-            xs={6}
-            sm={4}
-            md={3}
-            onClick={checkConnection}
-            loading={loadingTestConnection}
-            color={colors.testButtonColor}
-            backgroundColor={colors.testButtonBackgroundColor}
-          >
-            Testar
-          </Button>
+          <Row>
+            <Button
+              xs={6}
+              sm={4}
+              md={3}
+              onClick={checkConnection}
+              loading={loadingTestConnection}
+              color={colors.testButtonColor}
+              backgroundColor={colors.testButtonBackgroundColor}
+            >
+              Testar
+            </Button>
 
-          <Spacer />
+            <Spacer />
 
-          <Button
-            xs={6}
-            sm={4}
-            md={3}
-            onClick={close}
-            color={colors.cancelButtonColor}
-            backgroundColor={colors.cancelButtonBackgroundColor}
-          >
-            Cancelar
-          </Button>
+            <Button
+              xs={6}
+              sm={4}
+              md={3}
+              onClick={close}
+              color={colors.cancelButtonColor}
+              backgroundColor={colors.cancelButtonBackgroundColor}
+            >
+              Cancelar
+            </Button>
 
-          <Button
-            xs={6}
-            sm={4}
-            md={3}
-            type="submit"
-            form="formNewConnection"
-            color={colors.saveButtonColor}
-            backgroundColor={colors.saveButtonBackgroundColor}
-          >
-            Salvar
-          </Button>
-        </Row>
+            <Button
+              xs={6}
+              sm={4}
+              md={3}
+              type="submit"
+              color={colors.saveButtonColor}
+              backgroundColor={colors.saveButtonBackgroundColor}
+            >
+              Salvar
+            </Button>
+          </Row>
+        </form>
       </Modal>
     );
   },

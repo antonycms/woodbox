@@ -1,7 +1,7 @@
 import React from 'react';
 import { useForm } from '@renderer/hooks/useForm';
 import { Button } from '@renderer/components/Button';
-import { Column, Row } from '@renderer/components/Grid';
+import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
@@ -47,41 +47,40 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
   return (
     <Modal title="Novo Projeto" width="500px" show={show}>
       <form onSubmit={onSubmit}>
-        <Row>
-          <Column md={12}>
-            <Input
-              required
-              backgroundColor={colors.fieldBackgroundColor}
-              color={colors.fieldColor}
-              label="Descrição"
-              labelColor={colors.fieldLabelColor}
-              {...register('description')}
-            />
-          </Column>
-        </Row>
+        <Input
+          required
+          backgroundColor={colors.fieldBackgroundColor}
+          color={colors.fieldColor}
+          label="Descrição"
+          labelColor={colors.fieldLabelColor}
+          md={12}
+          {...register('description')}
+        />
 
         <Row>
           <Spacer />
 
-          <Column xs={6} sm={4} md={3}>
-            <Button
-              color={colors.cancelButtonColor}
-              backgroundColor={colors.cancelButtonBackgroundColor}
-              onClick={close}
-            >
-              Cancelar
-            </Button>
-          </Column>
+          <Button
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+            onClick={close}
+            xs={6}
+            sm={4}
+            md={3}
+          >
+            Cancelar
+          </Button>
 
-          <Column xs={6} sm={4} md={3}>
-            <Button
-              color={colors.saveButtonColor}
-              backgroundColor={colors.saveButtonBackgroundColor}
-              type="submit"
-            >
-              Salvar
-            </Button>
-          </Column>
+          <Button
+            color={colors.saveButtonColor}
+            backgroundColor={colors.saveButtonBackgroundColor}
+            type="submit"
+            xs={6}
+            sm={4}
+            md={3}
+          >
+            Salvar
+          </Button>
         </Row>
       </form>
     </Modal>

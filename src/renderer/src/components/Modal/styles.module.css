@@ -8,6 +8,10 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
+.hidden {
+  display: none;
+}
+
 .container {
   padding: 20px;
   width: 100%;

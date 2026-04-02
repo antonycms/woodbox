@@ -4,7 +4,10 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { Divider } from '@renderer/components/Divider';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
+import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
+
+const containerElement = document.getElementById('modal-root');
 
 export const Modal = React.memo((props: IModalProps) => {
   const { show, title, onClose, justHide, children, closeOutside = false, width = '800px' } = props;
@@ -15,32 +18,32 @@ export const Modal = React.memo((props: IModalProps) => {
     },
   } = useThemeContext();
 
-  const [container, setContainer] = React.useState<HTMLDivElement>();
+  const styleOverlay = React.useMemo(() => {
+    return { display: justHide && !show ? 'none' : 'unset' };
+  }, [show, justHide]);
 
-  const emitCloseOutside = ({ target, currentTarget }) => {
-    if (!closeOutside || (target && target !== currentTarget)) return;
+  const styleContainer = React.useMemo(() => {
+    return { backgroundColor, maxWidth: width };
+  }, [backgroundColor, width]);
 
-    onClose?.();
-  };
+  const emitCloseOutside = React.useCallback(
+    ({ target, currentTarget }) => {
+      if (target && target !== currentTarget) return;
 
-  React.useEffect(() => {
-    const div = document.createElement('div');
-    document.body.appendChild(div);
+      onClose?.();
+    },
+    [onClose],
+  );
 
-    setContainer(div);
-
-    return () => div?.remove?.();
-  }, []);
-
-  if (!container || !show) return null;
+  if (!show && !justHide) return;
 
   return ReactDOM.createPortal(
     <div
-      className={styles.overlay}
-      onClick={emitCloseOutside}
-      style={{ display: justHide && !show ? 'none' : 'unset' }}
+      className={classes(styles.overlay, !show && justHide && styles.hidden)}
+      onClick={closeOutside ? emitCloseOutside : undefined}
+      style={styleOverlay}
     >
-      <div className={styles.container} style={{ backgroundColor, maxWidth: width }}>
+      <div className={styles.container} style={styleContainer}>
         {!!title && (
           <>
             <Row>
@@ -56,13 +59,13 @@ export const Modal = React.memo((props: IModalProps) => {
         {children}
       </div>
     </div>,
-    container,
+    containerElement,
   );
 });
 
 Modal.displayName = 'Modal';
 
-interface IModalProps {
+export interface IModalProps {
   children?: React.ReactNode;
   show?: boolean;
   closeOutside?: boolean;
