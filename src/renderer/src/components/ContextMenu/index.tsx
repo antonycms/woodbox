@@ -21,7 +21,9 @@ export interface IContextMenuProps {
 }
 
 export const ContextMenu = (props: IContextMenuProps) => {
-  const { activeTheme: { contextMenu: theme } } = useThemeContext();
+  const {
+    activeTheme: { contextMenu: theme },
+  } = useThemeContext();
   const { position, onClose, options } = props;
   const { x: positionX, y: positionY } = position || {};
 
@@ -47,7 +49,13 @@ export const ContextMenu = (props: IContextMenuProps) => {
       style={{ ...toCssProperties(theme), top: positionY, left: positionX }}
     >
       {options?.map?.((option, index) => (
-        <Button text key={index} onClick={() => option.onClick?.()} alignContent="start" color={theme.color}>
+        <Button
+          text
+          justifyContent="start"
+          key={index}
+          color={theme.color}
+          onClick={() => option.onClick?.()}
+        >
           {option.text}
         </Button>
       ))}
