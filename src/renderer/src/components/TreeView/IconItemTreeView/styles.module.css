@@ -1,0 +1,16 @@
+.icon {
+  color: var(--color-white);
+  margin-left: 4px;
+  font-size: 16px;
+  min-width: 16px;
+  pointer-events: none;
+}
+
+.icon.clickable {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.icon.no_margin {
+  margin: 0px;
+}

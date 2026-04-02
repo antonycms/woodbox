@@ -1,141 +1,93 @@
 import React from 'react';
-import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
-import { FaFolder, FaDatabase, FaTable } from 'react-icons/fa';
-import { CgFileDocument } from 'react-icons/cg';
 import { classes } from '@renderer/styles/theme';
-import { SpinnerLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 
-const Icon = ({ icon, ...props }: IIcon) => {
-  const availableIcons = {
-    defalt: FaFolder,
-    folder: FaFolder,
-    file: CgFileDocument,
-    database: FaDatabase,
-    table: FaTable,
-  };
-
-  const Cp = availableIcons[icon] || availableIcons.defalt;
-
-  return (
-    <Cp
-      {...props}
-      className={classes(styles.icon, icon === 'file' && styles.icon2)}
-      style={{ pointerEvents: 'none' }}
-    />
-  );
-};
-
-const ItemTreeView = (props: IItemTreeViewProps) => {
-  const { icon, loading, color = 'white', childs = [], openedItemsId = [] } = props;
-
-  const isOpen = () => openedItemsId.some((id) => id === props.id);
-
-  return (
-    <div
-      title={props.label}
-      className={classes(styles.containerItem, props.isFirst && styles.first)}
-    >
-      <div
-        id={`item_treeview_id_${props.id}`}
-        className={classes(
-          styles.containerItemInfo,
-          props.focusedItemId === props.id && styles.focused,
-        )}
-      >
-        {loading ? (
-          <SpinnerLoading thickness={2} size={10} color="white" />
-        ) : isOpen() ? (
-          <MdKeyboardArrowDown
-            className={classes(styles.icon, styles.arrow)}
-            color={color}
-            onClick={() => props.onSwitch(props)}
-          />
-        ) : (
-          <MdKeyboardArrowRight
-            className={classes(styles.icon, styles.arrow)}
-            color={color}
-            onClick={() => props.onSwitch(props)}
-          />
-        )}
-
-        {props?.renderIcon?.() || (
-          <Icon className={styles.ignorePointerEvents} icon={icon} color={color} />
-        )}
-
-        <span
-          className={classes(styles.containerItemLabel, styles.ignorePointerEvents)}
-          style={{ color }}
-        >
-          {props.label}
-        </span>
-      </div>
-
-      {isOpen() &&
-        childs.map((child) => (
-          <ItemTreeView
-            {...child}
-            key={child.id}
-            color={color}
-            onSwitch={props.onSwitch}
-            openedItemsId={openedItemsId}
-            focusedItemId={props.focusedItemId}
-          />
-        ))}
-    </div>
-  );
-};
+import { AvalailableTreeViewIcon } from './IconItemTreeView';
+import ItemTreeView, { IItemTreeViewProps } from './ItemTreeView';
 
 const TreeView = (props: ITreeViewProps) => {
   const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
-  const [focusedItemId, setFocusedItemId] = React.useState<string>(null);
 
   const getItemRecursive = (items: IItem[], id: string) => {
-    if (!id) return;
+    if (!id || !items?.length) return;
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-
+    for (const item of items) {
       if (item.id === id) return item;
 
-      const itemChild = getItemRecursive(Array.isArray(item.childs) ? item.childs : [], id);
+      const itemChild = getItemRecursive(item.childs, id);
+
       if (itemChild) return itemChild;
     }
   };
 
-  const getItemFromMouseEvent = (e: React.MouseEvent<HTMLDivElement, MouseEvent>): IItem => {
-    const target = e?.target as HTMLElement;
-
+  const getItemFromElement = (target: HTMLDivElement): IItem => {
     const idItem = target?.id?.replace?.('item_treeview_id_', '');
     const item = getItemRecursive(props.items, idItem);
 
     return item;
   };
 
+  const getSurroundingElements = () => {
+    const elements = document.querySelectorAll<HTMLDivElement>(
+      `.${styles.container} *[tabindex="0"]`,
+    );
+
+    let prevItem = null;
+    let nextItem = null;
+
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+
+      prevItem = elements[i - 1];
+      nextItem = elements[i + 1];
+
+      if (document.activeElement === element) break;
+    }
+
+    return { prevItem, nextItem };
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const element = e.target as HTMLDivElement;
+    const item = getItemFromElement(element);
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') handleSwitchItem(item);
+    if (e.key === 'ArrowUp') getSurroundingElements()?.prevItem?.focus();
+    if (e.key === 'ArrowDown') getSurroundingElements()?.nextItem?.focus();
+    if (e.key === 'Enter') handleDoubleClick(e);
+  };
+
   const handleClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const item = getItemFromMouseEvent(e);
+    const element = e.target as HTMLDivElement;
+    const item = getItemFromElement(element);
 
     if (!item) return;
 
-    setFocusedItemId(item.id);
+    element?.focus();
     props.onClick?.({ id: item.id, data: item.data, type: item.type });
   };
 
-  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+  const handleDoubleClick = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent> | React.KeyboardEvent<HTMLDivElement>,
+  ) => {
     if (typeof props.onDoubleClick !== 'function') return;
 
-    const item = getItemFromMouseEvent(e);
+    const element = e.target as HTMLDivElement;
+    const item = getItemFromElement(element);
+
     if (!item) return;
 
+    element?.focus();
     props.onDoubleClick?.({ id: item.id, data: item.data, type: item.type });
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const item = getItemFromMouseEvent(e);
+    const element = e.target as HTMLDivElement;
+    const item = getItemFromElement(element);
 
     if (!item) return;
 
-    setFocusedItemId(item.id);
+    element?.focus();
     props.onContextMenu?.({ id: item.id, data: item.data, type: item.type }, e);
   };
 
@@ -159,6 +111,7 @@ const TreeView = (props: ITreeViewProps) => {
       onDoubleClick={handleDoubleClick}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
+      onKeyDown={onKeyDown}
     >
       {props.items.map((item) => (
         <ItemTreeView
@@ -167,7 +120,6 @@ const TreeView = (props: ITreeViewProps) => {
           key={item.id}
           color={props.color}
           openedItemsId={openedItemsId}
-          focusedItemId={focusedItemId}
           onSwitch={handleSwitchItem}
         />
       ))}
@@ -176,12 +128,6 @@ const TreeView = (props: ITreeViewProps) => {
 };
 
 export default TreeView;
-
-interface IIcon {
-  icon: string;
-  color?: string;
-  className?: string;
-}
 
 export interface IItemTreeViewData {
   id: string;
@@ -192,7 +138,7 @@ export interface IItemTreeViewData {
 export interface IItem extends IItemTreeViewData {
   label: string;
   childs?: IItemTreeViewProps[];
-  icon?: 'folder' | 'file' | 'file2' | 'database' | 'table';
+  icon?: AvalailableTreeViewIcon;
   renderIcon?(): JSX.Element;
   loading?: boolean;
 }
@@ -210,12 +156,4 @@ interface ITreeViewProps {
     item: IItemTreeViewData,
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
   ): void;
-}
-
-interface IItemTreeViewProps extends IItem {
-  isFirst?: boolean;
-  color?: string;
-  openedItemsId?: string[];
-  focusedItemId?: string;
-  onSwitch?(item: IItem): void;
 }
