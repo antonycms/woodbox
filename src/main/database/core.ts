@@ -1,6 +1,11 @@
 import knex, { Knex } from 'knex';
+import pg from 'pg';
 import clientsQuery from './querys';
 import { getConnectionsSaved } from '../storage/store';
+
+// Override 'pg' default parser to return dates as strings
+pg.types.setTypeParser(1114, (val) => val); // timestamp without time zone
+pg.types.setTypeParser(1184, (val) => val); // timestamp with time zone
 
 const activeConnections: IConnection[] = [];
 
@@ -210,18 +215,35 @@ export const getTableData = async (
   return { count, data };
 };
 
-export const runSql = async (connectionId: string, sql: string) => {
+export const runSql = async (connectionId: string, sql: string, { page = 1, limit = 200 } = {}) => {
   const connection = await getConnection(connectionId);
   const { instance } = connection;
 
-  const raw = await instance.raw(sql);
+  let sql_final = sql.trim();
+
+  // Cria uma versão normalizada pra fazer verificacoes
+  const normalized = sql_final.replace(/\s+/g, ' ').toLowerCase();
+
+  const isSelectQuery = normalized.startsWith('select') || normalized.startsWith('with');
+
+  // adiciona limit e offset em consultas SELECT para realizar paginacao.
+  if (isSelectQuery) {
+    const hasLimit = /\blimit\b/.test(normalized);
+    const hasOffset = /\boffset\b/.test(normalized);
+
+    if (sql_final.endsWith(';')) sql_final = sql_final.slice(0, -1);
+    if (!hasLimit && limit >= 0) sql_final += ` LIMIT ${limit}`;
+    if (!hasOffset && page >= 0) sql_final += ` OFFSET ${page}`;
+
+    sql_final += ';';
+  }
+
+  const raw = await instance.raw(sql_final);
 
   const rawArray = Array.isArray(raw) ? raw : [raw];
 
   const serializedData = rawArray.map((rawResult) => {
     const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
-
-    console.log(rawResult);
 
     return {
       type,
