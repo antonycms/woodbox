@@ -1,0 +1,42 @@
+.inputContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.isRequired label::after {
+  content: '*';
+  margin-left: 1px;
+  color: #ff6767;
+  font-size: 14px;
+}
+
+.input {
+  width: 100%;
+  border: 0;
+  background-color: transparent;
+  height: 28px;
+  outline: transparent;
+  padding: 0 10px;
+}
+
+.input::-webkit-input-placeholder {
+  color: var(--placeholderColor);
+}
+
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+}
+
+.icon {
+  color: var(--selectColor);
+  position: absolute;
+  right: 6px;
+  top: 27px;
+  pointer-events: none;
+}
