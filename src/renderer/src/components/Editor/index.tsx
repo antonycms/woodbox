@@ -5,7 +5,8 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { defineSQlAutocomplete } from './autocompleteDefault';
+import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
+import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
 
 const Editor = React.forwardRef<IEditorRef, IEditorProps>(
   ({ initialValue = '', selections = [], language = 'sql', ...props }, ref) => {
@@ -15,6 +16,27 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
 
     const resize = useDebounce(() => editor?.layout?.(), 10);
+
+    const getWordAtPosition = (position: monaco.IPosition) => {
+      return editor.getModel().getWordAtPosition(position);
+    };
+
+    const setMarkers = (params: IAddMarkerParams[]) => {
+      const model = editor.getModel();
+
+      const markers: monaco.editor.IMarkerData[] = [];
+
+      for (const markerParams of params) {
+        const { severity, ...otherParams } = markerParams;
+
+        markers.push({
+          ...otherParams,
+          severity: monaco.MarkerSeverity[severity],
+        });
+      }
+
+      monaco.editor.setModelMarkers(model, null, markers);
+    };
 
     const setScroll = (scroll: IScroll) => {
       if (typeof scroll !== 'object') return;
@@ -57,6 +79,10 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       return editor?.getModel()?.getValue?.() || '';
     };
 
+    const getCurrentValue = () => {
+      return getCurrentQuerySqlFromContent(editor?.getModel()?.getValue?.() || '');
+    };
+
     const initEditor = () => {
       const currentEditor = monaco.editor.create(
         containerRef.current,
@@ -91,10 +117,13 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         setScroll,
         getSelection,
         getSelections,
-        getSelectionValue,
         setSelections,
+        getSelectionValue,
         getValue,
+        getCurrentValue,
         setValue,
+        setMarkers,
+        getWordAtPosition,
         element: editor?.getDomNode?.(),
       }),
       [editor],
@@ -151,9 +180,13 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         listenerSelections && monacoListeners.push(listenerSelections);
       }
 
-      if (props.onChange) {
+      if (props.onChange || props.onChangeCurrentValue) {
         const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
-          props.onChange?.(getValue());
+          const value = getValue();
+          const currentValue = getCurrentQuerySqlFromContent(value);
+
+          props.onChange?.(value);
+          props.onChangeCurrentValue?.(currentValue);
         });
 
         listenerValueChange && monacoListeners.push(listenerValueChange);
@@ -162,38 +195,15 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       return () => {
         monacoListeners.forEach((a) => a?.dispose?.());
       };
-    }, [editor, props.onChange]);
+    }, [editor, props.onChange, props.onChangeCurrentValue]);
 
     React.useEffect(() => {
       if (!editor) return;
 
-      const schemas = [
-        { name: 'sistema' },
-        { name: 'recursos_humanos' },
-      ];
-      const tables = [
-        { name: 'usuario', schema: 'sistema' },
-        { name: 'pessoa', schema: 'recursos_humanos' },
-      ];
-
-      const aliases = [
-        { name: 'u' },
-        { name: 'p' },
-      ]
-
-      const columns = [
-        { name: 'seq_usuario', alias: 'u' },
-        { name: 'cod_pessoa', alias: 'u' },
-        { name: 'ind_status', alias: 'u' },
-        { name: 'seq_pessoa', alias: 'p' },
-        { name: 'nom_pessoa', alias: 'p' },
-        { name: 'nom_email', alias: 'p' },
-      ]
-
-      const disposable = defineSQlAutocomplete({ schemas, tables, aliases, columns });
+      const disposable = defineSQlAutocomplete(props.autocomplete);
 
       return () => disposable?.dispose();
-    }, [editor, /* tables */]);
+    }, [editor, props.autocomplete]);
 
     return (
       <div className={styles.outsideContainer}>
@@ -216,7 +226,9 @@ export interface IEditorProps {
   selections?: monaco.Selection[];
   onUmounted?: (data: IDataUmounted) => void;
   onChange?: (value: string) => void;
+  onChangeCurrentValue?: (value: string) => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
+  autocomplete?: IDefineSQlAutocompleteParams;
 }
 
 export interface IScroll {
@@ -230,7 +242,19 @@ export interface IDataUmounted {
   selections: monaco.Selection[];
 }
 
+interface IAddMarkerParams {
+  message: string;
+  code?: string;
+  source?: string;
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+  severity: 'Warning' | 'Error' | 'Hint' | 'Info';
+}
+
 export interface IEditorRef {
+  getCurrentValue(): string;
   getValue(): string;
   setValue(value: string): void;
   getSelections(): monaco.Selection[];
@@ -238,5 +262,7 @@ export interface IEditorRef {
   getSelectionValue(selection: monaco.Selection): string;
   getScroll(): IScroll;
   setScroll(scroll: IScroll): void;
+  setMarkers(params: IAddMarkerParams[]): void;
+  getWordAtPosition(position: monaco.IPosition): monaco.editor.IWordAtPosition;
   element?: HTMLElement;
 }
