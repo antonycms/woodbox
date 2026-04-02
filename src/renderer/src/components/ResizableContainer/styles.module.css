@@ -13,6 +13,7 @@
 }
 
 .resizeBar {
+  z-index: 1;
   border-collapse: none;
   user-select: none;
   position: absolute;
