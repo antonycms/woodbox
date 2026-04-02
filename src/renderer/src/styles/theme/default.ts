@@ -197,7 +197,7 @@ const defaultTheme: ITheme<Color> = {
       fieldPlaceholderColor: '__colors.white',
       borderColor: '__colors.border',
     },
-  }
+  },
 };
 
 export default defaultTheme;

@@ -5,7 +5,7 @@ export const makeOnChangeSetState = (setState: React.Dispatch<React.SetStateActi
 
   return (event: React.ChangeEvent<any>) => {
     if (!event?.target?.name) {
-      console.error('[makeOnChangeSetState] element not has "name" property')
+      console.error('[makeOnChangeSetState] element not has "name" property');
       return;
     }
 

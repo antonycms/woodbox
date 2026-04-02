@@ -23,3 +23,7 @@ export function textToSnakeCase(text: string, prefix?: string) {
 
   return serializedTextArr.join('_');
 }
+
+export const checkCharIsWhitespace = (char: string) => {
+  return char === ' ' || char === '\n' || char === '\r' || char === '\t';
+};

@@ -1,8 +1,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Toast, ToastType } from '../components/Toast';
-import { ToastsWrapper } from '../components/Toast/ToastsWrapper';
-import { generateHash } from '../utils/methods';
+import { Toast, ToastType } from '@renderer/components/Toast';
+import { ToastsWrapper } from '@renderer/components/Toast/ToastsWrapper';
+import { generateHash } from '@renderer/utils/string';
 
 const ToastContext = React.createContext<IToastContext>({} as IToastContext);
 

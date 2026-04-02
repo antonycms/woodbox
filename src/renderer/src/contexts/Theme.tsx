@@ -1,6 +1,8 @@
 import React from 'react';
+
 import useStorage from '@renderer/hooks/useStorage';
 import defaultTheme, { applyMonacoTheme, serializeTheme, ITheme } from '@renderer/styles/theme';
+import { useCssProperties } from '@renderer/hooks/useCssProperties';
 
 const ThemeContext = React.createContext<IThemeContext>({} as IThemeContext);
 
@@ -50,6 +52,15 @@ const ThemeProvider = ({ children }: IThemeProviderProps) => {
 
 export const useThemeContext = () => {
   return React.useContext(ThemeContext);
+};
+
+export const useCssPropertiesWithActiveTheme = (
+  callback: (activeTheme: ITheme<string>) => object,
+  arrDependencies?: any[],
+) => {
+  const { activeTheme } = useThemeContext();
+
+  return useCssProperties(() => callback(activeTheme), [activeTheme, ...(arrDependencies || [])]);
 };
 
 export default ThemeProvider;

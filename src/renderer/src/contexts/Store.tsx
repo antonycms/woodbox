@@ -300,11 +300,14 @@ export interface IStoreContext {
   runSql(
     idConnection: string,
     sql: string,
-  ): Promise<{
-    type: string;
-    rows: any[];
-    columns: string[];
-  }>;
+  ): Promise<
+    {
+      type: string;
+      rows?: any[];
+      columns?: string[];
+      affected_rows?: number;
+    }[]
+  >;
 }
 
 export interface IConnectionsGroupPerProject extends IProject {

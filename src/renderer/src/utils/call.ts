@@ -1,15 +1,23 @@
 const ipcRederer = window.electron?.ipcRenderer;
 
+class CallError extends Error {
+  position?: string;
+
+  constructor(params) {
+    super(params?.message || 'unknown error');
+    this.position = params?.position;
+  }
+}
+
 /** Function to call backend application */
 export default async function call<IData = any>(event: string, ...params): Promise<IData> {
-  try {
-    return await ipcRederer.invoke(event, ...params);
-  } catch (error) {
-    console.error(error);
+  const result = await ipcRederer.invoke(event, ...params);
 
-    const [, message] = error?.message?.split?.('Error:');
+  const { data, error } = result;
 
-    if (!message) throw error;
-    throw new Error(message);
+  if (error) {
+    throw new CallError(error);
   }
+
+  return data;
 }
