@@ -16,7 +16,11 @@ export const SidebarActiveContent = React.memo((props: ISidebarActiveContentProp
 
   const stylesVar = toCssProperties({ backgroundColorSidebar: colors.backgroundColor });
 
-  return <div style={stylesVar} className={classes(styles.menuContainer, active && styles.active)}>{children}</div>;
+  return (
+    <div style={stylesVar} className={classes(styles.menuContainer, active && styles.active)}>
+      {children}
+    </div>
+  );
 });
 
 SidebarActiveContent.displayName = 'SidebarActiveContent';

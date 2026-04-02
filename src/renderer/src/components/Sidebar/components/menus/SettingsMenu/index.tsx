@@ -6,7 +6,9 @@ import React from 'react';
 const SettingsMenu = () => {
   return (
     <>
-      <Text bold userSelect={false}>Configurações Gerais</Text>
+      <Text bold userSelect={false}>
+        Configurações Gerais
+      </Text>
       <Divider />
 
       <Input label="Tamanho da Fonte" type="number" min="8" />
@@ -14,7 +16,9 @@ const SettingsMenu = () => {
 
       <Divider />
 
-      <Text bold userSelect={false}>Configurações do Editor</Text>
+      <Text bold userSelect={false}>
+        Configurações do Editor
+      </Text>
       <Divider />
 
       <Input label="Tamanho da Fonte" type="number" min="8" />

@@ -1,14 +1,15 @@
 import React from 'react';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
 import { Welcolme } from '@renderer/components/Welcome';
-import { QueryEditor } from '@renderer/views/QueryEditor';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
 
 export const MainContent = () => {
   const { tabs, removeTab, activeTabId, setActiveTabId } = useAppTabContext();
-  const { activeTheme: { mainTab: theme } } = useThemeContext();
+  const {
+    activeTheme: { mainTab: theme },
+  } = useThemeContext();
 
   if (!tabs.length) return <Welcolme />;
 

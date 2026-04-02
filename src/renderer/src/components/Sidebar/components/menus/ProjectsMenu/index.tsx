@@ -147,11 +147,9 @@ const ProjectsMenu = () => {
     addTab({
       id: generateHash(),
       title: `Sem título [${description_connection}]`,
-      component: () => (
-        <QueryEditor id_connection={id_connection} />
-      ),
+      component: () => <QueryEditor id_connection={id_connection} />,
     });
-  }
+  };
 
   const contextOptions = React.useMemo(() => {
     const optionsAvailable = {
@@ -232,7 +230,9 @@ const ProjectsMenu = () => {
             };
 
             return {
-              id: table_schema ? `${table_schema}_${table_name}` : `${table_name}`,
+              id: table_schema
+                ? `${connection.id}:${table_schema}_${table_name}`
+                : `${connection.id}:${table_name}`,
               label: table_name,
               data: dataTable,
               icon: 'table' as const,
@@ -254,7 +254,7 @@ const ProjectsMenu = () => {
             };
 
             return {
-              id: schema,
+              id: `${connection.id}:${schema}`,
               label: schema,
               data: dataSchema,
               icon: 'file2' as const,
@@ -342,7 +342,7 @@ const ProjectsMenu = () => {
           <Button
             smallIcon
             text
-            title="Adicionar Novo Projeto"
+            title="Palavra exata"
             icon={() => <WholeWordIcon />}
             color={isWholeWordFilter ? 'white' : 'gray'}
             onClick={() => setIsWholeWordFilter((prevState) => !prevState)}

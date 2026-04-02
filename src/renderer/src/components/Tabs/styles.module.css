@@ -3,8 +3,9 @@
 }
 
 .outsideBar {
-  overflow-x: hidden;
   display: flex;
+  max-width: 100%;
+  position: relative;
 }
 
 .outsideBar:hover,
@@ -64,6 +65,13 @@
 
 .tabBar.borderRight {
   border-right: var(--borderTab);
+}
+
+.tabBar:not(.vertical) {
+  position: absolute;
+  left: 0;
+  top: 0;
+  min-width: 100%;
 }
 
 .tabBar.vertical {

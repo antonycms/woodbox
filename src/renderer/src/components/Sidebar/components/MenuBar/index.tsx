@@ -17,14 +17,14 @@ export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
   return (
     <div className={styles.categoryBar} style={stylesVar}>
       {items.map((item) => (
-        <div
+        <button
           key={item.id}
           title={item.title}
           onClick={() => onChange?.(item.id)}
           className={classes(styles.categoryBarButton, item.id === value && styles.active)}
         >
           <item.icon />
-        </div>
+        </button>
       ))}
     </div>
   );

@@ -3,27 +3,26 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase, IconSettings } from '@renderer/styles/icons';
+import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import SettingsMenu from './components/menus/SettingsMenu';
 import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
 import styles from './styles.module.css';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { toCssProperties } from '@renderer/styles/theme';
 
 type Menu = 'projects' | 'settings';
 
 export const Sidebar = React.memo(() => {
-  const { activeTheme } = useThemeContext();
-
-  const { borderColor } = activeTheme.sideBar;
-
   const [selectedMenu, setSelectedMenu] = React.useState<Menu>('projects');
   const [width, _setWidth] = useStorage('sidebar_width', 300);
   const setWidth = useDebounce(_setWidth);
 
+  const style = useCssPropertiesWithActiveTheme((activeTheme) => ({
+    borderColor: activeTheme.sideBar.borderColor,
+  }));
+
   return (
-    <div className={styles.container} style={toCssProperties({ borderColor })}>
+    <div className={styles.container} style={style}>
       <MenuBar
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}

@@ -4,6 +4,8 @@
   position: relative;
   cursor: pointer;
   color: var(--colorMenuBar);
+  background-color: transparent;
+  border: 0;
 }
 
 .categoryBarButton svg {
