@@ -6,7 +6,7 @@
 .isRequired label::after {
   content: '*';
   margin-left: 1px;
-  color: var(--color-red);
+  color: #ff6767;
   font-size: 14px;
 }
 

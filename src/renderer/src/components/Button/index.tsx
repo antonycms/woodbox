@@ -8,7 +8,7 @@ export const Button = React.memo((props: IButtonProps) => {
   const {
     children,
     title,
-    alignContent,
+    justifyContent,
     backgroundColor,
     color,
     className,
@@ -33,7 +33,10 @@ export const Button = React.memo((props: IButtonProps) => {
   );
 
   const isDisabled = !!(loading || disabled);
-  const style = { color, backgroundColor, width, justifyContent: alignContent };
+
+  const style = React.useMemo(() => {
+    return { color, backgroundColor, width, justifyContent };
+  }, [color, backgroundColor, width, justifyContent]);
 
   return (
     <Column {...gridProps}>
@@ -76,13 +79,14 @@ export interface IButtonProps extends IGridSystem {
   onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>;
   title?: string;
   className?: string;
+  form?: string;
+  disabled?: boolean;
+  loading?: boolean;
+
   text?: boolean;
   backgroundColor?: string;
   color?: string;
   smallIcon?: boolean;
-  width?: string | number;
-  alignContent?: 'center' | 'start';
-  form?: string;
-  disabled?: boolean;
-  loading?: boolean;
+  width?: string;
+  justifyContent?: 'start' | 'center';
 }

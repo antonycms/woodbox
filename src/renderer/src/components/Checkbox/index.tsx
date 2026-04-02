@@ -44,7 +44,12 @@ export const Checkbox = (props: ICheckboxProps) => {
             {label}
           </Label>
         )}
-        <input style={{ backgroundColor, color }} checked={checked} type="checkbox" onChange={handleChecked} />
+        <input
+          style={{ backgroundColor, color }}
+          checked={checked}
+          type="checkbox"
+          onChange={handleChecked}
+        />
       </div>
     </Column>
   );

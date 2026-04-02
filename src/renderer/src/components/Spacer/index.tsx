@@ -4,16 +4,11 @@ import styles from './styles.module.css';
 export const Spacer = React.memo((props: ISpacerProps) => {
   const { flexDirection = 'row', justifyContent = 'center', alignItems = 'center' } = props;
 
-  return (
-    <div
-      className={styles.spacer}
-      style={{
-        flexDirection: flexDirection,
-        justifyContent: justifyContent,
-        alignItems: alignItems,
-      }}
-    />
-  );
+  const style = React.useMemo(() => {
+    return { flexDirection, justifyContent, alignItems };
+  }, [flexDirection, justifyContent, alignItems]);
+
+  return <div className={styles.spacer} style={style} />;
 });
 
 Spacer.displayName = 'Spacer';

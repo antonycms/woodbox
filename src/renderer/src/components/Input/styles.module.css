@@ -17,8 +17,8 @@
   border: 0;
   background-color: transparent;
   height: 28px;
-  outline: transparent;
   padding: 0 10px;
+  border-radius: 4px;
 }
 
 .input::-webkit-input-placeholder {

@@ -6,14 +6,14 @@ export const Form = (props: IFormProps) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const element = e.target as HTMLFormElement;
+    // const element = e.target as HTMLFormElement;
 
-    console.log(element.validity);
+    // console.log(element.validity);
 
-    const x = element.checkValidity();
+    // const x = element.checkValidity();
     // const x = element.reportValidity();
 
-    if (!x) return;
+    // if (!x) return;
 
     onSubmit?.(e);
   };

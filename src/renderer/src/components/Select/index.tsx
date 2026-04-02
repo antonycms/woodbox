@@ -67,7 +67,11 @@ export const Select = React.memo((props: ISelectProps) => {
   return (
     <Column {...gridSystem}>
       <div style={styleVars} className={classes(styles.container, required && styles.isRequired)}>
-        {!!label && <Label color={labelColor} htmlFor={id}>{label}</Label>}
+        {!!label && (
+          <Label color={labelColor} htmlFor={id}>
+            {label}
+          </Label>
+        )}
 
         <select
           className={styles.select}

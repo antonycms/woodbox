@@ -35,6 +35,12 @@ export const Input = React.memo((props: IInputProps) => {
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
   const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;
 
+  const inputContainerStyle = React.useMemo(() => ({ backgroundColor }), [backgroundColor]);
+
+  const inputStyle = React.useMemo(() => {
+    return { ...toCssProperties({ placeholderColor }), maxWidth, color };
+  }, []);
+
   return (
     <Column {...gridSystem}>
       <div className={classes(required && styles.isRequired)}>
@@ -43,7 +49,7 @@ export const Input = React.memo((props: IInputProps) => {
             {label}
           </Label>
         )}
-        <div className={styles.inputContainer} style={{ backgroundColor }}>
+        <div className={styles.inputContainer} style={inputContainerStyle}>
           <input
             id={id}
             name={name}
@@ -58,8 +64,8 @@ export const Input = React.memo((props: IInputProps) => {
             type={type}
             required={required}
             onChange={onChange}
+            style={inputStyle}
             className={classes(className, styles.input, centerText && styles.centerText)}
-            style={{ ...toCssProperties({ placeholderColor }), maxWidth, color }}
           />
 
           {!!Icon && (
