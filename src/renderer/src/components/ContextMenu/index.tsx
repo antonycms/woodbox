@@ -48,17 +48,20 @@ export const ContextMenu = (props: IContextMenuProps) => {
       className={styles.container}
       style={{ ...toCssProperties(theme), top: positionY, left: positionX }}
     >
-      {options?.map?.((option, index) => (
-        <Button
-          text
-          justifyContent="start"
-          key={index}
-          color={theme.color}
-          onClick={() => option.onClick?.()}
-        >
-          {option.text}
-        </Button>
-      ))}
+      {options?.map?.(
+        (option, index) =>
+          !!option && (
+            <Button
+              text
+              justifyContent="start"
+              key={index}
+              color={theme.color}
+              onClick={() => option.onClick?.()}
+            >
+              {option.text}
+            </Button>
+          ),
+      )}
     </div>
   );
 };
