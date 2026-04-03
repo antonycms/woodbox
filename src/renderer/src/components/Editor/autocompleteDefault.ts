@@ -14,7 +14,7 @@ const makeItem =
     label: word,
     insertText: word,
     kind,
-    sortText: String(priority),
+    sortText: String(priority ?? 9),
   });
 
 const operatorsItems = operators.map(
@@ -42,7 +42,7 @@ const triggerCharacters = [' ', '.'];
 export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {}) => {
   const { schemas, columns = [], tablesAvailable = [], tablesUsed = [] } = params;
 
-  const aliases = tablesUsed?.filter?.((tableInfo) => tableInfo?.alias) || [];
+  const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
 
   return languages.registerCompletionItemProvider('sql', {
     triggerCharacters,
@@ -60,7 +60,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
 
       const words = [];
 
-      for (const word of currentContent.split(/\n|\r | /)) {
+      for (const word of currentContent.split(/[\n\r ]/)) {
         const trimmedWord = word?.trim?.();
         if (trimmedWord) words.push(trimmedWord);
       }
@@ -87,7 +87,10 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
           (schema) => currentWord.startsWith(schema.name) && currentWord.includes('.'),
         );
 
-      const isAlias = currentWord.includes('.') && currentWord.startsWith(tableAlias?.alias);
+      const isAlias =
+        currentWord.includes('.') &&
+        !!tableAlias?.alias &&
+        currentWord.startsWith(tableAlias.alias);
       const isSelectColumns = !isTable && checkOperation(['select']);
       const isFromOrJoin = !isTable && checkOperation(['from', 'join']);
       const isFilterOperators =
@@ -96,7 +99,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
 
       if (isSchema) {
         const tablesWords = tablesAvailable
-          .filter(({ schema }) => currentWord.startsWith(schema))
+          .filter(({ schema }) => currentWord.split('.')[0] === schema)
           .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
 
         availableWords = tablesWords;
@@ -104,26 +107,15 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
       else if (isAlias) {
         const columnsWords = columns
           .filter(({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema)
-          .map(({ name }) => makeItem('Alias', languages.CompletionItemKind.Variable)(name));
+          .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable)(name));
 
         availableWords = columnsWords;
       } //
       else if (isSelectColumns) {
-        if (isAlias) {
-          const columnsWords = columns
-            .filter(
-              ({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema,
-            )
-            .map(({ name }) => makeItem('Alias', languages.CompletionItemKind.Variable)(name));
-
-          availableWords = [...columnsWords, ...defaultSugestions];
-        } //
-        else {
-          const columnsWords = columns.map(({ name }) =>
-            makeItem('Alias', languages.CompletionItemKind.Variable)(name),
-          );
-          availableWords = [...columnsWords, ...defaultSugestions];
-        }
+        const columnsWords = columns.map(({ name }) =>
+          makeItem('Column', languages.CompletionItemKind.Variable)(name),
+        );
+        availableWords = [...columnsWords, ...defaultSugestions];
       } //
       else if (isFromOrJoin) {
         if (schemas) {
@@ -157,7 +149,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
           );
 
           const columnsWords = columns.map(({ name }) =>
-            makeItem('Alias', languages.CompletionItemKind.Variable, 1)(name),
+            makeItem('Column', languages.CompletionItemKind.Variable, 1)(name),
           );
 
           availableWords = [...columnsWords, ...aliasAvailable, ...defaultSugestions];
