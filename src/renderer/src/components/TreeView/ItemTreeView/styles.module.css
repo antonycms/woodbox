@@ -1,3 +1,7 @@
+.ignorePointerEvents {
+  pointer-events: none;
+}
+
 .containerItem {
   margin-top: 2px;
   margin-left: 14px;
