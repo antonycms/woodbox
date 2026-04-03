@@ -124,6 +124,18 @@ const StoreContextProvider = ({ children }) => {
     });
   };
 
+  const closeConnection = async (id: string) => {
+    await call('@get:close_connection', id);
+
+    setConnectionsInfo((prevState) => {
+      const newState = new Map(prevState);
+
+      newState.delete(id);
+
+      return newState;
+    });
+  };
+
   const getTableColumns = async (idConnection: string, { table, schema }) => {
     return await call('@get:table_columns', idConnection, { table, schema });
   };
@@ -174,6 +186,7 @@ const StoreContextProvider = ({ children }) => {
 
         testConnection,
         loadConnectionInfo,
+        closeConnection,
         getTableData,
 
         getTableColumns,
@@ -280,6 +293,7 @@ export interface IStoreContext {
 
   loadConnectionInfo(id: string): Promise<void>;
   testConnection(data: IConnectionCreate): Promise<boolean>;
+  closeConnection(id: string): Promise<void>;
   getTableData(idConnection: string, params: IParamsGetTableData): Promise<IDataTable>;
 
   getTableColumns(

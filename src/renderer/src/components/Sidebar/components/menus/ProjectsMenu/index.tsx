@@ -8,7 +8,11 @@ import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
 import { AddIcon, AddSqlIcon } from '@renderer/styles/icons';
-import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
+import {
+  ContextMenu,
+  IContextMenuOption,
+  IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
 import TreeView, { IItemTreeViewData } from '@renderer/components/TreeView';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
@@ -26,6 +30,7 @@ const ProjectsMenu = () => {
     removeConnection,
     removeProject,
     loadConnectionInfo,
+    closeConnection,
     connectionsInfo,
   } = useStoreContext();
 
@@ -58,6 +63,10 @@ const ProjectsMenu = () => {
       return text?.toLowerCase?.() === filterTextSerialized;
     }
     return text?.toLowerCase?.()?.includes?.(filterTextSerialized);
+  };
+
+  const checkHasConnection = (id: string) => {
+    return connectionsInfo.has(id);
   };
 
   const refreshConnectionInfo = async (id: string, force?: boolean) => {
@@ -152,7 +161,7 @@ const ProjectsMenu = () => {
   };
 
   const contextOptions = React.useMemo(() => {
-    const optionsAvailable = {
+    const optionsAvailable: Record<string, IContextMenuOption[]> = {
       project: [
         {
           text: 'Nova Conexão',
@@ -169,6 +178,14 @@ const ProjectsMenu = () => {
       ],
 
       connection: [
+        !checkHasConnection(contextMenuItemSelected?.id) && {
+          text: 'Conectar',
+          onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id),
+        },
+        checkHasConnection(contextMenuItemSelected?.id) && {
+          text: 'Desconectar',
+          onClick: () => closeConnection(contextMenuItemSelected?.id),
+        },
         {
           text: 'Recarregar',
           onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id, true),
