@@ -72,6 +72,8 @@ const Table = (props: ITableProps) => {
   const selectedRowsRef = React.useRef(selectedRows);
   selectedRowsRef.current = selectedRows;
 
+  const [copyData, setCopyData] = React.useState<any[]>(null);
+
   const serializedRows = React.useMemo(() => {
     return rows.map((row, index) => {
       const keyRow = rowKeyExtractor(row, index);
@@ -322,8 +324,12 @@ const Table = (props: ITableProps) => {
       const isCopy = window.ctrlPressed && ev.key === 'c';
       const isPaste = window.ctrlPressed && ev.key === 'v';
 
-      isCopy && onCopy?.([...selectedRowsRef.current.values()]);
-      isPaste && onCopy?.([...selectedRowsRef.current.values()]);
+      if (isCopy) {
+        const rows = [...selectedRowsRef.current.values()];
+        setCopyData(rows);
+        onCopy?.(rows);
+      }
+      isPaste && onPaste?.([...selectedRowsRef.current.values()]);
     };
 
     refScrollContainer.current?.addEventListener?.('keydown', cb);
@@ -366,6 +372,14 @@ const Table = (props: ITableProps) => {
         {virtualHeader}
         {virtualRows}
       </div>
+
+      {copyData !== null && (
+        <ModalCopy
+          content={copyData}
+          open
+          onClose={() => setCopyData(null)}
+        />
+      )}
     </div>
   );
 };

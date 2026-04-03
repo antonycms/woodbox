@@ -9,7 +9,7 @@ import { Button } from '../Button';
 import { Spacer } from '../Spacer';
 
 interface IModalCopyProps extends Omit<IModalProps, 'children'> {
-  content: string | object;
+  content: any[];
 }
 
 export const ModalCopy = (props: IModalCopyProps) => {
@@ -20,26 +20,40 @@ export const ModalCopy = (props: IModalCopyProps) => {
   } = useThemeContext();
 
   const attributes = React.useMemo(() => {
-    return typeof !content || content !== 'object' ? [] : Object.keys(content);
+    if (!Array.isArray(content) || !content.length) return [];
+    return Object.keys(content[0]).filter((key) => !key.startsWith('__'));
   }, [content]);
 
-  const { handleSubmit } = useForm({
+  const { handleSubmit, register } = useForm({
     separator: '\\n',
-    attributes: [],
+    attributes: attributes,
   });
 
   const onSubmit = React.useCallback(
     handleSubmit((data) => {
-      //
+      const separator = data.separator.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+      const activeAttributes: string[] = data.attributes?.length ? data.attributes : attributes;
+
+      const text = content
+        .map((row) => activeAttributes.map((attr) => row[attr] ?? '').join(separator))
+        .join('\n');
+
+      navigator.clipboard.writeText(text);
+      onClose?.();
     }),
-    [],
+    [content, attributes, onClose],
   );
 
   return (
     <Modal title="Copiar Conteúdo" {...modalProps}>
       <form onSubmit={onSubmit}>
         <Row>
-          <Input label="Separador" backgroundColor={colors.backgroundColor} color={colors.color} />
+          <Input
+            label="Separador"
+            backgroundColor={colors.backgroundColor}
+            color={colors.color}
+            {...register('separator')}
+          />
 
           {!!attributes.length && (
             <Select
@@ -47,6 +61,7 @@ export const ModalCopy = (props: IModalCopyProps) => {
               backgroundColor={colors.backgroundColor}
               color={colors.color}
               items={attributes}
+              {...register('attributes')}
             />
           )}
         </Row>
