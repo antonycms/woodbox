@@ -2,15 +2,18 @@
 import { useRef, useCallback } from 'react';
 
 function useDebounce<Type = any>(fn: Function, delay?: number): Type {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef({ fn, delay, timeout: null as NodeJS.Timeout });
 
-  const debounceFn = useCallback(
-    (...args) => {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => fn(...args), delay);
-    },
-    [fn, delay],
-  );
+  debounceRef.current.fn = fn;
+  debounceRef.current.delay = delay;
+
+  const debounceFn = useCallback((...args) => {
+    clearTimeout(debounceRef.current.timeout);
+
+    debounceRef.current.timeout = setTimeout(() => {
+      debounceRef.current.fn?.(...args);
+    }, debounceRef.current.delay);
+  }, []);
 
   return debounceFn as any;
 }
