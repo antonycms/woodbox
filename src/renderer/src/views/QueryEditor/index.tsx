@@ -22,44 +22,83 @@ import {
   SaveIcon,
 } from '@renderer/styles/icons';
 import { RunSelectionIcon } from '../../styles/icons';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
+import { ITableQuery } from '@renderer/utils/sql';
+import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
+import { getTablesFromQuerySql } from '@renderer/utils/sql';
+import { arrayIsEquals } from '@renderer/utils/array';
+import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
+import { toDateTime } from '@renderer/utils/date';
 
 interface IQueryResult {
-  type?: string;
+  type: string;
   rows?: any[];
   columns?: string[];
-  title?: string;
   loading?: boolean;
+  message?: string;
+  query?: string;
+  affected_rows?: number;
+  date_run?: string;
 }
 
-type IDataUpdateabResult = Partial<IQueryResult>;
+type IDataMakeTabResult = IQueryResult & { title?: string };
+
+type IDataUpdateabResult = Partial<IDataMakeTabResult>;
 
 interface IQueryEditorProps {
   id_connection: string;
 }
 
 export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
-  const { runSql, connectionsInfo } = useStoreContext();
+  const { runSql, connectionsInfo, getTableColumns } = useStoreContext();
   const { activeTheme } = useThemeContext();
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>();
-  const [connectionInfo, setConnectionInfo] = React.useState(connectionsInfo.get(id_connection));
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 100);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
+  const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = useStateWithDebounce<ITableQuery[]>(
+    [],
+    500,
+  );
+  const [tableColumns, setTableColumn] = React.useState<Map<string, IColumnInfo[]>>(new Map());
   const [tabsResult, setTabsResult] = React.useState<ITab[]>([]);
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
 
-  const makeNewTabResult = (data: IQueryResult) => {
+  const makeUpdateResultTab = (idTab: string) => {
+    const updateTabResultData = (params: IDataUpdateabResult) => {
+      setQuerysResultData((prevState) => {
+        const newMap = new Map(prevState);
+
+        const prevTabResultData = prevState.get(idTab) || ({} as any);
+        const newTabResultData = { ...prevTabResultData, ...params };
+
+        newTabResultData.rows = newTabResultData.rows?.map?.((row) => ({
+          ...row,
+          __hash_rowTable: generateHash(),
+        }));
+
+        newMap.set(idTab, newTabResultData);
+
+        return newMap;
+      });
+    };
+
+    return updateTabResultData;
+  };
+
+  const makeNewTabResult = (data: IDataMakeTabResult) => {
     const {
       loading,
       type,
       columns = [],
       rows = [],
+      query,
+      affected_rows,
       title = `Result ${tabsResult.length + 1}`,
     } = data;
 
@@ -74,29 +113,14 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       type,
       columns,
       rows,
-      title,
       loading,
+      query,
+      affected_rows,
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
 
-    const updateTabResultData = (params: IDataUpdateabResult) => {
-      setQuerysResultData((prevState) => {
-        const newMap = new Map(prevState);
-
-        const prevTabResultData = prevState.get(idTab) || {};
-        const newTabResultData = { type, ...prevTabResultData, ...params };
-
-        newTabResultData.rows = newTabResultData.rows?.map?.((row) => ({
-          ...row,
-          __hash_rowTable: generateHash(),
-        }));
-
-        newMap.set(idTab, newTabResultData);
-
-        return newMap;
-      });
-    };
+    const updateTabResultData = makeUpdateResultTab(idTab);
 
     updateTabResultData(queryResultData);
 
@@ -124,41 +148,175 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     return selectionsValue;
   };
 
+  const refreshResultSqlTab = async (idTab: string) => {
+    const tab = querysResultData.get(idTab);
+    const updateTabResultData = makeUpdateResultTab(idTab);
+
+    updateTabResultData({ loading: true, date_run: new Date().toISOString() });
+
+    try {
+      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, tab.query);
+
+      updateTabResultData({ columns, rows, type, query: tab.query, affected_rows, loading: false });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({ type: 'ERROR', message, query: tab.query, loading: false });
+    }
+  };
+
   const runSelectionsSQL = async () => {
     const selectionsValue = getSelectionsValues();
-    const value = selectionsValue.join('\n');
+    const query = selectionsValue.join('\n');
 
-    if (!value) return;
+    if (!query) return;
 
     const updateTabResultData = makeNewTabResult({
-      columns: [],
-      rows: [],
       type: 'SELECT',
+      query,
       loading: true,
+      date_run: new Date().toISOString(),
     });
 
-    const { type, rows, columns } = await runSql(id_connection, value);
+    try {
+      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
 
-    updateTabResultData({ columns, rows, type, loading: false });
+      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({ type: 'ERROR', message, loading: false });
+    }
   };
 
   const runAllSQL = async () => {
-    const value = refEditor.current?.getValue?.();
+    const query = refEditor.current?.getValue?.();
 
-    if (!value) return;
+    if (!query) return;
 
     const updateTabResultData = makeNewTabResult({
-      columns: [],
-      rows: [],
       type: 'SELECT',
       loading: true,
+      query,
+      date_run: new Date().toISOString(),
     });
 
-    const { type, rows, columns } = await runSql(id_connection, value);
-    console.log(rows);
+    try {
+      refEditor.current.setMarkers([]);
 
-    updateTabResultData({ columns, rows, type, loading: false });
+      const x = await runSql(id_connection, query);
+
+      const [{ type, rows, columns, affected_rows }] = x;
+
+      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+    } catch (error) {
+      const message = error?.message?.split?.(' - ')?.[1];
+
+      updateTabResultData({ type: 'ERROR', message, loading: false });
+
+      const position = Number(error.position) + 1;
+
+      let startLine = 1;
+      let endLine = 1;
+      let startColumn = 1;
+      let endColumn = 1;
+
+      let currentLine = 1;
+      let currentColumn = 1;
+
+      for (let i = 1; i <= query.length; i++) {
+        currentColumn++;
+
+        const word = query[i];
+
+        if (word === '\n') {
+          currentLine++;
+          currentColumn = 1;
+        }
+
+        if (i === position) {
+          startLine = currentLine;
+          startColumn = currentColumn;
+        }
+
+        if (i === query.length) {
+          endLine = currentLine;
+          endColumn = currentColumn;
+        }
+      }
+
+      refEditor.current.setMarkers([
+        {
+          message,
+          startLineNumber: startLine,
+          endLineNumber: endLine,
+          code: `SQL Error`,
+          startColumn,
+          endColumn,
+          severity: 'Error',
+        },
+      ]);
+    }
   };
+
+  const loadTableColumns = async () => {
+    const newTable = currentQueryTablesInfo.find((tableInfo) => {
+      const { name, schema } = tableInfo;
+      const key = `${schema ? schema + '.' : ''}${name}`;
+      return !tableColumns.get(key);
+    });
+
+    if (!newTable) return;
+
+    const { name: table, schema } = newTable;
+
+    const items = await getTableColumns(id_connection, { schema, table });
+
+    if (!items?.length) return;
+
+    setTableColumn((prevState) => {
+      const newState = new Map(prevState);
+      const key = `${schema ? schema + '.' : ''}${table}`;
+      newState.set(key, items);
+      return newState;
+    });
+  };
+
+  const handleUpdateCurrentQueryInfo = React.useCallback((query: string) => {
+    const tablesQueryInfo = getTablesFromQuerySql(query);
+
+    setCurrentQueryTablesInfo((prevState) => {
+      // avoid changing the state memory address if there are no changes (prevent rerendering)
+      const checkIsEquals = arrayIsEquals(prevState, tablesQueryInfo);
+      return checkIsEquals ? prevState : tablesQueryInfo;
+    });
+  }, []);
+
+  const autocomplete = React.useMemo<IDefineSQlAutocompleteParams>(() => {
+    const connectionInfo = connectionsInfo.get(id_connection);
+
+    if (!connectionInfo) return;
+
+    const { schemas, tables } = connectionInfo;
+
+    const schemasSerialized = schemas.map((schema) => ({ name: schema }));
+    const tablesAvailable = tables.map((table) => ({
+      name: table.table_name,
+      schema: table.table_schema,
+    }));
+    const tablesUsed = currentQueryTablesInfo;
+
+    const columns = [];
+
+    tablesUsed.forEach((tableInfo) => {
+      const { name: table, schema } = tableInfo;
+      const key = `${schema ? schema + '.' : ''}${table}`;
+
+      tableColumns
+        .get(key)
+        ?.forEach?.((column) => columns.push({ name: column.column_name, table, schema }));
+    });
+
+    return { schemas: schemasSerialized, tablesAvailable, tablesUsed, columns };
+  }, [connectionsInfo, currentQueryTablesInfo, tableColumns]);
 
   React.useEffect(() => {
     if (tabsResult.length) {
@@ -167,19 +325,11 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     }
   }, [tabsResult]);
 
-  // // apagar dps
-  // React.useEffect(() => {
-  //   const columns = ['id', 'name'];
-  //   const rows = [
-  //     { name: 'Fulano 1', id: 1 },
-  //     { name: 'Fulano 2', id: 2 },
-  //     { name: 'Fulano 3', id: 3 },
-  //   ];
+  const runAllRef = React.useRef(runAllSQL);
+  runAllRef.current = runAllSQL;
 
-  //   makeNewTabResult({ type: 'select', columns, rows });
-  //   makeNewTabResult({ type: 'select', columns, rows });
-  //   makeNewTabResult({ type: 'select', columns, rows });
-  // }, []);
+  const runSelectionsRef = React.useRef(runSelectionsSQL);
+  runSelectionsRef.current = runSelectionsSQL;
 
   React.useEffect(() => {
     if (!refEditor.current?.element) return;
@@ -191,11 +341,11 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
         e.preventDefault();
 
         if (e.altKey) {
-          console.log(1);
+          runSelectionsRef.current();
           return;
         }
 
-        console.log(2);
+        runAllRef.current();
       }
     };
 
@@ -205,6 +355,10 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       element.removeEventListener('keydown', keypressCallback);
     };
   }, [refEditor.current?.element]);
+
+  React.useEffect(() => {
+    loadTableColumns();
+  }, [id_connection, currentQueryTablesInfo]);
 
   return (
     <div className={styles.queryEditorContainer}>
@@ -246,7 +400,12 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
           </Button>
         </Bar>
 
-        <Editor ref={refEditor} dialect="postgres" />
+        <Editor
+          ref={refEditor}
+          dialect="postgres"
+          onChangeCurrentValue={handleUpdateCurrentQueryInfo}
+          autocomplete={autocomplete}
+        />
       </div>
 
       {!!tabsResult.length && (
@@ -279,8 +438,15 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
               if (!data) return null;
 
+              const isSelect = data.type === 'SELECT';
+
               return (
-                <TabContent key={tabResult.idTab} idTab={tabResult.idTab}>
+                <TabContent
+                  hasPadding={!isSelect}
+                  key={tabResult.idTab}
+                  idTab={tabResult.idTab}
+                  backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                >
                   {data.type === 'SELECT' && (
                     <>
                       <Table
@@ -328,6 +494,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
                           text
                           smallIcon
                           title="Atualizar dados"
+                          onClick={() => refreshResultSqlTab(tabResult.idTab)}
                           color={activeTheme.queryEditor.bar.color}
                         >
                           <IconRefresh size={18} />
@@ -340,9 +507,41 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
                           userSelect={false}
                           color={activeTheme.queryEditor.bar.color}
                         >
-                          Atualizado em 25 de set. as 09:18
+                          Atualizado em {toDateTime(data.date_run)}
                         </Text>
                       </Bar>
+                    </>
+                  )}
+
+                  {data.type === 'DELETE' && (
+                    <>
+                      <Text bold color={activeTheme.queryEditor.tab.color}>
+                        Remoção executada com sucesso
+                      </Text>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
+                      <Text color={activeTheme.queryEditor.tab.color}>
+                        Total de linhas afetadas: {data.affected_rows}
+                      </Text>
+                    </>
+                  )}
+
+                  {data.type === 'ALTER' && (
+                    <>
+                      <Text bold color={activeTheme.queryEditor.tab.color}>
+                        Alteração realizada com sucesso
+                      </Text>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
+                    </>
+                  )}
+                  {data.type === 'ERROR' && (
+                    <>
+                      <Text bold color={activeTheme.queryEditor.tab.color}>
+                        Erro ao executar a query
+                      </Text>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>{data.message}</Text>
                     </>
                   )}
                 </TabContent>
