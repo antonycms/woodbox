@@ -12,7 +12,11 @@ import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: { properties: theme } } } = useThemeContext();
+  const {
+    activeTheme: {
+      tableInfo: { properties: theme },
+    },
+  } = useThemeContext();
   const { columns, loadTableColumns, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
 
@@ -60,6 +64,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         rowKeyExtractor={(item) => item.column_name}
         onContextMenu={onContextMenuTable}
         rows={columns}
+        onCopy={(rows) => console.log(rows)}
         columns={[
           { label: 'Nome da coluna', attribute: 'column_name', editable: true },
           { label: 'Tipo', attribute: 'data_type', editable: true },

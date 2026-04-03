@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaGripLines, FaRegListAlt } from 'react-icons/fa';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import TableInfoProvider from '@renderer/contexts/TableInfoContext';
 
 import Data from './components/Data';
@@ -11,7 +11,9 @@ import { ITableInfoProps } from './dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const TableInfo = (props: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: theme } } = useThemeContext();
+  const {
+    activeTheme: { tableInfo: theme },
+  } = useThemeContext();
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState('tabProperties');
 

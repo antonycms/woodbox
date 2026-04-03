@@ -24,7 +24,11 @@ import { IColumn } from '@renderer/components/Table2/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: { data: theme } } } = useThemeContext();
+  const {
+    activeTheme: {
+      tableInfo: { data: theme },
+    },
+  } = useThemeContext();
   const { columns, loading: loadingTableInfo } = useTableInfoContext();
 
   const { getTableData } = useStoreContext();
@@ -109,86 +113,18 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     if (loading) return;
 
     setLoading(true);
-    const { data } = await getTableData(id_connection, { schema, table, limit: items.length, page: 1 });
+    const { data } = await getTableData(id_connection, {
+      schema,
+      table,
+      limit: items.length,
+      page: 1,
+    });
     setLoading(false);
 
     lastPageSearch.current = 0;
     setLastFetchDate(new Date());
     setItems(data);
   }, [id_connection, items, loading, schema, table, limit, page]);
-
-  const columnsFake = [
-    {
-      label: 'label 1',
-      attribute: 'att_1',
-    },
-    {
-      label: 'label 2',
-      attribute: 'att_2',
-    },
-    {
-      label: 'label 3',
-      attribute: 'att_3',
-    },
-    {
-      label: 'label 4',
-      attribute: 'att_4',
-    },
-    {
-      label: 'label 5',
-      attribute: 'att_5',
-    },
-    {
-      label: 'label 6',
-      attribute: 'att_6',
-    },
-    {
-      label: 'label 7',
-      attribute: 'att_7',
-    },
-    {
-      label: 'label 8',
-      attribute: 'att_8',
-    },
-  ];
-
-  const dataFake = (() => {
-    const itemsFake = [];
-
-    for (let i = 0; i < 1000; i++) {
-      itemsFake.push({
-        id: i,
-        att_1: `att_${i + 1}`,
-        att_2: `att_${i + 2}`,
-        att_3: `att_${i + 3}`,
-        att_4: `att_${i + 4}`,
-        att_5: `att_${i + 5}`,
-        att_6: `att_${i + 6}`,
-        att_7: `att_${i + 7}`,
-        att_8: `att_${i + 8}`,
-      });
-    }
-
-    return itemsFake;
-  })();
-
-  const serializedData = React.useMemo(() => {
-    if (!columns?.length) return [];
-
-    return items.map((item) => {
-      const row = { ...item };
-
-      columnsSerialized.forEach(({ attribute }) => {
-        const columnValue = row[attribute];
-
-        if (typeof columnValue === 'object') {
-          row[attribute] = JSON.stringify(columnValue);
-        }
-      });
-
-      return row;
-    });
-  }, [items, columns]);
 
   React.useEffect(() => {
     loadData();
@@ -199,7 +135,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
       <Table
         selectable
         columns={columnsSerialized}
-        rows={serializedData}
+        rows={items}
         // columns={columnsFake}
         // rows={dataFake}
         rowKeyExtractor={(_, index) => index}
@@ -240,7 +176,13 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
           <PanelFile size={16} />
         </Button>
 
-        <Button title="Atualizar dados" text smallIcon color={theme.bar.color} onClick={handleRefresh}>
+        <Button
+          title="Atualizar dados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleRefresh}
+        >
           <IconRefresh size={18} />
         </Button>
 

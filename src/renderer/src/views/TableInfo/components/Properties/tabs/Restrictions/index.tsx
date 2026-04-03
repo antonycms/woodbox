@@ -12,7 +12,11 @@ import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
-  const { activeTheme: { tableInfo: { properties: theme } } } = useThemeContext();
+  const {
+    activeTheme: {
+      tableInfo: { properties: theme },
+    },
+  } = useThemeContext();
   const { restrictions, loadTableRestrictions, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
 
