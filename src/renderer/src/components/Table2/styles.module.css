@@ -4,6 +4,7 @@
   position: relative;
   overflow: auto;
   background-color: var(--backgroundColor);
+  outline: transparent;
 }
 
 .table_container {

@@ -6,9 +6,9 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
-import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { ModalCopy } from '../ModalCopy';
 
 interface IColumn {
   label: string;
@@ -30,6 +30,9 @@ interface ITableProps {
   columns: IColumn[];
   selectable?: boolean;
   loading?: boolean;
+  onCopy?(selectedRows: any[]): void;
+  onPaste?(selectedRows: any[]): void;
+  onSelectRow?(rowsData: any[]): void;
 }
 
 const Table = (props: ITableProps) => {
@@ -43,10 +46,15 @@ const Table = (props: ITableProps) => {
     onScrollEnd,
     editedRows,
     onEditRow,
+    onSelectRow,
+    onCopy,
+    onPaste,
   } = props;
 
-  const { activeTheme: { table: theme } } = useThemeContext();
-  const refBodyContainer = React.useRef<HTMLDivElement>();
+  const {
+    activeTheme: { table: theme },
+  } = useThemeContext();
+  const refScrollContainer = React.useRef<HTMLDivElement>();
   const rowHeight = React.useMemo(() => 35, []);
   const maxColumnSize = React.useMemo(() => 760, []);
   const defaultColumnSize = React.useMemo(() => 200, []);
@@ -57,9 +65,12 @@ const Table = (props: ITableProps) => {
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [scroll, setScroll] = useStateWithDebounce({ left: 0, top: 0 }, 20);
   const { height: heightBodyContainer, width: widthBodyContainer } = useResize({
-    HTMLElement: refBodyContainer.current,
+    HTMLElement: refScrollContainer.current,
     ignoreZeroValue: true,
   });
+
+  const selectedRowsRef = React.useRef(selectedRows);
+  selectedRowsRef.current = selectedRows;
 
   const serializedRows = React.useMemo(() => {
     return rows.map((row, index) => {
@@ -139,17 +150,25 @@ const Table = (props: ITableProps) => {
     });
   }, []);
 
-  const onScroll = useLatestFunc((event: React.UIEvent<HTMLDivElement, UIEvent>) => {
-    const element = event.target as HTMLDivElement;
+  const onScroll = React.useCallback(
+    (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
+      const element = event.target as HTMLDivElement;
 
-    setScroll({ left: element.scrollLeft, top: element.scrollTop });
+      const hasHorizontalScrollbar = element.scrollWidth > element.clientWidth;
+      const scrollbarSize = 6;
 
-    const isEndVerticalScroll = element.offsetHeight + element.scrollTop > element.scrollHeight + 5;
+      const scrollHeight = element.scrollHeight + (hasHorizontalScrollbar ? scrollbarSize : 0);
 
-    if (isEndVerticalScroll && element.scrollTop !== scroll.top) {
-      onScrollEnd?.();
-    }
-  });
+      const isEndVerticalScroll = element.offsetHeight + element.scrollTop >= scrollHeight;
+
+      if (isEndVerticalScroll && element.scrollTop !== scroll.top) {
+        onScrollEnd?.();
+      }
+
+      setScroll({ left: element.scrollLeft, top: element.scrollTop });
+    },
+    [onScrollEnd],
+  );
 
   const virtualHeader = React.useMemo(() => {
     const { columnsIndexToRender } = columnsDetails;
@@ -178,24 +197,23 @@ const Table = (props: ITableProps) => {
     );
   }, [columns, columnsDetails, minColumnsSize]);
 
-  const onSelectRow = React.useCallback(
+  const handleSelectRow = React.useCallback(
     (row, isSelected: boolean) => {
       const indexRow = row.__index_row;
       const keyRow = row.__key_row;
-      const w = window as any;
 
-      if (!w.shiftPressed || typeof lastSelectedIndex.current !== 'number') {
+      if (!window.shiftPressed || typeof lastSelectedIndex.current !== 'number') {
         lastSelectedIndex.current = indexRow;
       }
 
-      if (w.ctrlPressed) {
+      if (window.ctrlPressed) {
         setSelectedRows((oldMap) => {
           const newMap = new Map(oldMap);
           isSelected ? newMap.delete(keyRow) : newMap.set(keyRow, row);
           return newMap;
         });
       } //
-      else if (w.shiftPressed) {
+      else if (window.shiftPressed) {
         if (typeof lastSelectedIndex.current === 'number') {
           let firstIndex = lastSelectedIndex.current;
           let lastIndex = indexRow;
@@ -256,7 +274,7 @@ const Table = (props: ITableProps) => {
         <TableRow
           key={keyRow}
           row={row}
-          onClick={selectable ? onSelectRow : undefined}
+          onClick={selectable ? handleSelectRow : undefined}
           isSelected={isSelected}
         >
           {columnsIndexToRender.map((columnIndex) => {
@@ -300,6 +318,22 @@ const Table = (props: ITableProps) => {
   });
 
   React.useEffect(() => {
+    const cb = (ev: KeyboardEvent) => {
+      const isCopy = window.ctrlPressed && ev.key === 'c';
+      const isPaste = window.ctrlPressed && ev.key === 'v';
+
+      isCopy && onCopy?.([...selectedRowsRef.current.values()]);
+      isPaste && onCopy?.([...selectedRowsRef.current.values()]);
+    };
+
+    refScrollContainer.current?.addEventListener?.('keydown', cb);
+
+    return () => {
+      refScrollContainer.current?.removeEventListener?.('keydown', cb);
+    };
+  }, [onCopy, onPaste]);
+
+  React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
       return Math.ceil(calculateTextHtmlWidth(column.label) + 40);
     });
@@ -313,19 +347,18 @@ const Table = (props: ITableProps) => {
     setMinColumnsSize(defaultColumnsSize);
   }, [columns]);
 
-  if (!columns?.length) {
-    return (
-      <div className={styles.table_outside_container} style={cssVars}>{!!loading && <MultiplesBarLoading />}</div>
-    );
-  }
+  React.useEffect(() => {
+    onSelectRow?.([...selectedRows.values()]);
+  }, [selectedRows]);
 
   return (
     <div
-      ref={refBodyContainer}
+      ref={refScrollContainer}
       onScroll={onScroll}
       className={styles.table_outside_container}
       onContextMenu={onContextMenu}
       style={cssVars}
+      tabIndex={0}
     >
       {!!loading && <MultiplesBarLoading />}
 

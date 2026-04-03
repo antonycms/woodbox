@@ -12,7 +12,11 @@ interface ITableRowProps {
 const TableRow = ({ isSelected, isHeader, onClick, children }: ITableRowProps) => {
   return (
     <div
-      className={classes(styles.table_row, isSelected && styles.selected, isHeader && styles.header)}
+      className={classes(
+        styles.table_row,
+        isSelected && styles.selected,
+        isHeader && styles.header,
+      )}
       onClick={onClick}
     >
       {children}

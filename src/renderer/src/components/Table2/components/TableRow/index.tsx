@@ -18,7 +18,11 @@ const TableRow = ({ children, isSelected, isHeader, onClick, row }: ITableRowPro
 
   return (
     <div
-      className={classes(styles.table_row, isSelected && styles.selected, isHeader && styles.header)}
+      className={classes(
+        styles.table_row,
+        isSelected && styles.selected,
+        isHeader && styles.header,
+      )}
       onClick={handleClick}
     >
       {children}

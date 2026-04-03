@@ -60,15 +60,12 @@ const TableColumn = ({
   // minify string lenght in cell to improve performance
   const serializedValue = (() => {
     if (isEditing) return null;
+
     let v = value;
 
-    if (typeof value === 'boolean' || typeof value === null) {
-      v = `${v}`.toUpperCase();
-    }
-    if (typeof value === 'object') {
-      v = JSON.stringify(v);
-    }
-    if (typeof v !==  'string') return v;
+    if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
+    else if (typeof v === 'object') v = JSON.stringify(v);
+    else if (typeof v !== 'string') return v;
 
     const maxValueLenght = Math.ceil(width / 5);
     const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
