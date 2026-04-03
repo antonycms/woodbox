@@ -7,8 +7,5 @@ export const Welcolme = () => {
     activeTheme: { welcome: colors },
   } = useThemeContext();
 
-  return (
-    <div className={styles.container} style={colors}>
-    </div>
-  );
+  return <div className={styles.container} style={colors}></div>;
 };
