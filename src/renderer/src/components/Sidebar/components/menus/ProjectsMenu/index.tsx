@@ -257,7 +257,7 @@ const ProjectsMenu = () => {
               id: `${connection.id}:${schema}`,
               label: schema,
               data: dataSchema,
-              icon: 'file2' as const,
+              icon: 'folder' as const,
               type: 'schema' as const,
               childs: tablesSchema,
             };
