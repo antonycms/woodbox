@@ -14,7 +14,6 @@ import {
 import styles from './styles.module.css';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { Button } from '@renderer/components/Button';
-import { Input } from '@renderer/components/Input';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '../../dtos';
@@ -37,7 +36,6 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
   const lastPageSearch = React.useRef(page);
-  const [limit, setLimit] = React.useState(200);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
 
@@ -52,10 +50,6 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     required: !!column.is_nullable,
     sortable: true,
   }));
-
-  const handleChangeLimit = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLimit(Number(e.target.value));
-  }, []);
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -96,7 +90,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     if (loading || newPage === lastPageSearch.current) return;
 
     setLoading(true);
-    const { data } = await getTableData(id_connection, { schema, table, limit, page: newPage });
+    const { data } = await getTableData(id_connection, { schema, table, page: newPage });
     setLoading(false);
 
     setLastFetchDate(new Date());
@@ -107,7 +101,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
 
     setPage(newPage);
     setItems((prevState) => [...prevState, ...data]);
-  }, [id_connection, loading, schema, table, limit, page]);
+  }, [id_connection, loading, schema, table, page]);
 
   const handleRefresh = React.useCallback(async () => {
     if (loading) return;
@@ -116,7 +110,6 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     const { data } = await getTableData(id_connection, {
       schema,
       table,
-      limit: items.length,
       page: 1,
     });
     setLoading(false);
@@ -124,7 +117,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     lastPageSearch.current = 0;
     setLastFetchDate(new Date());
     setItems(data);
-  }, [id_connection, items, loading, schema, table, limit, page]);
+  }, [id_connection, items, loading, schema, table, page]);
 
   React.useEffect(() => {
     loadData();
@@ -185,18 +178,6 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
         >
           <IconRefresh size={18} />
         </Button>
-
-        <Input
-          centerText
-          title="Limite por busca"
-          type="number"
-          maxWidth="80px"
-          value={limit}
-          onChange={handleChangeLimit}
-          backgroundColor={theme.bar.fieldBackgroundColor}
-          color={theme.bar.fieldColor}
-          placeholderColor={theme.bar.fieldPlaceholderColor}
-        />
 
         <Spacer />
 
