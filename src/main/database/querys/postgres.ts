@@ -1,4 +1,4 @@
-/* 
+/*
   VSCode Extension
   https://marketplace.visualstudio.com/items?itemName=jtladeiras.vscode-inline-sql
 */
@@ -11,7 +11,7 @@ const getAllSchemas = () => /* sql */ `
 `;
 
 const getTables = () => /* sql */ `
-  SELECT 
+  SELECT
     table_name,
     table_schema
   FROM information_schema.tables
@@ -33,9 +33,9 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
     c.table_name = st.relname
   )
   LEFT JOIN pg_catalog.pg_description pgd ON (
-    pgd.objoid = st.relid AND 
-    pgd.objsubid = c.ordinal_position   
-  ) 
+    pgd.objoid = st.relid AND
+    pgd.objsubid = c.ordinal_position
+  )
   WHERE c.table_name = '${table}' AND c.table_schema = '${schema}';
 `;
 
@@ -62,11 +62,11 @@ const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
 `;
 
 const getTableRestrictions = ({ schema, table }) => /* sql */ `
-  SELECT 
+  SELECT
     con.conname AS constraint_name,
-    (CASE 
-      WHEN con.contype = 'p' THEN 'primary_key' 
-      WHEN con.contype = 'u' THEN 'unique_key' 
+    (CASE
+      WHEN con.contype = 'p' THEN 'primary_key'
+      WHEN con.contype = 'u' THEN 'unique_key'
       WHEN con.contype = 'c' THEN 'check'
       ELSE NULL END
     ) AS constraint_type
