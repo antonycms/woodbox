@@ -10,7 +10,16 @@ import styles from './styles.module.css';
 const containerElement = document.getElementById('modal-root');
 
 export const Modal = React.memo((props: IModalProps) => {
-  const { show, title, onClose, justHide, children, closeOutside = false, width = '800px' } = props;
+  const {
+    show,
+    title,
+    onClose,
+    justHide,
+    children,
+    closeOutside = false,
+    height,
+    width = '800px',
+  } = props;
 
   const {
     activeTheme: {
@@ -23,8 +32,8 @@ export const Modal = React.memo((props: IModalProps) => {
   }, [show, justHide]);
 
   const styleContainer = React.useMemo(() => {
-    return { backgroundColor, maxWidth: width };
-  }, [backgroundColor, width]);
+    return { backgroundColor, height, maxWidth: width };
+  }, [backgroundColor, height, width]);
 
   const emitCloseOutside = React.useCallback(
     ({ target, currentTarget }) => {
