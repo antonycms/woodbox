@@ -92,6 +92,8 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
           lineNumbersMinChars: 3,
           value: initialValue,
           theme: 'active-theme',
+          readOnly: props.readonly,
+          minimap: { enabled: !props.hidePreview },
         },
         {
           contextMenuService: {
@@ -130,13 +132,20 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     );
 
     React.useEffect(() => {
-      const currentEditor = initEditor();
-      setEditor(currentEditor);
+      let currentEditor: monaco.editor.IStandaloneCodeEditor;
+
+      // fix startup freeze
+      setTimeout(() => {
+        currentEditor = initEditor();
+        setEditor(currentEditor);
+      });
 
       return () => {
         currentEditor?.dispose?.();
       };
     }, []);
+
+    React.useEffect(resize, [width, height]);
 
     React.useEffect(() => {
       monaco.editor.setTheme('active-theme');
@@ -153,8 +162,6 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         props.onUmounted?.({ value, selections, scroll });
       };
     }, [editor, props.onUmounted]);
-
-    React.useEffect(resize, [width, height]);
 
     React.useEffect(() => {
       if (props.value !== undefined) setValue(props.value);
@@ -229,6 +236,8 @@ export interface IEditorProps {
   onChangeCurrentValue?: (value: string) => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
+  readonly?: boolean;
+  hidePreview?: boolean;
 }
 
 export interface IScroll {
