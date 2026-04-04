@@ -164,6 +164,28 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     }
   };
 
+  const runCurrentSQL = async () => {
+    const query = getSelectionsValues().join('\n') || refEditor.current?.getCurrentValue?.();
+
+    if (!query) return;
+
+    const updateTabResultData = makeNewTabResult({
+      type: 'SELECT',
+      query,
+      loading: true,
+      date_run: new Date().toISOString(),
+    });
+
+    try {
+      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
+
+      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({ type: 'ERROR', message, loading: false });
+    }
+  };
+
   const runSelectionsSQL = async () => {
     const selectionsValue = getSelectionsValues();
     const query = selectionsValue.join('\n');
@@ -331,6 +353,9 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
   const runSelectionsRef = React.useRef(runSelectionsSQL);
   runSelectionsRef.current = runSelectionsSQL;
 
+  const runCurrentSQLRef = React.useRef(runCurrentSQL);
+  runCurrentSQLRef.current = runCurrentSQL;
+
   React.useEffect(() => {
     if (!refEditor.current?.element) return;
 
@@ -341,11 +366,16 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
         e.preventDefault();
 
         if (e.altKey) {
+          runAllRef.current();
+          return;
+        }
+
+        if (e.shiftKey) {
           runSelectionsRef.current();
           return;
         }
 
-        runAllRef.current();
+        runCurrentSQLRef.current();
       }
     };
 
