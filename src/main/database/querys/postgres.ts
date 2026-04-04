@@ -40,19 +40,25 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
 `;
 
 const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
-  SELECT DISTINCT
-    r.constraint_name,
-    r.table_schema,
-    r.table_name, 
-    r.column_name,
-    u.table_schema as "reference_table_schema", 
-    u.table_name as "reference_table_name",
-    u.column_name as "reference_column_name"
-  FROM information_schema.constraint_column_usage u
-  INNER JOIN information_schema.referential_constraints fk on u.constraint_schema = fk.unique_constraint_schema AND u.constraint_name = fk.unique_constraint_name 
-  INNER JOIN information_schema.key_column_usage r ON r.constraint_schema = fk.constraint_schema AND r.constraint_name = fk.constraint_name
-  WHERE r.table_schema = '${schema}'
-  AND r.table_name = '${table}';
+  SELECT
+    c.conname AS constraint_name,
+    ns.nspname AS table_schema,
+    t.relname  AS table_name,
+    a.attname  AS column_name,
+    ns_ref.nspname AS reference_table_schema,
+    t_ref.relname  AS reference_table_name,
+    a_ref.attname  AS reference_column_name
+  FROM pg_catalog.pg_constraint c
+  JOIN pg_catalog.pg_class       t      ON t.oid      = c.conrelid
+  JOIN pg_catalog.pg_namespace   ns     ON ns.oid     = t.relnamespace
+  JOIN pg_catalog.pg_class       t_ref  ON t_ref.oid  = c.confrelid
+  JOIN pg_catalog.pg_namespace   ns_ref ON ns_ref.oid = t_ref.relnamespace
+  CROSS JOIN LATERAL unnest(c.conkey, c.confkey) AS cols(src_col, ref_col)
+  JOIN pg_catalog.pg_attribute a     ON a.attrelid     = c.conrelid  AND a.attnum     = cols.src_col
+  JOIN pg_catalog.pg_attribute a_ref ON a_ref.attrelid = c.confrelid AND a_ref.attnum = cols.ref_col
+  WHERE c.contype = 'f'
+  AND ns.nspname = '${schema}'
+  AND t.relname  = '${table}';
 `;
 
 const getTableRestrictions = ({ schema, table }) => /* sql */ `
