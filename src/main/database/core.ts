@@ -233,10 +233,14 @@ export const runSql = async (connectionId: string, sql: string, { page = 1, limi
     const hasOffset = /\boffset\b/.test(normalized);
 
     if (sql_final.endsWith(';')) sql_final = sql_final.slice(0, -1);
-    if (!hasLimit && limit >= 0) sql_final += ` LIMIT ${limit}`;
-    if (!hasOffset && page >= 0) sql_final += ` OFFSET ${page}`;
 
-    sql_final += ';';
+    if (!hasLimit && !hasOffset) {
+      sql_final = `
+        SELECT *
+        FROM (${sql_final}) AS __base_query
+        LIMIT ${limit} OFFSET ${(page - 1) * limit};
+      `;
+    }
   }
 
   const raw = await instance.raw(sql_final);
