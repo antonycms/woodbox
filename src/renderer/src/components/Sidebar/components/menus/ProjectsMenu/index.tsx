@@ -153,6 +153,8 @@ const ProjectsMenu = () => {
   const handleOpenNewSqlFile = () => {
     const { id_connection, description_connection } = selectedConnection;
 
+    refreshConnectionInfo(id_connection);
+
     addTab({
       id: generateHash(),
       title: `Sem título [${description_connection}]`,
