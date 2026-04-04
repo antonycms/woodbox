@@ -36,9 +36,10 @@ interface IQueryResult {
   columns?: string[];
   loading?: boolean;
   message?: string;
-  query?: string;
+  query: string;
   affected_rows?: number;
   date_run?: string;
+  page?: number;
 }
 
 type IDataMakeTabResult = IQueryResult & { title?: string };
@@ -99,6 +100,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       rows = [],
       query,
       affected_rows,
+      page,
       title = `Result ${tabsResult.length + 1}`,
     } = data;
 
@@ -115,6 +117,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       rows,
       loading,
       query,
+      page,
       affected_rows,
     };
 
@@ -180,10 +183,10 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     try {
       const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
 
-      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({ page: 1, query, columns, rows, type, affected_rows, loading: false });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', message, loading: false });
+      updateTabResultData({ type: 'ERROR', query, message, loading: false });
     }
   };
 
@@ -203,7 +206,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     try {
       const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
 
-      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({ page: 1, columns, rows, type, affected_rows, loading: false });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({ type: 'ERROR', message, loading: false });
@@ -229,7 +232,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
       const [{ type, rows, columns, affected_rows }] = x;
 
-      updateTabResultData({ columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({ page: 1, columns, rows, type, affected_rows, loading: false });
     } catch (error) {
       const message = error?.message?.split?.(' - ')?.[1];
 
@@ -277,6 +280,38 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
           severity: 'Error',
         },
       ]);
+    }
+  };
+
+  const onScrollEnd = async () => {
+    const lastTabResult = querysResultData.get(activeTabId);
+
+    if (!lastTabResult) return;
+
+    const updateTabResultData = makeUpdateResultTab(activeTabId);
+
+    const query = lastTabResult.query;
+    const newPage = (lastTabResult.page || 1) + 1;
+
+    updateTabResultData({ loading: true });
+
+    try {
+      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query, {
+        page: newPage,
+      });
+
+      updateTabResultData({
+        page: newPage,
+        columns,
+        rows: [...lastTabResult.rows, ...rows],
+        type,
+        query,
+        affected_rows,
+        loading: false,
+      });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({ type: 'ERROR', query, message, loading: false });
     }
   };
 
@@ -484,6 +519,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
                         loading={!!data.loading}
                         rowKeyExtractor={(item) => item.__hash_rowTable}
                         rows={data.rows}
+                        onScrollEnd={onScrollEnd}
                         columns={data.columns.map((column) => ({
                           attribute: column,
                           label: column,

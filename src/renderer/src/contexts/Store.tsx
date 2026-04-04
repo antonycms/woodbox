@@ -154,8 +154,8 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_data', idConnection, { table, schema, page, limit });
   };
 
-  const runSql = async (idConnection: string, sql: string) => {
-    return await call('@post:run_sql', idConnection, sql);
+  const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
+    return await call('@post:run_sql', idConnection, sql, options);
   };
 
   React.useEffect(() => {
@@ -272,7 +272,12 @@ interface IParamsGetTableData {
   table: string;
   schema?: string;
   page: number;
-  limit: number;
+  limit?: number;
+}
+
+interface IOptionsRunSql {
+  limit?: number;
+  page?: number;
 }
 
 export interface IStoreContext {
@@ -314,6 +319,7 @@ export interface IStoreContext {
   runSql(
     idConnection: string,
     sql: string,
+    options?: IOptionsRunSql,
   ): Promise<
     {
       type: string;

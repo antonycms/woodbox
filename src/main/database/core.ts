@@ -216,7 +216,11 @@ export const getTableData = async (
   return { count, data };
 };
 
-export const runSql = async (connectionId: string, sql: string, { page = 1, limit = 200 } = {}) => {
+export const runSql = async (
+  connectionId: string,
+  sql: string,
+  options?: { page?: number; limit?: number },
+) => {
   const connection = await getConnection(connectionId);
   const { instance } = connection;
 
@@ -226,15 +230,21 @@ export const runSql = async (connectionId: string, sql: string, { page = 1, limi
   const normalized = sql_final.replace(/\s+/g, ' ').toLowerCase();
 
   const isSelectQuery = normalized.startsWith('select') || normalized.startsWith('with');
+  let auto_paginated = false;
 
   // adiciona limit e offset em consultas SELECT para realizar paginacao.
   if (isSelectQuery) {
     const hasLimit = /\blimit\b/.test(normalized);
     const hasOffset = /\boffset\b/.test(normalized);
 
+    const limit = options?.limit ?? 200;
+    const page = options?.page ?? 1;
+
     if (sql_final.endsWith(';')) sql_final = sql_final.slice(0, -1);
 
-    if (!hasLimit && !hasOffset) {
+    if (!hasLimit && !hasOffset && Number(limit) > 0 && Number(page) >= 0) {
+      auto_paginated = true;
+
       sql_final = `
         SELECT *
         FROM (${sql_final}) AS __base_query
@@ -253,6 +263,7 @@ export const runSql = async (connectionId: string, sql: string, { page = 1, limi
     return {
       type,
       affected_rows,
+      auto_paginated,
       rows: JSON.parse(JSON.stringify(rows)),
       columns: columns?.map?.((field) => field.name) || [],
     };
