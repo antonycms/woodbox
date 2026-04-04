@@ -134,6 +134,8 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       prevState.delete(idTab);
       return new Map(prevState);
     });
+
+    if (activeTabId === idTab) setActiveTabId(null);
   };
 
   const getSelectionsValues = () => {
