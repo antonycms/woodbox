@@ -28,43 +28,48 @@ const TreeView = (props: ITreeViewProps) => {
   };
 
   const getSurroundingElements = () => {
-    const elements = document.querySelectorAll<HTMLDivElement>(
-      `.${styles.container} *[tabindex="0"]`,
+    const elements = Array.from(
+      document.querySelectorAll<HTMLDivElement>(`.${styles.container} *[tabindex="0"]`),
     );
 
-    let prevItem = null;
-    let nextItem = null;
+    const index = elements.indexOf(document.activeElement as HTMLDivElement);
 
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i];
+    if (index === -1) return { prevItem: null, nextItem: null };
 
-      prevItem = elements[i - 1];
-      nextItem = elements[i + 1];
-
-      if (document.activeElement === element) break;
-    }
-
-    return { prevItem, nextItem };
+    return {
+      prevItem: elements[index - 1] ?? null,
+      nextItem: elements[index + 1] ?? null,
+    };
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const element = e.target as HTMLDivElement;
-    const item = getItemFromElement(element);
+  const handleSelectItem = (element: HTMLDivElement) => {
+    if (!element) return;
 
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') handleSwitchItem(item);
-    if (e.key === 'ArrowUp') getSurroundingElements()?.prevItem?.focus();
-    if (e.key === 'ArrowDown') getSurroundingElements()?.nextItem?.focus();
-    if (e.key === 'Enter') handleDoubleClick(e);
-  };
-
-  const handleClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const element = e.target as HTMLDivElement;
     const item = getItemFromElement(element);
 
     if (!item) return;
 
     element?.focus();
     props.onClick?.({ id: item.id, data: item.data, type: item.type });
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      handleSwitchItem(getItemFromElement(e.target as HTMLDivElement));
+    } //
+    else if (e.key === 'ArrowUp') {
+      handleSelectItem(getSurroundingElements()?.prevItem);
+    } //
+    else if (e.key === 'ArrowDown') {
+      handleSelectItem(getSurroundingElements()?.nextItem);
+    } //
+    else if (e.key === 'Enter') {
+      handleDoubleClick(e);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    handleSelectItem(e.target as HTMLDivElement);
   };
 
   const handleDoubleClick = (
