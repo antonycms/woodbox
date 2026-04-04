@@ -61,9 +61,10 @@ const TableColumn = ({
   const serializedValue = (() => {
     if (isEditing) return null;
 
-    let v = value;
+    let v: any = value;
 
     if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
+    else if (v instanceof Date) v = v.toISOString();
     else if (typeof v === 'object') v = JSON.stringify(v);
     else if (typeof v !== 'string') return v;
 
