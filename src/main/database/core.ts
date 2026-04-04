@@ -41,6 +41,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
       user,
       password,
       database,
+      dateStrings: true,
     },
   });
 
