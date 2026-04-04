@@ -80,7 +80,17 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     };
 
     const getCurrentValue = () => {
-      return getCurrentQuerySqlFromContent(editor?.getModel()?.getValue?.() || '');
+      const position = editor?.getPosition?.();
+      if (!position) return editor?.getModel()?.getValue?.() || '';
+
+      return getCurrentQuerySqlFromContent(
+        editor?.getModel()?.getValueInRange?.({
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        }) || '',
+      );
     };
 
     const initEditor = () => {
