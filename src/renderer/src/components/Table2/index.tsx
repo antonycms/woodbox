@@ -163,7 +163,7 @@ const Table = (props: ITableProps) => {
 
       const isEndVerticalScroll = element.offsetHeight + element.scrollTop >= scrollHeight;
 
-      if (isEndVerticalScroll && element.scrollTop !== scroll.top) {
+      if (isEndVerticalScroll) {
         onScrollEnd?.();
       }
 
@@ -373,13 +373,7 @@ const Table = (props: ITableProps) => {
         {virtualRows}
       </div>
 
-      {copyData !== null && (
-        <ModalCopy
-          content={copyData}
-          open
-          onClose={() => setCopyData(null)}
-        />
-      )}
+      {copyData !== null && <ModalCopy content={copyData} open onClose={() => setCopyData(null)} />}
     </div>
   );
 };
