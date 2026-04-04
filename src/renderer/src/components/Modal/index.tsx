@@ -56,7 +56,7 @@ export const Modal = React.memo((props: IModalProps) => {
           </>
         )}
 
-        {children}
+        <div className={styles.contentContainer}>{children}</div>
       </div>
     </div>,
     containerElement,

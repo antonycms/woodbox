@@ -13,6 +13,9 @@
 }
 
 .container {
+  display: flex;
+  flex-direction: column;
+
   padding: 20px;
   width: 100%;
   border-radius: 8px;
@@ -21,6 +24,12 @@
   top: 50%;
   transform: translateX(-50%) translateY(-50%);
   animation: blowUp 0.5s forwards;
+}
+
+.contentContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 @keyframes blowUp {
