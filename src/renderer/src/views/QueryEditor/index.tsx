@@ -171,12 +171,11 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
     if (!query) return;
 
-    const updateTabResultData = makeNewTabResult({
-      type: 'SELECT',
-      query,
-      loading: true,
-      date_run: new Date().toISOString(),
-    });
+    const updateTabResultData = activeTabId
+      ? makeUpdateResultTab(activeTabId)
+      : makeNewTabResult({ query, type: 'SELECT', date_run: new Date().toISOString() });
+
+    updateTabResultData({ loading: true });
 
     try {
       const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
