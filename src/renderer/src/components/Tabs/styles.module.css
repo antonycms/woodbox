@@ -8,9 +8,12 @@
   position: relative;
 }
 
-.outsideBar:hover,
-.outsideBar:active,
-.outsideBar:focus {
+.outsideBar::-webkit-scrollbar {
+  display: none;
+}
+
+.outsideBar {
+  background-color: var(--colorBorder);
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -38,7 +41,6 @@
 .tabBar {
   display: flex;
   flex-direction: row;
-  box-sizing: content-box;
   background-color: var(--backgroundColorBar);
   flex: 1;
 }
@@ -116,8 +118,7 @@
   left: 0;
   background-color: var(--ascentColor);
 }
-.tab.active::before {
-  display: none;
+.tab.vertical.active::before {
   content: '';
   position: absolute;
   height: 1px;

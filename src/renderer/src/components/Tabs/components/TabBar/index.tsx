@@ -29,7 +29,6 @@ const TabsBar = (props: ITabsBarProps) => {
 
   const ref = React.useRef<HTMLDivElement>();
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
-  const [tabBarSize, setTabBarSize] = React.useState(0);
   const noHasContent = !tabs.length;
 
   const changeTabContent = () => {
@@ -105,26 +104,14 @@ const TabsBar = (props: ITabsBarProps) => {
   );
 
   const styleOutsideContainer = React.useMemo(() => {
-    return toCssProperties({ colorBorder: borderColor });
-  }, [borderColor]);
-
-  // const styleOutsideContainer = React.useMemo(() => {
-  //   const cssProperties = toCssProperties({ colorBorder: borderColor });
-
-  //   const outsideContainerElement = ref?.current?.parentElement;
-
-  //   const hasHorizontalScroll = outsideContainerElement?.scrollWidth > outsideContainerElement?.clientWidth;
-  //   const horizontalHeight = `calc(${height} + ${hasHorizontalScroll ? '10px' : '2px'})`
-
-  //   console.log(outsideContainerElement?.scrollWidth, outsideContainerElement?.clientWidth)
-
-  //   return { ...cssProperties, height: vertical ? undefined : horizontalHeight };
-  // }, [tabs, borderColor, vertical]);
+    const cssProperties = toCssProperties({ colorBorder: borderColor });
+    return { ...cssProperties, height: vertical ? undefined : height };
+  }, [tabs.length, borderColor, vertical, borderBottom, borderTop]);
 
   const styleTabBar = React.useMemo(() => {
     const cssProperties = toCssProperties({ backgroundColorBar });
-    return { ...cssProperties, width: vertical ? width : `${tabBarSize}px` };
-  }, [backgroundColorBar, width, vertical, tabBarSize]);
+    return { ...cssProperties, width: vertical ? width : undefined };
+  }, [backgroundColorBar, width, vertical]);
 
   React.useEffect(() => {
     const element = ref.current;
@@ -144,37 +131,6 @@ const TabsBar = (props: ITabsBarProps) => {
   }, []);
 
   React.useEffect(() => {
-    const outsideContainerElement = ref?.current?.parentElement;
-
-    const totalSize = [...(ref?.current?.children || [])].reduce((acm, child) => {
-      const tabSize = Math.floor(vertical ? child.clientHeight : child.clientWidth) + 2.5;
-      return acm + tabSize;
-    }, 0);
-
-    setTabBarSize(totalSize);
-
-    const borderSize = `${[borderTop, borderBottom].filter(Boolean).length ? 2 : 0}px`;
-
-    // console.log(borderSize)
-
-    setTimeout(() => {
-      if (outsideContainerElement && !vertical) {
-        const hasHorizontalScroll =
-          outsideContainerElement?.scrollWidth > outsideContainerElement?.clientWidth;
-        const horizontalHeight = `calc(${height} + ${
-          hasHorizontalScroll ? '10px' : '2px'
-        } - ${borderSize})`;
-
-        // console.log(hasHorizontalScroll)
-
-        outsideContainerElement.style.height = horizontalHeight;
-      }
-    });
-
-    // console.log(outsideContainerElement?.scrollWidth, outsideContainerElement?.clientWidth)
-  }, [tabs, vertical, borderBottom, borderTop]);
-
-  React.useEffect(() => {
     changeTabContent();
 
     const activeTab = tabs.find((t) => t.idTab === activeTabId);
@@ -184,9 +140,6 @@ const TabsBar = (props: ITabsBarProps) => {
     } //
     else if (activeTab?.idTab != activeTabId) {
       onActiveTab(activeTab);
-    }
-
-    if (ref.current) {
     }
   }, [tabs, activeTabId]);
 
