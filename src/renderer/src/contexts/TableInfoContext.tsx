@@ -9,24 +9,27 @@ import {
 const TableInfoContext = React.createContext<ITableInfoContext>({} as ITableInfoContext);
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
-  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions } =
+  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions, getTableDefinition } =
     useStoreContext();
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
   const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);
   const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
   const [restrictions, setRestrictions] = React.useState<IColumnRestrictionsInfo[]>([]);
+  const [definition, setDefinition] = React.useState<string>('');
   const [lastFetchDate, setLastFetchDate] = React.useState<ILastFetchDate>({
     columns: new Date(),
     references: new Date(),
     usedAsReference: new Date(),
     restrictions: new Date(),
+    definition: new Date(),
   });
   const [loading, setLoading] = React.useState<ITableInfoLoading>({
     columns: false,
     references: false,
     usedAsReference: false,
     restrictions: false,
+    definition: false,
   });
 
   const updateFetchDate = (attribute: keyof ITableInfo) => {
@@ -98,6 +101,19 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     }
   }, []);
 
+  const loadTableDefinition: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
+    try {
+      updateLoading('definition', true);
+
+      const items = await getTableDefinition(idConnection, filters);
+
+      setDefinition(items?.[0]?.definition || '');
+      updateFetchDate('definition');
+    } finally {
+      updateLoading('definition', false);
+    }
+  }, []);
+
   return (
     <TableInfoContext.Provider
       value={{
@@ -105,11 +121,13 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         references,
         usedAsReference,
         restrictions,
+        definition,
 
         loadTableColumns,
         loadTableReferences,
         loadTableUsedAsReference,
         loadTableRestrictions,
+        loadTableDefinition,
 
         lastFetchDate,
         loading,
@@ -135,6 +153,7 @@ interface ITableInfo {
   references: IColumnReferenceInfo[];
   usedAsReference: IColumnReferenceInfo[];
   restrictions: IColumnRestrictionsInfo[];
+  definition: string;
 }
 
 type ILastFetchDate = {
@@ -150,6 +169,7 @@ interface ITableInfoContext extends ITableInfo {
   loadTableReferences: LoadTableInfo;
   loadTableUsedAsReference: LoadTableInfo;
   loadTableRestrictions: LoadTableInfo;
+  loadTableDefinition: LoadTableInfo;
 
   lastFetchDate: ILastFetchDate;
   loading: ITableInfoLoading;

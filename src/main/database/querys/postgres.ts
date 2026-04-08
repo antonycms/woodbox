@@ -121,6 +121,55 @@ const selectWithOffset = ({
   `;
 };
 
+const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  WITH table_info AS (
+    SELECT c.oid, n.nspname AS schema_name, c.relname AS table_name
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname = '${table}' AND n.nspname = '${schema}' AND c.relkind = 'r'
+  ),
+  columns AS (
+    SELECT
+      a.attnum AS sort_order,
+      '  ' || quote_ident(a.attname) || ' ' ||
+      CASE
+        WHEN ad.adbin IS NOT NULL AND pg_catalog.pg_get_expr(ad.adbin, ad.adrelid) LIKE 'nextval(%'
+        THEN CASE pg_catalog.format_type(a.atttypid, a.atttypmod)
+          WHEN 'smallint' THEN 'SMALLSERIAL' || CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END
+          WHEN 'integer'  THEN 'SERIAL'      || CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END
+          WHEN 'bigint'   THEN 'BIGSERIAL'   || CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END
+          ELSE
+            pg_catalog.format_type(a.atttypid, a.atttypmod) ||
+            CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
+            ' DEFAULT ' || pg_catalog.pg_get_expr(ad.adbin, ad.adrelid)
+        END
+        ELSE
+          pg_catalog.format_type(a.atttypid, a.atttypmod) ||
+          CASE WHEN a.attnotnull THEN ' NOT NULL' ELSE '' END ||
+          CASE WHEN ad.adbin IS NOT NULL THEN ' DEFAULT ' || pg_catalog.pg_get_expr(ad.adbin, ad.adrelid) ELSE '' END
+      END AS part
+    FROM table_info ti
+    JOIN pg_attribute a ON a.attrelid = ti.oid AND a.attnum > 0 AND NOT a.attisdropped
+    LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+  ),
+  constraints AS (
+    SELECT
+      1000 + row_number() OVER (ORDER BY con.conname) AS sort_order,
+      '  CONSTRAINT ' || quote_ident(con.conname) || ' ' || pg_get_constraintdef(con.oid, true) AS part
+    FROM table_info ti
+    JOIN pg_constraint con ON con.conrelid = ti.oid
+    WHERE con.contype IN ('p', 'u', 'c', 'f')
+  )
+  SELECT
+    'CREATE TABLE ' || quote_ident(ti.schema_name) || '.' || quote_ident(ti.table_name) || ' (' || E'\\n' ||
+    (
+      SELECT string_agg(part, ',' || E'\\n' ORDER BY sort_order)
+      FROM (SELECT * FROM columns UNION ALL SELECT * FROM constraints) all_parts
+    ) ||
+    E'\\n)' AS definition
+  FROM table_info ti
+`;
+
 export default {
   getAllSchemas,
   getTables,
@@ -130,6 +179,7 @@ export default {
   getTotalRowsCountInTable,
   selectWithOffset,
   getTableRestrictions,
+  getTableDefinition,
 };
 
 export interface ITableWithSchema {
