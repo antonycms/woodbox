@@ -59,8 +59,6 @@ const TableColumn = ({
 
   // minify string lenght in cell to improve performance
   const serializedValue = (() => {
-    if (isEditing) return null;
-
     let v: any = value;
 
     if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
@@ -71,7 +69,7 @@ const TableColumn = ({
     const maxValueLenght = Math.ceil(width / 5);
     const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
 
-    return v.slice(0, valueLenght);
+    return isEditing ? v : v.slice(0, valueLenght);
   })();
 
   const style = React.useMemo(() => {
@@ -115,7 +113,7 @@ const TableColumn = ({
             {...props}
             autoFocus
             spellCheck={false}
-            defaultValue={value}
+            defaultValue={serializedValue}
             onBlur={handleSaveInputValue}
             onChange={(e) => {
               editedValue.current = e.target.value;
@@ -136,7 +134,7 @@ const TableColumn = ({
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
     >
-      {serializedValue}
+      {isEditing ? null : serializedValue}
     </ColumnComponent>
   );
 };
