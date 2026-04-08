@@ -9,6 +9,7 @@ import { ITableInfoProps } from '../../dtos';
 import Columns from './tabs/Columns';
 import ForeingKeys from './tabs/ForeingKeys';
 import Restrictios from './tabs/Restrictions';
+import References from './tabs/References';
 import styles from './styles.module.css';
 
 const Properties = (props: ITableInfoProps) => {
@@ -75,6 +76,7 @@ const Properties = (props: ITableInfoProps) => {
             { idTab: '1', title: 'Colunas' },
             { idTab: '2', title: 'Restrições' },
             { idTab: '3', title: 'Chaves Estrangeiras' },
+            { idTab: '4', title: 'Referências' },
           ]}
         />
 
@@ -89,6 +91,10 @@ const Properties = (props: ITableInfoProps) => {
 
           <TabContent idTab="3">
             <ForeingKeys {...props} />
+          </TabContent>
+
+          <TabContent idTab="4">
+            <References {...props} />
           </TabContent>
         </TabWindow>
       </div>

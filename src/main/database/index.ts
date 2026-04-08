@@ -6,6 +6,7 @@ import {
   getTableData,
   getTableColumns,
   getTableReferences,
+  getTableUsedAsReference,
   getTableRestrictions,
   runSql,
 } from './core';
@@ -16,6 +17,7 @@ addListener('@get:connection_info', getConnectionInfo);
 addListener('@get:table_data', getTableData);
 addListener('@get:table_columns', getTableColumns);
 addListener('@get:table_references', getTableReferences);
+addListener('@get:table_used_as_reference', getTableUsedAsReference);
 addListener('@get:table_restrictions', getTableRestrictions);
 addListener('@post:run_sql', runSql);
 

@@ -61,6 +61,28 @@ const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
   AND t.relname  = '${table}';
 `;
 
+const getTableUsedAsReference = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  SELECT
+    c.conname AS constraint_name,
+    ns.nspname AS table_schema,
+    t.relname  AS table_name,
+    a.attname  AS column_name,
+    ns_ref.nspname AS reference_table_schema,
+    t_ref.relname  AS reference_table_name,
+    a_ref.attname  AS reference_column_name
+  FROM pg_catalog.pg_constraint c
+  JOIN pg_catalog.pg_class       t      ON t.oid      = c.conrelid
+  JOIN pg_catalog.pg_namespace   ns     ON ns.oid     = t.relnamespace
+  JOIN pg_catalog.pg_class       t_ref  ON t_ref.oid  = c.confrelid
+  JOIN pg_catalog.pg_namespace   ns_ref ON ns_ref.oid = t_ref.relnamespace
+  CROSS JOIN LATERAL unnest(c.conkey, c.confkey) AS cols(src_col, ref_col)
+  JOIN pg_catalog.pg_attribute a     ON a.attrelid     = c.conrelid  AND a.attnum     = cols.src_col
+  JOIN pg_catalog.pg_attribute a_ref ON a_ref.attrelid = c.confrelid AND a_ref.attnum = cols.ref_col
+  WHERE c.contype = 'f'
+  AND ns_ref.nspname = '${schema}'
+  AND t_ref.relname  = '${table}';
+`;
+
 const getTableRestrictions = ({ schema, table }) => /* sql */ `
   SELECT
     con.conname AS constraint_name,
@@ -104,6 +126,7 @@ export default {
   getTables,
   getTableColumns,
   getTableReferences,
+  getTableUsedAsReference,
   getTotalRowsCountInTable,
   selectWithOffset,
   getTableRestrictions,

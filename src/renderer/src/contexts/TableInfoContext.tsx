@@ -9,19 +9,23 @@ import {
 const TableInfoContext = React.createContext<ITableInfoContext>({} as ITableInfoContext);
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
-  const { getTableColumns, getTableReferences, getTableRestrictions } = useStoreContext();
+  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions } =
+    useStoreContext();
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
   const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);
+  const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
   const [restrictions, setRestrictions] = React.useState<IColumnRestrictionsInfo[]>([]);
   const [lastFetchDate, setLastFetchDate] = React.useState<ILastFetchDate>({
     columns: new Date(),
     references: new Date(),
+    usedAsReference: new Date(),
     restrictions: new Date(),
   });
   const [loading, setLoading] = React.useState<ITableInfoLoading>({
     columns: false,
     references: false,
+    usedAsReference: false,
     restrictions: false,
   });
 
@@ -47,8 +51,6 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
 
       setColumns(items || []);
       updateFetchDate('columns');
-    } catch (error) {
-      throw error;
     } finally {
       updateLoading('columns', false);
     }
@@ -62,12 +64,26 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
 
       setReferences(items || []);
       updateFetchDate('references');
-    } catch (error) {
-      throw error;
     } finally {
       updateLoading('references', false);
     }
   }, []);
+
+  const loadTableUsedAsReference: LoadTableInfo = React.useCallback(
+    async (idConnection, filters) => {
+      try {
+        updateLoading('usedAsReference', true);
+
+        const items = await getTableUsedAsReference(idConnection, filters);
+
+        setUsedAsReference(items || []);
+        updateFetchDate('usedAsReference');
+      } finally {
+        updateLoading('usedAsReference', false);
+      }
+    },
+    [],
+  );
 
   const loadTableRestrictions: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
     try {
@@ -77,8 +93,6 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
 
       setRestrictions(items || []);
       updateFetchDate('restrictions');
-    } catch (error) {
-      throw error;
     } finally {
       updateLoading('restrictions', false);
     }
@@ -89,10 +103,12 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       value={{
         columns,
         references,
+        usedAsReference,
         restrictions,
 
         loadTableColumns,
         loadTableReferences,
+        loadTableUsedAsReference,
         loadTableRestrictions,
 
         lastFetchDate,
@@ -117,6 +133,7 @@ interface IThemeProviderProps {
 interface ITableInfo {
   columns: IColumnInfo[];
   references: IColumnReferenceInfo[];
+  usedAsReference: IColumnReferenceInfo[];
   restrictions: IColumnRestrictionsInfo[];
 }
 
@@ -131,6 +148,7 @@ type ITableInfoLoading = {
 interface ITableInfoContext extends ITableInfo {
   loadTableColumns: LoadTableInfo;
   loadTableReferences: LoadTableInfo;
+  loadTableUsedAsReference: LoadTableInfo;
   loadTableRestrictions: LoadTableInfo;
 
   lastFetchDate: ILastFetchDate;

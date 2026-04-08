@@ -144,6 +144,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_references', idConnection, { table, schema });
   };
 
+  const getTableUsedAsReference = async (idConnection: string, { table, schema }) => {
+    return await call('@get:table_used_as_reference', idConnection, { table, schema });
+  };
+
   const getTableRestrictions = async (idConnection: string, { table, schema }) => {
     return await call('@get:table_restrictions', idConnection, { table, schema });
   };
@@ -191,6 +195,7 @@ const StoreContextProvider = ({ children }) => {
 
         getTableColumns,
         getTableReferences,
+        getTableUsedAsReference,
         getTableRestrictions,
         runSql,
       }}
@@ -307,6 +312,11 @@ export interface IStoreContext {
   ): Promise<IColumnInfo[]>;
 
   getTableReferences(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IColumnReferenceInfo[]>;
+
+  getTableUsedAsReference(
     idConnection: string,
     filters: { table: string; schema: string },
   ): Promise<IColumnReferenceInfo[]>;

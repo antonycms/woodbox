@@ -183,6 +183,17 @@ export const getTableReferences = async (connectionId: string, { table, schema }
   return raw?.rows || [];
 };
 
+export const getTableUsedAsReference = async (connectionId: string, { table, schema }) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+
+  const query = clientsQuery[dialect];
+
+  const raw = await instance.raw(query.getTableUsedAsReference({ table, schema }));
+
+  return raw?.rows || [];
+};
+
 export const getTableRestrictions = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
