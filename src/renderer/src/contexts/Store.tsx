@@ -366,6 +366,7 @@ export interface IStoreContext {
       rows?: any[];
       columns?: string[];
       affected_rows?: number;
+      auto_paginated?: boolean;
     }[]
   >;
 }

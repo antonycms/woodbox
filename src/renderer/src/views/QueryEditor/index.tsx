@@ -40,6 +40,7 @@ interface IQueryResult {
   affected_rows?: number;
   date_run?: string;
   page?: number;
+  auto_paginated?: boolean;
 }
 
 type IDataMakeTabResult = IQueryResult & { title?: string };
@@ -160,9 +161,20 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     updateTabResultData({ loading: true, date_run: new Date().toISOString() });
 
     try {
-      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, tab.query);
+      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
+        id_connection,
+        tab.query,
+      );
 
-      updateTabResultData({ columns, rows, type, query: tab.query, affected_rows, loading: false });
+      updateTabResultData({
+        columns,
+        rows,
+        type,
+        query: tab.query,
+        affected_rows,
+        auto_paginated,
+        loading: false,
+      });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({ type: 'ERROR', message, query: tab.query, loading: false });
@@ -181,9 +193,21 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     updateTabResultData({ loading: true });
 
     try {
-      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
+      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
+        id_connection,
+        query,
+      );
 
-      updateTabResultData({ page: 1, query, columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({
+        page: 1,
+        query,
+        columns,
+        rows,
+        type,
+        affected_rows,
+        auto_paginated,
+        loading: false,
+      });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({ type: 'ERROR', query, message, loading: false });
@@ -204,9 +228,20 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     });
 
     try {
-      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query);
+      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
+        id_connection,
+        query,
+      );
 
-      updateTabResultData({ page: 1, columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({
+        page: 1,
+        columns,
+        rows,
+        type,
+        affected_rows,
+        auto_paginated,
+        loading: false,
+      });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({ type: 'ERROR', message, loading: false });
@@ -230,9 +265,17 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
       const x = await runSql(id_connection, query);
 
-      const [{ type, rows, columns, affected_rows }] = x;
+      const [{ type, rows, columns, affected_rows, auto_paginated }] = x;
 
-      updateTabResultData({ page: 1, columns, rows, type, affected_rows, loading: false });
+      updateTabResultData({
+        page: 1,
+        columns,
+        rows,
+        type,
+        affected_rows,
+        auto_paginated,
+        loading: false,
+      });
     } catch (error) {
       const message = error?.message?.split?.(' - ')?.[1];
 
@@ -286,7 +329,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
   const onScrollEnd = async () => {
     const lastTabResult = querysResultData.get(activeTabId);
 
-    if (!lastTabResult) return;
+    if (!lastTabResult || !lastTabResult.auto_paginated) return;
 
     const updateTabResultData = makeUpdateResultTab(activeTabId);
 
@@ -296,9 +339,11 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     updateTabResultData({ loading: true });
 
     try {
-      const [{ type, rows, columns, affected_rows }] = await runSql(id_connection, query, {
-        page: newPage,
-      });
+      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
+        id_connection,
+        query,
+        { page: newPage },
+      );
 
       updateTabResultData({
         page: newPage,
@@ -307,6 +352,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
         type,
         query,
         affected_rows,
+        auto_paginated,
         loading: false,
       });
     } catch (error) {
