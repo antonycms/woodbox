@@ -170,6 +170,42 @@ const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
   FROM table_info ti
 `;
 
+const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  SELECT
+    t.tgname AS trigger_name,
+    CASE
+      WHEN t.tgtype & 64 = 64 THEN 'INSTEAD OF'
+      WHEN t.tgtype & 2  = 2  THEN 'BEFORE'
+      ELSE 'AFTER'
+    END AS timing,
+    array_to_string(
+      ARRAY[
+        CASE WHEN t.tgtype & 4  = 4  THEN 'INSERT'   ELSE NULL END,
+        CASE WHEN t.tgtype & 8  = 8  THEN 'DELETE'   ELSE NULL END,
+        CASE WHEN t.tgtype & 16 = 16 THEN 'UPDATE'   ELSE NULL END,
+        CASE WHEN t.tgtype & 32 = 32 THEN 'TRUNCATE' ELSE NULL END
+      ],
+      ' OR '
+    ) AS event,
+    CASE t.tgtype & 1 WHEN 1 THEN 'ROW' ELSE 'STATEMENT' END AS orientation,
+    n_func.nspname || '.' || p.proname AS function_name,
+    CASE t.tgenabled
+      WHEN 'O' THEN 'enabled'
+      WHEN 'D' THEN 'disabled'
+      WHEN 'R' THEN 'replica'
+      WHEN 'A' THEN 'always'
+    END AS status
+  FROM pg_catalog.pg_trigger t
+  JOIN pg_catalog.pg_class c     ON c.oid = t.tgrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_catalog.pg_proc p      ON p.oid = t.tgfoid
+  JOIN pg_catalog.pg_namespace n_func ON n_func.oid = p.pronamespace
+  WHERE NOT t.tgisinternal
+  AND c.relname  = '${table}'
+  AND n.nspname  = '${schema}'
+  ORDER BY t.tgname;
+`;
+
 export default {
   getAllSchemas,
   getTables,
@@ -180,6 +216,7 @@ export default {
   selectWithOffset,
   getTableRestrictions,
   getTableDefinition,
+  getTableTriggers,
 };
 
 export interface ITableWithSchema {

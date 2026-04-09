@@ -3,13 +3,14 @@ import {
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
+  ITriggerInfo,
   useStoreContext,
 } from './Store';
 
 const TableInfoContext = React.createContext<ITableInfoContext>({} as ITableInfoContext);
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
-  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions, getTableDefinition } =
+  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions, getTableDefinition, getTableTriggers } =
     useStoreContext();
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
@@ -17,12 +18,14 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
   const [restrictions, setRestrictions] = React.useState<IColumnRestrictionsInfo[]>([]);
   const [definition, setDefinition] = React.useState<string>('');
+  const [triggers, setTriggers] = React.useState<ITriggerInfo[]>([]);
   const [lastFetchDate, setLastFetchDate] = React.useState<ILastFetchDate>({
     columns: new Date(),
     references: new Date(),
     usedAsReference: new Date(),
     restrictions: new Date(),
     definition: new Date(),
+    triggers: new Date(),
   });
   const [loading, setLoading] = React.useState<ITableInfoLoading>({
     columns: false,
@@ -30,6 +33,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     usedAsReference: false,
     restrictions: false,
     definition: false,
+    triggers: false,
   });
 
   const updateFetchDate = (attribute: keyof ITableInfo) => {
@@ -101,6 +105,19 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     }
   }, []);
 
+  const loadTableTriggers: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
+    try {
+      updateLoading('triggers', true);
+
+      const items = await getTableTriggers(idConnection, filters);
+
+      setTriggers(items || []);
+      updateFetchDate('triggers');
+    } finally {
+      updateLoading('triggers', false);
+    }
+  }, []);
+
   const loadTableDefinition: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
     try {
       updateLoading('definition', true);
@@ -122,12 +139,14 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         usedAsReference,
         restrictions,
         definition,
+        triggers,
 
         loadTableColumns,
         loadTableReferences,
         loadTableUsedAsReference,
         loadTableRestrictions,
         loadTableDefinition,
+        loadTableTriggers,
 
         lastFetchDate,
         loading,
@@ -154,6 +173,7 @@ interface ITableInfo {
   usedAsReference: IColumnReferenceInfo[];
   restrictions: IColumnRestrictionsInfo[];
   definition: string;
+  triggers: ITriggerInfo[];
 }
 
 type ILastFetchDate = {
@@ -170,6 +190,7 @@ interface ITableInfoContext extends ITableInfo {
   loadTableUsedAsReference: LoadTableInfo;
   loadTableRestrictions: LoadTableInfo;
   loadTableDefinition: LoadTableInfo;
+  loadTableTriggers: LoadTableInfo;
 
   lastFetchDate: ILastFetchDate;
   loading: ITableInfoLoading;
