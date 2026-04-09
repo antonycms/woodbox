@@ -10,8 +10,14 @@ import {
 const TableInfoContext = React.createContext<ITableInfoContext>({} as ITableInfoContext);
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
-  const { getTableColumns, getTableReferences, getTableUsedAsReference, getTableRestrictions, getTableDefinition, getTableTriggers } =
-    useStoreContext();
+  const {
+    getTableColumns,
+    getTableReferences,
+    getTableUsedAsReference,
+    getTableRestrictions,
+    getTableDefinition,
+    getTableTriggers,
+  } = useStoreContext();
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
   const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);

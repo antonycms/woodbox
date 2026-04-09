@@ -20,7 +20,13 @@ const TableInfo = (props: ITableInfoProps) => {
   const [activeTabId, setActiveTabId] = React.useState(props.initialTab || 'tabProperties');
 
   const handleOpenTable = React.useCallback(
-    (idConnection: string, schema: string, table: string, filterColumn: string, filterValue: string) => {
+    (
+      idConnection: string,
+      schema: string,
+      table: string,
+      filterColumn: string,
+      filterValue: string,
+    ) => {
       const tabTitle = `${table} [${filterColumn}=${filterValue}]`;
       const escapedValue = filterValue.replace(/'/g, "''");
       const initialWhere = `"${filterColumn}" = '${escapedValue}'`;

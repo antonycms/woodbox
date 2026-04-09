@@ -232,7 +232,13 @@ export const getTableTriggers = async (connectionId: string, { table, schema }) 
  */
 export const getTableData = async (
   connectionId: string,
-  { table, schema, page = 1, limit = 200, where }: { table: string; schema: string; page?: number; limit?: number; where?: string },
+  {
+    table,
+    schema,
+    page = 1,
+    limit = 200,
+    where,
+  }: { table: string; schema: string; page?: number; limit?: number; where?: string },
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
