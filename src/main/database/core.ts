@@ -232,7 +232,7 @@ export const getTableTriggers = async (connectionId: string, { table, schema }) 
  */
 export const getTableData = async (
   connectionId: string,
-  { table, schema, page = 1, limit = 200 },
+  { table, schema, page = 1, limit = 200, where }: { table: string; schema: string; page?: number; limit?: number; where?: string },
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -241,8 +241,8 @@ export const getTableData = async (
 
   const [count, data] = (
     await Promise.all([
-      instance.raw(query.getTotalRowsCountInTable({ table, schema })),
-      instance.raw(query.selectWithOffset({ table, schema, actualPage: page, limit })),
+      instance.raw(query.getTotalRowsCountInTable({ table, schema, where })),
+      instance.raw(query.selectWithOffset({ table, schema, actualPage: page, limit, where })),
     ])
   ).map((raw) => raw?.rows || []);
 

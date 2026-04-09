@@ -21,6 +21,8 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { IColumn } from '@renderer/components/Table2/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { Row } from '@renderer/components/Grid';
+import { Input } from '@renderer/components/Input';
 
 const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -38,6 +40,8 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
+  const [whereInput, setWhereInput] = React.useState('');
+  const [appliedWhere, setAppliedWhere] = React.useState('');
 
   const isLoading = loadingTableInfo.columns || loading;
 
@@ -90,7 +94,12 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
     if (loading || newPage === lastPageSearch.current) return;
 
     setLoading(true);
-    const { data } = await getTableData(id_connection, { schema, table, page: newPage });
+    const { data } = await getTableData(id_connection, {
+      schema,
+      table,
+      page: newPage,
+      where: appliedWhere || undefined,
+    });
     setLoading(false);
 
     setLastFetchDate(new Date());
@@ -101,7 +110,7 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
 
     setPage(newPage);
     setItems((prevState) => [...prevState, ...data]);
-  }, [id_connection, loading, schema, table, page]);
+  }, [id_connection, loading, schema, table, page, appliedWhere]);
 
   const handleRefresh = React.useCallback(async () => {
     if (loading) return;
@@ -111,13 +120,39 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
       schema,
       table,
       page: 1,
+      where: appliedWhere || undefined,
     });
     setLoading(false);
 
     lastPageSearch.current = 0;
     setLastFetchDate(new Date());
     setItems(data);
-  }, [id_connection, items, loading, schema, table, page]);
+  }, [id_connection, loading, schema, table, appliedWhere]);
+
+  const handleFilterKeyDown = React.useCallback(
+    async (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter' || loading) return;
+
+      const newWhere = whereInput || undefined;
+      setAppliedWhere(whereInput);
+      setLoading(true);
+      try {
+        const { data } = await getTableData(id_connection, {
+          schema,
+          table,
+          page: 1,
+          where: newWhere,
+        });
+        setItems(data);
+        setPage(0);
+        lastPageSearch.current = 0;
+        setLastFetchDate(new Date());
+      } finally {
+        setLoading(false);
+      }
+    },
+    [id_connection, whereInput, loading, schema, table],
+  );
 
   React.useEffect(() => {
     loadData();
@@ -125,6 +160,18 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
 
   return (
     <div className={styles.container}>
+      <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
+        <input
+          className={styles.filterInput}
+          placeholder="WHERE filter (ex: id = 1 and status = true)"
+          value={whereInput}
+          onChange={(e) => setWhereInput(e.target.value)}
+          onKeyDown={handleFilterKeyDown}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
+
       <Table
         selectable
         columns={columnsSerialized}

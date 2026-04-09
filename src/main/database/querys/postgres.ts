@@ -100,9 +100,10 @@ const getTableRestrictions = ({ schema, table }) => /* sql */ `
   AND rel.relname = '${table}'
 `;
 
-const getTotalRowsCountInTable = ({ schema, table }: ITableWithSchema) => /* sql */ `
-  SELECT count(*) as total_rows FROM "${schema}"."${table}";
-`;
+const getTotalRowsCountInTable = ({ schema, table, where }: ITableWithSchema & { where?: string }) => {
+  const whereQuery = where ? `WHERE ${where}` : '';
+  return /* sql */ `SELECT count(*) as total_rows FROM "${schema}"."${table}" ${whereQuery};`;
+};
 
 const selectWithOffset = ({
   schema,
