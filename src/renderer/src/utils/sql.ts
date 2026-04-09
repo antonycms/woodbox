@@ -50,6 +50,34 @@ export const getTablesFromQuerySql = (query: string) => {
     });
   }
 
+  const updateRegex = /UPDATE\s+([\w.]+)/gim;
+  while ((match = updateRegex.exec(query))) {
+    const sqlTablePart = match[1];
+    let tableSchema: string;
+    let tableName: string;
+    if (sqlTablePart.includes('.')) {
+      [tableSchema, tableName] = sqlTablePart.split('.');
+    } else {
+      tableName = sqlTablePart;
+    }
+    if (!tableName) continue;
+    tables.push({ name: tableName, schema: tableSchema });
+  }
+
+  const insertRegex = /INSERT\s+INTO\s+([\w.]+)/gim;
+  while ((match = insertRegex.exec(query))) {
+    const sqlTablePart = match[1];
+    let tableSchema: string;
+    let tableName: string;
+    if (sqlTablePart.includes('.')) {
+      [tableSchema, tableName] = sqlTablePart.split('.');
+    } else {
+      tableName = sqlTablePart;
+    }
+    if (!tableName) continue;
+    tables.push({ name: tableName, schema: tableSchema });
+  }
+
   return tables;
 };
 

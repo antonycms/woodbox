@@ -81,21 +81,39 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         (table) => `${table.schema ? `${table.schema}.` : ''}${table.name}` === currentWord,
       );
 
+      const isTypingCurrentWord = !/[\s]$/.test(currentContent);
       const isSchema =
-        !isTable &&
         schemas?.some?.(
           (schema) => currentWord.startsWith(schema.name) && currentWord.includes('.'),
-        );
+        ) && (!isTable || isTypingCurrentWord);
 
       const isAlias =
         currentWord.includes('.') &&
         !!tableAlias?.alias &&
         currentWord.startsWith(tableAlias.alias);
       const isSelectColumns = !isTable && checkOperation(['select']);
-      const isFromOrJoin = !isTable && checkOperation(['from', 'join']);
+      const isFromOrJoin = !isTable && checkOperation(['from', 'join', 'update', 'into']);
       const isFilterOperators =
         !isTable &&
         checkOperation(['where', 'and', 'or', 'ilike', 'like', '=', '>', '>=', '<', '<=']);
+
+      const isUpdateQuery = /^\s*UPDATE\s/i.test(currentContent);
+      const isInsertQuery = /^\s*INSERT\s+INTO\s/i.test(currentContent);
+
+      const isInUpdateSetClause =
+        !isTable &&
+        isUpdateQuery &&
+        /\bSET\b/i.test(currentContent) &&
+        !/\bSET\b.*\bWHERE\b/i.test(currentContent);
+
+      const isUpdateSetColumns =
+        isInUpdateSetClause && (checkOperation(['set']) || currentWord.endsWith(','));
+
+      const isInsertColumns =
+        !isTable &&
+        isInsertQuery &&
+        currentContent.includes('(') &&
+        (currentWord.startsWith('(') || currentWord.endsWith('(') || currentWord.endsWith(','));
 
       if (isSchema) {
         const tablesWords = tablesAvailable
@@ -132,6 +150,11 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
 
           availableWords = tablesWords;
         }
+      } //
+      else if (isUpdateSetColumns || isInsertColumns) {
+        availableWords = columns.map(({ name }) =>
+          makeItem('Column', languages.CompletionItemKind.Variable)(name),
+        );
       } //
       else if (isFilterOperators) {
         if (isAlias) {
