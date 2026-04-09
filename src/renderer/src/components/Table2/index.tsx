@@ -154,25 +154,31 @@ const Table = (props: ITableProps) => {
     });
   }, []);
 
+  const checkScrollEnd = React.useCallback(() => {
+    const element = refScrollContainer.current;
+    if (!element || !onScrollEnd) return;
+
+    const hasHorizontalScrollbar = element.scrollWidth > element.clientWidth;
+    const scrollbarSize = 6;
+    const scrollHeight = element.scrollHeight + (hasHorizontalScrollbar ? scrollbarSize : 0);
+    const isEndVerticalScroll = Math.ceil(element.offsetHeight + element.scrollTop) >= scrollHeight;
+
+    if (isEndVerticalScroll) {
+      onScrollEnd();
+    }
+  }, [onScrollEnd]);
+
   const onScroll = React.useCallback(
     (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
-      const element = event.target as HTMLDivElement;
-
-      const hasHorizontalScrollbar = element.scrollWidth > element.clientWidth;
-      const scrollbarSize = 6;
-
-      const scrollHeight = element.scrollHeight + (hasHorizontalScrollbar ? scrollbarSize : 0);
-
-      const isEndVerticalScroll = element.offsetHeight + element.scrollTop >= scrollHeight;
-
-      if (isEndVerticalScroll) {
-        onScrollEnd?.();
-      }
-
-      setScroll({ left: element.scrollLeft, top: element.scrollTop });
+      checkScrollEnd();
+      setScroll({ left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop });
     },
-    [onScrollEnd],
+    [checkScrollEnd],
   );
+
+  React.useEffect(() => {
+    checkScrollEnd();
+  }, [heightBodyContainer, widthBodyContainer]);
 
   const virtualHeader = React.useMemo(() => {
     const { columnsIndexToRender } = columnsDetails;
