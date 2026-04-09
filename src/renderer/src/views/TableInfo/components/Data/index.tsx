@@ -21,16 +21,36 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { IColumn } from '@renderer/components/Table2/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { Row } from '@renderer/components/Grid';
-import { Input } from '@renderer/components/Input';
 
-const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
+interface IDataProps extends ITableInfoProps {
+  onOpenTable?: (
+    idConnection: string,
+    schema: string,
+    table: string,
+    filterColumn: string,
+    filterValue: string,
+  ) => void;
+}
+
+const Data = ({
+  id_connection,
+  schema,
+  table,
+  initialWhere,
+  filterLocked,
+  onOpenTable,
+}: IDataProps) => {
   const {
     activeTheme: {
       tableInfo: { data: theme },
     },
   } = useThemeContext();
-  const { columns, loading: loadingTableInfo } = useTableInfoContext();
+  const {
+    columns,
+    references,
+    loadTableReferences,
+    loading: loadingTableInfo,
+  } = useTableInfoContext();
 
   const { getTableData } = useStoreContext();
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
@@ -40,20 +60,50 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
-  const [whereInput, setWhereInput] = React.useState('');
-  const [appliedWhere, setAppliedWhere] = React.useState('');
+  const [whereInput, setWhereInput] = React.useState(initialWhere || '');
+  const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
+
+  React.useEffect(() => {
+    if (references.length === 0) {
+      loadTableReferences(id_connection, { table, schema });
+    }
+  }, [id_connection, table, schema]);
+
+  const fkMap = React.useMemo(
+    () => new Map(references.map((r) => [r.column_name, r])),
+    [references],
+  );
+
+  const handleFkCellClick = React.useCallback(
+    (attribute: string, value: any) => {
+      const ref = fkMap.get(attribute);
+      if (!ref || value === null || value === undefined) return;
+      onOpenTable?.(
+        id_connection,
+        ref.reference_table_schema,
+        ref.reference_table_name,
+        ref.reference_column_name,
+        String(value),
+      );
+    },
+    [fkMap, id_connection, onOpenTable],
+  );
 
   const isLoading = loadingTableInfo.columns || loading;
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate);
 
-  const columnsSerialized = columns.map<IColumn>((column) => ({
-    label: column.column_name,
-    attribute: column.column_name,
-    // type: column.data_type,
-    required: !!column.is_nullable,
-    sortable: true,
-  }));
+  const columnsSerialized = React.useMemo(
+    () =>
+      columns.map<IColumn>((column) => ({
+        label: column.column_name,
+        attribute: column.column_name,
+        required: !!column.is_nullable,
+        sortable: true,
+        isFk: fkMap.has(column.column_name),
+      })),
+    [columns, fkMap],
+  );
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -165,9 +215,10 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
           className={styles.filterInput}
           placeholder="WHERE filter (ex: id = 1 and status = true)"
           value={whereInput}
-          onChange={(e) => setWhereInput(e.target.value)}
+          onChange={(e) => !filterLocked && setWhereInput(e.target.value)}
           onKeyDown={handleFilterKeyDown}
-          style={{ color: theme.bar.color }}
+          style={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
+          disabled={filterLocked}
           spellCheck={false}
         />
       </div>
@@ -176,13 +227,12 @@ const Data = ({ id_connection, schema, table }: ITableInfoProps) => {
         selectable
         columns={columnsSerialized}
         rows={items}
-        // columns={columnsFake}
-        // rows={dataFake}
         rowKeyExtractor={(_, index) => index}
         onScrollEnd={loadData}
         loading={isLoading}
         onContextMenu={onContextMenuTable}
         editedRows={editedFieldsRows}
+        onFkCellClick={handleFkCellClick}
         onEditRow={(index, attribute, value) => {
           setEditedFieldsRows((prevState) => {
             const newState = new Map(prevState);

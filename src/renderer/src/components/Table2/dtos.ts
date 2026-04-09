@@ -4,6 +4,7 @@ export interface IColumn {
   resizable?: boolean;
   sortable?: boolean;
   editable?: boolean;
+  isFk?: boolean;
   type?: 'text' | 'number' | 'select';
   renderIcon?(): JSX.Element;
 }

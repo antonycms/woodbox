@@ -33,6 +33,7 @@ interface ITableProps {
   onCopy?(selectedRows: any[]): void;
   onPaste?(selectedRows: any[]): void;
   onSelectRow?(rowsData: any[]): void;
+  onFkCellClick?(attribute: string, value: any): void;
 }
 
 const Table = (props: ITableProps) => {
@@ -49,6 +50,7 @@ const Table = (props: ITableProps) => {
     onSelectRow,
     onCopy,
     onPaste,
+    onFkCellClick,
   } = props;
 
   const {
@@ -302,6 +304,8 @@ const Table = (props: ITableProps) => {
                 width={width}
                 name={column.attribute}
                 value={value}
+                isFk={column.isFk}
+                onFkCellClick={onFkCellClick}
               />
             );
           })}
