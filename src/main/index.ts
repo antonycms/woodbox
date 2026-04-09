@@ -7,8 +7,8 @@ import { closeAllConnections } from './database';
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 675,
+    width: 1600,
+    height: 900,
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../../build/icon.png'),
