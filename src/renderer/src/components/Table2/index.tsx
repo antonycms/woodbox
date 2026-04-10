@@ -167,10 +167,6 @@ const Table = (props: ITableProps) => {
     [checkScrollEnd],
   );
 
-  React.useEffect(() => {
-    checkScrollEnd();
-  }, [heightBodyContainer, widthBodyContainer]);
-
   const virtualHeader = React.useMemo(() => {
     const { columnsIndexToRender } = columnsDetails;
     return (
