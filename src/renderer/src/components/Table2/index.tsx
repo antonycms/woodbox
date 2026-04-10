@@ -9,16 +9,7 @@ import TableColumn from './components/TableColumn';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ModalCopy } from '../ModalCopy';
-
-interface IColumn {
-  label: string;
-  attribute: string;
-  resizable?: boolean;
-  sortable?: boolean;
-  editable?: boolean;
-  type?: 'text' | 'number' | 'select' | 'checkbox';
-  renderIcon?(): JSX.Element;
-}
+import { IColumn } from './dtos';
 
 interface ITableProps {
   rowKeyExtractor(rowData, index: number): React.Key;
