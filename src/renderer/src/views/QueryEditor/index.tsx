@@ -22,13 +22,15 @@ import {
   SaveIcon,
 } from '@renderer/styles/icons';
 import { RunSelectionIcon } from '../../styles/icons';
-import { IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
+import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
 import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { getTablesFromQuerySql } from '@renderer/utils/sql';
 import { arrayIsEquals } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import { toDateTime } from '@renderer/utils/date';
+import TableInfoWithContext from '@renderer/views/TableInfo';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 
 interface IQueryResult {
   type: string;
@@ -52,8 +54,9 @@ interface IQueryEditorProps {
 }
 
 export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
-  const { runSql, connectionsInfo, getTableColumns } = useStoreContext();
+  const { runSql, connectionsInfo, getTableColumns, getTableReferences } = useStoreContext();
   const { activeTheme } = useThemeContext();
+  const { addTab } = useAppTabContext();
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>();
@@ -66,10 +69,24 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     500,
   );
   const [tableColumns, setTableColumn] = React.useState<Map<string, IColumnInfo[]>>(new Map());
+  const [tableReferences, setTableReferences] = React.useState<Map<string, IColumnReferenceInfo[]>>(
+    new Map(),
+  );
   const [tabsResult, setTabsResult] = React.useState<ITab[]>([]);
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
+
+  const queryFkMap = React.useMemo(() => {
+    const map = new Map<string, IColumnReferenceInfo>();
+    currentQueryTablesInfo.forEach(({ name, schema }) => {
+      const key = `${schema ? schema + '.' : ''}${name}`;
+      (tableReferences.get(key) || []).forEach((ref) => {
+        if (!map.has(ref.column_name)) map.set(ref.column_name, ref);
+      });
+    });
+    return map;
+  }, [currentQueryTablesInfo, tableReferences]);
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -384,6 +401,50 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     });
   };
 
+  const loadTableReferences = async () => {
+    const newTable = currentQueryTablesInfo.find((tableInfo) => {
+      const { name, schema } = tableInfo;
+      const key = `${schema ? schema + '.' : ''}${name}`;
+      return !tableReferences.get(key);
+    });
+
+    if (!newTable) return;
+
+    const { name: table, schema } = newTable;
+    const items = await getTableReferences(id_connection, { schema, table });
+
+    setTableReferences((prevState) => {
+      const newState = new Map(prevState);
+      const key = `${schema ? schema + '.' : ''}${table}`;
+      newState.set(key, items || []);
+      return newState;
+    });
+  };
+
+  const handleFkCellClick = React.useCallback(
+    (attribute: string, value: any) => {
+      const ref = queryFkMap.get(attribute);
+      if (!ref || value === null || value === undefined) return;
+      const tabTitle = `${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
+      const escapedValue = String(value).replace(/'/g, "''");
+      const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
+      addTab({
+        title: tabTitle,
+        component: () => (
+          <TableInfoWithContext
+            id_connection={id_connection}
+            schema={ref.reference_table_schema}
+            table={ref.reference_table_name}
+            initialWhere={initialWhere}
+            filterLocked
+            initialTab="tabData"
+          />
+        ),
+      });
+    },
+    [queryFkMap, id_connection, addTab],
+  );
+
   const handleUpdateCurrentQueryInfo = React.useCallback((query: string) => {
     const tablesQueryInfo = getTablesFromQuerySql(query);
 
@@ -421,13 +482,6 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
     return { schemas: schemasSerialized, tablesAvailable, tablesUsed, columns };
   }, [connectionsInfo, currentQueryTablesInfo, tableColumns]);
-
-  React.useEffect(() => {
-    if (tabsResult.length) {
-      const lastTabIndex = tabsResult.length - 1;
-      setActiveTabId(tabsResult[lastTabIndex].idTab);
-    }
-  }, [tabsResult]);
 
   const runAllRef = React.useRef(runAllSQL);
   runAllRef.current = runAllSQL;
@@ -470,6 +524,17 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
 
   React.useEffect(() => {
     loadTableColumns();
+  }, [id_connection, currentQueryTablesInfo]);
+
+  React.useEffect(() => {
+    if (tabsResult.length) {
+      const lastTabIndex = tabsResult.length - 1;
+      setActiveTabId(tabsResult[lastTabIndex].idTab);
+    }
+  }, [tabsResult]);
+
+  React.useEffect(() => {
+    loadTableReferences();
   }, [id_connection, currentQueryTablesInfo]);
 
   return (
@@ -566,9 +631,11 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
                         rowKeyExtractor={(item) => item.__hash_rowTable}
                         rows={data.rows}
                         onScrollEnd={onScrollEnd}
+                        onFkCellClick={handleFkCellClick}
                         columns={data.columns.map((column) => ({
                           attribute: column,
                           label: column,
+                          isFk: queryFkMap.has(column),
                         }))}
                       />
 
