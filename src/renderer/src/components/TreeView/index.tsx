@@ -12,6 +12,8 @@ const TreeView = (props: ITreeViewProps) => {
     if (!id || !items?.length) return;
 
     for (const item of items) {
+      if (!item) continue;
+
       if (item.id === id) return item;
 
       const itemChild = getItemRecursive(item.childs, id);
@@ -118,16 +120,20 @@ const TreeView = (props: ITreeViewProps) => {
       onContextMenu={handleContextMenu}
       onKeyDown={onKeyDown}
     >
-      {props.items.map((item) => (
-        <ItemTreeView
-          {...item}
-          isFirst
-          key={item.id}
-          color={props.color}
-          openedItemsId={openedItemsId}
-          onSwitch={handleSwitchItem}
-        />
-      ))}
+      {props.items.map((item) => {
+        if (!item) return null;
+
+        return (
+          <ItemTreeView
+            {...item}
+            isFirst
+            key={item.id}
+            color={props.color}
+            openedItemsId={openedItemsId}
+            onSwitch={handleSwitchItem}
+          />
+        );
+      })}
     </div>
   );
 };

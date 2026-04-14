@@ -42,15 +42,19 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
       </div>
 
       {isOpen &&
-        childs.map((child) => (
-          <ItemTreeView
-            {...child}
-            key={child.id}
-            color={color}
-            onSwitch={props.onSwitch}
-            openedItemsId={openedItemsId}
-          />
-        ))}
+        childs.map((child) => {
+          if (!child) return null;
+
+          return (
+            <ItemTreeView
+              {...child}
+              key={child.id}
+              color={color}
+              onSwitch={props.onSwitch}
+              openedItemsId={openedItemsId}
+            />
+          );
+        })}
     </div>
   );
 };

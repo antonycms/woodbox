@@ -251,7 +251,7 @@ const ProjectsMenu = () => {
   }, [contextMenuItemSelected]);
 
   const projectsSerialized = connectionsGroupPerProject.map((project) => {
-    let hasTableWithFilterText = false;
+    let hasContentWithFilterText = false;
 
     const projects: IItemTreeView = {
       id: project.id,
@@ -281,7 +281,7 @@ const ProjectsMenu = () => {
             };
           }) || [];
 
-        const functionsThreeView: IItemTreeView[] =
+        let functionsThreeView: IItemTreeView[] =
           connectionInfo?.functions?.map((fn, index) => {
             const { function_name, function_schema } = fn;
 
@@ -304,6 +304,7 @@ const ProjectsMenu = () => {
 
         if (filterTextSerialized) {
           tablesThreeView = tablesThreeView.filter((table) => checkFilterText(table?.label));
+          functionsThreeView = functionsThreeView.filter((fn) => checkFilterText(fn?.label));
         }
 
         let schemasThreeView: IItemTreeView[] =
@@ -325,19 +326,30 @@ const ProjectsMenu = () => {
               icon: 'folder' as const,
               type: 'schema' as const,
               childs: [
-                { id: `tables_${connection.id}:${schema}`, label: 'Tabelas', childs: tablesSchema },
-                { id: `fns_${connection.id}:${schema}`, label: 'Funções', childs: functionsSchema },
+                tablesSchema?.length && {
+                  id: `tables_${connection.id}:${schema}`,
+                  label: 'Tabelas',
+                  childs: tablesSchema,
+                },
+                functionsSchema?.length && {
+                  id: `fns_${connection.id}:${schema}`,
+                  label: 'Funções',
+                  childs: functionsSchema,
+                },
               ],
             };
           }) || [];
 
         if (filterTextSerialized) {
-          schemasThreeView = schemasThreeView.filter((schema) => schema.childs.length);
+          schemasThreeView = schemasThreeView.filter((schema) =>
+            schema.childs.some((group) => group.childs?.length),
+          );
         }
 
         const schemasOrTables = schemasThreeView || tablesThreeView || [];
 
-        hasTableWithFilterText = hasTableWithFilterText || !!tablesThreeView.length;
+        hasContentWithFilterText =
+          hasContentWithFilterText || !!tablesThreeView.length || !!functionsThreeView.length;
 
         return {
           id: connection.id,
@@ -351,7 +363,7 @@ const ProjectsMenu = () => {
       }),
     };
 
-    return { ...projects, hasTableWithFilterText };
+    return { ...projects, hasContentWithFilterText };
   });
 
   return (
@@ -428,7 +440,7 @@ const ProjectsMenu = () => {
           onClick={handleClickItemThreeView}
           items={
             filterTextSerialized
-              ? projectsSerialized.filter((project) => project.hasTableWithFilterText)
+              ? projectsSerialized.filter((project) => project.hasContentWithFilterText)
               : projectsSerialized
           }
         />
