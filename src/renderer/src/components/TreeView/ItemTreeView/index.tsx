@@ -1,5 +1,5 @@
 import React from 'react';
-import { IItem } from '@renderer/components/TreeView';
+import { IItemTreeView } from '@renderer/components/TreeView';
 import styles from './styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import { SpinnerLoading } from '@renderer/components/Loaders';
@@ -57,9 +57,9 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
 
 export default ItemTreeView;
 
-export interface IItemTreeViewProps extends IItem {
+export interface IItemTreeViewProps extends IItemTreeView {
   isFirst?: boolean;
   color?: string;
   openedItemsId?: string[];
-  onSwitch?(item: IItem): void;
+  onSwitch?(item: IItemTreeView): void;
 }

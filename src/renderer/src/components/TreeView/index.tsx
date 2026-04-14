@@ -8,7 +8,7 @@ import ItemTreeView, { IItemTreeViewProps } from './ItemTreeView';
 const TreeView = (props: ITreeViewProps) => {
   const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
 
-  const getItemRecursive = (items: IItem[], id: string) => {
+  const getItemRecursive = (items: IItemTreeView[], id: string) => {
     if (!id || !items?.length) return;
 
     for (const item of items) {
@@ -20,7 +20,7 @@ const TreeView = (props: ITreeViewProps) => {
     }
   };
 
-  const getItemFromElement = (target: HTMLDivElement): IItem => {
+  const getItemFromElement = (target: HTMLDivElement): IItemTreeView => {
     const idItem = target?.id?.replace?.('item_treeview_id_', '');
     const item = getItemRecursive(props.items, idItem);
 
@@ -96,7 +96,7 @@ const TreeView = (props: ITreeViewProps) => {
     props.onContextMenu?.({ id: item.id, data: item.data, type: item.type }, e);
   };
 
-  const handleSwitchItem = async (item: IItem) => {
+  const handleSwitchItem = async (item: IItemTreeView) => {
     const itemIsOpen = openedItemsId.some((id) => id === item.id);
 
     const succes = await props.onSwitchItem?.(item, itemIsOpen);
@@ -140,7 +140,7 @@ export interface IItemTreeViewData {
   type?: string;
 }
 
-export interface IItem extends IItemTreeViewData {
+export interface IItemTreeView extends IItemTreeViewData {
   label: string;
   childs?: IItemTreeViewProps[];
   icon?: AvalailableTreeViewIcon;
@@ -149,7 +149,7 @@ export interface IItem extends IItemTreeViewData {
 }
 
 interface ITreeViewProps {
-  items: IItem[];
+  items: IItemTreeView[];
   color?: string;
   onClick?(itemData: IItemTreeViewData): void;
   onDoubleClick?(itemData: IItemTreeViewData): void;
