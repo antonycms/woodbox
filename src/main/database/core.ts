@@ -151,14 +151,15 @@ export const getConnectionInfo = async (connectionId: string) => {
 
   if (dialect === 'postgres') {
     promises.push(instance.raw(query.getAllSchemas()));
+    promises.push(instance.raw(query.getFunctions()));
   }
 
   // eslint-disable-next-line prefer-const
-  let [tables, schemas] = (await Promise.all(promises)).map((raw) => raw?.rows || []);
+  let [tables, schemas, functions] = (await Promise.all(promises)).map((raw) => raw?.rows || []);
 
   schemas = schemas?.map?.((row) => row?.schema_name);
 
-  return { tables, schemas };
+  return { tables, schemas, functions };
 };
 
 export const getTableColumns = async (connectionId: string, { table, schema }) => {
@@ -223,6 +224,20 @@ export const getTableTriggers = async (connectionId: string, { table, schema }) 
   const query = clientsQuery[dialect];
 
   const raw = await instance.raw(query.getTableTriggers({ table, schema }));
+
+  return raw?.rows || [];
+};
+
+export const getFunctionDefinition = async (
+  connectionId: string,
+  { schema, functionName }: { schema: string; functionName: string },
+) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+
+  const query = clientsQuery[dialect];
+
+  const raw = await instance.raw(query.getFunctionDefinition({ schema, functionName }));
 
   return raw?.rows || [];
 };

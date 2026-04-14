@@ -211,6 +211,30 @@ const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
   ORDER BY t.tgname;
 `;
 
+const getFunctions = () => /* sql */ `
+  SELECT
+    p.proname  AS function_name,
+    n.nspname  AS function_schema
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  ORDER BY n.nspname, p.proname;
+`;
+
+const getFunctionDefinition = ({
+  schema,
+  functionName,
+}: {
+  schema: string;
+  functionName: string;
+}) => /* sql */ `
+  SELECT pg_get_functiondef(p.oid) AS definition
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE p.proname = '${functionName}'
+    AND n.nspname = '${schema}';
+`;
+
 export default {
   getAllSchemas,
   getTables,
@@ -222,6 +246,8 @@ export default {
   getTableRestrictions,
   getTableDefinition,
   getTableTriggers,
+  getFunctions,
+  getFunctionDefinition,
 };
 
 export interface ITableWithSchema {

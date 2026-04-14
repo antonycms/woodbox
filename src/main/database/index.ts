@@ -10,6 +10,7 @@ import {
   getTableRestrictions,
   getTableDefinition,
   getTableTriggers,
+  getFunctionDefinition,
   runSql,
 } from './core';
 
@@ -23,6 +24,7 @@ addListener('@get:table_used_as_reference', getTableUsedAsReference);
 addListener('@get:table_restrictions', getTableRestrictions);
 addListener('@get:table_definition', getTableDefinition);
 addListener('@get:table_triggers', getTableTriggers);
+addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
 
 export { closeAllConnections } from './core';

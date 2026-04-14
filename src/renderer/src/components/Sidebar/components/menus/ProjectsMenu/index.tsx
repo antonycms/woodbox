@@ -13,12 +13,13 @@ import {
   IContextMenuOption,
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import TreeView, { IItemTreeViewData } from '@renderer/components/TreeView';
+import TreeView, { IItemTreeView, IItemTreeViewData } from '@renderer/components/TreeView';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import styles from './styles.module.css';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
+import FunctionInfo from '@renderer/views/FunctionInfo';
 import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { generateHash } from '@renderer/utils/string';
@@ -147,6 +148,27 @@ const ProjectsMenu = () => {
           ),
         });
       }
+    } else if (item.type === 'function') {
+      const { id_connection, function_schema: schema, function_name } = item.data;
+      const tabId = `fn_${id_connection}_${schema}_${function_name}`;
+
+      const tab = getTab(tabId);
+
+      if (tab) {
+        setActiveTabId(tabId);
+      } else {
+        addTab({
+          id: tabId,
+          title: function_name,
+          component: () => (
+            <FunctionInfo
+              id_connection={id_connection}
+              schema={schema}
+              function_name={function_name}
+            />
+          ),
+        });
+      }
     }
   };
 
@@ -231,18 +253,18 @@ const ProjectsMenu = () => {
   const projectsSerialized = connectionsGroupPerProject.map((project) => {
     let hasTableWithFilterText = false;
 
-    const projects = {
+    const projects: IItemTreeView = {
       id: project.id,
       label: project.description,
       type: 'project' as const,
       childs: project.connections.map((connection) => {
         const connectionInfo = connectionsInfo.get(connection.id);
 
-        let tablesThreeView =
+        let tablesThreeView: IItemTreeView[] =
           connectionInfo?.tables?.map((table) => {
             const { table_name, table_schema } = table;
 
-            const dataTable = {
+            const data = {
               ...table,
               id_connection: connection.id,
               description_connection: connection.description,
@@ -253,9 +275,30 @@ const ProjectsMenu = () => {
                 ? `${connection.id}:${table_schema}_${table_name}`
                 : `${connection.id}:${table_name}`,
               label: table_name,
-              data: dataTable,
               icon: 'table' as const,
               type: 'table' as const,
+              data: data,
+            };
+          }) || [];
+
+        const functionsThreeView: IItemTreeView[] =
+          connectionInfo?.functions?.map((fn) => {
+            const { function_name, function_schema } = fn;
+
+            const data = {
+              ...fn,
+              id_connection: connection.id,
+              description_connection: connection.description,
+            };
+
+            return {
+              id: function_schema
+                ? `${connection.id}:${function_schema}_${function_name}`
+                : `${connection.id}:${function_name}`,
+              label: function_name,
+              icon: 'table' as const,
+              type: 'function' as const,
+              data,
             };
           }) || [];
 
@@ -263,9 +306,12 @@ const ProjectsMenu = () => {
           tablesThreeView = tablesThreeView.filter((table) => checkFilterText(table?.label));
         }
 
-        let schemasThreeView =
+        let schemasThreeView: IItemTreeView[] =
           connectionInfo?.schemas?.map?.((schema) => {
             const tablesSchema = tablesThreeView.filter(({ data }) => data.table_schema === schema);
+            const functionsSchema = functionsThreeView.filter(
+              ({ data }) => data.function_schema === schema,
+            );
 
             const dataSchema = {
               id_connection: connection.id,
@@ -278,7 +324,10 @@ const ProjectsMenu = () => {
               data: dataSchema,
               icon: 'folder' as const,
               type: 'schema' as const,
-              childs: tablesSchema,
+              childs: [
+                { id: `tables_${connection.id}:${schema}`, label: 'Tabelas', childs: tablesSchema },
+                { id: `fns_${connection.id}:${schema}`, label: 'Funções', childs: functionsSchema },
+              ],
             };
           }) || [];
 

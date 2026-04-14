@@ -156,6 +156,13 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_definition', idConnection, { table, schema });
   };
 
+  const getFunctionDefinition = async (
+    idConnection: string,
+    { schema, functionName }: { schema: string; functionName: string },
+  ) => {
+    return await call('@get:function_definition', idConnection, { schema, functionName });
+  };
+
   const getTableTriggers = async (idConnection: string, { table, schema }) => {
     return await call('@get:table_triggers', idConnection, { table, schema });
   };
@@ -207,6 +214,7 @@ const StoreContextProvider = ({ children }) => {
         getTableRestrictions,
         getTableDefinition,
         getTableTriggers,
+        getFunctionDefinition,
         runSql,
       }}
     >
@@ -234,8 +242,14 @@ interface ITable {
   table_schema?: string;
 }
 
+interface IFunctionDb {
+  function_name: string;
+  function_schema?: string;
+}
+
 interface IConnectionInfo {
   tables: ITable[];
+  functions: IFunctionDb[];
   schemas?: string[];
 }
 
@@ -355,6 +369,11 @@ export interface IStoreContext {
     idConnection: string,
     filters: { table: string; schema: string },
   ): Promise<ITriggerInfo[]>;
+
+  getFunctionDefinition(
+    idConnection: string,
+    filters: { schema: string; functionName: string },
+  ): Promise<{ definition: string }[]>;
 
   runSql(
     idConnection: string,

@@ -1,0 +1,32 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.icon {
+  color: var(--color-white);
+  margin-right: 4px;
+  font-size: 12px;
+  min-width: 12px;
+}
+
+.propertiesContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.propertiesHeader {
+  padding: 20px;
+}
+
+.propertiesContent {
+  display: flex;
+  flex: 1;
+}
+
+.editorContainer {
+  flex: 1;
+  overflow: hidden;
+}
