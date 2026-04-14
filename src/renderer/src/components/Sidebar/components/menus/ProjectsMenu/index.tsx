@@ -282,7 +282,7 @@ const ProjectsMenu = () => {
           }) || [];
 
         const functionsThreeView: IItemTreeView[] =
-          connectionInfo?.functions?.map((fn) => {
+          connectionInfo?.functions?.map((fn, index) => {
             const { function_name, function_schema } = fn;
 
             const data = {
@@ -293,8 +293,8 @@ const ProjectsMenu = () => {
 
             return {
               id: function_schema
-                ? `${connection.id}:${function_schema}_${function_name}`
-                : `${connection.id}:${function_name}`,
+                ? `${connection.id}:${function_schema}_${function_name}:${index}`
+                : `${connection.id}:${function_name}:${index}`,
               label: function_name,
               icon: 'table' as const,
               type: 'function' as const,
