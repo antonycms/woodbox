@@ -14,6 +14,10 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
     const containerRef = React.useRef<HTMLDivElement>();
     const { width, height } = useResize({ HTMLElement: containerRef.current });
     const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
+    const onCtrlClickRef = React.useRef(props.onCtrlClick);
+    React.useEffect(() => {
+      onCtrlClickRef.current = props.onCtrlClick;
+    }, [props.onCtrlClick]);
 
     const resize = useDebounce(() => editor?.layout?.(), 10);
 
@@ -117,6 +121,29 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
         label: 'ctrl+enter Shortcut',
         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
         run: () => {},
+      });
+
+      currentEditor.onMouseDown((e) => {
+        if (!e.event.ctrlKey) return;
+        if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
+        const position = e.target.position;
+        if (!position) return;
+        const model = currentEditor.getModel();
+        const word = model?.getWordAtPosition(position);
+        if (!word) return;
+
+        const lineContent = model?.getLineContent(position.lineNumber) || '';
+        const charBefore = lineContent[word.startColumn - 2];
+        let schema: string | undefined;
+        if (charBefore === '.') {
+          const schemaWord = model?.getWordAtPosition({
+            lineNumber: position.lineNumber,
+            column: word.startColumn - 1,
+          });
+          schema = schemaWord?.word;
+        }
+
+        onCtrlClickRef.current?.(word.word, schema);
       });
 
       return currentEditor;
@@ -246,6 +273,7 @@ export interface IEditorProps {
   onChangeCurrentValue?: (value: string) => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
+  onCtrlClick?: (word: string, schema?: string) => void;
   readonly?: boolean;
   hidePreview?: boolean;
 }

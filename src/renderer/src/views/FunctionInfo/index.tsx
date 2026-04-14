@@ -10,6 +10,7 @@ import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { generateHash } from '@renderer/utils/string';
 import { useStoreContext } from '@renderer/contexts/Store';
+import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -28,6 +29,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
     },
   } = useThemeContext();
   const { getFunctionDefinition } = useStoreContext();
+  const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   const [topTabId] = React.useState(generateHash());
   const [sideTabId] = React.useState(generateHash());
@@ -84,12 +86,20 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
             >
               <Row>
                 <Input
+                  disabled
                   md={6}
                   label="Função"
                   backgroundColor={propertiesTheme.header.fieldBackgroundColor}
                   color={propertiesTheme.header.fieldColor}
                   value={function_name}
-                  onChange={() => {}}
+                />
+                <Input
+                  disabled
+                  md={6}
+                  label="Schema"
+                  backgroundColor={propertiesTheme.header.fieldBackgroundColor}
+                  color={propertiesTheme.header.fieldColor}
+                  value={schema}
                 />
               </Row>
             </div>
@@ -123,6 +133,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                       language="sql"
                       readonly
                       value={loading ? '' : definition}
+                      onCtrlClick={handleEditorCtrlClick}
                     />
                   </div>
                   <Bar

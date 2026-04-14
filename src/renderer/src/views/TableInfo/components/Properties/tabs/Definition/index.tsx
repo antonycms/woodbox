@@ -9,6 +9,7 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import styles from './styles.module.css';
 
 const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
@@ -18,6 +19,7 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
     },
   } = useThemeContext();
   const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoContext();
+  const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   React.useEffect(() => {
     loadTableDefinition(id_connection, { schema, table });
@@ -31,6 +33,7 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
           language="sql"
           readonly
           value={loading.definition ? '' : definition}
+          onCtrlClick={handleEditorCtrlClick}
         />
       </div>
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

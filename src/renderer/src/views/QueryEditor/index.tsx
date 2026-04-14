@@ -31,6 +31,7 @@ import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autoco
 import { toDateTime } from '@renderer/utils/date';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 
 interface IQueryResult {
   type: string;
@@ -57,6 +58,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
   const { runSql, connectionsInfo, getTableColumns, getTableReferences } = useStoreContext();
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
+  const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>();
@@ -582,6 +584,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
           dialect="postgres"
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
           autocomplete={autocomplete}
+          onCtrlClick={handleEditorCtrlClick}
         />
       </div>
 
