@@ -100,7 +100,7 @@ const Data = ({
         attribute: column.column_name,
         required: !!column.is_nullable,
         sortable: true,
-        isFk: fkMap.has(column.column_name),
+        isLink: fkMap.has(column.column_name),
       })),
     [columns, fkMap],
   );
@@ -232,7 +232,7 @@ const Data = ({
         loading={isLoading}
         onContextMenu={onContextMenuTable}
         editedRows={editedFieldsRows}
-        onFkCellClick={handleFkCellClick}
+        onCellLinkClick={handleFkCellClick}
         onEditRow={(index, attribute, value) => {
           setEditedFieldsRows((prevState) => {
             const newState = new Map(prevState);

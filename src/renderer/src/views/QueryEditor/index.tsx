@@ -631,7 +631,7 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
                         rowKeyExtractor={(item) => item.__hash_rowTable}
                         rows={data.rows}
                         onScrollEnd={onScrollEnd}
-                        onFkCellClick={handleFkCellClick}
+                        onCellLinkClick={handleFkCellClick}
                         columns={data.columns.map((column) => ({
                           attribute: column,
                           label: column,

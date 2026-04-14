@@ -23,7 +23,7 @@ interface ITableColumnProps {
   name?: string;
   rowColumnKey?: string;
   width: number;
-  isFk?: boolean;
+  isLink?: boolean;
   onFkCellClick?(name: string, value: any): void;
   // type: 'string' | 'number' | 'boolean';
 }
@@ -45,12 +45,12 @@ const TableColumn = ({
   width,
   name,
   style: styleExternal = {},
-  isFk,
+  isLink,
   onFkCellClick,
 }: ITableColumnProps) => {
   const editedValue = React.useRef(value);
   const isHeaderColumn = indexRow === undefined;
-  const isFkClickable = isFk && !isHeaderColumn && value !== null && value !== undefined;
+  const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
 
   const className = (() => {
     return classes(
@@ -138,9 +138,9 @@ const TableColumn = ({
       className={className}
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-      title={isFkClickable ? 'Ctrl+click para abrir linha referenciada' : undefined}
+      title={isLinkClickable ? 'Ctrl+click para abrir linha referenciada' : undefined}
       onClick={
-        isFkClickable
+        isLinkClickable
           ? (e: React.MouseEvent) => {
               if (e.ctrlKey) {
                 e.preventDefault();
@@ -151,7 +151,7 @@ const TableColumn = ({
           : undefined
       }
     >
-      {isEditing ? null : isFkClickable ? (
+      {isEditing ? null : isLinkClickable ? (
         <span style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}>
           {serializedValue}
         </span>
