@@ -27,6 +27,7 @@ export const Input = React.memo((props: IInputProps) => {
     color,
     backgroundColor,
     placeholderColor,
+    disabled,
     icon: Icon,
     id: externalId,
     ...gridSystem
@@ -51,6 +52,7 @@ export const Input = React.memo((props: IInputProps) => {
         )}
         <div className={styles.inputContainer} style={inputContainerStyle}>
           <input
+            disabled={disabled}
             id={id}
             name={name}
             title={inputTitle}
@@ -106,6 +108,7 @@ export type InputTypes =
   | 'week';
 
 export type IInputProps = IGridSystem & {
+  disabled?: boolean;
   value?: string | number;
   placeholder?: string;
   onChange?(event: React.ChangeEvent<HTMLInputElement>): void;
