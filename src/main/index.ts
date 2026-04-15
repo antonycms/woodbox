@@ -1,6 +1,6 @@
 import './storage';
 import * as path from 'path';
-import { app, shell, BrowserWindow } from 'electron';
+import { app, shell, BrowserWindow, globalShortcut } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { closeAllConnections } from './database';
@@ -52,6 +52,9 @@ app.whenReady().then(() => {
    * see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
    */
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
+
+  // Disable shortcut to close application
+  globalShortcut.register('Control+Q', () => {});
 
   const mainWindow = createWindow();
 
