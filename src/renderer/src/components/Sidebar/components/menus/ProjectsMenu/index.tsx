@@ -7,6 +7,7 @@ import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
+import { ModalNewScript } from '@renderer/components/ModalNewScript';
 import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
@@ -22,7 +23,6 @@ import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { generateHash } from '@renderer/utils/string';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
 
@@ -34,6 +34,10 @@ const ProjectsMenu = () => {
     loadConnectionInfo,
     closeConnection,
     connectionsInfo,
+    scripts,
+    addScript,
+    removeScript,
+    getScriptContent,
   } = useStoreContext();
 
   const {
@@ -52,6 +56,8 @@ const ProjectsMenu = () => {
   const [projectNewConnection, setProjectNewConnection] = React.useState<IItemTreeViewData>();
   const [selectedConnection, setSelectedConnection] = React.useState(null);
   const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
+
+  const [showMoodalNewScript, setShowModalNewScript] = React.useState(false);
 
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [contextMenuItemSelected, setContextMenuItemSelected] = React.useState<IItemTreeViewData>();
@@ -170,18 +176,45 @@ const ProjectsMenu = () => {
           ),
         });
       }
+    } else if (item.type === 'script') {
+      const { script } = item.data;
+      const tabId = `script_${script.id}`;
+
+      const tab = getTab(tabId);
+
+      if (tab) {
+        setActiveTabId(tabId);
+      } else {
+        addTab({
+          id: tabId,
+          title: script.name,
+          component: () => (
+            <QueryEditor id_connection={script.id_connection} id_script={script.id} />
+          ),
+        });
+      }
     }
   };
 
-  const handleOpenNewSqlFile = () => {
-    const { id_connection, description_connection } = selectedConnection;
+  const handleCreateNewScript = async (name: string) => {
+    const { id_connection } = selectedConnection;
 
     refreshConnectionInfo(id_connection);
 
+    const script = await addScript({
+      name,
+      id_connection,
+      content: '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    setShowModalNewScript(false);
+
     addTab({
-      id: generateHash(),
-      title: `Sem título [${description_connection}]`,
-      component: () => <QueryEditor id_connection={id_connection} />,
+      id: `script_${script.id}`,
+      title: script.name,
+      component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
   };
 
@@ -257,6 +290,20 @@ const ProjectsMenu = () => {
           onClick: () => {},
         },
       ],
+
+      scripts: [
+        {
+          text: 'Novo script SQL',
+          onClick: () => setShowModalNewScript(true),
+        },
+      ],
+
+      script: [
+        {
+          text: 'Excluir Script',
+          onClick: () => removeScript(contextMenuItemSelected?.data?.script?.id),
+        },
+      ],
     };
 
     return optionsAvailable[contextMenuItemSelected?.type] || [];
@@ -316,7 +363,15 @@ const ProjectsMenu = () => {
             };
           }) || [];
 
-        const scripts: IItemTreeView[] = [];
+        const connectionScripts = scripts.filter((s) => s.id_connection === connection.id);
+
+        const scriptsThreeView: IItemTreeView[] = connectionScripts.map((script) => ({
+          id: `script_${script.id}`,
+          label: script.name,
+          icon: 'file' as const,
+          type: 'script' as const,
+          data: { script },
+        }));
 
         if (filterTextSerialized) {
           tablesThreeView = tablesThreeView.filter((table) => checkFilterText(table?.label));
@@ -376,9 +431,30 @@ const ProjectsMenu = () => {
           type: 'connection' as const,
           data: { id_connection: connection.id, description_connection: connection.description },
           childs: [
-            { id: 'schemas', label: 'Esquemas', childs: schemasThreeView, icon: 'schema' },
-            !schemasThreeView && { id: 'tables', label: 'Tabelas', childs: tablesThreeView },
-            { id: 'scripts', label: 'Scripts', childs: scripts, icon: 'fileSql' },
+            {
+              id: 'schemas',
+              type: 'schemas',
+              label: 'Esquemas',
+              childs: schemasThreeView,
+              icon: 'schema',
+            },
+            !schemasThreeView && {
+              id: 'tables',
+              type: 'tables',
+              label: 'Tabelas',
+              childs: tablesThreeView,
+            },
+            {
+              id: `scripts_${connection.id}`,
+              type: 'scripts',
+              label: 'Scripts',
+              childs: scriptsThreeView,
+              icon: 'fileSql',
+              data: {
+                id_connection: connection.id,
+                description_connection: connection.description,
+              },
+            },
           ],
         } as IItemTreeView;
       }),
@@ -402,6 +478,12 @@ const ProjectsMenu = () => {
         idProject={projectEditing?.id}
       />
 
+      <ModalNewScript
+        show={showMoodalNewScript}
+        onConfirm={handleCreateNewScript}
+        onClose={() => setShowModalNewScript(false)}
+      />
+
       <Row>
         <Text bold color={colors.color} userSelect={false}>
           Projetos
@@ -416,7 +498,7 @@ const ProjectsMenu = () => {
             title="Novo SQL"
             color={colors.color}
             icon={() => <FileSqlIcon size={14} />}
-            onClick={handleOpenNewSqlFile}
+            onClick={() => setShowModalNewScript(true)}
           />
         )}
 
