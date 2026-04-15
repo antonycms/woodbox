@@ -9,6 +9,7 @@ const StoreContextProvider = ({ children }) => {
   const [connectionTypes, setConnectionTypes] = React.useState<string[]>([]);
   const [connections, setConnections] = React.useState<IConnection[]>([]);
   const [connectionsInfo, setConnectionsInfo] = React.useState(new Map<string, IConnectionInfo>());
+  const [scripts, setScripts] = React.useState<IScript[]>([]);
 
   const connectionsGroupPerProject = React.useMemo<IConnectionsGroupPerProject[]>(() => {
     const groupedConnections = connections.reduce((acm, connection) => {
@@ -41,6 +42,42 @@ const StoreContextProvider = ({ children }) => {
     const storedProjects = await call('@get:projects');
 
     setProjects(storedProjects || []);
+  };
+
+  const loadScripts = async () => {
+    const meta: IScript[] = await call('@get:scripts_meta');
+    setScripts(meta || []);
+  };
+
+  const getScriptContent = async (id: string) => {
+    return (await call('@get:script_content', id)) ?? '';
+  };
+
+  const addScript = async (data: Omit<IScript, 'id'>) => {
+    const script: IScript = { ...data, id: generateHash() };
+
+    await call('@add:scripts', script);
+
+    setScripts((prev) => [...prev, script]);
+
+    return script;
+  };
+
+  const editScript = async (id: string, data: Partial<IScript>) => {
+    await call('@patch:scripts', id, data);
+
+    const metaChanges = Object.fromEntries(
+      Object.entries(data).filter(([key]) => key !== 'content'),
+    ) as Partial<IScript>;
+
+    if (Object.keys(metaChanges).length) {
+      setScripts((prev) => prev.map((s) => (s.id === id ? { ...s, ...metaChanges } : s)));
+    }
+  };
+
+  const removeScript = async (id: string) => {
+    await call('@remove:scripts', id);
+    setScripts((prev) => prev.filter((s) => s.id !== id));
   };
 
   const addProject = async (data: IProjectCreate) => {
@@ -181,6 +218,7 @@ const StoreContextProvider = ({ children }) => {
     loadConnectionTypes();
     loadConnections();
     loadProjects();
+    loadScripts();
   }, []);
 
   return (
@@ -216,6 +254,13 @@ const StoreContextProvider = ({ children }) => {
         getTableTriggers,
         getFunctionDefinition,
         runSql,
+
+        // scripts
+        scripts,
+        addScript,
+        editScript,
+        removeScript,
+        getScriptContent,
       }}
     >
       {children}
@@ -228,6 +273,15 @@ export const useStoreContext = () => {
 };
 
 export default StoreContextProvider;
+
+export interface IScript {
+  id: string;
+  name: string;
+  id_connection: string;
+  content?: string; // Not loaded in listing — fetched on demand when opening a script
+  created_at: string;
+  updated_at: string;
+}
 
 export interface IProjectCreate {
   description: string;
@@ -330,6 +384,12 @@ export interface IStoreContext {
   addProject(data: IProjectCreate): Promise<void>;
   removeProject(id: string): Promise<void>;
   editProject(id: string, data: IProjectCreate): Promise<void>;
+
+  scripts: IScript[];
+  addScript(data: Omit<IScript, 'id'>): Promise<IScript>;
+  editScript(id: string, data: Partial<IScript>): Promise<void>;
+  removeScript(id: string): Promise<void>;
+  getScriptContent(id: string): Promise<string>;
 
   connectionsGroupPerProject: IConnectionsGroupPerProject[];
 
