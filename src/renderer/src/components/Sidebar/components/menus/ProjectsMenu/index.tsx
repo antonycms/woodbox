@@ -269,6 +269,7 @@ const ProjectsMenu = () => {
       id: project.id,
       label: project.description,
       type: 'project' as const,
+      icon: 'grid',
       childs: project.connections.map((connection) => {
         const connectionInfo = connectionsInfo.get(connection.id);
 
@@ -309,11 +310,13 @@ const ProjectsMenu = () => {
                 ? `${connection.id}:${function_schema}_${function_name}:${index}`
                 : `${connection.id}:${function_name}:${index}`,
               label: function_name,
-              icon: 'table' as const,
-              type: 'function' as const,
+              icon: 'function',
+              type: 'function',
               data,
             };
           }) || [];
+
+        const scripts: IItemTreeView[] = [];
 
         if (filterTextSerialized) {
           tablesThreeView = tablesThreeView.filter((table) => checkFilterText(table?.label));
@@ -343,12 +346,14 @@ const ProjectsMenu = () => {
                 tablesSchema?.length && {
                   id: `tables_${connection.id}:${schema}`,
                   label: 'Tabelas',
+                  icon: 'multi',
                   childs: tablesSchema,
                 },
                 functionsSchema?.length && {
                   id: `fns_${connection.id}:${schema}`,
                   label: 'Funções',
                   childs: functionsSchema,
+                  icon: 'functions',
                 },
               ],
             };
@@ -360,8 +365,6 @@ const ProjectsMenu = () => {
           );
         }
 
-        const schemasOrTables = schemasThreeView || tablesThreeView || [];
-
         hasContentWithFilterText =
           hasContentWithFilterText || !!tablesThreeView.length || !!functionsThreeView.length;
 
@@ -372,8 +375,12 @@ const ProjectsMenu = () => {
           icon: 'database' as const,
           type: 'connection' as const,
           data: { id_connection: connection.id, description_connection: connection.description },
-          childs: schemasOrTables,
-        };
+          childs: [
+            { id: 'schemas', label: 'Esquemas', childs: schemasThreeView, icon: 'schema' },
+            !schemasThreeView && { id: 'tables', label: 'Tabelas', childs: tablesThreeView },
+            { id: 'scripts', label: 'Scripts', childs: scripts, icon: 'fileSql' },
+          ],
+        } as IItemTreeView;
       }),
     };
 
