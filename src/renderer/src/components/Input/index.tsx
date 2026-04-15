@@ -28,6 +28,7 @@ export const Input = React.memo((props: IInputProps) => {
     backgroundColor,
     placeholderColor,
     disabled,
+    autoFocus,
     icon: Icon,
     id: externalId,
     ...gridSystem
@@ -52,6 +53,7 @@ export const Input = React.memo((props: IInputProps) => {
         )}
         <div className={styles.inputContainer} style={inputContainerStyle}>
           <input
+            autoFocus={autoFocus}
             disabled={disabled}
             id={id}
             name={name}
@@ -131,4 +133,5 @@ export type IInputProps = IGridSystem & {
   placeholderColor?: string;
   label?: string;
   labelColor?: string;
+  autoFocus?: boolean;
 };
