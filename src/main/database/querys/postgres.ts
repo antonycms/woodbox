@@ -6,7 +6,9 @@
 /* postgres only */
 const getAllSchemas = () => /* sql */ `
   SELECT schema_name FROM information_schema.schemata
-  WHERE schema_owner != 'postgres'
+  WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  AND schema_name NOT LIKE 'pg_temp_%'
+  AND schema_name NOT LIKE 'pg_toast_temp_%'
   ORDER BY schema_name;
 `;
 
