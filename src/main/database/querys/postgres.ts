@@ -13,7 +13,8 @@ const getAllSchemas = () => /* sql */ `
 const getTables = () => /* sql */ `
   SELECT
     table_name,
-    table_schema
+    table_schema,
+    pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name)) AS total_size
   FROM information_schema.tables
   WHERE table_type='BASE TABLE'
   AND table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')

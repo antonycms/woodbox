@@ -99,3 +99,11 @@ export function isElement(o: any) {
 export function toCssVar(cssVars: any = {}): React.CSSProperties {
   return Object.keys(cssVars).reduce((acc, key) => ({ ...acc, [`--${key}`]: cssVars[key] }), {});
 }
+
+export function formatSizeFromBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} kB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}

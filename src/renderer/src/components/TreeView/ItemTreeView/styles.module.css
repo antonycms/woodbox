@@ -32,3 +32,10 @@
   font-size: 14px;
   white-space: nowrap;
 }
+
+.containerItemLabelInfo {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.5;
+  white-space: nowrap;
+}

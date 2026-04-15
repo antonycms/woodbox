@@ -39,6 +39,15 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
         >
           {props.label}
         </span>
+
+        {props.labelInfo && (
+          <span
+            className={classes(styles.containerItemLabelInfo, styles.ignorePointerEvents)}
+            style={{ color }}
+          >
+            {props.labelInfo}
+          </span>
+        )}
       </div>
 
       {isOpen &&

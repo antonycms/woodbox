@@ -240,6 +240,7 @@ export interface IProject extends IProjectCreate {
 interface ITable {
   table_name: string;
   table_schema?: string;
+  total_size?: number;
 }
 
 interface IFunctionDb {

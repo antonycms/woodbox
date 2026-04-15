@@ -24,6 +24,7 @@ import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { generateHash } from '@renderer/utils/string';
 import { QueryEditor } from '@renderer/views/QueryEditor';
+import { formatSizeFromBytes } from '@renderer/utils/methods';
 
 const ProjectsMenu = () => {
   const {
@@ -262,7 +263,7 @@ const ProjectsMenu = () => {
 
         let tablesThreeView: IItemTreeView[] =
           connectionInfo?.tables?.map((table) => {
-            const { table_name, table_schema } = table;
+            const { table_name, table_schema, total_size } = table;
 
             const data = {
               ...table,
@@ -275,6 +276,7 @@ const ProjectsMenu = () => {
                 ? `${connection.id}:${table_schema}_${table_name}`
                 : `${connection.id}:${table_name}`,
               label: table_name,
+              labelInfo: formatSizeFromBytes(total_size),
               icon: 'table' as const,
               type: 'table' as const,
               data: data,
