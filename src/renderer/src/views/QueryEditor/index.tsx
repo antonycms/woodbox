@@ -665,11 +665,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
               if (!data) return null;
 
-              const isSelect = data.type === 'SELECT';
-
               return (
                 <TabContent
-                  hasPadding={!isSelect}
                   key={tabResult.idTab}
                   idTab={tabResult.idTab}
                   backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
@@ -744,7 +741,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                   )}
 
                   {data.type === 'DELETE' && (
-                    <>
+                    <div className={styles.paddingContent}>
                       <Text bold color={activeTheme.queryEditor.tab.color}>
                         Remoção executada com sucesso
                       </Text>
@@ -753,37 +750,53 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       <Text color={activeTheme.queryEditor.tab.color}>
                         Total de linhas afetadas: {data.affected_rows}
                       </Text>
-                    </>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>
+                        Executado em {toDateTime(data.date_run)}
+                      </Text>
+                    </div>
                   )}
 
                   {data.type === 'ALTER' && (
-                    <>
+                    <div className={styles.paddingContent}>
                       <Text bold color={activeTheme.queryEditor.tab.color}>
                         Alteração realizada com sucesso
                       </Text>
 
                       <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-                    </>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>
+                        Executado em {toDateTime(data.date_run)}
+                      </Text>
+                    </div>
                   )}
 
                   {data.type === 'ERROR' && (
-                    <>
+                    <div className={styles.paddingContent}>
                       <Text bold color={activeTheme.queryEditor.tab.color}>
                         Erro ao executar a query
                       </Text>
 
                       <Text color={activeTheme.queryEditor.tab.color}>{data.message}</Text>
-                    </>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>
+                        Executado em {toDateTime(data.date_run)}
+                      </Text>
+                    </div>
                   )}
 
                   {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
-                    <>
+                    <div className={styles.paddingContent}>
                       <Text bold color={activeTheme.queryEditor.tab.color}>
                         Query executada com sucesso
                       </Text>
 
                       <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-                    </>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>
+                        Executado em {toDateTime(data.date_run)}
+                      </Text>
+                    </div>
                   )}
                 </TabContent>
               );
