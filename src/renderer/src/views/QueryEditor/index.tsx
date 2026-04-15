@@ -18,6 +18,7 @@ import {
   IconFileWrited,
   IconRefresh,
   PanelFile,
+  RunFileIcon,
   RunIcon,
   SaveIcon,
 } from '@renderer/styles/icons';
@@ -200,14 +201,15 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     }
   };
 
-  const runCurrentSQL = async () => {
+  const runCurrentSQL = async (openNewTab?: boolean) => {
     const query = getSelectionsValues().join('\n') || refEditor.current?.getCurrentValue?.();
 
     if (!query) return;
 
-    const updateTabResultData = activeTabId
-      ? makeUpdateResultTab(activeTabId)
-      : makeNewTabResult({ query, type: 'SELECT', date_run: new Date().toISOString() });
+    const updateTabResultData =
+      !openNewTab && activeTabId
+        ? makeUpdateResultTab(activeTabId)
+        : makeNewTabResult({ query, type: 'SELECT', date_run: new Date().toISOString() });
 
     updateTabResultData({ loading: true });
 
@@ -503,14 +505,16 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'enter') {
         e.preventDefault();
 
+        if (e.altKey && e.shiftKey) {
+          return runAllRef.current();
+        }
+
         if (e.altKey) {
-          runAllRef.current();
-          return;
+          return runSelectionsRef.current();
         }
 
         if (e.shiftKey) {
-          runSelectionsRef.current();
-          return;
+          return runCurrentSQLRef.current(true);
         }
 
         runCurrentSQLRef.current();
@@ -552,21 +556,31 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
           <Button
             text
             smallIcon
-            title="Executar script SQL"
+            title="Executar script SQL (Ctrl + Shift + Alt + Enter)"
             onClick={runAllSQL}
             color={activeTheme.queryEditor.bar.color}
           >
-            <RunIcon size={16} />
+            <RunFileIcon size={16} />
           </Button>
 
           <Button
             text
             smallIcon
-            title="Executar seleção"
+            title="Executar SQL selecionado (Ctrl + Alt + Enter)"
             onClick={runSelectionsSQL}
             color={activeTheme.queryEditor.bar.color}
           >
             <RunSelectionIcon size={20} />
+          </Button>
+
+          <Button
+            text
+            smallIcon
+            title="Executar SQL atual (Ctrl + Shift + Enter)"
+            onClick={() => runCurrentSQL(true)}
+            color={activeTheme.queryEditor.bar.color}
+          >
+            <RunIcon size={16} />
           </Button>
 
           <Button
