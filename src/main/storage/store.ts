@@ -4,11 +4,13 @@ import {
   initialValue as saved_connections,
   getModule as getModuleSavedConnections,
 } from './modules/saved_connections';
+import { initialValue as scripts_meta, getModule as getModuleScripts } from './modules/scripts';
 
 const store = new Store({
   schema: {
     projects,
     saved_connections,
+    scripts_meta,
   },
 });
 
@@ -31,3 +33,11 @@ export const {
   remove: removeConnectionSaved,
   edit: editConnectionSaved,
 } = getModuleSavedConnections(store);
+
+export const {
+  add: addScript,
+  remove: removeScript,
+  getMeta: getScriptsMeta,
+  getContent: getScriptContent,
+  patch: patchScript,
+} = getModuleScripts(store);
