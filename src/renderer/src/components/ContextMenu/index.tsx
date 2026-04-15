@@ -4,9 +4,9 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
-export interface IContextMenuOption {
+export interface IContextMenuOption<ActiveContextInfo = any> {
   text: string;
-  onClick?(): void;
+  onClick?(activeContextInfo?: ActiveContextInfo): void;
 }
 
 export interface IContextMenuPosition {
@@ -14,17 +14,18 @@ export interface IContextMenuPosition {
   y: number;
 }
 
-export interface IContextMenuProps {
-  options: IContextMenuOption[];
+export interface IContextMenuProps<ActiveContextInfo = any> {
+  activeContextInfo?: ActiveContextInfo;
+  options: IContextMenuOption<ActiveContextInfo>[];
   position?: IContextMenuPosition;
   onClose?(): void;
 }
 
-export const ContextMenu = (props: IContextMenuProps) => {
+export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<ActiveContextInfo>) {
   const {
     activeTheme: { contextMenu: theme },
   } = useThemeContext();
-  const { position, onClose, options } = props;
+  const { position, onClose, options, activeContextInfo } = props;
   const { x: positionX, y: positionY } = position || {};
 
   const isInvalidPosition = typeof positionX !== 'number' || typeof positionY !== 'number';
@@ -56,7 +57,7 @@ export const ContextMenu = (props: IContextMenuProps) => {
               justifyContent="start"
               key={index}
               color={theme.color}
-              onClick={() => option.onClick?.()}
+              onClick={() => option.onClick?.(activeContextInfo)}
             >
               {option.text}
             </Button>
@@ -64,4 +65,4 @@ export const ContextMenu = (props: IContextMenuProps) => {
       )}
     </div>
   );
-};
+}

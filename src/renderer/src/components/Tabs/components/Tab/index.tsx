@@ -23,6 +23,7 @@ const Tab = (props: ITabProps) => {
     color,
     ascentColor,
     backgroundColor,
+    onContextMenu,
     icon: Icon,
   } = props;
 
@@ -34,6 +35,7 @@ const Tab = (props: ITabProps) => {
       id={id}
       style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
@@ -91,6 +93,7 @@ export interface ITabProps {
   color: string;
   ascentColor: string;
   backgroundColor: string;
+  onContextMenu?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
 }
 
 export type TabComponent = (props: ITabProps) => JSX.Element;

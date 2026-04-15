@@ -1,5 +1,10 @@
 import React from 'react';
 import { classes, toCssProperties } from '@renderer/styles/theme';
+import {
+  ContextMenu,
+  IContextMenuOption,
+  IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
 import Tab from '../Tab';
 import styles from '../../styles.module.css';
 
@@ -23,12 +28,14 @@ const TabsBar = (props: ITabsBarProps) => {
     backgroundColor,
     ascentColor,
     borderColor,
+    contextMenuOptions,
     height = '30px',
     width = '100%',
   } = props;
 
   const ref = React.useRef<HTMLDivElement>();
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
+  const [activeTabContextMenu, setActiveTabContextMenu] = React.useState<IActiveTabContextMenu>();
   const noHasContent = !tabs.length;
 
   const changeTabContent = () => {
@@ -174,9 +181,21 @@ const TabsBar = (props: ITabsBarProps) => {
             onClick={() => handleClickTab(tab)}
             onRemove={() => onRemoveTab?.(tab)}
             unsaved={tab.unsaved}
+            onContextMenu={(event) => {
+              setActiveTabContextMenu({ tab, position: { x: event.clientX, y: event.clientY } });
+            }}
           />
         ))}
       </div>
+
+      {!!contextMenuOptions?.length && (
+        <ContextMenu
+          activeContextInfo={activeTabContextMenu}
+          position={activeTabContextMenu?.position}
+          options={contextMenuOptions}
+          onClose={() => setActiveTabContextMenu(null)}
+        />
+      )}
     </div>
   );
 };
@@ -211,4 +230,10 @@ export interface ITabsBarProps {
   backgroundColor: string;
   backgroundColorBar: string;
   borderColor: string;
+  contextMenuOptions?: IContextMenuOption<IActiveTabContextMenu>[];
+}
+
+interface IActiveTabContextMenu {
+  tab: ITab;
+  position: IContextMenuPosition;
 }
