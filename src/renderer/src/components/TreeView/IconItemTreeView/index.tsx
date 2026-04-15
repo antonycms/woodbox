@@ -1,7 +1,18 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import { FaDatabase, FaFileAlt, FaFolder, FaTable } from 'react-icons/fa';
-import { MdKeyboardArrowDown, MdKeyboardArrowRight } from 'react-icons/md';
+import {
+  MdFunctions,
+  MdGridView,
+  MdKeyboardArrowDown,
+  MdKeyboardArrowRight,
+  MdOutlineSchema,
+} from 'react-icons/md';
+import { FaFolderTree } from 'react-icons/fa6';
+import { BsFiletypeSql } from 'react-icons/bs';
+import { TbBoxMultipleFilled } from 'react-icons/tb';
+import { PiFunctionLight } from 'react-icons/pi';
+import { AiOutlineTable } from 'react-icons/ai';
 import styles from './styles.module.css';
 
 const availableIcons = {
@@ -9,9 +20,16 @@ const availableIcons = {
   folder: FaFolder,
   file: FaFileAlt,
   database: FaDatabase,
-  table: FaTable,
+  table: AiOutlineTable,
   arrowDown: MdKeyboardArrowDown,
   arrowRight: MdKeyboardArrowRight,
+  schema: MdOutlineSchema,
+  fileSql: BsFiletypeSql,
+  grid: MdGridView,
+  folderTree: FaFolderTree,
+  functions: MdFunctions,
+  multi: TbBoxMultipleFilled,
+  function: PiFunctionLight,
 };
 
 const IconItemTreeView = ({ no_margin, icon = 'folder', ...props }: IIcon) => {
