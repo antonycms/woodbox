@@ -145,6 +145,8 @@ const ProjectsMenu = () => {
 
     if (tab) return setActiveTabId(tabId);
 
+    refreshConnectionInfo(script.id_connection);
+
     addTab({
       id: tabId,
       title: script.name,
