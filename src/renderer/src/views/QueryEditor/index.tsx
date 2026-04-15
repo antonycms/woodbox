@@ -53,10 +53,19 @@ type IDataUpdateabResult = Partial<IDataMakeTabResult>;
 
 interface IQueryEditorProps {
   id_connection: string;
+  id_script?: string;
 }
 
-export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
-  const { runSql, connectionsInfo, getTableColumns, getTableReferences } = useStoreContext();
+export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
+  const {
+    runSql,
+    connectionsInfo,
+    getTableColumns,
+    getTableReferences,
+    editScript,
+    getScriptContent,
+  } = useStoreContext();
+
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
@@ -425,6 +434,14 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     });
   };
 
+  const loadScriptContent = async () => {
+    if (!id_script) return;
+
+    const content = await getScriptContent(id_script);
+
+    if (content) refEditor.current.setValue(content);
+  };
+
   const handleFkCellClick = React.useCallback(
     (attribute: string, value: any) => {
       const ref = queryFkMap.get(attribute);
@@ -449,6 +466,14 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
     [queryFkMap, id_connection, addTab],
   );
 
+  const saveScript = useDebounce(() => {
+    if (!id_script) return;
+
+    const content = refEditor.current.getValue();
+
+    editScript(id_script, { content, updated_at: new Date().toISOString() });
+  }, 1000);
+
   const handleUpdateCurrentQueryInfo = React.useCallback((query: string) => {
     const tablesQueryInfo = getTablesFromQuerySql(query);
 
@@ -457,6 +482,8 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
       const checkIsEquals = arrayIsEquals(prevState, tablesQueryInfo);
       return checkIsEquals ? prevState : tablesQueryInfo;
     });
+
+    if (id_script) saveScript();
   }, []);
 
   const autocomplete = React.useMemo<IDefineSQlAutocompleteParams>(() => {
@@ -531,6 +558,12 @@ export const QueryEditor = ({ id_connection }: IQueryEditorProps) => {
   React.useEffect(() => {
     loadTableColumns();
   }, [id_connection, currentQueryTablesInfo]);
+
+  React.useEffect(() => {
+    const timeout = setTimeout(loadScriptContent);
+
+    return () => clearTimeout(timeout);
+  }, [id_script]);
 
   React.useEffect(() => {
     if (tabsResult.length) {
