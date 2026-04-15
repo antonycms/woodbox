@@ -1,14 +1,12 @@
 import React from 'react';
 
-type IconRenderer = (props?: { style: React.CSSProperties }) => JSX.Element;
-
 export interface IElementProps {
   style?: React.CSSProperties;
   size?: number;
 }
 
 export interface IIconProps extends IElementProps {
-  iconRenderer: IconRenderer;
+  iconRenderer: React.ElementType;
   fixSize?: number;
 }
 
@@ -21,7 +19,7 @@ export const Icon = (props: IIconProps) => {
   return <IconComponent style={{ ...style, width: size, fontSize: serializedSize }} />;
 };
 
-export const makeIcon = (iconRenderer: IconRenderer, size = 20, fixSize = 0) => {
+export const makeIcon = (iconRenderer: React.ElementType, size = 20, fixSize = 0) => {
   const IconComponent = (props: IElementProps) => (
     <Icon
       size={props.size || size}
