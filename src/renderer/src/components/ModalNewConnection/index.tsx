@@ -103,6 +103,7 @@ export const ModalNewConnection = React.memo(
         <form id="formNewConnection" onSubmit={onSubmit} ref={formRef}>
           <Row>
             <Input
+              autoFocus
               required
               label="Descrição"
               xs={12}

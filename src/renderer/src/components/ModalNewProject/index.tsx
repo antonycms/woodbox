@@ -48,6 +48,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
     <Modal title="Novo Projeto" width="500px" show={show}>
       <form onSubmit={onSubmit}>
         <Input
+          autoFocus
           required
           backgroundColor={colors.fieldBackgroundColor}
           color={colors.fieldColor}
