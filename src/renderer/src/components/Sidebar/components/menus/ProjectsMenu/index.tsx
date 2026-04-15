@@ -7,7 +7,7 @@ import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
-import { AddIcon, AddSqlIcon } from '@renderer/styles/icons';
+import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
   IContextMenuOption,
@@ -408,7 +408,7 @@ const ProjectsMenu = () => {
             text
             title="Novo SQL"
             color={colors.color}
-            icon={() => <AddSqlIcon size={14} />}
+            icon={() => <FileSqlIcon size={14} />}
             onClick={handleOpenNewSqlFile}
           />
         )}

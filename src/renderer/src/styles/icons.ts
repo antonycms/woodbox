@@ -13,7 +13,7 @@ import {
 } from 'react-icons/md';
 
 export const AddIcon = makeIcon(FaPlus, 20, 6);
-export const AddSqlIcon = makeIcon(BsFiletypeSql);
+export const FileSqlIcon = makeIcon(BsFiletypeSql);
 export const SaveIcon = makeIcon(FiSave);
 export const RemoveIcon = makeIcon(CgTrash);
 export const RunFileIcon = makeIcon(BsFileEarmarkPlayFill);
