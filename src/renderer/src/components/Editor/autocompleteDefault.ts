@@ -75,7 +75,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         return op.includes(serializedCurrentWord) || op.includes(serializedPrevWord);
       };
 
-      const tableAlias = aliases.find(({ alias }) => alias && currentWord.startsWith(alias));
+      const tableAlias = aliases.find(({ alias }) => alias && currentWord?.startsWith(alias));
 
       const isTable = tablesAvailable?.some?.(
         (table) => `${table.schema ? `${table.schema}.` : ''}${table.name}` === currentWord,
@@ -84,13 +84,14 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
       const isTypingCurrentWord = !/[\s]$/.test(currentContent);
       const isSchema =
         schemas?.some?.(
-          (schema) => currentWord.startsWith(schema.name) && currentWord.includes('.'),
-        ) && (!isTable || isTypingCurrentWord);
+          (schema) => currentWord?.startsWith(schema.name) && currentWord?.includes('.'),
+        ) &&
+        (!isTable || isTypingCurrentWord);
 
       const isAlias =
-        currentWord.includes('.') &&
+        currentWord?.includes('.') &&
         !!tableAlias?.alias &&
-        currentWord.startsWith(tableAlias.alias);
+        currentWord?.startsWith(tableAlias.alias);
       const isSelectColumns = !isTable && checkOperation(['select']);
       const isFromOrJoin = !isTable && checkOperation(['from', 'join', 'update', 'into']);
       const isFilterOperators =
@@ -107,17 +108,17 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         !/\bSET\b.*\bWHERE\b/i.test(currentContent);
 
       const isUpdateSetColumns =
-        isInUpdateSetClause && (checkOperation(['set']) || currentWord.endsWith(','));
+        isInUpdateSetClause && (checkOperation(['set']) || currentWord?.endsWith(','));
 
       const isInsertColumns =
         !isTable &&
         isInsertQuery &&
         currentContent.includes('(') &&
-        (currentWord.startsWith('(') || currentWord.endsWith('(') || currentWord.endsWith(','));
+        (currentWord?.startsWith('(') || currentWord?.endsWith('(') || currentWord?.endsWith(','));
 
       if (isSchema) {
         const tablesWords = tablesAvailable
-          .filter(({ schema }) => currentWord.split('.')[0] === schema)
+          .filter(({ schema }) => currentWord?.split('.')[0] === schema)
           .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
 
         availableWords = tablesWords;
