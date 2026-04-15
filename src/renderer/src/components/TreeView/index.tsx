@@ -52,7 +52,7 @@ const TreeView = (props: ITreeViewProps) => {
     if (!item) return;
 
     element?.focus();
-    props.onClick?.({ id: item.id, data: item.data, type: item.type });
+    props.onClick?.({ id: item.id, label: item.label, data: item.data, type: item.type });
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -85,7 +85,7 @@ const TreeView = (props: ITreeViewProps) => {
     if (!item) return;
 
     element?.focus();
-    props.onDoubleClick?.({ id: item.id, data: item.data, type: item.type });
+    props.onDoubleClick?.({ id: item.id, label: item.label, data: item.data, type: item.type });
   };
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -95,7 +95,7 @@ const TreeView = (props: ITreeViewProps) => {
     if (!item) return;
 
     element?.focus();
-    props.onContextMenu?.({ id: item.id, data: item.data, type: item.type }, e);
+    props.onContextMenu?.({ id: item.id, label: item.label, data: item.data, type: item.type }, e);
   };
 
   const handleSwitchItem = async (item: IItemTreeView) => {
@@ -142,12 +142,12 @@ export default TreeView;
 
 export interface IItemTreeViewData {
   id: string;
+  label: string;
   data?: any;
   type?: string;
 }
 
 export interface IItemTreeView extends IItemTreeViewData {
-  label: string;
   labelInfo?: string;
   childs?: IItemTreeViewProps[];
   icon?: AvalailableTreeViewIcon;

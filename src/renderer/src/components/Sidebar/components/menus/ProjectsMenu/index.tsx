@@ -24,7 +24,7 @@ import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { generateHash } from '@renderer/utils/string';
 import { QueryEditor } from '@renderer/views/QueryEditor';
-import { formatSizeFromBytes } from '@renderer/utils/methods';
+import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
 
 const ProjectsMenu = () => {
   const {
@@ -227,6 +227,10 @@ const ProjectsMenu = () => {
 
       schema: [
         {
+          text: 'Copiar',
+          onClick: () => copyToClipboard(contextMenuItemSelected.data.schema_name),
+        },
+        {
           text: 'Renomear Esquema',
           onClick: () => {},
         },
@@ -237,6 +241,13 @@ const ProjectsMenu = () => {
       ],
 
       table: [
+        {
+          text: 'Copiar',
+          onClick: () => {
+            const data = contextMenuItemSelected?.data;
+            copyToClipboard([data.table_schema, data.table_name].filter(Boolean).join('.'));
+          },
+        },
         {
           text: 'Renomear Tabela',
           onClick: () => {},
@@ -319,6 +330,7 @@ const ProjectsMenu = () => {
             const dataSchema = {
               id_connection: connection.id,
               description_connection: connection.description,
+              schema_name: schema,
             };
 
             return {
