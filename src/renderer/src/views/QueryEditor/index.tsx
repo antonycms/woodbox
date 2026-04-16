@@ -469,7 +469,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const saveScript = useDebounce(() => {
     if (!id_script) return;
 
-    const content = refEditor.current.getValue();
+    const content = refEditor.current?.getValue();
 
     editScript(id_script, { content, updated_at: new Date().toISOString() });
   }, 1000);
