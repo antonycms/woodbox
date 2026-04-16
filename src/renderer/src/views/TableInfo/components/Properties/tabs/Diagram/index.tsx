@@ -35,6 +35,7 @@ const X_RIGHT = 800;
 type TableNodeData = {
   label: string;
   isCurrent: boolean;
+  columns: string[];
   backgroundColor: string;
   borderColor: string;
   accentColor: string;
@@ -43,7 +44,7 @@ type TableNodeData = {
 };
 
 const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
-  const { label, isCurrent, accentColor, secondaryAccentColor, color } = data;
+  const { label, isCurrent, columns, accentColor, secondaryAccentColor, color } = data;
   const nodeAccent = isCurrent ? accentColor : secondaryAccentColor;
   return (
     <div
@@ -66,6 +67,31 @@ const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
         {label}
       </div>
       {isCurrent && <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>tabela atual</div>}
+      {columns.length > 0 && (
+        <>
+          <div
+            style={{
+              borderTop: `1px solid ${nodeAccent}55`,
+              marginTop: 6,
+              marginBottom: 5,
+            }}
+          />
+          {columns.map((col, i) => (
+            <div
+              key={i}
+              style={{
+                fontSize: 10,
+                opacity: 0.75,
+                marginTop: i > 0 ? 3 : 0,
+                fontFamily: 'monospace',
+                wordBreak: 'break-all',
+              }}
+            >
+              {col}
+            </div>
+          ))}
+        </>
+      )}
       <Handle
         type="source"
         position={Position.Right}
@@ -160,6 +186,19 @@ const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
     const outgoing = Object.values(outgoingMap);
     const incoming = Object.values(incomingMap);
 
+    // Group all FK columns by table (a table may have multiple FK constraints)
+    const targetColumnsMap = outgoing.reduce((acc, fk) => {
+      if (!acc[fk.target]) acc[fk.target] = [];
+      acc[fk.target].push(...fk.columns);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    const sourceColumnsMap = incoming.reduce((acc, fk) => {
+      if (!acc[fk.source]) acc[fk.source] = [];
+      acc[fk.source].push(...fk.columns);
+      return acc;
+    }, {} as Record<string, string[]>);
+
     const uniqueTargets = [...new Set(outgoing.map((f) => f.target))];
     const uniqueSources = [...new Set(incoming.map((f) => f.source))];
 
@@ -177,29 +216,36 @@ const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
         id: 'current',
         type: 'tableNode',
         position: { x: X_CENTER, y: centerY - NODE_HEIGHT / 2 },
-        data: { label: currentLabel, isCurrent: true, ...themeColors },
+        data: { label: currentLabel, isCurrent: true, columns: [], ...themeColors },
       },
       ...uniqueTargets.map((target, i) => ({
         id: `out_${target}`,
         type: 'tableNode' as const,
         position: { x: X_RIGHT, y: rightStart + i * V_SPACING - NODE_HEIGHT / 2 },
-        data: { label: target, isCurrent: false, ...themeColors },
+        data: {
+          label: target,
+          isCurrent: false,
+          columns: targetColumnsMap[target] ?? [],
+          ...themeColors,
+        },
       })),
       ...uniqueSources.map((source, i) => ({
         id: `in_${source}`,
         type: 'tableNode' as const,
         position: { x: X_LEFT, y: leftStart + i * V_SPACING - NODE_HEIGHT / 2 },
-        data: { label: source, isCurrent: false, ...themeColors },
+        data: {
+          label: source,
+          isCurrent: false,
+          columns: sourceColumnsMap[source] ?? [],
+          ...themeColors,
+        },
       })),
     ];
 
     const edgeBase = {
       type: 'smoothstep',
       markerEnd: { type: MarkerType.ArrowClosed, color: theme.tab.ascentColor },
-      style: { stroke: theme.tab.ascentColor },
-      labelStyle: { fill: theme.tab.color, fontSize: 11 },
-      labelBgStyle: { fill: theme.tab.backgroundColor, fillOpacity: 0.85 },
-      labelBgPadding: [4, 4] as [number, number],
+      style: { stroke: theme.tab.ascentColor, strokeOpacity: 0.6 },
     };
 
     const newEdges: Edge[] = [
@@ -208,14 +254,12 @@ const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
         id: `edge_out_${fk.constraint_name}`,
         source: 'current',
         target: `out_${fk.target}`,
-        label: fk.columns.join('\n'),
       })),
       ...incoming.map((fk) => ({
         ...edgeBase,
         id: `edge_in_${fk.constraint_name}`,
         source: `in_${fk.source}`,
         target: 'current',
-        label: fk.columns.join('\n'),
       })),
     ];
 
