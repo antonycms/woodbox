@@ -765,6 +765,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
                     </>
                   )}
+
                   {data.type === 'ERROR' && (
                     <>
                       <Text bold color={activeTheme.queryEditor.tab.color}>
@@ -772,6 +773,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       </Text>
 
                       <Text color={activeTheme.queryEditor.tab.color}>{data.message}</Text>
+                    </>
+                  )}
+
+                  {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
+                    <>
+                      <Text bold color={activeTheme.queryEditor.tab.color}>
+                        Query executada com sucesso
+                      </Text>
+
+                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
                     </>
                   )}
                 </TabContent>
