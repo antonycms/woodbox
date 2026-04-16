@@ -486,7 +486,12 @@ const ProjectsMenu = () => {
             color={colors.color}
             icon={() => <FileSqlIcon size={14} />}
             onClick={() => {
-              const script = scripts[scripts.length - 1];
+              const connectionScripts = scripts.filter(
+                (s) => s.id_connection === selectedConnection.id_connection,
+              );
+
+              const script = connectionScripts[connectionScripts.length - 1];
+
               script ? openTabScriptSql(script) : setShowModalNewScript(true);
             }}
           />
