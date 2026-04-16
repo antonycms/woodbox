@@ -61,6 +61,7 @@ const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
       <Handle
         type="target"
         position={Position.Left}
+        isConnectable={false}
         style={{ background: nodeAccent, border: 'none' }}
       />
       <div style={{ fontWeight: isCurrent ? 700 : 500, fontSize: 13, wordBreak: 'break-all' }}>
@@ -95,6 +96,7 @@ const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
       <Handle
         type="source"
         position={Position.Right}
+        isConnectable={false}
         style={{ background: nodeAccent, border: 'none' }}
       />
     </div>
@@ -313,6 +315,7 @@ const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
           fitView
           minZoom={0.2}
           colorMode="dark"
+          nodesConnectable={false}
           proOptions={{ hideAttribution: true }}
           style={{ background: theme.tab.backgroundColor }}
         >
