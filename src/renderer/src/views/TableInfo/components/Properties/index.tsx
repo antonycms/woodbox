@@ -12,6 +12,7 @@ import Restrictios from './tabs/Restrictions';
 import References from './tabs/References';
 import Definition from './tabs/Definition';
 import Triggers from './tabs/Triggers';
+import Diagram from './tabs/Diagram';
 import styles from './styles.module.css';
 
 const Properties = (props: ITableInfoProps) => {
@@ -79,6 +80,7 @@ const Properties = (props: ITableInfoProps) => {
             { idTab: '2', title: 'Restrições' },
             { idTab: '3', title: 'Chaves Estrangeiras' },
             { idTab: '4', title: 'Referências' },
+            { idTab: '7', title: 'Diagrama' },
             { idTab: '6', title: 'Triggers' },
             { idTab: '5', title: 'Definição' },
           ]}
@@ -99,6 +101,10 @@ const Properties = (props: ITableInfoProps) => {
 
           <TabContent idTab="4">
             <References {...props} />
+          </TabContent>
+
+          <TabContent idTab="7">
+            <Diagram key={activeTabId} {...props} />
           </TabContent>
 
           <TabContent idTab="5">
