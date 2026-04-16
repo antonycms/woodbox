@@ -53,7 +53,9 @@ const ProjectsMenu = () => {
   const [isNewProject, setIsNewProject] = React.useState(false);
   const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
   const [projectNewConnection, setProjectNewConnection] = React.useState<IItemTreeViewData>();
-  const [selectedConnection, setSelectedConnection] = React.useState(null);
+  const [selectedConnection, setSelectedConnection] = React.useState<ISelectedConnection | null>(
+    null,
+  );
   const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
 
   const [showMoodalNewScript, setShowModalNewScript] = React.useState(false);
@@ -547,3 +549,7 @@ const ProjectsMenu = () => {
 };
 
 export default React.memo(ProjectsMenu);
+
+interface ISelectedConnection {
+  id_connection: string;
+}
