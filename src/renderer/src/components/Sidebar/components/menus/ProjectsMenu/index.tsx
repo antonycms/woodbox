@@ -15,7 +15,7 @@ import {
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
 import TreeView, { IItemTreeView, IItemTreeViewData } from '@renderer/components/TreeView';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { IScript, useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import styles from './styles.module.css';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
@@ -37,7 +37,6 @@ const ProjectsMenu = () => {
     scripts,
     addScript,
     removeScript,
-    getScriptContent,
   } = useStoreContext();
 
   const {
@@ -137,6 +136,20 @@ const ProjectsMenu = () => {
     setSelectedConnection(item?.data?.id_connection && item?.data);
   };
 
+  const openTabScriptSql = (script: IScript) => {
+    const tabId = `script_${script.id}`;
+
+    const tab = getTab(tabId);
+
+    if (tab) return setActiveTabId(tabId);
+
+    addTab({
+      id: tabId,
+      title: script.name,
+      component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
+    });
+  };
+
   const handleDoubleClickItemThreeView = (item: IItemTreeViewData) => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
@@ -178,21 +191,7 @@ const ProjectsMenu = () => {
       }
     } else if (item.type === 'script') {
       const { script } = item.data;
-      const tabId = `script_${script.id}`;
-
-      const tab = getTab(tabId);
-
-      if (tab) {
-        setActiveTabId(tabId);
-      } else {
-        addTab({
-          id: tabId,
-          title: script.name,
-          component: () => (
-            <QueryEditor id_connection={script.id_connection} id_script={script.id} />
-          ),
-        });
-      }
+      openTabScriptSql(script);
     }
   };
 
@@ -320,15 +319,14 @@ const ProjectsMenu = () => {
       childs: project.connections.map((connection) => {
         const connectionInfo = connectionsInfo.get(connection.id);
 
+        const dataConnection = {
+          id_connection: connection.id,
+          description_connection: connection.description,
+        };
+
         let tablesThreeView: IItemTreeView[] =
           connectionInfo?.tables?.map((table) => {
             const { table_name, table_schema, total_size } = table;
-
-            const data = {
-              ...table,
-              id_connection: connection.id,
-              description_connection: connection.description,
-            };
 
             return {
               id: table_schema
@@ -338,19 +336,13 @@ const ProjectsMenu = () => {
               labelInfo: formatSizeFromBytes(total_size),
               icon: 'table' as const,
               type: 'table' as const,
-              data: data,
+              data: { ...table, ...dataConnection },
             };
           }) || [];
 
         let functionsThreeView: IItemTreeView[] =
           connectionInfo?.functions?.map((fn, index) => {
             const { function_name, function_schema } = fn;
-
-            const data = {
-              ...fn,
-              id_connection: connection.id,
-              description_connection: connection.description,
-            };
 
             return {
               id: function_schema
@@ -359,7 +351,7 @@ const ProjectsMenu = () => {
               label: function_name,
               icon: 'function',
               type: 'function',
-              data,
+              data: { ...fn, ...dataConnection },
             };
           }) || [];
 
@@ -370,7 +362,7 @@ const ProjectsMenu = () => {
           label: script.name,
           icon: 'file' as const,
           type: 'script' as const,
-          data: { script },
+          data: { script, ...dataConnection },
         }));
 
         if (filterTextSerialized) {
@@ -385,16 +377,10 @@ const ProjectsMenu = () => {
               ({ data }) => data.function_schema === schema,
             );
 
-            const dataSchema = {
-              id_connection: connection.id,
-              description_connection: connection.description,
-              schema_name: schema,
-            };
-
             return {
               id: `${connection.id}:${schema}`,
               label: schema,
-              data: dataSchema,
+              data: { schema_name: schema, ...dataConnection },
               icon: 'folder' as const,
               type: 'schema' as const,
               childs: [
@@ -437,12 +423,14 @@ const ProjectsMenu = () => {
               label: 'Esquemas',
               childs: schemasThreeView,
               icon: 'schema',
+              data: dataConnection,
             },
             !schemasThreeView && {
               id: 'tables',
               type: 'tables',
               label: 'Tabelas',
               childs: tablesThreeView,
+              data: dataConnection,
             },
             {
               id: `scripts_${connection.id}`,
@@ -450,10 +438,7 @@ const ProjectsMenu = () => {
               label: 'Scripts',
               childs: scriptsThreeView,
               icon: 'fileSql',
-              data: {
-                id_connection: connection.id,
-                description_connection: connection.description,
-              },
+              data: dataConnection,
             },
           ],
         } as IItemTreeView;
@@ -495,10 +480,13 @@ const ProjectsMenu = () => {
           <Button
             smallIcon
             text
-            title="Novo SQL"
+            title="Abrir editor SQL"
             color={colors.color}
             icon={() => <FileSqlIcon size={14} />}
-            onClick={() => setShowModalNewScript(true)}
+            onClick={() => {
+              const script = scripts[scripts.length - 1];
+              script ? openTabScriptSql(script) : setShowModalNewScript(true);
+            }}
           />
         )}
 
