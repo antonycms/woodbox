@@ -1,6 +1,7 @@
 import { IoMdPlay } from 'react-icons/io';
 import { FiSave } from 'react-icons/fi';
 import { FaDatabase, FaFileAlt, FaFolderPlus, FaPlus, FaRegSun } from 'react-icons/fa';
+import { HiOutlineClipboardCopy } from 'react-icons/hi';
 import { CgExport, CgTrash } from 'react-icons/cg';
 import { BiListPlus } from 'react-icons/bi';
 import { BsFileEarmarkPlayFill, BsFiletypeSql } from 'react-icons/bs';
@@ -28,3 +29,4 @@ export const IconFile = makeIcon(FaFileAlt);
 export const PanelFile = makeIcon(MdOutlineChromeReaderMode);
 export const IconFileWrited = makeIcon(MdOutlineTextSnippet);
 export const IconRefresh = makeIcon(MdRefresh);
+export const IconCopyToClipboard = makeIcon(HiOutlineClipboardCopy);
