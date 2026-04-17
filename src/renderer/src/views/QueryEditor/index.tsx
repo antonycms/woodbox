@@ -108,11 +108,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         const prevTabResultData = prevState.get(idTab) || ({} as any);
         const newTabResultData = { ...prevTabResultData, ...params };
 
-        newTabResultData.rows = newTabResultData.rows?.map?.((row) => ({
-          ...row,
-          __hash_rowTable: generateHash(),
-        }));
-
         newMap.set(idTab, newTabResultData);
 
         return newMap;
