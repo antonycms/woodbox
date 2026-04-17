@@ -15,6 +15,7 @@ import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import {
   ExportIcon,
+  IconCopyToClipboard,
   IconFileWrited,
   IconRefresh,
   PanelFile,
@@ -27,12 +28,14 @@ import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/co
 import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { getTablesFromQuerySql } from '@renderer/utils/sql';
-import { arrayIsEquals } from '@renderer/utils/array';
+import { arrayIsEquals, arrayToCSV } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import { toDateTime } from '@renderer/utils/date';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
+import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
+import { copyToClipboard } from '@renderer/utils/methods';
 
 interface IQueryResult {
   type: string;
@@ -670,7 +673,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                     <>
                       <Table
                         loading={!!data.loading}
-                        rowKeyExtractor={(item) => item.__hash_rowTable}
                         rows={data.rows}
                         onScrollEnd={onScrollEnd}
                         onCellLinkClick={handleFkCellClick}
@@ -693,6 +695,30 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         >
                           <SaveIcon size={16} />
                         </Button>
+
+                        <ButtonDropdown
+                          text
+                          smallIcon
+                          title="Copiar para área de transferencia"
+                          direction="up"
+                          dropdownBackground={activeTheme.queryEditor.bar.backgroundColor}
+                          dropdownColor={activeTheme.queryEditor.bar.color}
+                          color={activeTheme.queryEditor.bar.color}
+                          onSelect={(opt) => {
+                            if (opt.id === 'JSON') {
+                              copyToClipboard(JSON.stringify(data.rows, null, 2));
+                            }
+                            if (opt.id === 'CSV') {
+                              copyToClipboard(arrayToCSV(data.rows));
+                            }
+                          }}
+                          options={[
+                            { id: 'JSON', label: 'JSON' },
+                            { id: 'CSV', label: 'CSV' },
+                          ]}
+                        >
+                          <IconCopyToClipboard size={16} />
+                        </ButtonDropdown>
 
                         <Button
                           text
