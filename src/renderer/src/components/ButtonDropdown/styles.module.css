@@ -1,0 +1,67 @@
+.container {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  left: 0;
+  z-index: 10;
+  background-color: var(--backgroundColor);
+  border: 1px solid var(--borderColor);
+  border-radius: 4px;
+}
+
+.down {
+  top: calc(100% + 4px);
+}
+
+.up {
+  bottom: calc(100% + 4px);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.option:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.down {
+  animation: blowUpDown 0.05s forwards;
+}
+
+.up {
+  animation: blowUpUp 0.05s forwards;
+}
+
+@keyframes blowUpDown {
+  0% {
+    transform: scale(0);
+    transform-origin: top left;
+  }
+  100% {
+    transform: scale(1);
+    transform-origin: top left;
+  }
+}
+
+@keyframes blowUpUp {
+  0% {
+    transform: scale(0);
+    transform-origin: bottom left;
+  }
+  100% {
+    transform: scale(1);
+    transform-origin: bottom left;
+  }
+}
