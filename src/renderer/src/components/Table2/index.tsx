@@ -12,7 +12,7 @@ import { ModalCopy } from '../ModalCopy';
 import { IColumn } from './dtos';
 
 interface ITableProps {
-  rowKeyExtractor(rowData, index: number): React.Key;
+  rowKeyExtractor?(rowData, index: number): React.Key;
   onContextMenu?(event: React.MouseEvent<HTMLDivElement, MouseEvent>): void;
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any): void;
@@ -27,12 +27,14 @@ interface ITableProps {
   onCellLinkClick?(attribute: string, value: any): void;
 }
 
+const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
+
 const Table = (props: ITableProps) => {
   const {
     columns = [],
     rows = [],
     loading,
-    rowKeyExtractor,
+    rowKeyExtractor = rowKeyExtractorDefault,
     selectable,
     onContextMenu,
     onScrollEnd,
