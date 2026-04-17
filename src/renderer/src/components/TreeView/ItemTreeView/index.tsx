@@ -12,7 +12,7 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
 
   return (
     <div
-      title={props.label}
+      title={`${props.label}${props.labelInfo ? `  [${props.labelInfo}]` : ''}`}
       className={classes(styles.containerItem, props.isFirst && styles.first)}
     >
       <div
