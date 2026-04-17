@@ -679,7 +679,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         columns={data.columns.map((column) => ({
                           attribute: column,
                           label: column,
-                          isFk: queryFkMap.has(column),
+                          isLink: queryFkMap.has(column),
                         }))}
                       />
 
