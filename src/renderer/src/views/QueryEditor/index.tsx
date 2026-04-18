@@ -48,6 +48,7 @@ interface IQueryResult {
   date_run?: string;
   page?: number;
   auto_paginated?: boolean;
+  tablesInfo?: ITableQuery[];
 }
 
 type IDataMakeTabResult = IQueryResult & { title?: string };
@@ -91,17 +92,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
-
-  const queryFkMap = React.useMemo(() => {
-    const map = new Map<string, IColumnReferenceInfo>();
-    currentQueryTablesInfo.forEach(({ name, schema }) => {
-      const key = `${schema ? schema + '.' : ''}${name}`;
-      (tableReferences.get(key) || []).forEach((ref) => {
-        if (!map.has(ref.column_name)) map.set(ref.column_name, ref);
-      });
-    });
-    return map;
-  }, [currentQueryTablesInfo, tableReferences]);
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -147,6 +137,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       query,
       page,
       affected_rows,
+      tablesInfo: getTablesFromQuerySql(query || ''),
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
@@ -440,30 +431,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     if (content) refEditor.current.setValue(content);
   };
 
-  const handleFkCellClick = React.useCallback(
-    (attribute: string, value: any) => {
-      const ref = queryFkMap.get(attribute);
-      if (!ref || value === null || value === undefined) return;
-      const tabTitle = `${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
-      const escapedValue = String(value).replace(/'/g, "''");
-      const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
-      addTab({
-        title: tabTitle,
-        component: () => (
-          <TableInfoWithContext
-            id_connection={id_connection}
-            schema={ref.reference_table_schema}
-            table={ref.reference_table_name}
-            initialWhere={initialWhere}
-            filterLocked
-            initialTab="tabData"
-          />
-        ),
-      });
-    },
-    [queryFkMap, id_connection, addTab],
-  );
-
   const saveScript = useDebounce(() => {
     if (!id_script) return;
 
@@ -662,6 +629,14 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
               if (!data) return null;
 
+              const tabFkMap = new Map<string, IColumnReferenceInfo>();
+              (data.tablesInfo || []).forEach(({ name, schema }) => {
+                const key = `${schema ? schema + '.' : ''}${name}`;
+                (tableReferences.get(key) || []).forEach((ref) => {
+                  if (!tabFkMap.has(ref.column_name)) tabFkMap.set(ref.column_name, ref);
+                });
+              });
+
               return (
                 <TabContent
                   key={tabResult.idTab}
@@ -674,11 +649,30 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         loading={!!data.loading}
                         rows={data.rows}
                         onScrollEnd={onScrollEnd}
-                        onCellLinkClick={handleFkCellClick}
+                        onCellLinkClick={(attribute, value) => {
+                          const ref = tabFkMap.get(attribute);
+                          if (!ref || value === null || value === undefined) return;
+                          const tabTitle = `${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
+                          const escapedValue = String(value).replace(/'/g, "''");
+                          const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
+                          addTab({
+                            title: tabTitle,
+                            component: () => (
+                              <TableInfoWithContext
+                                id_connection={id_connection}
+                                schema={ref.reference_table_schema}
+                                table={ref.reference_table_name}
+                                initialWhere={initialWhere}
+                                filterLocked
+                                initialTab="tabData"
+                              />
+                            ),
+                          });
+                        }}
                         columns={data.columns.map((column) => ({
                           attribute: column,
                           label: column,
-                          isLink: queryFkMap.has(column),
+                          isLink: tabFkMap.has(column),
                         }))}
                       />
 
