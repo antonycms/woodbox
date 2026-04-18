@@ -372,7 +372,7 @@ const Table = (props: ITableProps) => {
         {virtualRows}
       </div>
 
-      {copyData !== null && <ModalCopy content={copyData} open onClose={() => setCopyData(null)} />}
+      {copyData !== null && <ModalCopy content={copyData} onClose={() => setCopyData(null)} />}
     </div>
   );
 };
