@@ -83,11 +83,12 @@ const Table = (props: ITableProps) => {
 
   const columnsDetails = React.useMemo(() => {
     const columnsIndexToRender: number[] = [];
+    const length = Math.min(columnsSize.length, columns.length);
 
     let startColumnPosition = 0;
     let endColumnPosition = 0;
 
-    for (let i = 0; i < columnsSize.length; i++) {
+    for (let i = 0; i < length; i++) {
       const colSize = columnsSize[i];
       endColumnPosition = startColumnPosition + colSize;
 
@@ -101,7 +102,7 @@ const Table = (props: ITableProps) => {
     }
 
     return { columnsIndexToRender };
-  }, [scroll.left, columnsSize, widthBodyContainer]);
+  }, [scroll.left, columnsSize, widthBodyContainer, columns]);
 
   const rowsDetails = (() => {
     const numberOfRowsToShowOnScreen = heightBodyContainer / rowHeight;
