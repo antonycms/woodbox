@@ -227,13 +227,21 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
       if (props.onChange || props.onChangeCurrentValue) {
         const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
           const value = getValue();
-          const currentValue = getCurrentQuerySqlFromContent(value);
+          const currentValue = getCurrentValue();
 
           props.onChange?.(value);
           props.onChangeCurrentValue?.(currentValue);
         });
 
         listenerValueChange && monacoListeners.push(listenerValueChange);
+      }
+
+      if (props.onChangeCurrentValue) {
+        const listenerCursorPosition = editor?.onDidChangeCursorPosition?.(() => {
+          props.onChangeCurrentValue?.(getCurrentValue());
+        });
+
+        listenerCursorPosition && monacoListeners.push(listenerCursorPosition);
       }
 
       return () => {

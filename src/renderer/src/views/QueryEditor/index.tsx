@@ -480,8 +480,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       const checkIsEquals = arrayIsEquals(prevState, tablesQueryInfo);
       return checkIsEquals ? prevState : tablesQueryInfo;
     });
-
-    if (id_script) saveScript();
   }, []);
 
   const autocomplete = React.useMemo<IDefineSQlAutocompleteParams>(() => {
@@ -627,6 +625,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         <Editor
           ref={refEditor}
           dialect="postgres"
+          onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
           autocomplete={autocomplete}
           onCtrlClick={handleEditorCtrlClick}
