@@ -48,7 +48,7 @@ interface IQueryResult {
   date_run?: string;
   page?: number;
   auto_paginated?: boolean;
-  tablesInfo?: ITableQuery[];
+  tables_info?: ITableQuery[];
 }
 
 type IDataMakeTabResult = IQueryResult & { title?: string };
@@ -98,8 +98,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       setQuerysResultData((prevState) => {
         const newMap = new Map(prevState);
 
-        const prevTabResultData = prevState.get(idTab) || ({} as any);
+        const prevTabResultData = prevState.get(idTab) || ({} as IQueryResult);
         const newTabResultData = { ...prevTabResultData, ...params };
+
+        newTabResultData.tables_info = getTablesFromQuerySql(newTabResultData.query);
 
         newMap.set(idTab, newTabResultData);
 
@@ -137,7 +139,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       query,
       page,
       affected_rows,
-      tablesInfo: getTablesFromQuerySql(query || ''),
+      tables_info: getTablesFromQuerySql(query),
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
@@ -630,7 +632,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
               if (!data) return null;
 
               const tabFkMap = new Map<string, IColumnReferenceInfo>();
-              (data.tablesInfo || []).forEach(({ name, schema }) => {
+              (data.tables_info || []).forEach(({ name, schema }) => {
                 const key = `${schema ? schema + '.' : ''}${name}`;
                 (tableReferences.get(key) || []).forEach((ref) => {
                   if (!tabFkMap.has(ref.column_name)) tabFkMap.set(ref.column_name, ref);
