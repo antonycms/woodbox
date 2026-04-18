@@ -4,11 +4,16 @@ import { app, shell, BrowserWindow, globalShortcut } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { closeAllConnections } from './database';
+import { getWindowState, saveWindowState } from './storage/store';
 
 function createWindow() {
+  const savedState = getWindowState();
+
   const mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 900,
+    width: savedState?.width ?? 1600,
+    height: savedState?.height ?? 900,
+    x: savedState?.x,
+    y: savedState?.y,
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '../../build/icon.png'),
@@ -18,20 +23,26 @@ function createWindow() {
     },
   });
 
-  mainWindow.on('ready-to-show', () => mainWindow.show());
+  mainWindow.on('ready-to-show', () => {
+    if (!savedState || savedState.isMaximized) {
+      mainWindow.maximize();
+    }
+    mainWindow.show();
+  });
+
+  mainWindow.on('close', () => {
+    const isMaximized = mainWindow.isMaximized();
+    const bounds = mainWindow.getBounds();
+    saveWindowState({ ...bounds, isMaximized });
+  });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: 'deny' };
   });
 
-  /**
-   * HMR for renderer base on electron-vite cli.
-   * Load the remote URL for development or the local html file for production.
-   */
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
-    mainWindow.maximize();
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
@@ -56,11 +67,7 @@ app.whenReady().then(() => {
   // Disable shortcut to close application
   globalShortcut.register('Control+Q', () => {});
 
-  const mainWindow = createWindow();
-
-  if (is.dev) {
-    mainWindow.webContents.openDevTools();
-  }
+  createWindow();
 });
 
 /**

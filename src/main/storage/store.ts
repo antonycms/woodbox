@@ -6,13 +6,26 @@ import {
 } from './modules/saved_connections';
 import { initialValue as scripts_meta, getModule as getModuleScripts } from './modules/scripts';
 
+type WindowState = { width: number; height: number; x: number; y: number; isMaximized: boolean };
+
 const store = new Store({
   schema: {
     projects,
     saved_connections,
     scripts_meta,
+    window_state: {
+      type: ['object', 'null'],
+      default: null,
+    },
   },
 });
+
+export const getWindowState = (): WindowState | null =>
+  (store.get('window_state') as WindowState | null) ?? null;
+
+export const saveWindowState = (state: WindowState): void => {
+  store.set('window_state', state);
+};
 
 export const {
   add: addProject,
