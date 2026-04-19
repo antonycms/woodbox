@@ -7,7 +7,7 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import Table from '@renderer/components/Table2';
+import Table from '@renderer/components/Table';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Button } from '@renderer/components/Button';
 import { Spacer } from '@renderer/components/Spacer';

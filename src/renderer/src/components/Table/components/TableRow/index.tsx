@@ -5,11 +5,17 @@ import styles from '../../styles.module.css';
 interface ITableRowProps {
   isSelected?: boolean;
   isHeader?: boolean;
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  onClick?(row, isSelected: boolean): void;
   children: React.ReactNode;
+  row?: any;
 }
 
-const TableRow = ({ isSelected, isHeader, onClick, children }: ITableRowProps) => {
+const TableRow = ({ children, isSelected, isHeader, onClick, row }: ITableRowProps) => {
+  const handleClick = React.useCallback(() => {
+    if (!onClick) return;
+    onClick?.(row, isSelected);
+  }, [onClick, row, isSelected]);
+
   return (
     <div
       className={classes(
@@ -17,7 +23,7 @@ const TableRow = ({ isSelected, isHeader, onClick, children }: ITableRowProps) =
         isSelected && styles.selected,
         isHeader && styles.header,
       )}
-      onClick={onClick}
+      onClick={handleClick}
     >
       {children}
     </div>

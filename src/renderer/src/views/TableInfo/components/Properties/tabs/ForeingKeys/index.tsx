@@ -1,5 +1,5 @@
 import React from 'react';
-import Table from '@renderer/components/Table2';
+import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { Button } from '@renderer/components/Button';

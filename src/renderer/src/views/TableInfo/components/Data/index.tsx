@@ -1,5 +1,5 @@
 import React from 'react';
-import Table from '@renderer/components/Table2';
+import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
@@ -19,7 +19,7 @@ import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
-import { IColumn } from '@renderer/components/Table2/dtos';
+import { IColumn } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 interface IDataProps extends ITableInfoProps {

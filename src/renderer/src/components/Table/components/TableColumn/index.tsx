@@ -1,7 +1,10 @@
 import React from 'react';
-import styles from '../../styles.module.css';
-import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
 import { classes } from '@renderer/styles/theme';
+import ResizableContainer, {
+  IResizableDivProps,
+  OnResizeCallback,
+} from '@renderer/components/ResizableContainer';
+import styles from '../../styles.module.css';
 
 interface ITableColumnProps {
   indexRow?: number;
@@ -10,12 +13,19 @@ interface ITableColumnProps {
   rowHeight: number;
   resizable?: boolean;
   onResize?: OnResizeCallback;
-  onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
-  onSave?(newValue: string | number): void;
+  onDoubleClick?(rowColumnKey: string): void;
+  onBlurCell?(): void;
+  onEditCell?(rowIndex: number, name: string, newValue: string | number): void;
   style?: React.CSSProperties;
   isEditing?: boolean;
   isEdited?: boolean;
-  value: number | string;
+  value?: number | string;
+  name?: string;
+  rowColumnKey?: string;
+  width: number;
+  isLink?: boolean;
+  onFkCellClick?(name: string, value: any): void;
+  // type: 'string' | 'number' | 'boolean';
 }
 
 const TableColumn = ({
@@ -29,15 +39,20 @@ const TableColumn = ({
   onResize,
   onDoubleClick,
   minWidth,
-  onSave,
+  onBlurCell,
+  onEditCell,
+  rowColumnKey,
+  width,
+  name,
   style: styleExternal = {},
+  isLink,
+  onFkCellClick,
 }: ITableColumnProps) => {
-  const serializedValue = typeof value === 'object' ? JSON.stringify(value) : value;
-
   const editedValue = React.useRef(value);
   const isHeaderColumn = indexRow === undefined;
+  const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
 
-  const className = React.useMemo(() => {
+  const className = (() => {
     return classes(
       styles.table_column,
       indexRow % 2 ? styles.even : styles.odd,
@@ -45,21 +60,66 @@ const TableColumn = ({
       isEdited && styles.edited,
       isHeaderColumn && styles.disableSelection,
     );
-  }, [indexRow, resizable, isEdited]);
+  })();
+
+  // minify string lenght in cell to improve performance
+  const serializedValue = (() => {
+    let v: any = value;
+
+    if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
+    else if (v instanceof Date) v = v.toISOString();
+    else if (typeof v === 'object') v = JSON.stringify(v);
+    else if (typeof v !== 'string') return v;
+
+    const maxValueLenght = Math.ceil(width / 5);
+    const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
+
+    return isEditing ? v : v.slice(0, valueLenght);
+  })();
+
+  const style = React.useMemo(() => {
+    return {
+      ...styleExternal,
+      '--rowIndex': indexRow,
+      '--columnIndex': columnIndex,
+      '--rowHeight': `${rowHeight}px`,
+    } as React.CSSProperties;
+  }, [indexRow, columnIndex, rowHeight, styleExternal]);
+
+  const handleSaveInputValue = React.useCallback(() => {
+    onBlurCell?.();
+
+    if (value === editedValue.current) return;
+
+    onEditCell?.(indexRow, name, editedValue.current);
+  }, [value, indexRow, name, onEditCell, onBlurCell]);
 
   const ColumnComponent = React.useMemo(() => {
-    const Cp = (props) => {
+    const Cp = (propsLocal: IResizableDivProps | React.InputHTMLAttributes<any>) => {
       if (resizable) {
-        return <ResizableContainer {...props} minWidth={minWidth} onResize={onResize} />;
+        const props = propsLocal as IResizableDivProps;
+
+        return (
+          <ResizableContainer
+            {...props}
+            width={props.width as number}
+            height={props.height as number}
+            minWidth={minWidth}
+            onResize={onResize}
+          />
+        );
       }
+
+      const props = propsLocal as React.InputHTMLAttributes<any>;
 
       if (isEditing) {
         return (
           <input
             {...props}
             autoFocus
+            spellCheck={false}
             defaultValue={serializedValue}
-            onBlur={() => onSave?.(editedValue.current)}
+            onBlur={handleSaveInputValue}
             onChange={(e) => {
               editedValue.current = e.target.value;
             }}
@@ -71,25 +131,33 @@ const TableColumn = ({
     };
 
     return Cp;
-  }, [resizable, minWidth, isEditing]);
-
-  const style = React.useMemo(() => {
-    return {
-      ...styleExternal,
-      '--rowIndex': indexRow,
-      '--columnIndex': columnIndex,
-      '--rowHeight': `${rowHeight}px`,
-    } as React.CSSProperties;
-  }, [indexRow, columnIndex, rowHeight, styleExternal]);
+  }, [resizable, minWidth, isEditing, handleSaveInputValue]);
 
   return (
     <ColumnComponent
-      title={typeof serializedValue === 'string' ? serializedValue.slice(0, 20) : serializedValue}
       className={className}
       style={style}
-      onDoubleClick={onDoubleClick}
+      onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+      title={isLinkClickable ? 'Ctrl+click para abrir linha referenciada' : undefined}
+      onClick={
+        isLinkClickable
+          ? (e: React.MouseEvent) => {
+              if (e.ctrlKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                onFkCellClick?.(name, value);
+              }
+            }
+          : undefined
+      }
     >
-      {isEditing ? null : serializedValue}
+      {isEditing ? null : isLinkClickable ? (
+        <span style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}>
+          {serializedValue}
+        </span>
+      ) : (
+        serializedValue
+      )}
     </ColumnComponent>
   );
 };

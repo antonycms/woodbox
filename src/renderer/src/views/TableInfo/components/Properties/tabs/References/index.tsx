@@ -1,5 +1,5 @@
 import React from 'react';
-import Table from '@renderer/components/Table2';
+import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
