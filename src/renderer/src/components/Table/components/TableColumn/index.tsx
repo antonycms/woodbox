@@ -25,6 +25,8 @@ interface ITableColumnProps {
   width: number;
   isLink?: boolean;
   onFkCellClick?(name: string, value: any): void;
+  isSelectedCell?: boolean;
+  onSelectCell?(rowIndex: number, colIndex: number): void;
   // type: 'string' | 'number' | 'boolean';
 }
 
@@ -47,6 +49,8 @@ const TableColumn = ({
   style: styleExternal = {},
   isLink,
   onFkCellClick,
+  isSelectedCell,
+  onSelectCell,
 }: ITableColumnProps) => {
   const editedValue = React.useRef(value);
   const isHeaderColumn = indexRow === undefined;
@@ -59,6 +63,7 @@ const TableColumn = ({
       resizable && styles.resizable,
       isEdited && styles.edited,
       isHeaderColumn && styles.disableSelection,
+      isSelectedCell && !resizable && styles.cell_selected,
     );
   })();
 
@@ -138,21 +143,20 @@ const TableColumn = ({
       className={className}
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-      title={isLinkClickable ? 'Ctrl+click para abrir linha referenciada' : undefined}
-      onClick={
-        isLinkClickable
-          ? (e: React.MouseEvent) => {
-              if (e.ctrlKey) {
-                e.preventDefault();
-                e.stopPropagation();
-                onFkCellClick?.(name, value);
-              }
-            }
-          : undefined
-      }
+      onClick={() => onSelectCell?.(indexRow, columnIndex)}
     >
       {isEditing ? null : isLinkClickable ? (
-        <span style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}>
+        <span
+          style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
+          title="Ctrl+click para abrir linha referenciada"
+          onClick={(e: React.MouseEvent) => {
+            if (e.ctrlKey) {
+              e.preventDefault();
+              e.stopPropagation();
+              onFkCellClick?.(name, value);
+            }
+          }}
+        >
           {serializedValue}
         </span>
       ) : (

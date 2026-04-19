@@ -29,6 +29,8 @@ interface ITableProps {
 
 const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
 
+const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
+
 const Table = (props: ITableProps) => {
   const {
     columns = [],
@@ -55,17 +57,22 @@ const Table = (props: ITableProps) => {
   const defaultColumnSize = React.useMemo(() => 200, []);
   const [columnsSize, setColumnsSize] = useStateWithDebounce<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
-  const [selectedRows, setSelectedRows] = React.useState<Map<React.Key, any>>(new Map());
-  const lastSelectedIndex = React.useRef<number>();
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
+  const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
+  const lastSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
+  const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const [scroll, setScroll] = useStateWithDebounce({ left: 0, top: 0 }, 20);
   const { height: heightBodyContainer, width: widthBodyContainer } = useResize({
     HTMLElement: refScrollContainer.current,
     ignoreZeroValue: true,
   });
 
-  const selectedRowsRef = React.useRef(selectedRows);
-  selectedRowsRef.current = selectedRows;
+  const cellEditingKeyRef = React.useRef(cellEditingKey);
+  cellEditingKeyRef.current = cellEditingKey;
+  const columnsRef = React.useRef(columns);
+  columnsRef.current = columns;
+  const columnsSizeRef = React.useRef(columnsSize);
+  columnsSizeRef.current = columnsSize;
 
   const [copyData, setCopyData] = React.useState<any[]>(null);
 
@@ -80,6 +87,22 @@ const Table = (props: ITableProps) => {
       };
     });
   }, [rows]);
+
+  const serializedRowsRef = React.useRef(serializedRows);
+  serializedRowsRef.current = serializedRows;
+
+  const selectedRows = React.useMemo(() => {
+    const map = new Map<React.Key, any>();
+    selectedCells.forEach((key) => {
+      const rowIndex = parseInt(key.split(':')[0], 10);
+      const row = serializedRows[rowIndex];
+      if (row) map.set(row.__key_row, row);
+    });
+    return map;
+  }, [selectedCells, serializedRows]);
+
+  const selectedRowsRef = React.useRef(selectedRows);
+  selectedRowsRef.current = selectedRows;
 
   const columnsDetails = React.useMemo(() => {
     const columnsIndexToRender: number[] = [];
@@ -197,55 +220,6 @@ const Table = (props: ITableProps) => {
     );
   }, [columns, columnsDetails, minColumnsSize]);
 
-  const handleSelectRow = React.useCallback(
-    (row, isSelected: boolean) => {
-      const indexRow = row.__index_row;
-      const keyRow = row.__key_row;
-
-      if (!window.shiftPressed || typeof lastSelectedIndex.current !== 'number') {
-        lastSelectedIndex.current = indexRow;
-      }
-
-      if (window.ctrlPressed) {
-        setSelectedRows((oldMap) => {
-          const newMap = new Map(oldMap);
-          isSelected ? newMap.delete(keyRow) : newMap.set(keyRow, row);
-          return newMap;
-        });
-      } //
-      else if (window.shiftPressed) {
-        if (typeof lastSelectedIndex.current === 'number') {
-          let firstIndex = lastSelectedIndex.current;
-          let lastIndex = indexRow;
-
-          if (firstIndex > lastIndex) {
-            lastIndex = firstIndex;
-            firstIndex = indexRow;
-          }
-
-          setSelectedRows(() => {
-            const newMap = new Map();
-
-            for (let i = firstIndex; i < lastIndex + 1; i++) {
-              const rowToSelect = serializedRows[i];
-              newMap.set(rowToSelect.__key_row, rowToSelect);
-            }
-
-            return newMap;
-          });
-        }
-      } //
-      else {
-        setSelectedRows((prevState) => {
-          const newMap = new Map();
-          (!isSelected || prevState.size > 1) && newMap.set(keyRow, row);
-          return newMap;
-        });
-      }
-    },
-    [serializedRows],
-  );
-
   const onSaveCell = React.useCallback(
     (indexRow: number, rowColumnKey: string, newValue: string | number) => {
       setCellEditingKey(null);
@@ -256,6 +230,36 @@ const Table = (props: ITableProps) => {
 
   const onBlurCell = React.useCallback(() => {
     setCellEditingKey(null);
+  }, []);
+
+  const handleSelectCell = React.useCallback((rowIndex: number, colIndex: number) => {
+    if (!window.shiftPressed || !lastSelectedCellRef.current) {
+      lastSelectedCellRef.current = { rowIndex, colIndex };
+    }
+    arrowCursorRef.current = { rowIndex, colIndex };
+
+    if (window.ctrlPressed) {
+      setSelectedCells((prev) => {
+        const next = new Set(prev);
+        const key = cellKey(rowIndex, colIndex);
+        next.has(key) ? next.delete(key) : next.add(key);
+        return next;
+      });
+    } else if (window.shiftPressed && lastSelectedCellRef.current) {
+      const anchor = lastSelectedCellRef.current;
+      const minRow = Math.min(anchor.rowIndex, rowIndex);
+      const maxRow = Math.max(anchor.rowIndex, rowIndex);
+      const minCol = Math.min(anchor.colIndex, colIndex);
+      const maxCol = Math.max(anchor.colIndex, colIndex);
+      setSelectedCells(() => {
+        const next = new Set<string>();
+        for (let r = minRow; r <= maxRow; r++)
+          for (let c = minCol; c <= maxCol; c++) next.add(cellKey(r, c));
+        return next;
+      });
+    } else {
+      setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
+    }
   }, []);
 
   const virtualRows = (() => {
@@ -274,7 +278,6 @@ const Table = (props: ITableProps) => {
         <TableRow
           key={keyRow}
           row={row}
-          onClick={selectable ? handleSelectRow : undefined}
           isSelected={isSelected}
         >
           {columnsIndexToRender.map((columnIndex) => {
@@ -302,6 +305,8 @@ const Table = (props: ITableProps) => {
                 value={value}
                 isLink={column.isLink}
                 onFkCellClick={onCellLinkClick}
+                isSelectedCell={selectedCells.has(cellKey(indexRow, columnIndex))}
+                onSelectCell={handleSelectCell}
               />
             );
           })}
@@ -338,6 +343,72 @@ const Table = (props: ITableProps) => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
   }, [onCopy, onPaste]);
+
+  React.useEffect(() => {
+    const cb = (ev: KeyboardEvent) => {
+      const anchor = lastSelectedCellRef.current;
+      if (!anchor || cellEditingKeyRef.current) return;
+
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key);
+      if (!isArrow) return;
+
+      ev.preventDefault();
+
+      const totalRows = serializedRowsRef.current.length;
+      const totalCols = columnsRef.current.length;
+      const cursor = arrowCursorRef.current ?? anchor;
+      let { rowIndex, colIndex } = cursor;
+
+      if (ev.key === 'ArrowUp') rowIndex = Math.max(0, rowIndex - 1);
+      else if (ev.key === 'ArrowDown') rowIndex = Math.min(totalRows - 1, rowIndex + 1);
+      else if (ev.key === 'ArrowLeft') colIndex = Math.max(0, colIndex - 1);
+      else if (ev.key === 'ArrowRight') colIndex = Math.min(totalCols - 1, colIndex + 1);
+
+      arrowCursorRef.current = { rowIndex, colIndex };
+
+      if (ev.shiftKey) {
+        const minRow = Math.min(anchor.rowIndex, rowIndex);
+        const maxRow = Math.max(anchor.rowIndex, rowIndex);
+        const minCol = Math.min(anchor.colIndex, colIndex);
+        const maxCol = Math.max(anchor.colIndex, colIndex);
+        setSelectedCells(() => {
+          const next = new Set<string>();
+          for (let r = minRow; r <= maxRow; r++)
+            for (let c = minCol; c <= maxCol; c++) next.add(cellKey(r, c));
+          return next;
+        });
+      } else {
+        lastSelectedCellRef.current = { rowIndex, colIndex };
+        setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
+      }
+
+      const container = refScrollContainer.current;
+      if (!container) return;
+
+      const cellTop = rowIndex * rowHeight;
+      const cellBottom = cellTop + rowHeight;
+      if (cellTop < container.scrollTop) {
+        container.scrollTop = cellTop;
+      } else if (cellBottom > container.scrollTop + container.clientHeight) {
+        container.scrollTop = cellBottom - container.clientHeight;
+      }
+
+      const sizes = columnsSizeRef.current;
+      let colStart = 0;
+      for (let i = 0; i < colIndex; i++) colStart += sizes[i] || 0;
+      const colEnd = colStart + (sizes[colIndex] || 0);
+      if (colStart < container.scrollLeft) {
+        container.scrollLeft = colStart;
+      } else if (colEnd > container.scrollLeft + container.clientWidth) {
+        container.scrollLeft = colEnd - container.clientWidth;
+      }
+    };
+
+    refScrollContainer.current?.addEventListener?.('keydown', cb);
+    return () => {
+      refScrollContainer.current?.removeEventListener?.('keydown', cb);
+    };
+  }, []);
 
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
