@@ -108,7 +108,7 @@ const Properties = (props: IPropertiesProps) => {
           </TabContent>
 
           <TabContent idTab="7">
-            <Diagram key={activeTabId} {...props} />
+            <Diagram active={activeTabId === '7'} {...props} />
           </TabContent>
 
           <TabContent idTab="5">

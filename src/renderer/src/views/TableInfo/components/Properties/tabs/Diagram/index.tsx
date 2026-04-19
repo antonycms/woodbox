@@ -105,18 +105,24 @@ const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
 
 const nodeTypes = { tableNode: TableNode };
 
-const FlowController = ({ nodeCount }: { nodeCount: number }) => {
+const FlowController = ({ nodeCount, active }: { nodeCount: number; active: boolean }) => {
   const { fitView } = useReactFlow();
+
   React.useEffect(() => {
-    if (nodeCount > 0) {
+    if (active && nodeCount > 0) {
       const timer = setTimeout(() => fitView({ padding: 0.15 }), 50);
       return () => clearTimeout(timer);
     }
-  }, [nodeCount]);
+  }, [active]);
   return null;
 };
 
-const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
+const Diagram = ({
+  id_connection,
+  schema,
+  table,
+  active,
+}: ITableInfoProps & { active: boolean }) => {
   const {
     activeTheme: {
       tableInfo: { tab: tableInfoTab, properties: theme },
@@ -319,7 +325,7 @@ const Diagram = ({ id_connection, schema, table }: ITableInfoProps) => {
           proOptions={{ hideAttribution: true }}
           style={{ background: theme.tab.backgroundColor }}
         >
-          <FlowController nodeCount={nodes.length} />
+          <FlowController nodeCount={nodes.length} active={active} />
           <Background
             color={theme.tab.borderColor}
             variant={BackgroundVariant.Dots}
