@@ -107,10 +107,10 @@ const Data = ({
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    // data: IContextMenuData,
+    data: { cellsText: string; rowsText: string; rowsJson: string },
   ) => {
     setContextMenuTable({
-      data: null,
+      data,
       position: {
         x: event.clientX,
         y: event.clientY,
@@ -289,16 +289,15 @@ const Data = ({
         options={[
           {
             text: 'Copiar',
-            onClick: () =>
-              copyToClipboard(
-                contextMenuTable?.data?.selections
-                  ?.map?.((item) => item[contextMenuTable?.data?.attribute])
-                  ?.join?.('\n') || '',
-              ),
+            onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
           },
           {
             text: 'Copiar linha',
-            onClick: () => copyToClipboard(contextMenuTable?.data?.selections),
+            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+          },
+          {
+            text: 'Copiar linha como JSON',
+            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
           },
           { text: 'Definir como null' },
         ]}
@@ -310,7 +309,7 @@ const Data = ({
 export default Data;
 
 export interface IContextMenuTable {
-  data: any;
+  data: { cellsText: string; rowsText: string; rowsJson: string } | null;
   position: {
     x: number;
     y: number;

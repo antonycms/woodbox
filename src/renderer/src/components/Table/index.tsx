@@ -1,7 +1,7 @@
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
-import { calculateTextHtmlWidth } from '@renderer/utils/methods';
+import { calculateTextHtmlWidth, copyToClipboard } from '@renderer/utils/methods';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableRow from './components/TableRow';
@@ -13,7 +13,10 @@ import { IColumn } from './dtos';
 
 interface ITableProps {
   rowKeyExtractor?(rowData, index: number): React.Key;
-  onContextMenu?(event: React.MouseEvent<HTMLDivElement, MouseEvent>): void;
+  onContextMenu?(
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    data: { cellsText: string; rowsText: string; rowsJson: string },
+  ): void;
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any): void;
   editedRows?: Map<React.Key, any>;
@@ -90,6 +93,9 @@ const Table = (props: ITableProps) => {
 
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;
+
+  const selectedCellsRef = React.useRef(selectedCells);
+  selectedCellsRef.current = selectedCells;
 
   const selectedRows = React.useMemo(() => {
     const map = new Map<React.Key, any>();
@@ -275,11 +281,7 @@ const Table = (props: ITableProps) => {
       const editedRow = editedRows?.get(keyRow);
 
       return (
-        <TableRow
-          key={keyRow}
-          row={row}
-          isSelected={isSelected}
-        >
+        <TableRow key={keyRow} row={row} isSelected={isSelected}>
           {columnsIndexToRender.map((columnIndex) => {
             const column = columns[columnIndex];
             const rowColumnKey = `${keyRow}:${column.attribute}`;
@@ -330,9 +332,32 @@ const Table = (props: ITableProps) => {
       const isPaste = window.ctrlPressed && ev.key === 'v';
 
       if (isCopy) {
-        const rows = [...selectedRowsRef.current.values()];
-        setCopyData(rows);
-        onCopy?.(rows);
+        const cells = selectedCellsRef.current;
+        if (cells.size > 0) {
+          const rowMap = new Map<number, number[]>();
+
+          cells.forEach((key) => {
+            const [r, c] = key.split(':').map(Number);
+            if (!rowMap.has(r)) rowMap.set(r, []);
+            rowMap.get(r)!.push(c);
+          });
+
+          const lines = [...rowMap.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([rowIndex, colIndices]) => {
+              colIndices.sort((a, b) => a - b);
+              return colIndices
+                .map((colIndex) => {
+                  const row = serializedRowsRef.current[rowIndex];
+                  const col = columnsRef.current[colIndex];
+                  const value = row?.[col?.attribute];
+                  return value == null ? '' : String(value);
+                })
+                .join(', ');
+            });
+
+          copyToClipboard(lines.join('\n'));
+        }
       }
       isPaste && onPaste?.([...selectedRowsRef.current.values()]);
     };
@@ -433,7 +458,62 @@ const Table = (props: ITableProps) => {
       ref={refScrollContainer}
       onScroll={onScroll}
       className={styles.table_outside_container}
-      onContextMenu={onContextMenu}
+      onContextMenu={(event) => {
+        if (!onContextMenu) return;
+
+        const cells = selectedCellsRef.current;
+        const rowMap = new Map<number, number[]>();
+
+        cells.forEach((key) => {
+          const [r, c] = key.split(':').map(Number);
+          if (!rowMap.has(r)) rowMap.set(r, []);
+          rowMap.get(r)!.push(c);
+        });
+
+        const cellLines = [...rowMap.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([rowIndex, colIndices]) => {
+            colIndices.sort((a, b) => a - b);
+            return colIndices
+              .map((ci) => {
+                const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
+                return v == null ? '' : String(v);
+              })
+              .join(', ');
+          });
+
+        const rowLines = [...rowMap.keys()]
+          .sort((a, b) => a - b)
+          .map((rowIndex) => {
+            const row = serializedRowsRef.current[rowIndex];
+            return columnsRef.current
+              .map((col) => {
+                const v = row?.[col.attribute];
+                return v == null ? '' : String(v);
+              })
+              .join(', ');
+          });
+
+        const sortedRowIndices = [...rowMap.keys()].sort((a, b) => a - b);
+
+        const rowObjects = sortedRowIndices.map((rowIndex) => {
+          const row = serializedRowsRef.current[rowIndex];
+          return Object.fromEntries(
+            columnsRef.current.map((col) => [col.attribute, row?.[col.attribute] ?? null]),
+          );
+        });
+
+        const rowsJson =
+          rowObjects.length === 1
+            ? JSON.stringify(rowObjects[0], null, 2)
+            : JSON.stringify(rowObjects, null, 2);
+
+        onContextMenu(event, {
+          cellsText: cellLines.join('\n'),
+          rowsText: rowLines.join('\n'),
+          rowsJson,
+        });
+      }}
       style={cssVars}
       tabIndex={0}
     >
