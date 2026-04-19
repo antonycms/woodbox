@@ -11,7 +11,11 @@ import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@rend
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
-const ForeingKeys = ({ id_connection, schema, table }: ITableInfoProps) => {
+interface IForeingKeysProps extends ITableInfoProps {
+  onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+}
+
+const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeysProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -49,6 +53,12 @@ const ForeingKeys = ({ id_connection, schema, table }: ITableInfoProps) => {
       : `${ref.reference_table_schema}.${ref.reference_table_name}`,
   }));
 
+  const handleCellLinkClick = (attribute: string, value: string) => {
+    if (attribute !== 'table_reference' || !onOpenTable) return;
+    const row = referencesSerialized.find((r) => r.table_reference === value);
+    if (row) onOpenTable(id_connection, row.reference_table_schema, row.reference_table_name);
+  };
+
   return (
     <>
       <ContextMenu
@@ -63,10 +73,11 @@ const ForeingKeys = ({ id_connection, schema, table }: ITableInfoProps) => {
         onContextMenu={onContextMenuTable}
         loading={loading.references}
         rows={referencesSerialized}
+        onCellLinkClick={handleCellLinkClick}
         columns={[
           { label: 'Nome', attribute: 'constraint_name' },
           { label: 'Coluna', attribute: 'column_name' },
-          { label: 'Tabela Referenciada', attribute: 'table_reference' },
+          { label: 'Tabela Referenciada', attribute: 'table_reference', isLink: true },
           { label: 'Coluna Referenciada', attribute: 'reference_column_name' },
           { label: 'Comentário', attribute: 'comment' },
           { label: 'Regra de Remoção', attribute: 'remove_rule' },

@@ -15,9 +15,29 @@ const TableInfo = (props: ITableInfoProps) => {
   const {
     activeTheme: { tableInfo: theme },
   } = useThemeContext();
-  const { addTab } = useAppTabContext();
+  const { addTab, getTab, setActiveTabId } = useAppTabContext();
   const [id] = React.useState(generateHash());
-  const [activeTabId, setActiveTabId] = React.useState(props.initialTab || 'tabProperties');
+  const [activeTableInfoTabId, setActiveTableInfoTabId] = React.useState(
+    props.initialTab || 'tabProperties',
+  );
+
+  const handleOpenTableSimple = React.useCallback(
+    (idConnection: string, schema: string, table: string) => {
+      const tabId = `${idConnection}_${schema}_${table}`;
+      if (getTab(tabId)) {
+        setActiveTabId(tabId);
+      } else {
+        addTab({
+          id: tabId,
+          title: table,
+          component: () => (
+            <TableInfoWithContext id_connection={idConnection} schema={schema} table={table} />
+          ),
+        });
+      }
+    },
+    [addTab, getTab, setActiveTabId],
+  );
 
   const handleOpenTable = React.useCallback(
     (
@@ -52,8 +72,8 @@ const TableInfo = (props: ITableInfoProps) => {
       <TabBar
         borderBottom
         idTabBar={id}
-        activeTabId={activeTabId}
-        onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
+        activeTabId={activeTableInfoTabId}
+        onActiveTab={(tab) => setActiveTableInfoTabId(tab?.idTab)}
         ascentColor={theme.tab.ascentColor}
         backgroundColor={theme.tab.backgroundColor}
         backgroundColorBar={theme.tab.bar.backgroundColor}
@@ -75,7 +95,7 @@ const TableInfo = (props: ITableInfoProps) => {
 
       <TabWindow idTabBar={id}>
         <TabContent idTab="tabProperties">
-          <Properties {...props} />
+          <Properties {...props} onOpenTable={handleOpenTableSimple} />
         </TabContent>
 
         <TabContent idTab="tabData">

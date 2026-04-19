@@ -15,7 +15,11 @@ import Triggers from './tabs/Triggers';
 import Diagram from './tabs/Diagram';
 import styles from './styles.module.css';
 
-const Properties = (props: ITableInfoProps) => {
+interface IPropertiesProps extends ITableInfoProps {
+  onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+}
+
+const Properties = (props: IPropertiesProps) => {
   const { table } = props;
   const {
     activeTheme: {

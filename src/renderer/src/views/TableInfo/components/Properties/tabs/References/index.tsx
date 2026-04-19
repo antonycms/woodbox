@@ -10,7 +10,11 @@ import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
-const References = ({ id_connection, schema, table }: ITableInfoProps) => {
+interface IReferencesProps extends ITableInfoProps {
+  onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+}
+
+const References = ({ id_connection, schema, table, onOpenTable }: IReferencesProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -30,6 +34,12 @@ const References = ({ id_connection, schema, table }: ITableInfoProps) => {
     source_table: !ref.table_schema ? ref.table_name : `${ref.table_schema}.${ref.table_name}`,
   }));
 
+  const handleCellLinkClick = (attribute: string, value: string) => {
+    if (attribute !== 'source_table' || !onOpenTable) return;
+    const row = rowsSerialized.find((r) => r.source_table === value);
+    if (row) onOpenTable(id_connection, row.table_schema, row.table_name);
+  };
+
   return (
     <>
       <Table
@@ -37,9 +47,10 @@ const References = ({ id_connection, schema, table }: ITableInfoProps) => {
         rowKeyExtractor={(item) => `${item.constraint_name}-${item.column_name}`}
         loading={loading.usedAsReference}
         rows={rowsSerialized}
+        onCellLinkClick={handleCellLinkClick}
         columns={[
           { label: 'Nome', attribute: 'constraint_name' },
-          { label: 'Tabela', attribute: 'source_table' },
+          { label: 'Tabela', attribute: 'source_table', isLink: true },
           { label: 'Coluna', attribute: 'column_name' },
           { label: 'Coluna Referenciada', attribute: 'reference_column_name' },
         ]}
