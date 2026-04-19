@@ -69,7 +69,7 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
 
       <Table
         selectable
-        rowKeyExtractor={(item) => item.constraint_name}
+        rowKeyExtractor={(item) => `${item.constraint_name}-${item.column_name}`}
         onContextMenu={onContextMenuTable}
         loading={loading.references}
         rows={referencesSerialized}
