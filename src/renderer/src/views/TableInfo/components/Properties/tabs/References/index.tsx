@@ -57,7 +57,13 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button title="Atualizar dados" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Atualizar dados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={() => loadTableUsedAsReference(id_connection, { schema, table })}
+        >
           <IconRefresh size={18} />
         </Button>
 
