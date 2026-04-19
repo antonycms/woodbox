@@ -44,7 +44,7 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     <>
       <Table
         selectable
-        rowKeyExtractor={(item) => `${item.constraint_name}-${item.column_name}`}
+        rowKeyExtractor={(item) => `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`}
         loading={loading.usedAsReference}
         rows={rowsSerialized}
         onCellLinkClick={handleCellLinkClick}
