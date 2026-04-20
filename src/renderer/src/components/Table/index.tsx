@@ -8,7 +8,6 @@ import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { ModalCopy } from '../ModalCopy';
 import { IColumn } from './dtos';
 
 interface ITableProps {
@@ -351,7 +350,7 @@ const Table = (props: ITableProps) => {
                   const row = serializedRowsRef.current[rowIndex];
                   const col = columnsRef.current[colIndex];
                   const value = row?.[col?.attribute];
-                  return value == null ? '' : String(value);
+                  return value === undefined ? '' : String(value);
                 })
                 .join(', ');
             });
@@ -477,7 +476,7 @@ const Table = (props: ITableProps) => {
             return colIndices
               .map((ci) => {
                 const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
-                return v == null ? '' : String(v);
+                return v === undefined ? '' : String(v);
               })
               .join(', ');
           });
@@ -489,7 +488,7 @@ const Table = (props: ITableProps) => {
             return columnsRef.current
               .map((col) => {
                 const v = row?.[col.attribute];
-                return v == null ? '' : String(v);
+                return v === undefined ? '' : String(v);
               })
               .join(', ');
           });
@@ -523,8 +522,6 @@ const Table = (props: ITableProps) => {
         {virtualHeader}
         {virtualRows}
       </div>
-
-      {copyData !== null && <ModalCopy content={copyData} onClose={() => setCopyData(null)} />}
     </div>
   );
 };
