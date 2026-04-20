@@ -28,14 +28,19 @@ import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/co
 import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { getTablesFromQuerySql } from '@renderer/utils/sql';
-import { arrayIsEquals, arrayToCSV } from '@renderer/utils/array';
+import { arrayIsEquals } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import { toDateTime } from '@renderer/utils/date';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
-import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
 import { copyToClipboard } from '@renderer/utils/methods';
+import { ContextMenu } from '@renderer/components/ContextMenu';
+
+interface IContextMenuTable {
+  data: { cellsText: string; rowsText: string; rowsJson: string } | null;
+  position: { x: number; y: number };
+}
 
 interface IQueryResult {
   type: string;
@@ -93,6 +98,14 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
+  const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
+
+  const onContextMenuTable = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    data: { cellsText: string; rowsText: string; rowsJson: string },
+  ) => {
+    setContextMenuTable({ data, position: { x: event.clientX, y: event.clientY } });
+  };
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -648,6 +661,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         loading={!!data.loading}
                         rows={data.rows}
                         onScrollEnd={onScrollEnd}
+                        onContextMenu={onContextMenuTable}
                         onCellLinkClick={(attribute, value) => {
                           const ref = tabFkMap.get(attribute);
                           if (!ref || value === null || value === undefined) return;
@@ -687,30 +701,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         >
                           <SaveIcon size={16} />
                         </Button>
-
-                        <ButtonDropdown
-                          text
-                          smallIcon
-                          title="Copiar para área de transferencia"
-                          direction="up"
-                          dropdownBackground={activeTheme.queryEditor.bar.backgroundColor}
-                          dropdownColor={activeTheme.queryEditor.bar.color}
-                          color={activeTheme.queryEditor.bar.color}
-                          onSelect={(opt) => {
-                            if (opt.id === 'JSON') {
-                              copyToClipboard(JSON.stringify(data.rows, null, 2));
-                            }
-                            if (opt.id === 'CSV') {
-                              copyToClipboard(arrayToCSV(data.rows));
-                            }
-                          }}
-                          options={[
-                            { id: 'JSON', label: 'JSON' },
-                            { id: 'CSV', label: 'CSV' },
-                          ]}
-                        >
-                          <IconCopyToClipboard size={16} />
-                        </ButtonDropdown>
 
                         <Button
                           text
@@ -835,6 +825,25 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           </TabWindow>
         </ResizableContainer>
       )}
+
+      <ContextMenu
+        position={contextMenuTable?.position}
+        onClose={() => setContextMenuTable(undefined)}
+        options={[
+          {
+            text: 'Copiar',
+            onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+          },
+          {
+            text: 'Copiar linha',
+            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+          },
+          {
+            text: 'Copiar linha como JSON',
+            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+          },
+        ]}
+      />
     </div>
   );
 };
