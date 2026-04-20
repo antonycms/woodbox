@@ -21,12 +21,12 @@ export interface IResizableDivProps {
 }
 
 const ResizableContainer = ({
-  width = 0,
-  height = 0,
   minWidth,
   maxWidth,
   minHeight,
   maxHeight,
+  width = minWidth,
+  height = minHeight,
   onResize,
   children,
   onDoubleClick,
