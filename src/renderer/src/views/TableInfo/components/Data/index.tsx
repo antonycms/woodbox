@@ -224,7 +224,6 @@ const Data = ({
       </div>
 
       <Table
-        selectable
         columns={columnsSerialized}
         rows={items}
         rowKeyExtractor={(_, index) => index}

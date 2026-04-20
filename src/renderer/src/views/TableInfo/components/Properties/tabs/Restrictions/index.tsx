@@ -51,7 +51,6 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Table
-        selectable
         rows={restrictions}
         loading={loading.restrictions}
         rowKeyExtractor={(item) => item.constraint_name}

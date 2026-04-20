@@ -59,7 +59,6 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Table
-        selectable
         loading={loading.columns}
         rowKeyExtractor={(item) => item.column_name}
         onContextMenu={onContextMenuTable}

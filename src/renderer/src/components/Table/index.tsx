@@ -21,7 +21,6 @@ interface ITableProps {
   editedRows?: Map<React.Key, any>;
   rows: any[];
   columns: IColumn[];
-  selectable?: boolean;
   loading?: boolean;
   onCopy?(selectedRows: any[]): void;
   onPaste?(selectedRows: any[]): void;
@@ -39,7 +38,6 @@ const Table = (props: ITableProps) => {
     rows = [],
     loading,
     rowKeyExtractor = rowKeyExtractorDefault,
-    selectable,
     onContextMenu,
     onScrollEnd,
     editedRows,

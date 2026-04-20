@@ -27,7 +27,6 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   return (
     <>
       <Table
-        selectable
         rowKeyExtractor={(item) => item.trigger_name}
         loading={loading.triggers}
         rows={triggers}
