@@ -307,7 +307,9 @@ export const runSql = async (
     }
   }
 
+  const t0 = Date.now();
   const raw = await instance.raw(sql_final);
+  const execution_time_ms = Date.now() - t0;
 
   const rawArray = Array.isArray(raw) ? raw : [raw];
 
@@ -318,6 +320,7 @@ export const runSql = async (
       type,
       affected_rows,
       auto_paginated,
+      execution_time_ms,
       rows: JSON.parse(JSON.stringify(rows)),
       columns: columns?.map?.((field) => field.name) || [],
     };

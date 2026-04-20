@@ -46,6 +46,7 @@ interface IQueryResult {
   query: string;
   affected_rows?: number;
   date_run?: string;
+  execution_time_ms?: number;
   page?: number;
   auto_paginated?: boolean;
   tables_info?: ITableQuery[];
@@ -181,10 +182,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     updateTabResultData({ loading: true, date_run: new Date().toISOString() });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
-        id_connection,
-        tab.query,
-      );
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, tab.query);
 
       updateTabResultData({
         columns,
@@ -193,6 +192,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         query: tab.query,
         affected_rows,
         auto_paginated,
+        execution_time_ms,
         loading: false,
       });
     } catch (error) {
@@ -214,10 +214,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     updateTabResultData({ loading: true });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
-        id_connection,
-        query,
-      );
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, query);
 
       updateTabResultData({
         page: 1,
@@ -227,6 +225,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         type,
         affected_rows,
         auto_paginated,
+        execution_time_ms,
         loading: false,
       });
     } catch (error) {
@@ -249,10 +248,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
-        id_connection,
-        query,
-      );
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, query);
 
       updateTabResultData({
         page: 1,
@@ -261,6 +258,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         type,
         affected_rows,
         auto_paginated,
+        execution_time_ms,
         loading: false,
       });
     } catch (error) {
@@ -286,7 +284,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
       const x = await runSql(id_connection, query);
 
-      const [{ type, rows, columns, affected_rows, auto_paginated }] = x;
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] = x;
 
       updateTabResultData({
         page: 1,
@@ -295,6 +293,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         type,
         affected_rows,
         auto_paginated,
+        execution_time_ms,
         loading: false,
       });
     } catch (error) {
@@ -360,11 +359,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     updateTabResultData({ loading: true });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated }] = await runSql(
-        id_connection,
-        query,
-        { page: newPage },
-      );
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, query, { page: newPage });
 
       updateTabResultData({
         page: newPage,
@@ -375,6 +371,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         affected_rows,
         auto_paginated,
         loading: false,
+        execution_time_ms,
       });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
@@ -744,6 +741,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         </Button>
 
                         <Spacer />
+
+                        <Text
+                          title="Tempo de execução da query"
+                          userSelect={false}
+                          color={activeTheme.queryEditor.bar.color}
+                        >
+                          {data.execution_time_ms < 1000
+                            ? `${data.execution_time_ms}ms`
+                            : `${(data.execution_time_ms / 1000).toFixed(2)}s`}
+                        </Text>
 
                         <Text
                           title="Total de Linhas sendo exibidas"

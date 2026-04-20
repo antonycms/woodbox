@@ -447,6 +447,7 @@ export interface IStoreContext {
       columns?: string[];
       affected_rows?: number;
       auto_paginated?: boolean;
+      execution_time_ms?: number;
     }[]
   >;
 }
