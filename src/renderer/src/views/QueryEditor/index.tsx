@@ -77,7 +77,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>();
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
-  const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 100);
+  const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
   const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = useStateWithDebounce<ITableQuery[]>(
@@ -605,7 +605,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         <ResizableContainer
           direction="vertical"
           height={sizeTabContent}
-          minHeight={140}
+          minHeight={120}
           maxHeight={800}
           onResize={(size) => setSizeTabContent(size.height)}
         >
@@ -744,6 +744,14 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         </Button>
 
                         <Spacer />
+
+                        <Text
+                          title="Total de Linhas sendo exibidas"
+                          userSelect={false}
+                          color={activeTheme.queryEditor.bar.color}
+                        >
+                          Linhas exibidas: {data.rows.length}
+                        </Text>
 
                         <Text
                           title="Data da última atualização"
