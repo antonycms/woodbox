@@ -1,10 +1,11 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Toast, ToastType } from '@renderer/components/Toast';
+import { Toast } from '@renderer/components/Toast';
 import { ToastsWrapper } from '@renderer/components/Toast/ToastsWrapper';
 import { generateHash } from '@renderer/utils/string';
+import ToastContext, { type IToastOptions, type IToastInfo } from './context';
 
-const ToastContext = React.createContext<IToastContext>({} as IToastContext);
+export type * from './context';
 
 const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = React.useState<IToastInfo[]>([]);
@@ -57,27 +58,3 @@ export default ToastProvider;
 export const useToast = () => {
   return React.useContext(ToastContext);
 };
-
-export interface IToastContext {
-  showToast(options: IToastOptions): void;
-}
-
-export interface IToastInfo {
-  id: string;
-  type: ToastType;
-  title: string;
-  description: string;
-  delay: number;
-}
-
-export interface IToastOptions {
-  type: ToastType;
-  title: string;
-  description?: string;
-
-  /**
-   * delay to close modal (ms)
-   * @default 5000
-   */
-  delay?: number;
-}

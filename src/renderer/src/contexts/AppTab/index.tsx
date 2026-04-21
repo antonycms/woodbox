@@ -1,7 +1,7 @@
 import React from 'react';
 import { generateHash } from '@renderer/utils/string';
-
-const AppTabContext = React.createContext<ITabContext>({} as any);
+import AppTabContext, { type IAppTab, type INewAppTab } from './context';
+export type * from './context';
 
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
@@ -77,26 +77,3 @@ export const useAppTabContext = () => {
 };
 
 export default AppTabProvider;
-
-interface ITabContext {
-  readonly tabs: IAppTab[];
-  activeTabId: string;
-  setActiveTabId: React.Dispatch<React.SetStateAction<string>>;
-  addTab(tab: INewAppTab): void;
-  removeTab(tabId: string): void;
-  getTab(tabId: string): IAppTab;
-}
-
-interface INewAppTab {
-  id?: string;
-  title?: string;
-  unsaved?: boolean;
-  component(): JSX.Element | null;
-}
-
-interface IAppTab {
-  id: string;
-  title: string;
-  unsaved?: boolean;
-  component(): JSX.Element | null;
-}

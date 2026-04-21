@@ -1,0 +1,185 @@
+import { createContext } from 'react';
+
+export interface IScript {
+  id: string;
+  name: string;
+  id_connection: string;
+  content?: string; // Not loaded in listing — fetched on demand when opening a script
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IProjectCreate {
+  description: string;
+}
+
+export interface IProject extends IProjectCreate {
+  id: string;
+}
+
+export interface ITable {
+  table_name: string;
+  table_schema?: string;
+  total_size?: number;
+}
+
+export interface IFunctionDb {
+  function_name: string;
+  function_schema?: string;
+}
+
+export interface IConnectionInfo {
+  tables: ITable[];
+  functions: IFunctionDb[];
+  schemas?: string[];
+}
+
+export interface IConnectionCreate {
+  id_project: string;
+  description: string;
+  dialect: string;
+  database: string;
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+}
+
+export interface IConnection extends IConnectionCreate {
+  id: string;
+}
+
+export interface IColumnInfo {
+  column_name: string;
+  data_type: string;
+  is_nullable: boolean;
+  column_default?: string;
+}
+
+export interface IColumnReferenceInfo {
+  constraint_name: string;
+  table_schema: string;
+  table_name: string;
+  column_name: string;
+  reference_table_schema: string;
+  reference_table_name: string;
+  reference_column_name: string;
+}
+
+export type ConstraintType = 'primary_key' | 'unique_key' | 'check';
+
+export interface IColumnRestrictionsInfo {
+  constraint_name: string;
+  constraint_type: ConstraintType;
+}
+
+export interface ITriggerInfo {
+  trigger_name: string;
+  timing: string;
+  event: string;
+  orientation: string;
+  function_name: string;
+  status: string;
+}
+
+export interface IDataTable {
+  count: number;
+  data: any[];
+}
+
+export interface IParamsGetTableData {
+  table: string;
+  schema?: string;
+  page: number;
+  limit?: number;
+  where?: string;
+}
+
+export interface IOptionsRunSql {
+  limit?: number;
+  page?: number;
+}
+
+export interface IStoreContext {
+  connections: IConnection[];
+  addConnection(data: IConnectionCreate): Promise<void>;
+  removeConnection(id: string): Promise<void>;
+  editConnection(id: string, data: IConnectionCreate): Promise<void>;
+
+  projects: IProject[];
+  addProject(data: IProjectCreate): Promise<void>;
+  removeProject(id: string): Promise<void>;
+  editProject(id: string, data: IProjectCreate): Promise<void>;
+
+  scripts: IScript[];
+  addScript(data: Omit<IScript, 'id'>): Promise<IScript>;
+  editScript(id: string, data: Partial<IScript>): Promise<void>;
+  removeScript(id: string): Promise<void>;
+  getScriptContent(id: string): Promise<string>;
+
+  connectionsGroupPerProject: IConnectionsGroupPerProject[];
+
+  connectionTypes?: string[];
+  connectionsInfo: Map<string, IConnectionInfo>;
+
+  loadConnectionInfo(id: string): Promise<void>;
+  testConnection(data: IConnectionCreate): Promise<boolean>;
+  closeConnection(id: string): Promise<void>;
+  getTableData(idConnection: string, params: IParamsGetTableData): Promise<IDataTable>;
+
+  getTableColumns(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IColumnInfo[]>;
+
+  getTableReferences(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IColumnReferenceInfo[]>;
+
+  getTableUsedAsReference(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IColumnReferenceInfo[]>;
+
+  getTableRestrictions(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IColumnRestrictionsInfo[]>;
+
+  getTableDefinition(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<{ definition: string }[]>;
+
+  getTableTriggers(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<ITriggerInfo[]>;
+
+  getFunctionDefinition(
+    idConnection: string,
+    filters: { schema: string; functionName: string },
+  ): Promise<{ definition: string }[]>;
+
+  runSql(
+    idConnection: string,
+    sql: string,
+    options?: IOptionsRunSql,
+  ): Promise<
+    {
+      type: string;
+      rows?: any[];
+      columns?: string[];
+      affected_rows?: number;
+      auto_paginated?: boolean;
+      execution_time_ms?: number;
+    }[]
+  >;
+}
+
+export interface IConnectionsGroupPerProject extends IProject {
+  connections: IConnection[];
+}
+
+export default createContext<IStoreContext>({} as IStoreContext);

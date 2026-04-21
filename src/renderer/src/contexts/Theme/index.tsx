@@ -3,8 +3,8 @@ import React from 'react';
 import useStorage from '@renderer/hooks/useStorage';
 import defaultTheme, { applyMonacoTheme, serializeTheme, ITheme } from '@renderer/styles/theme';
 import { useCssProperties } from '@renderer/hooks/useCssProperties';
-
-const ThemeContext = React.createContext<IThemeContext>({} as IThemeContext);
+import ThemeContext, { type IThemeProviderProps } from './context';
+export type * from './context';
 
 const ThemeProvider = ({ children }: IThemeProviderProps) => {
   const [activeThemeName, setActiveThemeName] = useStorage<string>(
@@ -64,14 +64,3 @@ export const useCssPropertiesWithActiveTheme = (
 };
 
 export default ThemeProvider;
-
-interface IThemeProviderProps {
-  children?: React.ReactNode;
-}
-
-interface IThemeContext {
-  activeTheme: ITheme<string>;
-  availableThemes: ITheme[];
-  addTheme(theme: ITheme): void;
-  changeTheme(themeName: string): void;
-}

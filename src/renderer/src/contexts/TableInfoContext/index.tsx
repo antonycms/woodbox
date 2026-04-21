@@ -1,13 +1,21 @@
 import React from 'react';
-import {
-  IColumnInfo,
-  IColumnReferenceInfo,
-  IColumnRestrictionsInfo,
-  ITriggerInfo,
-  useStoreContext,
-} from './Store';
 
-const TableInfoContext = React.createContext<ITableInfoContext>({} as ITableInfoContext);
+import {
+  type IColumnInfo,
+  type IColumnReferenceInfo,
+  type IColumnRestrictionsInfo,
+  type ITriggerInfo,
+  useStoreContext,
+} from '@renderer/contexts/Store';
+
+import TableInfoContext, {
+  type ILastFetchDate,
+  type ITableInfo,
+  type ITableInfoLoading,
+  type LoadTableInfo,
+} from './context';
+
+export type * from './context';
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const {
@@ -172,39 +180,3 @@ export default TableInfoProvider;
 interface IThemeProviderProps {
   children?: React.ReactNode;
 }
-
-interface ITableInfo {
-  columns: IColumnInfo[];
-  references: IColumnReferenceInfo[];
-  usedAsReference: IColumnReferenceInfo[];
-  restrictions: IColumnRestrictionsInfo[];
-  definition: string;
-  triggers: ITriggerInfo[];
-}
-
-type ILastFetchDate = {
-  [key in keyof ITableInfo]: Date;
-};
-
-type ITableInfoLoading = {
-  [key in keyof ITableInfo]: boolean;
-};
-
-interface ITableInfoContext extends ITableInfo {
-  loadTableColumns: LoadTableInfo;
-  loadTableReferences: LoadTableInfo;
-  loadTableUsedAsReference: LoadTableInfo;
-  loadTableRestrictions: LoadTableInfo;
-  loadTableDefinition: LoadTableInfo;
-  loadTableTriggers: LoadTableInfo;
-
-  lastFetchDate: ILastFetchDate;
-  loading: ITableInfoLoading;
-}
-
-interface ILoadTableInfoFilters {
-  table: string;
-  schema: string;
-}
-
-export type LoadTableInfo = (idConnection: string, filters: ILoadTableInfoFilters) => Promise<void>;
