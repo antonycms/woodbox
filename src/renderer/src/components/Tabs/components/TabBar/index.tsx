@@ -160,7 +160,7 @@ const TabsBar = (props: ITabsBarProps) => {
         style={styleTabBar}
         className={classesTabBar}
       >
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <Tab
             key={`tab_${idTabBar}_${tab.idTab}`}
             id={`tab_${idTabBar}_${tab.idTab}`}
@@ -182,7 +182,11 @@ const TabsBar = (props: ITabsBarProps) => {
             onRemove={() => onRemoveTab?.(tab)}
             unsaved={tab.unsaved}
             onContextMenu={(event) => {
-              setActiveTabContextMenu({ tab, position: { x: event.clientX, y: event.clientY } });
+              setActiveTabContextMenu({
+                index,
+                tab,
+                position: { x: event.clientX, y: event.clientY },
+              });
             }}
           />
         ))}
@@ -233,7 +237,8 @@ export interface ITabsBarProps {
   contextMenuOptions?: IContextMenuOption<IActiveTabContextMenu>[];
 }
 
-interface IActiveTabContextMenu {
+export interface IActiveTabContextMenu {
   tab: ITab;
   position: IContextMenuPosition;
+  index: number;
 }
