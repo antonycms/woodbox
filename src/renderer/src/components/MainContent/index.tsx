@@ -3,6 +3,7 @@ import { TabBar, TabWindow, TabContent, IActiveTabContextMenu } from '@renderer/
 import { Welcolme } from '@renderer/components/Welcome';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { copyToClipboard } from '@renderer/utils/methods';
 import styles from './styles.module.css';
 import { IContextMenuOption } from '../ContextMenu';
 
@@ -14,6 +15,10 @@ export const MainContent = () => {
 
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
     () => [
+      {
+        text: 'Copiar',
+        onClick: (info) => copyToClipboard(info.tab.title),
+      },
       {
         text: 'Fechar aba',
         onClick: (info) => {
