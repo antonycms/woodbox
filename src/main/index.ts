@@ -1,6 +1,6 @@
 import './storage';
 import * as path from 'path';
-import { app, shell, BrowserWindow, globalShortcut } from 'electron';
+import { app, shell, BrowserWindow, globalShortcut, Menu } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { closeAllConnections } from './database';
@@ -63,6 +63,9 @@ app.whenReady().then(() => {
    * see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
    */
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
+
+  // Remove default menu (prevents Ctrl+W and other default shortcuts from closing the app)
+  Menu.setApplicationMenu(null);
 
   // Disable shortcut to close application
   globalShortcut.register('Control+Q', () => {});
