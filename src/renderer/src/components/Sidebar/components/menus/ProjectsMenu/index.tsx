@@ -17,7 +17,6 @@ import {
 import TreeView, { IItemTreeView, IItemTreeViewData } from '@renderer/components/TreeView';
 import { IScript, useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
-import styles from './styles.module.css';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
@@ -25,6 +24,7 @@ import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
+import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
   const {
@@ -158,6 +158,7 @@ const ProjectsMenu = () => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;
+      const title = `${schema ? `${schema}.` : ''}${table}`;
 
       const tab = getTab(tabId);
 
@@ -166,7 +167,7 @@ const ProjectsMenu = () => {
       } else {
         addTab({
           id: tabId,
-          title: table,
+          title,
           component: () => (
             <TableInfo id_connection={id_connection} schema={schema} table={table} />
           ),
