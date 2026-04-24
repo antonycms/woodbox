@@ -85,16 +85,14 @@ const Editor = React.forwardRef<IEditorRef, IEditorProps>(
 
     const getCurrentValue = () => {
       const position = editor?.getPosition?.();
-      if (!position) return editor?.getModel()?.getValue?.() || '';
+      const model = editor?.getModel?.();
 
-      return getCurrentQuerySqlFromContent(
-        editor?.getModel()?.getValueInRange?.({
-          startLineNumber: 1,
-          startColumn: 1,
-          endLineNumber: position.lineNumber,
-          endColumn: position.column,
-        }) || '',
-      );
+      if (!position || !model) return model?.getValue?.() || '';
+
+      const fullContent = model.getValue();
+      const cursorOffset = model.getOffsetAt(position);
+
+      return getCurrentQuerySqlFromContent(fullContent, cursorOffset);
     };
 
     const initEditor = () => {
