@@ -435,7 +435,7 @@ const ProjectsMenu = () => {
           data: { id_connection: connection.id, description_connection: connection.description },
           childs: [
             {
-              id: 'schemas',
+              id: `schemas_${connection.id}`,
               type: 'schemas',
               label: 'Esquemas',
               childs: schemasThreeView,
@@ -443,7 +443,7 @@ const ProjectsMenu = () => {
               data: dataConnection,
             },
             !schemasThreeView && {
-              id: 'tables',
+              id: `tables_${connection.id}`,
               type: 'tables',
               label: 'Tabelas',
               childs: tablesThreeView,
