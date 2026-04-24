@@ -114,7 +114,7 @@ export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: nu
 
   while ((result = regex.exec(content))) {
     const sepEnd = result.index + result[0].length;
-    if (sepEnd <= cursorOffset) {
+    if (sepEnd < cursorOffset) {
       queryStart = sepEnd;
     } else {
       queryEnd = result.index;
