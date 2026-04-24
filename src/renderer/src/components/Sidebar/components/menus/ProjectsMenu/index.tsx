@@ -65,13 +65,21 @@ const ProjectsMenu = () => {
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(projectNewConnection || connectionEditing);
-  const filterTextSerialized = filterText?.trim?.();
+  const filterTextSerialized = filterText?.trim?.() ?? '';
 
-  const checkFilterText = (text: string) => {
+  const checkFilterText = (text: string, text2?: string) => {
+    const filterWithSchema = filterTextSerialized.includes('.');
+
     if (isWholeWordFilter) {
-      return text?.toLowerCase?.() === filterTextSerialized;
+      return filterWithSchema
+        ? `${text2}.${text}`.trim() === filterTextSerialized
+        : text === filterTextSerialized;
     }
-    return text?.toLowerCase?.()?.includes?.(filterTextSerialized);
+
+    return filterWithSchema
+      ? filterTextSerialized.startsWith(text2) &&
+          `${text2}.${text}`.trim().includes(filterTextSerialized)
+      : text?.includes?.(filterTextSerialized);
   };
 
   const checkHasConnection = (id: string) => {
@@ -371,8 +379,12 @@ const ProjectsMenu = () => {
         }));
 
         if (filterTextSerialized) {
-          tablesThreeView = tablesThreeView.filter((table) => checkFilterText(table?.label));
-          functionsThreeView = functionsThreeView.filter((fn) => checkFilterText(fn?.label));
+          tablesThreeView = tablesThreeView.filter((table) =>
+            checkFilterText(table?.label, table?.data?.table_schema),
+          );
+          functionsThreeView = functionsThreeView.filter((fn) =>
+            checkFilterText(fn?.label, fn?.data?.function_schema),
+          );
         }
 
         let schemasThreeView: IItemTreeView[] =
