@@ -56,6 +56,13 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     return tabs.find((tab) => tab.id === tabId);
   };
 
+  const updateTab = React.useCallback(
+    (id: string, data: Partial<Pick<IAppTab, 'title' | 'unsaved'>>) => {
+      setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
+    },
+    [],
+  );
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'w' && activeTabId) {
@@ -78,6 +85,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         activeTabId,
         setActiveTabId,
         getTab,
+        updateTab,
       }}
     >
       {children}

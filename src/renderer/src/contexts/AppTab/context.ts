@@ -7,6 +7,7 @@ export interface ITabContext {
   addTab(tab: INewAppTab): void;
   removeTab(tabId: string): void;
   getTab(tabId: string): IAppTab;
+  updateTab(id: string, data: Partial<Pick<IAppTab, 'title' | 'unsaved'>>): void;
 }
 
 export interface INewAppTab {
