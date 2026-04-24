@@ -21,6 +21,24 @@ export const Sidebar = React.memo(() => {
     borderColor: activeTheme.sideBar.borderColor,
   }));
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key?.toLowerCase?.() === 'f') {
+        e.preventDefault();
+        setSelectedMenu('projects');
+
+        setTimeout(() => {
+          const inputFilterProjects = document.getElementById('input_filter_projects');
+          inputFilterProjects?.focus?.();
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className={styles.container} style={style}>
       <MenuBar

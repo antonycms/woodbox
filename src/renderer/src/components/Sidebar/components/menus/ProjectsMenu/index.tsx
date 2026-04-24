@@ -525,6 +525,7 @@ const ProjectsMenu = () => {
       <Divider />
 
       <Input
+        id="input_filter_projects"
         placeholder="Filtrar"
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
