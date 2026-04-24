@@ -81,28 +81,46 @@ export const getTablesFromQuerySql = (query: string) => {
   return tables;
 };
 
-export const getCurrentQuerySqlFromContent = (content: string) => {
+export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: number) => {
   if (!content || typeof content !== 'string') return content;
 
   const regex = /(;|\r?\n\r?\n)/g;
-  let start = 0;
-  let end = 0;
 
+  if (cursorOffset === undefined) {
+    let start = 0;
+    let end = 0;
+    let result: RegExpExecArray;
+
+    while ((result = regex.exec(content))) {
+      start = end;
+      end = result.index;
+    }
+
+    let chunk = content.substring(end, content.length).trim();
+
+    if (chunk.startsWith(';')) {
+      chunk = chunk.substring(0 + 1).trim();
+    }
+    if (!chunk) {
+      chunk = content.substring(start, content.length).trim();
+    }
+
+    return chunk;
+  }
+
+  let queryStart = 0;
+  let queryEnd = content.length;
   let result: RegExpExecArray;
 
   while ((result = regex.exec(content))) {
-    start = end;
-    end = result.index;
+    const sepEnd = result.index + result[0].length;
+    if (sepEnd <= cursorOffset) {
+      queryStart = sepEnd;
+    } else {
+      queryEnd = result.index;
+      break;
+    }
   }
 
-  let chunk = content.substring(end, content.length).trim();
-
-  if (chunk.startsWith(';')) {
-    chunk = chunk.substring(0 + 1).trim();
-  }
-  if (!chunk) {
-    chunk = content.substring(start, content.length).trim();
-  }
-
-  return chunk;
+  return content.substring(queryStart, queryEnd).trim();
 };
