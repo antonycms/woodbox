@@ -9,7 +9,7 @@ const { keywords, operators, builtinFunctions } = sqlLanguageWithTs;
 
 const makeItem =
   (documentation: string, kind: languages.CompletionItemKind, priority?: number) =>
-  (word: string) => ({
+  (word: string): IItem => ({
     documentation,
     label: word,
     insertText: word,
@@ -47,7 +47,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
   return languages.registerCompletionItemProvider('sql', {
     triggerCharacters,
     provideCompletionItems: (model, position) => {
-      let availableWords: Omit<languages.CompletionItem, 'range'>[] = defaultSugestions;
+      let availableWords: IItem[] = defaultSugestions;
 
       const value = model.getValueInRange({
         startColumn: 0,
@@ -75,7 +75,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         return op.includes(serializedCurrentWord) || op.includes(serializedPrevWord);
       };
 
-      const tableAlias = aliases.find(({ alias }) => alias && currentWord?.startsWith(alias));
+      const tableAlias = aliases.find(({ alias }) => alias && currentWord?.startsWith(`${alias}.`));
 
       const isTable = tablesAvailable?.some?.(
         (table) => `${table.schema ? `${table.schema}.` : ''}${table.name}` === currentWord,
@@ -91,7 +91,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
       const isAlias =
         currentWord?.includes('.') &&
         !!tableAlias?.alias &&
-        currentWord?.startsWith(tableAlias.alias);
+        currentWord?.startsWith(`${tableAlias.alias}.`);
       const isSelectColumns = !isTable && checkOperation(['select']);
       const isFromOrJoin = !isTable && checkOperation(['from', 'join', 'update', 'into']);
       const isFilterOperators =
@@ -116,23 +116,24 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         currentContent.includes('(') &&
         (currentWord?.startsWith('(') || currentWord?.endsWith('(') || currentWord?.endsWith(','));
 
-      if (isSchema) {
-        const tablesWords = tablesAvailable
-          .filter(({ schema }) => currentWord?.split('.')[0] === schema)
-          .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
-
-        availableWords = tablesWords;
-      } //
-      else if (isAlias) {
+      if (isAlias) {
         const columnsWords = columns
           .filter(({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema)
           .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable)(name));
 
         availableWords = columnsWords;
       } //
+      else if (isSchema) {
+        // const tablesWords = [];
+        const tablesWords = tablesAvailable
+          .filter(({ schema }) => currentWord?.split('.')[0] === schema)
+          .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
+
+        availableWords = tablesWords;
+      } //
       else if (isSelectColumns) {
         const columnsWords = columns.map(({ name }) =>
-          makeItem('Column', languages.CompletionItemKind.Variable)(name),
+          makeItem('Column', languages.CompletionItemKind.Variable, 0)(name),
         );
         availableWords = [...columnsWords, ...defaultSugestions];
       } //
@@ -224,4 +225,12 @@ interface ILanguage {
     quotedIdentifier: any;
     scopes: any;
   };
+}
+
+interface IItem {
+  documentation: string;
+  label: string;
+  insertText: string;
+  kind: languages.CompletionItemKind;
+  sortText: string;
 }
