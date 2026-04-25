@@ -5,7 +5,7 @@ export interface ITabContext {
   activeTabId: string;
   setActiveTabId: React.Dispatch<React.SetStateAction<string>>;
   addTab(tab: INewAppTab): void;
-  removeTab(tabId: string): void;
+  removeTab(tabId: string | string[]): void;
   getTab(tabId: string): IAppTab;
   updateTab(id: string, data: Partial<Pick<IAppTab, 'title' | 'unsaved'>>): void;
 }

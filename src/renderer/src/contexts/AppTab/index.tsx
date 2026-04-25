@@ -22,32 +22,34 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const removeTab = React.useCallback(
-    (tabId: string) => {
-      let indexToRemove = -1;
-      let indexAround = null;
+    (tabId: string | string[]) => {
+      const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
 
-      for (let i = 0; i < tabs.length; i++) {
-        const tab = tabs[i];
+      if (tabsIdToRemove.has(activeTabId)) {
+        const activeIndex = tabs.findIndex((t) => t.id === activeTabId);
 
-        if (tab.id === tabId) {
-          indexToRemove = i;
+        let nextId: string | undefined;
 
-          if (indexToRemove === 0) indexAround = indexToRemove + 1;
-          else indexAround = indexToRemove - 1;
-
-          break;
+        for (let i = activeIndex - 1; i >= 0; i--) {
+          if (!tabsIdToRemove.has(tabs[i].id)) {
+            nextId = tabs[i].id;
+            break;
+          }
         }
+
+        if (!nextId) {
+          for (let i = activeIndex + 1; i < tabs.length; i++) {
+            if (!tabsIdToRemove.has(tabs[i].id)) {
+              nextId = tabs[i].id;
+              break;
+            }
+          }
+        }
+
+        setActiveTabId(nextId);
       }
 
-      if (activeTabId === tabId) {
-        setActiveTabId(tabs[indexAround]?.id);
-      }
-
-      setTabs((prevState) => {
-        const newState = [...prevState];
-        newState.splice(indexToRemove, 1);
-        return newState;
-      });
+      setTabs((prev) => prev.filter((t) => !tabsIdToRemove.has(t.id)));
     },
     [tabs, activeTabId],
   );
