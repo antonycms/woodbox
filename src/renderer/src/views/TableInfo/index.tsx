@@ -1,15 +1,17 @@
 import React from 'react';
-import { FaGripLines, FaRegListAlt } from 'react-icons/fa';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
 import { generateHash } from '@renderer/utils/string';
 import TableInfoProvider from '@renderer/contexts/TableInfoContext';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 
 import Data from './components/Data';
 import Properties from './components/Properties';
 import styles from './styles.module.css';
 import { ITableInfoProps } from './dtos';
-import { useThemeContext } from '@renderer/contexts/Theme';
+
+import IconFaRegularListAlt from '~icons/fa-regular/list-alt';
+import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
 
 const TableInfo = (props: ITableInfoProps) => {
   const {
@@ -83,12 +85,12 @@ const TableInfo = (props: ITableInfoProps) => {
           {
             idTab: 'tabProperties',
             title: 'Propriedades',
-            icon: () => <FaGripLines className={styles.icon} />,
+            icon: () => <IconFaSolidGripLines className={styles.icon} width={12} height={12} />,
           },
           {
             idTab: 'tabData',
             title: 'Dados',
-            icon: () => <FaRegListAlt className={styles.icon} />,
+            icon: () => <IconFaRegularListAlt className={styles.icon} width={12} height={12} />,
           },
         ]}
       />

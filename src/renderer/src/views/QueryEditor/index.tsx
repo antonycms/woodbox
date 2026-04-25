@@ -15,7 +15,6 @@ import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import {
   ExportIcon,
-  IconCopyToClipboard,
   IconFileWrited,
   IconRefresh,
   PanelFile,

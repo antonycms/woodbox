@@ -1,5 +1,4 @@
 import React from 'react';
-import { FaGripLines } from 'react-icons/fa';
 import { Spacer } from '@renderer/components/Spacer';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
@@ -15,6 +14,8 @@ import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
+
+import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
 
 interface IFunctionInfoProps {
   id_connection: string;
@@ -72,7 +73,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
           {
             idTab: 'tabProperties',
             title: 'Propriedades',
-            icon: () => <FaGripLines className={styles.icon} />,
+            icon: () => <IconFaSolidGripLines className={styles.icon} width={12} height={12} />,
           },
         ]}
       />
