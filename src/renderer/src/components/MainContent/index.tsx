@@ -22,35 +22,34 @@ export const MainContent = () => {
       {
         text: 'Fechar aba',
         onClick: (info) => {
-          setActiveTabId(info.tab.idTab);
-          tabs.forEach((t) => t.id === info.tab.idTab && removeTab(t.id));
+          removeTab(info.tab.idTab);
         },
       },
       tabs.length > 1 && {
         text: 'Fechar outras abas',
         onClick: (info) => {
           setActiveTabId(info.tab.idTab);
-          tabs.forEach((t) => t.id !== info.tab.idTab && removeTab(t.id));
+          removeTab(tabs.filter((t) => t.id !== info.tab.idTab).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
         text: 'Fechar abas à esquerda',
         onClick: (info) => {
           const idx = tabs.findIndex((t) => t.id === info.tab.idTab);
-          tabs.slice(0, idx).forEach((t) => removeTab(t.id));
+          removeTab(tabs.slice(0, idx).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
         text: 'Fechar abas à direita',
         onClick: (info) => {
           const idx = tabs.findIndex((t) => t.id === info.tab.idTab);
-          tabs.slice(idx + 1).forEach((t) => removeTab(t.id));
+          removeTab(tabs.slice(idx + 1).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
         text: 'Fechar todas as abas',
         onClick: () => {
-          tabs.forEach((t) => removeTab(t.id));
+          removeTab(tabs.map((t) => t.id));
         },
       },
     ],
