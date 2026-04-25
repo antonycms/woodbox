@@ -137,7 +137,7 @@ const TabsBar = (props: ITabsBarProps) => {
     };
   }, []);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     changeTabContent();
 
     const activeTab = tabs.find((t) => t.idTab === activeTabId);
