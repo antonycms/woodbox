@@ -1,8 +1,9 @@
 import React from 'react';
-import { CgClose } from 'react-icons/cg';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { Text } from '@renderer/components/Text';
 import styles from '@renderer/components/Tabs/styles.module.css';
+
+import IconMdiClose from '~icons/mdi/close';
 
 const Tab = (props: ITabProps) => {
   const {
@@ -64,7 +65,12 @@ const Tab = (props: ITabProps) => {
             onRemove?.(e);
           }}
         >
-          <CgClose className={styles.ignoreTabDrag} color={active ? ascentColor : color} />
+          <IconMdiClose
+            className={styles.ignoreTabDrag}
+            color={active ? ascentColor : color}
+            width={14}
+            height={14}
+          />
         </button>
       )}
     </div>
