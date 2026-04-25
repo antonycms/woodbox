@@ -8,6 +8,7 @@ import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
 import { ModalNewScript } from '@renderer/components/ModalNewScript';
+import { ModalRename } from '@renderer/components/ModalRename';
 import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
@@ -37,6 +38,7 @@ const ProjectsMenu = () => {
     scripts,
     addScript,
     removeScript,
+    editScript,
   } = useStoreContext();
 
   const {
@@ -44,7 +46,7 @@ const ProjectsMenu = () => {
   } = useThemeContext();
 
   const { showToast } = useToast();
-  const { addTab, getTab, setActiveTabId } = useAppTabContext();
+  const { addTab, getTab, setActiveTabId, updateTab } = useAppTabContext();
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
 
   const [filterText, setFilterText] = React.useState('');
@@ -59,6 +61,7 @@ const ProjectsMenu = () => {
   const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
 
   const [showMoodalNewScript, setShowModalNewScript] = React.useState(false);
+  const [scriptToRename, setScriptToRename] = React.useState<IScript | null>(null);
 
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [contextMenuItemSelected, setContextMenuItemSelected] = React.useState<IItemTreeViewData>();
@@ -208,6 +211,12 @@ const ProjectsMenu = () => {
     }
   };
 
+  const handleRenameScript = async (name: string) => {
+    await editScript(scriptToRename.id, { name });
+    updateTab(`script_${scriptToRename.id}`, { title: name });
+    setScriptToRename(null);
+  };
+
   const handleCreateNewScript = async (name: string) => {
     const { id_connection } = selectedConnection;
 
@@ -311,6 +320,10 @@ const ProjectsMenu = () => {
       ],
 
       script: [
+        {
+          text: 'Renomear Script',
+          onClick: () => setScriptToRename(contextMenuItemSelected?.data?.script),
+        },
         {
           text: 'Excluir Script',
           onClick: () => removeScript(contextMenuItemSelected?.data?.script?.id),
@@ -484,6 +497,14 @@ const ProjectsMenu = () => {
         show={showMoodalNewScript}
         onConfirm={handleCreateNewScript}
         onClose={() => setShowModalNewScript(false)}
+      />
+
+      <ModalRename
+        title="Renomear Script"
+        show={!!scriptToRename}
+        name={scriptToRename?.name}
+        onConfirm={handleRenameScript}
+        onClose={() => setScriptToRename(null)}
       />
 
       <Row>
