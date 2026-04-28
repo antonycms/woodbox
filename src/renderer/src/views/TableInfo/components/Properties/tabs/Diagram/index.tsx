@@ -24,6 +24,8 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
+import { copyToClipboard } from '@renderer/utils/methods';
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 70;
@@ -140,6 +142,8 @@ const Diagram = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
+  const [contextMenuTableName, setContextMenuTableName] = React.useState<string>();
 
   const isLoading = loading.references || loading.usedAsReference;
 
@@ -152,6 +156,25 @@ const Diagram = ({
     loadTableReferences(id_connection, { schema, table });
     loadTableUsedAsReference(id_connection, { schema, table });
   }, [id_connection, schema, table]);
+
+  const contextMenuOptions = React.useMemo(() => {
+    return [
+      {
+        text: 'Copiar',
+        onClick: () => copyToClipboard(contextMenuTableName),
+      },
+    ];
+  }, [contextMenuTableName]);
+
+  const onNodeContextMenu = (event: React.MouseEvent, node: Node<TableNodeData>) => {
+    event.preventDefault();
+
+    setContextMenuPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    setContextMenuTableName(node.data.label);
+  };
 
   React.useEffect(() => {
     loadData();
@@ -279,6 +302,16 @@ const Diagram = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <ContextMenu
+        activeContextInfo={contextMenuTableName}
+        position={contextMenuPosition}
+        options={contextMenuOptions}
+        onClose={() => {
+          setContextMenuPosition(null);
+          setContextMenuTableName(null);
+        }}
+      />
+
       <div
         style={
           {
@@ -317,6 +350,7 @@ const Diagram = ({
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeContextMenu={onNodeContextMenu}
           nodeTypes={nodeTypes}
           fitView
           minZoom={0.2}
