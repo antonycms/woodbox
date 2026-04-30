@@ -4,6 +4,7 @@ import type {
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
+  IIndexInfo,
   ITriggerInfo,
 } from '@renderer/contexts/Store';
 
@@ -13,6 +14,7 @@ export interface ITableInfo {
   usedAsReference: IColumnReferenceInfo[];
   restrictions: IColumnRestrictionsInfo[];
   definition: string;
+  indexes: IIndexInfo[];
   triggers: ITriggerInfo[];
 }
 
@@ -30,6 +32,7 @@ export interface ITableInfoContext extends ITableInfo {
   loadTableUsedAsReference: LoadTableInfo;
   loadTableRestrictions: LoadTableInfo;
   loadTableDefinition: LoadTableInfo;
+  loadTableIndexes: LoadTableInfo;
   loadTableTriggers: LoadTableInfo;
 
   lastFetchDate: ILastFetchDate;

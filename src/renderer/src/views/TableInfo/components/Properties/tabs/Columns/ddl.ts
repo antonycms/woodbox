@@ -2,6 +2,7 @@ import type {
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
+  IIndexInfo,
   ITriggerInfo,
 } from '@renderer/contexts/Store';
 
@@ -170,6 +171,14 @@ export const generateRestrictionsDdl = (
 export const generateTriggersDdl = (triggers: ITriggerInfo[]) => {
   return triggers
     .map((trigger) => trigger.trigger_definition)
+    .filter((definition): definition is string => !!definition)
+    .map((definition) => (definition.endsWith(';') ? definition : `${definition};`))
+    .join('\n\n');
+};
+
+export const generateIndexesDdl = (indexes: IIndexInfo[]) => {
+  return indexes
+    .map((index) => index.index_definition)
     .filter((definition): definition is string => !!definition)
     .map((definition) => (definition.endsWith(';') ? definition : `${definition};`))
     .join('\n\n');

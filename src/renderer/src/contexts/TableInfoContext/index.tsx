@@ -4,6 +4,7 @@ import {
   type IColumnInfo,
   type IColumnReferenceInfo,
   type IColumnRestrictionsInfo,
+  type IIndexInfo,
   type ITriggerInfo,
   useStoreContext,
 } from '@renderer/contexts/Store';
@@ -24,6 +25,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     getTableUsedAsReference,
     getTableRestrictions,
     getTableDefinition,
+    getTableIndexes,
     getTableTriggers,
   } = useStoreContext();
 
@@ -32,6 +34,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
   const [restrictions, setRestrictions] = React.useState<IColumnRestrictionsInfo[]>([]);
   const [definition, setDefinition] = React.useState<string>('');
+  const [indexes, setIndexes] = React.useState<IIndexInfo[]>([]);
   const [triggers, setTriggers] = React.useState<ITriggerInfo[]>([]);
   const [lastFetchDate, setLastFetchDate] = React.useState<ILastFetchDate>({
     columns: new Date(),
@@ -39,6 +42,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     usedAsReference: new Date(),
     restrictions: new Date(),
     definition: new Date(),
+    indexes: new Date(),
     triggers: new Date(),
   });
   const [loading, setLoading] = React.useState<ITableInfoLoading>({
@@ -47,6 +51,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     usedAsReference: false,
     restrictions: false,
     definition: false,
+    indexes: false,
     triggers: false,
   });
 
@@ -145,6 +150,19 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     }
   }, []);
 
+  const loadTableIndexes: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
+    try {
+      updateLoading('indexes', true);
+
+      const items = await getTableIndexes(idConnection, filters);
+
+      setIndexes(items || []);
+      updateFetchDate('indexes');
+    } finally {
+      updateLoading('indexes', false);
+    }
+  }, []);
+
   return (
     <TableInfoContext.Provider
       value={{
@@ -153,6 +171,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         usedAsReference,
         restrictions,
         definition,
+        indexes,
         triggers,
 
         loadTableColumns,
@@ -160,6 +179,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         loadTableUsedAsReference,
         loadTableRestrictions,
         loadTableDefinition,
+        loadTableIndexes,
         loadTableTriggers,
 
         lastFetchDate,

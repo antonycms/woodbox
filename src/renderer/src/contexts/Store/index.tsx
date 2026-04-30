@@ -211,6 +211,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:function_definition', idConnection, { schema, functionName });
   };
 
+  const getTableIndexes = async (idConnection: string, { table, schema }) => {
+    return await call('@get:table_indexes', idConnection, { table, schema });
+  };
+
   const getTableTriggers = async (idConnection: string, { table, schema }) => {
     return await call('@get:table_triggers', idConnection, { table, schema });
   };
@@ -269,6 +273,7 @@ const StoreContextProvider = ({ children }) => {
         getTableUsedAsReference,
         getTableRestrictions,
         getTableDefinition,
+        getTableIndexes,
         getTableTriggers,
         getFunctionDefinition,
         runSql,

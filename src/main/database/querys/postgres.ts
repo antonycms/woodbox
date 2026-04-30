@@ -227,6 +227,33 @@ const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
   FROM table_info ti
 `;
 
+const getTableIndexes = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  SELECT
+    i.relname AS index_name,
+    am.amname AS index_method,
+    ix.indisunique AS is_unique,
+    ix.indisprimary AS is_primary,
+    ix.indisvalid AS is_valid,
+    COALESCE(
+      json_agg(a.attname ORDER BY cols.ordinality) FILTER (WHERE a.attname IS NOT NULL),
+      '[]'::json
+    ) AS column_names,
+    pg_catalog.pg_get_expr(ix.indexprs, ix.indrelid) AS expression,
+    pg_catalog.pg_get_expr(ix.indpred, ix.indrelid) AS predicate,
+    pg_catalog.pg_get_indexdef(ix.indexrelid) AS index_definition
+  FROM pg_catalog.pg_index ix
+  JOIN pg_catalog.pg_class t ON t.oid = ix.indrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
+  JOIN pg_catalog.pg_class i ON i.oid = ix.indexrelid
+  JOIN pg_catalog.pg_am am ON am.oid = i.relam
+  LEFT JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS cols(attnum, ordinality) ON TRUE
+  LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = cols.attnum
+  WHERE n.nspname = '${schema}'
+  AND t.relname = '${table}'
+  GROUP BY i.relname, am.amname, ix.indisunique, ix.indisprimary, ix.indisvalid, ix.indexrelid, ix.indexprs, ix.indpred, ix.indrelid
+  ORDER BY i.relname;
+`;
+
 const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
   SELECT
     t.tgname AS trigger_name,
@@ -298,6 +325,7 @@ export default {
   selectWithOffset,
   getTableRestrictions,
   getTableDefinition,
+  getTableIndexes,
   getTableTriggers,
   getFunctions,
   getFunctionDefinition,

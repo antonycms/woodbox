@@ -9,6 +9,7 @@ import {
   getTableUsedAsReference,
   getTableRestrictions,
   getTableDefinition,
+  getTableIndexes,
   getTableTriggers,
   getFunctionDefinition,
   runSql,
@@ -23,6 +24,7 @@ addListener('@get:table_references', getTableReferences);
 addListener('@get:table_used_as_reference', getTableUsedAsReference);
 addListener('@get:table_restrictions', getTableRestrictions);
 addListener('@get:table_definition', getTableDefinition);
+addListener('@get:table_indexes', getTableIndexes);
 addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);

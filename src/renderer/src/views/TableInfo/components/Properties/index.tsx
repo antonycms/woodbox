@@ -12,6 +12,7 @@ import Restrictios from './tabs/Restrictions';
 import References from './tabs/References';
 import Definition from './tabs/Definition';
 import Triggers from './tabs/Triggers';
+import Indexes from './tabs/Indexes';
 import Diagram from './tabs/Diagram';
 import styles from './styles.module.css';
 
@@ -81,6 +82,7 @@ const Properties = (props: IPropertiesProps) => {
           onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
           tabs={[
             { idTab: '1', title: 'Colunas' },
+            { idTab: '8', title: 'Índices' },
             { idTab: '2', title: 'Restrições' },
             { idTab: '3', title: 'Chaves Estrangeiras' },
             { idTab: '4', title: 'Referências' },
@@ -93,6 +95,10 @@ const Properties = (props: IPropertiesProps) => {
         <TabWindow idTabBar={id}>
           <TabContent idTab="1">
             <Columns {...props} />
+          </TabContent>
+
+          <TabContent idTab="8">
+            <Indexes {...props} />
           </TabContent>
 
           <TabContent idTab="2">

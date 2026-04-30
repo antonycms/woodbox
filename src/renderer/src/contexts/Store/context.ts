@@ -88,6 +88,18 @@ export interface IColumnRestrictionsInfo {
   comment?: string;
 }
 
+export interface IIndexInfo {
+  index_name: string;
+  index_method: string;
+  is_unique: boolean;
+  is_primary: boolean;
+  is_valid: boolean;
+  column_names?: string[];
+  expression?: string;
+  predicate?: string;
+  index_definition?: string;
+}
+
 export interface ITriggerInfo {
   trigger_name: string;
   timing: string;
@@ -174,6 +186,11 @@ export interface IStoreContext {
     idConnection: string,
     filters: { table: string; schema: string },
   ): Promise<{ definition: string }[]>;
+
+  getTableIndexes(
+    idConnection: string,
+    filters: { table: string; schema: string },
+  ): Promise<IIndexInfo[]>;
 
   getTableTriggers(
     idConnection: string,
