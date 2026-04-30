@@ -35,6 +35,7 @@ import { useAppTabContext } from '@renderer/contexts/AppTab';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
+import IconMdiAlertCircle from '~icons/mdi/alert-circle';
 
 interface IContextMenuTable {
   data: { cellsText: string; rowsText: string; rowsJson: string } | null;
@@ -792,16 +793,24 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                   )}
 
                   {data.type === 'ERROR' && (
-                    <div className={styles.paddingContent}>
-                      <Text bold color={activeTheme.queryEditor.tab.color}>
-                        Erro ao executar a query
-                      </Text>
+                    <div className={styles.resultContainer}>
+                      <div className={styles.resultCard}>
+                        <div className={styles.resultHeader}>
+                          <IconMdiAlertCircle width={18} height={18} />
 
-                      <Text color={activeTheme.queryEditor.tab.color}>{data.message}</Text>
+                          <Text bold color="#ffb4b4">
+                            Erro ao executar a query
+                          </Text>
+                        </div>
 
-                      <Text color={activeTheme.queryEditor.tab.color}>
-                        Executado em {toDateTime(data.date_run)}
-                      </Text>
+                        <div className={styles.resultMessage}>
+                          <Text color="#ffe1e1">{data.message || 'Erro desconhecido'}</Text>
+                        </div>
+
+                        <Text small color="#c9a0a0">
+                          Executado em {toDateTime(data.date_run)}
+                        </Text>
+                      </div>
                     </div>
                   )}
 

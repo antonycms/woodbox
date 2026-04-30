@@ -14,3 +14,43 @@
   flex: 1;
   padding: 10px;
 }
+
+.resultContainer {
+  flex: 1;
+  padding: 12px;
+  overflow: auto;
+}
+
+.resultCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e73c3c66;
+  border-left: 4px solid #e73c3c;
+  border-radius: 6px;
+  background: #e73c3c14;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ff6767;
+}
+
+.resultHeader p {
+  margin: 0;
+}
+
+.resultMessage {
+  padding: 10px;
+  border-radius: 4px;
+  background: #00000024;
+}
+
+.resultMessage p {
+  margin: 0;
+  cursor: text;
+  user-select: text;
+}
