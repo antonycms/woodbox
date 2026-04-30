@@ -3,22 +3,34 @@ import { generateHash } from '@renderer/utils/string';
 import AppTabContext, { type IAppTab, type INewAppTab } from './context';
 export type * from './context';
 
+const APP_TABS_SESSION_STORAGE_KEY = 'app_tabs_session';
+
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
+  const hasRestoredTabs = React.useRef(false);
 
   const addTab = React.useCallback((tabData: INewAppTab) => {
-    const { id = generateHash(), unsaved = false, title = 'Sem titulo', component } = tabData;
+    const { id = generateHash(), unsaved = false, title = 'Sem titulo', data, component } = tabData;
 
     const tab: IAppTab = {
       id,
       title,
       unsaved,
+      data,
       component: React.memo(component) as any,
     };
 
     setTabs((prevState) => [...prevState, tab]);
     setActiveTabId(tab.id);
+  }, []);
+
+  const restoreTabs = React.useCallback((nextTabs: IAppTab[], nextActiveTabId?: string) => {
+    hasRestoredTabs.current = true;
+    setTabs(nextTabs);
+    setActiveTabId(
+      nextTabs.some((tab) => tab.id === nextActiveTabId) ? nextActiveTabId : nextTabs[0]?.id,
+    );
   }, []);
 
   const removeTab = React.useCallback(
@@ -93,11 +105,29 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTabId, removeTab]);
 
+  React.useEffect(() => {
+    if (!hasRestoredTabs.current) return;
+
+    const serializableTabs = tabs
+      .filter((tab) => tab.data)
+      .map(({ id, title, unsaved, data }) => ({ id, title, unsaved, data }));
+
+    const nextActiveTabId = serializableTabs.some((tab) => tab.id === activeTabId)
+      ? activeTabId
+      : serializableTabs[0]?.id;
+
+    window.localStorage.setItem(
+      APP_TABS_SESSION_STORAGE_KEY,
+      JSON.stringify({ tabs: serializableTabs, activeTabId: nextActiveTabId }),
+    );
+  }, [tabs, activeTabId]);
+
   return (
     <AppTabContext.Provider
       value={{
         tabs,
         addTab,
+        restoreTabs,
         removeTab,
         moveTab,
         activeTabId,
