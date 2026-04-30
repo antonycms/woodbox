@@ -54,6 +54,12 @@ export interface IColumnInfo {
   data_type: string;
   is_nullable: boolean;
   column_default?: string;
+  description?: string;
+  udt_name?: string;
+  character_maximum_length?: number;
+  numeric_precision?: number;
+  numeric_scale?: number;
+  datetime_precision?: number;
 }
 
 export interface IColumnReferenceInfo {
@@ -64,6 +70,11 @@ export interface IColumnReferenceInfo {
   reference_table_schema: string;
   reference_table_name: string;
   reference_column_name: string;
+  constraint_definition?: string;
+  constraint_order?: number;
+  comment?: string;
+  remove_rule?: string;
+  update_rule?: string;
 }
 
 export type ConstraintType = 'primary_key' | 'unique_key' | 'check';
@@ -71,6 +82,10 @@ export type ConstraintType = 'primary_key' | 'unique_key' | 'check';
 export interface IColumnRestrictionsInfo {
   constraint_name: string;
   constraint_type: ConstraintType;
+  constraint_definition?: string;
+  column_names?: string[];
+  expression?: string;
+  comment?: string;
 }
 
 export interface ITriggerInfo {

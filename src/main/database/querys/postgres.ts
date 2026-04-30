@@ -27,6 +27,11 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
   SELECT
       c.column_name,
       c.data_type,
+      c.udt_name,
+      c.character_maximum_length,
+      c.numeric_precision,
+      c.numeric_scale,
+      c.datetime_precision,
       c.column_default,
       pgd.description,
       (c.is_nullable = 'YES') AS is_nullable
@@ -50,18 +55,38 @@ const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
     a.attname  AS column_name,
     ns_ref.nspname AS reference_table_schema,
     t_ref.relname  AS reference_table_name,
-    a_ref.attname  AS reference_column_name
+    a_ref.attname  AS reference_column_name,
+    pg_catalog.pg_get_constraintdef(c.oid) AS constraint_definition,
+    cols.ordinality AS constraint_order,
+    obj_description(c.oid, 'pg_constraint') AS comment,
+    (CASE c.confdeltype
+      WHEN 'a' THEN 'NO ACTION'
+      WHEN 'r' THEN 'RESTRICT'
+      WHEN 'c' THEN 'CASCADE'
+      WHEN 'n' THEN 'SET NULL'
+      WHEN 'd' THEN 'SET DEFAULT'
+      ELSE NULL END
+    ) AS remove_rule,
+    (CASE c.confupdtype
+      WHEN 'a' THEN 'NO ACTION'
+      WHEN 'r' THEN 'RESTRICT'
+      WHEN 'c' THEN 'CASCADE'
+      WHEN 'n' THEN 'SET NULL'
+      WHEN 'd' THEN 'SET DEFAULT'
+      ELSE NULL END
+    ) AS update_rule
   FROM pg_catalog.pg_constraint c
   JOIN pg_catalog.pg_class       t      ON t.oid      = c.conrelid
   JOIN pg_catalog.pg_namespace   ns     ON ns.oid     = t.relnamespace
   JOIN pg_catalog.pg_class       t_ref  ON t_ref.oid  = c.confrelid
   JOIN pg_catalog.pg_namespace   ns_ref ON ns_ref.oid = t_ref.relnamespace
-  CROSS JOIN LATERAL unnest(c.conkey, c.confkey) AS cols(src_col, ref_col)
+  CROSS JOIN LATERAL unnest(c.conkey, c.confkey) WITH ORDINALITY AS cols(src_col, ref_col, ordinality)
   JOIN pg_catalog.pg_attribute a     ON a.attrelid     = c.conrelid  AND a.attnum     = cols.src_col
   JOIN pg_catalog.pg_attribute a_ref ON a_ref.attrelid = c.confrelid AND a_ref.attnum = cols.ref_col
   WHERE c.contype = 'f'
   AND ns.nspname = '${schema}'
-  AND t.relname  = '${table}';
+  AND t.relname  = '${table}'
+  ORDER BY c.conname, cols.ordinality;
 `;
 
 const getTableUsedAsReference = ({ schema, table }: ITableWithSchema) => /* sql */ `
@@ -94,13 +119,24 @@ const getTableRestrictions = ({ schema, table }) => /* sql */ `
       WHEN con.contype = 'u' THEN 'unique_key'
       WHEN con.contype = 'c' THEN 'check'
       ELSE NULL END
-    ) AS constraint_type
+    ) AS constraint_type,
+    pg_catalog.pg_get_constraintdef(con.oid) AS constraint_definition,
+    pg_catalog.pg_get_expr(con.conbin, con.conrelid) AS expression,
+    COALESCE(
+      json_agg(att.attname ORDER BY cols.ordinality) FILTER (WHERE att.attname IS NOT NULL),
+      '[]'::json
+    ) AS column_names,
+    obj_description(con.oid, 'pg_constraint') AS comment
   FROM pg_catalog.pg_constraint con
   INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
   INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
+  LEFT JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ordinality) ON TRUE
+  LEFT JOIN pg_catalog.pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = cols.attnum
   WHERE con.contype IN ('p', 'u', 'c')
   AND nsp.nspname = '${schema}'
   AND rel.relname = '${table}'
+  GROUP BY con.oid, con.conname, con.contype, con.conbin, con.conrelid
+  ORDER BY con.conname
 `;
 
 const getTotalRowsCountInTable = ({
