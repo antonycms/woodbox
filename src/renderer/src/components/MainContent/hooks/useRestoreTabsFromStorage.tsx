@@ -1,5 +1,7 @@
 import React from 'react';
 import { IAppTab, useAppTabContext } from '@renderer/contexts/AppTab';
+import { useStoreContext } from '@renderer/contexts/Store';
+import { useToast } from '@renderer/contexts/Toast';
 import type { IAppTabsSession } from '@renderer/components/MainContent';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
@@ -9,6 +11,8 @@ const APP_TABS_SESSION_STORAGE_KEY = 'app_tabs_session';
 
 export const usRestoreTabsFromStorage = () => {
   const { restoreTabs } = useAppTabContext();
+  const { loadConnectionInfo } = useStoreContext();
+  const { showToast } = useToast();
 
   React.useEffect(() => {
     const rawSession = window.localStorage.getItem(APP_TABS_SESSION_STORAGE_KEY);
@@ -22,8 +26,13 @@ export const usRestoreTabsFromStorage = () => {
       const session = JSON.parse(rawSession) as IAppTabsSession;
 
       const restoredTabs: IAppTab[] = [];
+      const connectionIds = new Set<string>();
 
       for (const tab of session.tabs || []) {
+        if (tab.data?.id_connection) {
+          connectionIds.add(tab.data.id_connection);
+        }
+
         if (tab.data?.type === 'query-editor') {
           const { id_connection, id_script } = tab.data;
 
@@ -68,6 +77,18 @@ export const usRestoreTabsFromStorage = () => {
           });
         }
       }
+
+      Promise.allSettled([...connectionIds].map((id) => loadConnectionInfo(id))).then((results) => {
+        results.forEach((result) => {
+          if (result.status === 'rejected') {
+            showToast({
+              type: 'error',
+              title: 'Erro ao restaurar conexão',
+              description: result.reason?.message,
+            });
+          }
+        });
+      });
 
       restoreTabs(restoredTabs, session.activeTabId);
     } catch {
