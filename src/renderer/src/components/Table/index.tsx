@@ -348,7 +348,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
                   const row = serializedRowsRef.current[rowIndex];
                   const col = columnsRef.current[colIndex];
                   const value = row?.[col?.attribute];
-                  return value === undefined ? '' : String(value);
+                  return value === undefined
+                    ? ''
+                    : typeof value === 'object'
+                    ? JSON.stringify(value)
+                    : String(value);
                 })
                 .join(', ');
             });
@@ -474,7 +478,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
             return colIndices
               .map((ci) => {
                 const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
-                return v === undefined ? '' : String(v);
+                return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
               })
               .join(', ');
           });
@@ -486,7 +490,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
             return columnsRef.current
               .map((col) => {
                 const v = row?.[col.attribute];
-                return v === undefined ? '' : String(v);
+                return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
               })
               .join(', ');
           });
