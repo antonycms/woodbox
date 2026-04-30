@@ -1,6 +1,6 @@
-export interface IColumn {
+export interface IColumn<ColumnType = any> {
   label: string;
-  attribute: string;
+  attribute: keyof ColumnType;
   resizable?: boolean;
   sortable?: boolean;
   editable?: boolean;

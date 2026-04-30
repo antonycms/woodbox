@@ -10,8 +10,8 @@ import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IColumn } from './dtos';
 
-interface ITableProps {
-  rowKeyExtractor?(rowData, index: number): React.Key;
+interface ITableProps<Row = any> {
+  rowKeyExtractor?(rowData: Row, index: number): React.Key;
   onContextMenu?(
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: { cellsText: string; rowsText: string; rowsJson: string },
@@ -19,12 +19,12 @@ interface ITableProps {
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any): void;
   editedRows?: Map<React.Key, any>;
-  rows: any[];
-  columns: IColumn[];
+  rows: Row[];
+  columns: IColumn<Row>[];
   loading?: boolean;
-  onCopy?(selectedRows: any[]): void;
-  onPaste?(selectedRows: any[]): void;
-  onSelectRow?(rowsData: any[]): void;
+  onCopy?(selectedRows: Row[]): void;
+  onPaste?(selectedRows: Row[]): void;
+  onSelectRow?(selectedRows: Row[]): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
 
@@ -32,7 +32,7 @@ const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => ind
 
 const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
 
-const Table = (props: ITableProps) => {
+function Table<Row = any>(props: ITableProps<Row>) {
   const {
     columns = [],
     rows = [],
@@ -208,7 +208,7 @@ const Table = (props: ITableProps) => {
           return (
             <TableColumn
               resizable
-              key={column.attribute}
+              key={String(column.attribute)}
               columnIndex={columnIndex}
               rowHeight={rowHeight}
               width={width}
@@ -270,7 +270,7 @@ const Table = (props: ITableProps) => {
     const { columnsIndexToRender } = columnsDetails;
     const rowsToRender = serializedRows.slice(first, last);
 
-    return rowsToRender.map((row) => {
+    return rowsToRender.map((row: any) => {
       const indexRow = row.__index_row;
       const styleRow = row.__style;
       const keyRow = row.__key_row;
@@ -281,7 +281,7 @@ const Table = (props: ITableProps) => {
         <TableRow key={keyRow} row={row} isSelected={isSelected}>
           {columnsIndexToRender.map((columnIndex) => {
             const column = columns[columnIndex];
-            const rowColumnKey = `${keyRow}:${column.attribute}`;
+            const rowColumnKey = `${keyRow}:${String(column.attribute)}`;
             const isEditing = rowColumnKey === cellEditingKey;
             const width = columnsSize[columnIndex];
             const editedValue = editedRow?.[column.attribute];
@@ -300,7 +300,7 @@ const Table = (props: ITableProps) => {
                 onEditCell={onSaveCell}
                 onBlurCell={onBlurCell}
                 width={width}
-                name={column.attribute}
+                name={String(column.attribute)}
                 value={value}
                 isLink={column.isLink}
                 onFkCellClick={onCellLinkClick}
@@ -522,6 +522,6 @@ const Table = (props: ITableProps) => {
       </div>
     </div>
   );
-};
+}
 
 export default Table;
