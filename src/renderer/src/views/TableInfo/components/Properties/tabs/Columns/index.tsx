@@ -11,7 +11,7 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import ModalGenerateDDL from './components/ModalGenerateDDL';
+import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 
 const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
