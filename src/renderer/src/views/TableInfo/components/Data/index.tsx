@@ -248,7 +248,7 @@ const Data = ({
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
         <input
           className={styles.filterInput}
-          placeholder="WHERE filter (ex: id = 1 and status = true)"
+          placeholder="Filtrar resultados (ex: id = 1 and status = true)"
           value={whereInput}
           onChange={(e) => !filterLocked && setWhereInput(e.target.value)}
           onKeyDown={handleFilterKeyDown}
