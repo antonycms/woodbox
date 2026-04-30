@@ -238,7 +238,8 @@ const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
       WHEN 'D' THEN 'disabled'
       WHEN 'R' THEN 'replica'
       WHEN 'A' THEN 'always'
-    END AS status
+    END AS status,
+    pg_catalog.pg_get_triggerdef(t.oid, true) AS trigger_definition
   FROM pg_catalog.pg_trigger t
   JOIN pg_catalog.pg_class c     ON c.oid = t.tgrelid
   JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace

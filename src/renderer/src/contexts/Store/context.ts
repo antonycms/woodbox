@@ -95,6 +95,7 @@ export interface ITriggerInfo {
   orientation: string;
   function_name: string;
   status: string;
+  trigger_definition?: string;
 }
 
 export interface IDataTable {
