@@ -705,7 +705,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         onCellLinkClick={(attribute, value) => {
                           const ref = tabFkMap.get(attribute);
                           if (!ref || value === null || value === undefined) return;
-                          const tabTitle = `${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
+                          const tabTitle = `${ref.reference_table_schema ? `${ref.reference_table_schema}.` : ''}${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
                           const escapedValue = String(value).replace(/'/g, "''");
                           const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
                           addTab({

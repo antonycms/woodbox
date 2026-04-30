@@ -25,7 +25,7 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
         } else {
           addTab({
             id: tabId,
-            title: tableMatch.table_name,
+            title: `${tableSchema ? `${tableSchema}.` : ''}${tableMatch.table_name}`,
             data: {
               type: 'table-info',
               id_connection,
@@ -56,7 +56,7 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
         } else {
           addTab({
             id: tabId,
-            title: fnMatch.function_name,
+            title: `${fnSchema ? `${fnSchema}.` : ''}${fnMatch.function_name}`,
             data: {
               type: 'function-info',
               id_connection,

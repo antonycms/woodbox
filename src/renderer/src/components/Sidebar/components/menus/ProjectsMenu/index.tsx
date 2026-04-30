@@ -206,7 +206,7 @@ const ProjectsMenu = () => {
       } else {
         addTab({
           id: tabId,
-          title: function_name,
+          title: `${schema ? `${schema}.` : ''}${function_name}`,
           data: {
             type: 'function-info',
             id_connection,

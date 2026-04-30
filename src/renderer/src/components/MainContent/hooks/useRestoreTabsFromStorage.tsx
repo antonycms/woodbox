@@ -38,6 +38,7 @@ export const usRestoreTabsFromStorage = () => {
 
           restoredTabs.push({
             ...tab,
+            title: `${schema ? `${schema}.` : ''}${table}`,
             component: () => (
               <TableInfo
                 id_connection={id_connection}
@@ -56,6 +57,7 @@ export const usRestoreTabsFromStorage = () => {
 
           restoredTabs.push({
             ...tab,
+            title: `${schema ? `${schema}.` : ''}${function_name}`,
             component: () => (
               <FunctionInfo
                 id_connection={id_connection}

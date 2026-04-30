@@ -31,7 +31,7 @@ const TableInfo = (props: ITableInfoProps) => {
       } else {
         addTab({
           id: tabId,
-          title: table,
+          title: `${schema ? `${schema}.` : ''}${table}`,
           data: {
             type: 'table-info',
             id_connection: idConnection,
@@ -55,7 +55,7 @@ const TableInfo = (props: ITableInfoProps) => {
       filterColumn: string,
       filterValue: string,
     ) => {
-      const tabTitle = `${table} [${filterColumn}=${filterValue}]`;
+      const tabTitle = `${schema ? `${schema}.` : ''}${table} [${filterColumn}=${filterValue}]`;
       const escapedValue = filterValue.replace(/'/g, "''");
       const initialWhere = `"${filterColumn}" = '${escapedValue}'`;
       addTab({
