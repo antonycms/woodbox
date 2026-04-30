@@ -52,15 +52,14 @@ const ResizableContainer = ({
     }
 
     const { currentTarget, pointerId } = event;
-    const { right } = currentTarget.getBoundingClientRect();
-    const offset = right - event.clientX;
+    const startX = event.clientX;
+    const startWidth = width || currentTarget.parentElement?.getBoundingClientRect().width || 0;
 
     function onPointerMove(event: PointerEvent) {
-      const { left } = currentTarget.getBoundingClientRect();
-      const width = refContentDiv.current.offsetWidth + event.clientX + offset - left;
+      const width = startWidth + event.clientX - startX;
 
       if (width > 0) {
-        onResize({ width: clampSize(width, minWidth, maxWidth) });
+        onResize?.({ width: clampSize(width, minWidth, maxWidth) });
       }
     }
 

@@ -1,9 +1,6 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
-import ResizableContainer, {
-  IResizableDivProps,
-  OnResizeCallback,
-} from '@renderer/components/ResizableContainer';
+import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
 import styles from '../../styles.module.css';
 
 interface ITableColumnProps {
@@ -103,47 +100,66 @@ const TableColumn = ({
     onEditCell?.(indexRow, name, editedValue.current);
   }, [value, indexRow, name, onEditCell, onBlurCell]);
 
-  const ColumnComponent = React.useMemo(() => {
-    const Cp = (propsLocal: IResizableDivProps | React.InputHTMLAttributes<any>) => {
-      if (resizable) {
-        const props = propsLocal as IResizableDivProps;
+  const content = isEditing ? null : isLinkClickable ? (
+    <span
+      style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
+      title="Ctrl+click para abrir linha referenciada"
+      onClick={(e: React.MouseEvent) => {
+        if (e.ctrlKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          onFkCellClick?.(name, value);
+        }
+      }}
+    >
+      {serializedValue}
+    </span>
+  ) : (
+    serializedValue
+  );
 
-        return (
-          <ResizableContainer
-            {...props}
-            width={props.width as number}
-            height={props.height as number}
-            minWidth={minWidth}
-            onResize={onResize}
-          />
-        );
-      }
+  if (resizable) {
+    return (
+      <ResizableContainer
+        className={className}
+        title={title}
+        style={style}
+        width={width}
+        height={rowHeight}
+        minWidth={minWidth}
+        onResize={onResize}
+        onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+        onClick={() => {
+          if (isHeaderColumn) return onClick?.();
+          onSelectCell?.(indexRow, columnIndex);
+        }}
+      >
+        {content}
+      </ResizableContainer>
+    );
+  }
 
-      const props = propsLocal as React.InputHTMLAttributes<any>;
-
-      if (isEditing) {
-        return (
-          <input
-            {...props}
-            autoFocus
-            spellCheck={false}
-            defaultValue={serializedValue}
-            onBlur={handleSaveInputValue}
-            onChange={(e) => {
-              editedValue.current = e.target.value;
-            }}
-          />
-        );
-      }
-
-      return <div {...props} />;
-    };
-
-    return Cp;
-  }, [resizable, minWidth, isEditing, handleSaveInputValue]);
+  if (isEditing) {
+    return (
+      <input
+        className={className}
+        title={title}
+        style={style}
+        autoFocus
+        spellCheck={false}
+        defaultValue={serializedValue}
+        onBlur={handleSaveInputValue}
+        onChange={(e) => {
+          editedValue.current = e.target.value;
+        }}
+        onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+        onClick={() => onSelectCell?.(indexRow, columnIndex)}
+      />
+    );
+  }
 
   return (
-    <ColumnComponent
+    <div
       className={className}
       title={title}
       style={style}
@@ -153,24 +169,8 @@ const TableColumn = ({
         onSelectCell?.(indexRow, columnIndex);
       }}
     >
-      {isEditing ? null : isLinkClickable ? (
-        <span
-          style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
-          title="Ctrl+click para abrir linha referenciada"
-          onClick={(e: React.MouseEvent) => {
-            if (e.ctrlKey) {
-              e.preventDefault();
-              e.stopPropagation();
-              onFkCellClick?.(name, value);
-            }
-          }}
-        >
-          {serializedValue}
-        </span>
-      ) : (
-        serializedValue
-      )}
-    </ColumnComponent>
+      {content}
+    </div>
   );
 };
 

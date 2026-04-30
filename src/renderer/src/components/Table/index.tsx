@@ -55,7 +55,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const rowHeight = React.useMemo(() => 35, []);
   const maxColumnSize = React.useMemo(() => 760, []);
   const defaultColumnSize = React.useMemo(() => 200, []);
-  const [columnsSize, setColumnsSize] = useStateWithDebounce<number[]>([]);
+  const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
@@ -154,25 +154,27 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return { width, columnsSizeStr };
   }, [columnsSize]);
 
-  const onResize = React.useCallback((index: number, size: number) => {
-    const minSizeAllowed = minColumnsSize[index];
-    let allowedSize = size;
+  const onResize = React.useCallback(
+    (index: number, size: number) => {
+      const minSizeAllowed = minColumnsSize[index] ?? 0;
+      let allowedSize = size;
 
-    if (size <= minSizeAllowed) {
-      allowedSize = minSizeAllowed;
-    } //
-    else if (allowedSize > maxColumnSize) {
-      allowedSize = maxColumnSize;
-    }
+      if (size <= minSizeAllowed) {
+        allowedSize = minSizeAllowed;
+      } else if (allowedSize > maxColumnSize) {
+        allowedSize = maxColumnSize;
+      }
 
-    setColumnsSize((prevState) => {
-      const nextState = [...prevState];
+      setColumnsSize((prevState) => {
+        const nextState = [...prevState];
 
-      nextState[index] = allowedSize;
+        nextState[index] = allowedSize;
 
-      return nextState;
-    });
-  }, []);
+        return nextState;
+      });
+    },
+    [maxColumnSize, minColumnsSize],
+  );
 
   const checkScrollEnd = React.useCallback(() => {
     const element = refScrollContainer.current;
@@ -238,7 +240,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         })}
       </TableRow>
     );
-  }, [columns, columnsDetails, getSortLabel, minColumnsSize, onSort]);
+  }, [columns, columnsDetails, getSortLabel, minColumnsSize, onResize, onSort]);
 
   const onSaveCell = React.useCallback(
     (indexRow: number, rowColumnKey: string, newValue: string | number) => {
