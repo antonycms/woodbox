@@ -6,6 +6,7 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
+import TableAnalysisView from './components/TableAnalysisView';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ITableSort } from './dtos';
@@ -58,8 +59,15 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
+  const [analysisMode, setAnalysisMode] = React.useState(false);
+  const [analysisRows, setAnalysisRows] = React.useState<any[]>([]);
+  const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
   const lastSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
+  const lastAnalysisSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(
+    null,
+  );
+  const analysisArrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const [scroll, setScroll] = useStateWithDebounce({ left: 0, top: 0 }, 20);
   const { height: heightBodyContainer, width: widthBodyContainer } = useResize({
@@ -69,6 +77,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const cellEditingKeyRef = React.useRef(cellEditingKey);
   cellEditingKeyRef.current = cellEditingKey;
+  const analysisModeRef = React.useRef(analysisMode);
+  analysisModeRef.current = analysisMode;
   const columnsRef = React.useRef(columns);
   columnsRef.current = columns;
   const columnsSizeRef = React.useRef(columnsSize);
@@ -93,6 +103,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const selectedCellsRef = React.useRef(selectedCells);
   selectedCellsRef.current = selectedCells;
+  const analysisSelectedCellsRef = React.useRef(analysisSelectedCells);
+  analysisSelectedCellsRef.current = analysisSelectedCells;
+  const analysisRowsRef = React.useRef(analysisRows);
+  analysisRowsRef.current = analysisRows;
 
   const selectedRows = React.useMemo(() => {
     const map = new Map<React.Key, any>();
@@ -106,6 +120,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const selectedRowsRef = React.useRef(selectedRows);
   selectedRowsRef.current = selectedRows;
+
+  const columnsSignature = React.useMemo(
+    () => columns.map((column) => String(column.attribute)).join('\0'),
+    [columns],
+  );
 
   const columnsDetails = React.useMemo(() => {
     const columnsIndexToRender: number[] = [];
@@ -284,6 +303,64 @@ function Table<Row = any>(props: ITableProps<Row>) {
     }
   }, []);
 
+  const selectAnalysisRange = React.useCallback(
+    (
+      anchor: { rowIndex: number; colIndex: number },
+      target: { rowIndex: number; colIndex: number },
+    ) => {
+      const rowsToAnalyze = analysisRowsRef.current;
+      const anchorRowPosition = rowsToAnalyze.findIndex(
+        (row) => row.__index_row === anchor.rowIndex,
+      );
+      const targetRowPosition = rowsToAnalyze.findIndex(
+        (row) => row.__index_row === target.rowIndex,
+      );
+
+      if (anchorRowPosition === -1 || targetRowPosition === -1) return;
+
+      const minField = Math.min(anchor.colIndex, target.colIndex);
+      const maxField = Math.max(anchor.colIndex, target.colIndex);
+      const minRowPosition = Math.min(anchorRowPosition, targetRowPosition);
+      const maxRowPosition = Math.max(anchorRowPosition, targetRowPosition);
+
+      setAnalysisSelectedCells(() => {
+        const next = new Set<string>();
+        for (let rowPosition = minRowPosition; rowPosition <= maxRowPosition; rowPosition++) {
+          const rowIndex = rowsToAnalyze[rowPosition]?.__index_row;
+          if (rowIndex === undefined) continue;
+          for (let fieldIndex = minField; fieldIndex <= maxField; fieldIndex++) {
+            next.add(cellKey(rowIndex, fieldIndex));
+          }
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleSelectAnalysisCell = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      if (!window.shiftPressed || !lastAnalysisSelectedCellRef.current) {
+        lastAnalysisSelectedCellRef.current = { rowIndex, colIndex };
+      }
+      analysisArrowCursorRef.current = { rowIndex, colIndex };
+
+      if (window.ctrlPressed) {
+        setAnalysisSelectedCells((prev) => {
+          const next = new Set(prev);
+          const key = cellKey(rowIndex, colIndex);
+          next.has(key) ? next.delete(key) : next.add(key);
+          return next;
+        });
+      } else if (window.shiftPressed && lastAnalysisSelectedCellRef.current) {
+        selectAnalysisRange(lastAnalysisSelectedCellRef.current, { rowIndex, colIndex });
+      } else {
+        setAnalysisSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
+      }
+    },
+    [selectAnalysisRange],
+  );
+
   const virtualRows = (() => {
     const { first, last } = rowsDetails;
     const { columnsIndexToRender } = columnsDetails;
@@ -340,14 +417,32 @@ function Table<Row = any>(props: ITableProps<Row>) {
     rowHeight: `${rowHeight}px`,
     totalRows: rows.length,
     columnsSize: tableDetails.columnsSizeStr,
+    analysisRows: analysisRows.length,
   });
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
+      if (ev.key === 'Tab' && !cellEditingKeyRef.current) {
+        const hasSelectedRows = selectedRowsRef.current.size > 0;
+        if (analysisMode) {
+          ev.preventDefault();
+          setAnalysisMode(false);
+        } else if (hasSelectedRows) {
+          ev.preventDefault();
+          setAnalysisRows(
+            [...selectedRowsRef.current.values()].sort((a, b) => a.__index_row - b.__index_row),
+          );
+          setAnalysisSelectedCells(new Set(selectedCellsRef.current));
+          lastAnalysisSelectedCellRef.current = lastSelectedCellRef.current;
+          analysisArrowCursorRef.current = lastSelectedCellRef.current;
+          setAnalysisMode(true);
+        }
+      }
+
       const isCopy = window.ctrlPressed && ev.key === 'c';
 
       if (isCopy) {
-        const cells = selectedCellsRef.current;
+        const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
         if (cells.size > 0) {
           const rowMap = new Map<number, number[]>();
 
@@ -385,14 +480,78 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, []);
+  }, [analysisMode]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
+      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key);
+
+      if (analysisModeRef.current) {
+        if (cellEditingKeyRef.current || !isArrow) return;
+
+        ev.preventDefault();
+
+        const rowsToAnalyze = analysisRowsRef.current;
+        const totalRows = rowsToAnalyze.length;
+        const totalFields = columnsRef.current.length;
+        if (!totalRows || !totalFields) return;
+
+        const anchor = lastAnalysisSelectedCellRef.current;
+        const fallbackCell = {
+          rowIndex: rowsToAnalyze[0].__index_row,
+          colIndex: 0,
+        };
+        const cursor = analysisArrowCursorRef.current ?? anchor ?? fallbackCell;
+        let fieldIndex = cursor.colIndex;
+        let rowPosition = rowsToAnalyze.findIndex((row) => row.__index_row === cursor.rowIndex);
+        if (rowPosition === -1) rowPosition = 0;
+
+        if (ev.key === 'ArrowUp') fieldIndex = Math.max(0, fieldIndex - 1);
+        else if (ev.key === 'ArrowDown') fieldIndex = Math.min(totalFields - 1, fieldIndex + 1);
+        else if (ev.key === 'ArrowLeft') rowPosition = Math.max(0, rowPosition - 1);
+        else if (ev.key === 'ArrowRight') rowPosition = Math.min(totalRows - 1, rowPosition + 1);
+
+        const target = {
+          rowIndex: rowsToAnalyze[rowPosition].__index_row,
+          colIndex: fieldIndex,
+        };
+
+        analysisArrowCursorRef.current = target;
+
+        if (ev.shiftKey && anchor) {
+          selectAnalysisRange(anchor, target);
+        } else {
+          lastAnalysisSelectedCellRef.current = target;
+          setAnalysisSelectedCells(new Set([cellKey(target.rowIndex, target.colIndex)]));
+        }
+
+        const container = refScrollContainer.current?.querySelector(
+          `.${styles.analysis_container}`,
+        ) as HTMLElement;
+        if (!container) return;
+
+        const cellTop = (fieldIndex + 1) * rowHeight;
+        const cellBottom = cellTop + rowHeight;
+        if (cellTop < container.scrollTop) {
+          container.scrollTop = cellTop;
+        } else if (cellBottom > container.scrollTop + container.clientHeight) {
+          container.scrollTop = cellBottom - container.clientHeight;
+        }
+
+        const cellLeft = 240 + rowPosition * 280;
+        const cellRight = cellLeft + 280;
+        if (cellLeft < container.scrollLeft) {
+          container.scrollLeft = cellLeft;
+        } else if (cellRight > container.scrollLeft + container.clientWidth) {
+          container.scrollLeft = cellRight - container.clientWidth;
+        }
+
+        return;
+      }
+
       const anchor = lastSelectedCellRef.current;
       if (!anchor || cellEditingKeyRef.current) return;
 
-      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key);
       if (!isArrow) return;
 
       ev.preventDefault();
@@ -451,7 +610,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, []);
+  }, [selectAnalysisRange]);
 
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
@@ -471,15 +630,23 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onSelectRow?.([...selectedRows.values()]);
   }, [selectedRows]);
 
+  React.useEffect(() => {
+    setAnalysisMode(false);
+    setAnalysisRows([]);
+    setAnalysisSelectedCells(new Set());
+    lastAnalysisSelectedCellRef.current = null;
+    analysisArrowCursorRef.current = null;
+  }, [rows, columnsSignature]);
+
   return (
     <div
       ref={refScrollContainer}
-      onScroll={onScroll}
+      onScroll={analysisMode ? undefined : onScroll}
       className={styles.table_outside_container}
       onContextMenu={(event) => {
         if (!onContextMenu) return;
 
-        const cells = selectedCellsRef.current;
+        const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
         const rowMap = new Map<number, number[]>();
 
         cells.forEach((key) => {
@@ -537,10 +704,25 @@ function Table<Row = any>(props: ITableProps<Row>) {
     >
       {!!loading && <MultiplesBarLoading />}
 
-      <div className={styles.table_container}>
-        {virtualHeader}
-        {virtualRows}
-      </div>
+      {analysisMode ? (
+        <TableAnalysisView
+          columns={columns}
+          rows={analysisRows}
+          rowHeight={rowHeight}
+          editedRows={editedRows}
+          cellEditingKey={cellEditingKey}
+          selectedCells={analysisSelectedCells}
+          onDoubleClick={setCellEditingKey}
+          onEditCell={onSaveCell}
+          onBlurCell={onBlurCell}
+          onSelectCell={handleSelectAnalysisCell}
+        />
+      ) : (
+        <div className={styles.table_container}>
+          {virtualHeader}
+          {virtualRows}
+        </div>
+      )}
     </div>
   );
 }
