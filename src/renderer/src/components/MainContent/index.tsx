@@ -1,17 +1,25 @@
 import React from 'react';
 import { TabBar, TabWindow, TabContent, IActiveTabContextMenu } from '@renderer/components/Tabs';
 import { Welcolme } from '@renderer/components/Welcome';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { IAppTab, IAppTabData, useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { copyToClipboard } from '@renderer/utils/methods';
+import { IContextMenuOption } from '@renderer/components/ContextMenu';
+import { usRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 import styles from './styles.module.css';
-import { IContextMenuOption } from '../ContextMenu';
+
+export interface IAppTabsSession {
+  tabs?: Array<Pick<IAppTab, 'id' | 'title' | 'unsaved'> & { data?: IAppTabData }>;
+  activeTabId?: string;
+}
 
 export const MainContent = () => {
   const { tabs, removeTab, moveTab, activeTabId, setActiveTabId } = useAppTabContext();
   const {
     activeTheme: { mainTab: theme },
   } = useThemeContext();
+
+  usRestoreTabsFromStorage();
 
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
     () => [
