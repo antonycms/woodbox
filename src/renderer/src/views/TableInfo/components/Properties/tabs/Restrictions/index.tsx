@@ -58,6 +58,7 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
         columns={[
           { label: 'Nome', attribute: 'constraint_name' },
           { label: 'Tipo', attribute: 'constraint_type' },
+          { label: 'Colunas', attribute: 'column_names' },
           { label: 'Expressão', attribute: 'expression' },
           { label: 'Comentário', attribute: 'comment' },
         ]}
