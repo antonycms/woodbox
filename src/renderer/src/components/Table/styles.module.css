@@ -103,9 +103,7 @@
 
 .analysis_grid {
   display: grid;
-  grid-template-columns:
-    minmax(240px, max-content)
-    repeat(var(--analysisRows), minmax(280px, 1fr));
+  grid-template-columns: var(--analysisColumnsSize);
   min-width: max-content;
   min-height: 100%;
 }
@@ -126,6 +124,7 @@
   background-color: var(--backgroundColorRowOdd);
   font-size: 14px;
   user-select: none;
+  min-width: 0;
 }
 
 .analysis_header {
@@ -139,6 +138,12 @@
 .analysis_header:first-child {
   left: 0;
   z-index: 4;
+}
+
+.analysis_header > div:first-child {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .analysis_field {

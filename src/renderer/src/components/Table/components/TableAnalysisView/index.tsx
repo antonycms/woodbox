@@ -2,14 +2,18 @@ import React from 'react';
 import type { IColumn } from '../../dtos';
 import styles from '../../styles.module.css';
 import { classes } from '@renderer/styles/theme';
+import ResizableContainer from '@renderer/components/ResizableContainer';
 
 interface ITableAnalysisViewProps<Row = any> {
   columns: IColumn<Row>[];
   rows: Row[];
   rowHeight: number;
+  columnsSize: number[];
+  minColumnsSize: number[];
   editedRows?: Map<React.Key, any>;
   cellEditingKey?: string;
   selectedCells?: Set<string>;
+  onResizeColumn?(index: number, size: number): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
   onEditCell?(rowIndex: number, attribute: string, value: string | number): void;
@@ -64,26 +68,49 @@ const TableAnalysisView = ({
   columns,
   rows,
   rowHeight,
+  columnsSize,
+  minColumnsSize,
   editedRows,
   cellEditingKey,
   selectedCells,
+  onResizeColumn,
   onDoubleClick,
   onBlurCell,
   onEditCell,
   onSelectCell,
 }: ITableAnalysisViewProps) => {
+  const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
+
   return (
     <div
       className={styles.analysis_container}
       style={{ '--rowHeight': `${rowHeight}px` } as React.CSSProperties}
     >
-      <div className={styles.analysis_grid}>
-        <div className={styles.analysis_header}>Coluna</div>
+      <div
+        className={styles.analysis_grid}
+        style={{ '--analysisColumnsSize': columnsSizeStyle } as React.CSSProperties}
+      >
+        <ResizableContainer
+          className={styles.analysis_header}
+          width={columnsSize[0]}
+          minWidth={minColumnsSize[0]}
+          height={rowHeight}
+          onResize={(size) => onResizeColumn?.(0, size.width || 0)}
+        >
+          Coluna
+        </ResizableContainer>
 
-        {rows.map((row: any) => (
-          <div className={styles.analysis_header} key={row.__key_row}>
+        {rows.map((row: any, rowIndex) => (
+          <ResizableContainer
+            className={styles.analysis_header}
+            key={row.__key_row}
+            width={columnsSize[rowIndex + 1]}
+            minWidth={minColumnsSize[rowIndex + 1]}
+            height={rowHeight}
+            onResize={(size) => onResizeColumn?.(rowIndex + 1, size.width || 0)}
+          >
             Linha #{Number(row.__index_row) + 1}
-          </div>
+          </ResizableContainer>
         ))}
 
         {columns.map((column, columnIndex) => (

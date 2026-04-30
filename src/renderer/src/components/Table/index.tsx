@@ -61,6 +61,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [analysisMode, setAnalysisMode] = React.useState(false);
   const [analysisRows, setAnalysisRows] = React.useState<any[]>([]);
+  const [analysisColumnsSize, setAnalysisColumnsSize] = React.useState<number[]>([]);
+  const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
   const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
   const lastSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
@@ -107,6 +109,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
   analysisSelectedCellsRef.current = analysisSelectedCells;
   const analysisRowsRef = React.useRef(analysisRows);
   analysisRowsRef.current = analysisRows;
+  const analysisColumnsSizeRef = React.useRef(analysisColumnsSize);
+  analysisColumnsSizeRef.current = analysisColumnsSize;
 
   const selectedRows = React.useMemo(() => {
     const map = new Map<React.Key, any>();
@@ -193,6 +197,28 @@ function Table<Row = any>(props: ITableProps<Row>) {
       });
     },
     [maxColumnSize, minColumnsSize],
+  );
+
+  const onResizeAnalysisColumn = React.useCallback(
+    (index: number, size: number) => {
+      const minSizeAllowed = analysisMinColumnsSize[index] ?? 0;
+      let allowedSize = size;
+
+      if (size <= minSizeAllowed) {
+        allowedSize = minSizeAllowed;
+      } else if (allowedSize > maxColumnSize) {
+        allowedSize = maxColumnSize;
+      }
+
+      setAnalysisColumnsSize((prevState) => {
+        const nextState = [...prevState];
+
+        nextState[index] = allowedSize;
+
+        return nextState;
+      });
+    },
+    [analysisMinColumnsSize, maxColumnSize],
   );
 
   const checkScrollEnd = React.useCallback(() => {
@@ -429,9 +455,27 @@ function Table<Row = any>(props: ITableProps<Row>) {
           setAnalysisMode(false);
         } else if (hasSelectedRows) {
           ev.preventDefault();
-          setAnalysisRows(
-            [...selectedRowsRef.current.values()].sort((a, b) => a.__index_row - b.__index_row),
+          const rowsToAnalyze = [...selectedRowsRef.current.values()].sort(
+            (a, b) => a.__index_row - b.__index_row,
           );
+          const firstColumnMinSize = Math.ceil(
+            Math.max(
+              0,
+              ...columnsRef.current.map((column) => calculateTextHtmlWidth(column.label)),
+            ) + 40,
+          );
+          const rowColumnsMinSize = rowsToAnalyze.map((row) =>
+            Math.ceil(calculateTextHtmlWidth(`Linha #${Number(row.__index_row) + 1}`) + 40),
+          );
+          const minSizes = [firstColumnMinSize, ...rowColumnsMinSize];
+          const sizes = minSizes.map((size) => {
+            const defaultSize = size > defaultColumnSize ? size : defaultColumnSize;
+            return defaultSize > maxColumnSize ? maxColumnSize : defaultSize;
+          });
+
+          setAnalysisRows(rowsToAnalyze);
+          setAnalysisMinColumnsSize(minSizes);
+          setAnalysisColumnsSize(sizes);
           setAnalysisSelectedCells(new Set(selectedCellsRef.current));
           lastAnalysisSelectedCellRef.current = lastSelectedCellRef.current;
           analysisArrowCursorRef.current = lastSelectedCellRef.current;
@@ -538,8 +582,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
           container.scrollTop = cellBottom - container.clientHeight;
         }
 
-        const cellLeft = 240 + rowPosition * 280;
-        const cellRight = cellLeft + 280;
+        const sizes = analysisColumnsSizeRef.current;
+        let cellLeft = sizes[0] || 0;
+        for (let i = 1; i <= rowPosition; i++) cellLeft += sizes[i] || 0;
+        const cellWidth = sizes[rowPosition + 1] || 0;
+        const cellRight = cellLeft + cellWidth;
         if (cellLeft < container.scrollLeft) {
           container.scrollLeft = cellLeft;
         } else if (cellRight > container.scrollLeft + container.clientWidth) {
@@ -633,6 +680,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
   React.useEffect(() => {
     setAnalysisMode(false);
     setAnalysisRows([]);
+    setAnalysisColumnsSize([]);
+    setAnalysisMinColumnsSize([]);
     setAnalysisSelectedCells(new Set());
     lastAnalysisSelectedCellRef.current = null;
     analysisArrowCursorRef.current = null;
@@ -709,9 +758,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
           columns={columns}
           rows={analysisRows}
           rowHeight={rowHeight}
+          columnsSize={analysisColumnsSize}
+          minColumnsSize={analysisMinColumnsSize}
           editedRows={editedRows}
           cellEditingKey={cellEditingKey}
           selectedCells={analysisSelectedCells}
+          onResizeColumn={onResizeAnalysisColumn}
           onDoubleClick={setCellEditingKey}
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
