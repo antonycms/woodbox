@@ -5,14 +5,21 @@ import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextM
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
+import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import { generateReferencesDdl } from '../Columns/ddl';
 
 interface IForeingKeysProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+}
+
+interface IReferenceSerialized extends IColumnReferenceInfo {
+  table_reference: string;
 }
 
 const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeysProps) => {
@@ -23,6 +30,9 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
   } = useThemeContext();
   const { references, loadTableReferences, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
+  const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
+  const [ddlSql, setDdlSql] = React.useState('');
+  const [showDdlModal, setShowDdlModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.references);
 
@@ -32,8 +42,15 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
         text: 'Nova chave',
         onClick: () => null,
       },
+      {
+        text: 'Gerar DDL',
+        onClick: () => {
+          setDdlSql(generateReferencesDdl(schema, table, selectedReferences));
+          setShowDdlModal(true);
+        },
+      },
     ];
-  }, []);
+  }, [schema, table, selectedReferences]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     setContextMenuPosition({
@@ -46,12 +63,14 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
     loadTableReferences(id_connection, { schema, table });
   }, []);
 
-  const referencesSerialized = references.map((ref) => ({
-    ...ref,
-    table_reference: !ref.table_schema
-      ? ref.reference_table_name
-      : `${ref.reference_table_schema}.${ref.reference_table_name}`,
-  }));
+  const referencesSerialized = React.useMemo(() => {
+    return references.map((ref) => ({
+      ...ref,
+      table_reference: !ref.table_schema
+        ? ref.reference_table_name
+        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
+    }));
+  }, [references]);
 
   const handleCellLinkClick = (attribute: string, value: string) => {
     if (attribute !== 'table_reference' || !onOpenTable) return;
@@ -67,9 +86,12 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
         onClose={() => setContextMenuPosition(null)}
       />
 
+      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+
       <Table
         rowKeyExtractor={(item) => `${item.constraint_name}-${item.column_name}`}
         onContextMenu={onContextMenuTable}
+        onSelectRow={setSelectedReferences}
         loading={loading.references}
         rows={referencesSerialized}
         onCellLinkClick={handleCellLinkClick}

@@ -6,10 +6,13 @@ import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextM
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
+import type { IColumnRestrictionsInfo } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import { generateRestrictionsDdl } from '../Columns/ddl';
 
 const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -19,6 +22,11 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
   } = useThemeContext();
   const { restrictions, loadTableRestrictions, lastFetchDate, loading } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
+  const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
+    [],
+  );
+  const [ddlSql, setDdlSql] = React.useState('');
+  const [showDdlModal, setShowDdlModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.restrictions);
 
@@ -28,8 +36,15 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
         text: 'Nova restrição',
         onClick: () => null,
       },
+      {
+        text: 'Gerar DDL',
+        onClick: () => {
+          setDdlSql(generateRestrictionsDdl(schema, table, selectedRestrictions));
+          setShowDdlModal(true);
+        },
+      },
     ];
-  }, []);
+  }, [schema, table, selectedRestrictions]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     setContextMenuPosition({
@@ -50,11 +65,14 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
         onClose={() => setContextMenuPosition(null)}
       />
 
+      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+
       <Table
         rows={restrictions}
         loading={loading.restrictions}
         rowKeyExtractor={(item) => item.constraint_name}
         onContextMenu={onContextMenuTable}
+        onSelectRow={setSelectedRestrictions}
         columns={[
           { label: 'Nome', attribute: 'constraint_name' },
           { label: 'Tipo', attribute: 'constraint_type' },

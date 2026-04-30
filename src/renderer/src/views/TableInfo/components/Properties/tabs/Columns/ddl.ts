@@ -2,6 +2,7 @@ import type {
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
+  ITriggerInfo,
 } from '@renderer/contexts/Store';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
@@ -74,7 +75,7 @@ const getConstraintComment = (tableName: string, constraintName: string, comment
   )};`;
 };
 
-const getReferencesDdl = (
+const getReferencesDdlBySelectedColumns = (
   tableName: string,
   selectedColumnNames: Set<string>,
   references: IColumnReferenceInfo[] = [],
@@ -94,7 +95,7 @@ const getReferencesDdl = (
     .filter((ddl): ddl is string => !!ddl);
 };
 
-const getRestrictionsDdl = (
+const getRestrictionsDdlBySelectedColumns = (
   tableName: string,
   selectedColumnNames: Set<string>,
   restrictions: IColumnRestrictionsInfo[] = [],
@@ -115,6 +116,63 @@ const getRestrictionsDdl = (
       )}`;
     })
     .filter((ddl): ddl is string => !!ddl);
+};
+
+export const generateReferencesDdl = (
+  schema: string | undefined,
+  table: string,
+  references: IColumnReferenceInfo[],
+) => {
+  const tableName = getTableName(schema, table);
+  const constraints = new Map<string, IColumnReferenceInfo>();
+
+  references.forEach((reference) => {
+    if (!constraints.has(reference.constraint_name)) {
+      constraints.set(reference.constraint_name, reference);
+    }
+  });
+
+  return [...constraints.values()]
+    .map((reference) => {
+      if (!reference.constraint_definition) return null;
+
+      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(reference.constraint_name)} ${
+        reference.constraint_definition
+      };${getConstraintComment(tableName, reference.constraint_name, reference.comment)}`;
+    })
+    .filter((ddl): ddl is string => !!ddl)
+    .join('\n\n');
+};
+
+export const generateRestrictionsDdl = (
+  schema: string | undefined,
+  table: string,
+  restrictions: IColumnRestrictionsInfo[],
+) => {
+  const tableName = getTableName(schema, table);
+
+  return restrictions
+    .map((restriction) => {
+      if (!restriction.constraint_definition) return null;
+
+      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+        restriction.constraint_name,
+      )} ${restriction.constraint_definition};${getConstraintComment(
+        tableName,
+        restriction.constraint_name,
+        restriction.comment,
+      )}`;
+    })
+    .filter((ddl): ddl is string => !!ddl)
+    .join('\n\n');
+};
+
+export const generateTriggersDdl = (triggers: ITriggerInfo[]) => {
+  return triggers
+    .map((trigger) => trigger.trigger_definition)
+    .filter((definition): definition is string => !!definition)
+    .map((definition) => (definition.endsWith(';') ? definition : `${definition};`))
+    .join('\n\n');
 };
 
 export const generateAddColumnsDdl = (
@@ -147,7 +205,7 @@ export const generateAddColumnsDdl = (
 
   return [
     ...columnsDdl,
-    ...getRestrictionsDdl(tableName, selectedColumnNames, options?.restrictions),
-    ...getReferencesDdl(tableName, selectedColumnNames, options?.references),
+    ...getRestrictionsDdlBySelectedColumns(tableName, selectedColumnNames, options?.restrictions),
+    ...getReferencesDdlBySelectedColumns(tableName, selectedColumnNames, options?.references),
   ].join('\n\n');
 };
