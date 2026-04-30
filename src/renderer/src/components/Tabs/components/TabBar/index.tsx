@@ -16,6 +16,7 @@ const TabsBar = (props: ITabsBarProps) => {
     activeTabId,
     onActiveTab,
     onRemoveTab,
+    onMoveTab,
     borderTop,
     borderBottom,
     borderLeft,
@@ -77,21 +78,22 @@ const TabsBar = (props: ITabsBarProps) => {
     currentElement.classList.add(styles.tabIsDragging);
   };
 
-  const tabDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    const element = e.currentTarget as EventTarget & HTMLDivElement;
-    e.dataTransfer.effectAllowed = 'copyMove';
-    setIdTabDraging(element.id);
+  const tabDragStart = (e: React.DragEvent<HTMLDivElement>, idTab: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setIdTabDraging(idTab);
   };
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    const element = e.target as EventTarget & HTMLDivElement;
+    const target = (e.target as HTMLElement).closest('[data-tab-id]') as HTMLElement;
+    const targetTabId = target?.dataset.tabId;
+    const sourceTabId = idTabDraging;
 
-    const idTab = idTabDraging;
     setIdTabDraging(null);
+    tabDragEnd();
 
-    if (!element.id || !idTab || element.id === idTab) return;
+    if (!sourceTabId || !targetTabId || sourceTabId === targetTabId) return;
 
-    // changeTabPosition(idTabDraging, element.id);
+    onMoveTab?.(sourceTabId, targetTabId);
   };
 
   const handleClickTab = (tab: ITab) => {
@@ -164,6 +166,7 @@ const TabsBar = (props: ITabsBarProps) => {
           <Tab
             key={`tab_${idTabBar}_${tab.idTab}`}
             id={`tab_${idTabBar}_${tab.idTab}`}
+            tabId={tab.idTab}
             title={tab.title || 'Sem título'}
             ascentColor={ascentColor}
             color={color}
@@ -172,7 +175,7 @@ const TabsBar = (props: ITabsBarProps) => {
             active={tab.idTab === activeTabId}
             icon={tab.icon}
             draggable={draggable ? 'true' : 'false'}
-            onDragStart={draggable ? tabDragStart : undefined}
+            onDragStart={draggable ? (event) => tabDragStart(event, tab.idTab) : undefined}
             onDragEnter={draggable ? tabDragEnter : undefined}
             onDragEnd={draggable ? tabDragEnd : undefined}
             height={height}
@@ -219,6 +222,7 @@ export interface ITabsBarProps {
   activeTabId: string;
   onActiveTab(tab: ITab): void;
   onRemoveTab?(tab: ITab): void;
+  onMoveTab?(sourceTabId: string, targetTabId: string): void;
   height?: string;
   width?: string;
   borderTop?: boolean;

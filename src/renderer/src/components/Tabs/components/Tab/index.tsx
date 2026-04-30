@@ -8,6 +8,7 @@ import IconMdiClose from '~icons/mdi/close';
 const Tab = (props: ITabProps) => {
   const {
     id,
+    tabId,
     active,
     title,
     isDraging,
@@ -34,6 +35,7 @@ const Tab = (props: ITabProps) => {
     <div
       className={classes(styles.tab, active && styles.active, vertical && styles.vertical)}
       id={id}
+      data-tab-id={tabId}
       style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
       onContextMenu={onContextMenu}
@@ -81,6 +83,7 @@ export default Tab;
 
 export interface ITabProps {
   id?: string;
+  tabId?: string;
   unsaved?: boolean;
   title: string;
   isDraging?: boolean;

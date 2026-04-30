@@ -8,7 +8,7 @@ import styles from './styles.module.css';
 import { IContextMenuOption } from '../ContextMenu';
 
 export const MainContent = () => {
-  const { tabs, removeTab, activeTabId, setActiveTabId } = useAppTabContext();
+  const { tabs, removeTab, moveTab, activeTabId, setActiveTabId } = useAppTabContext();
   const {
     activeTheme: { mainTab: theme },
   } = useThemeContext();
@@ -73,6 +73,7 @@ export const MainContent = () => {
         onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
         idTabBar="app_tabs"
         onRemoveTab={(tab) => removeTab(tab.idTab)}
+        onMoveTab={moveTab}
         tabs={tabs.map(({ id: idTab, title, unsaved }) => ({ idTab, title, unsaved }))}
         contextMenuOptions={contextMenuOptions}
       />

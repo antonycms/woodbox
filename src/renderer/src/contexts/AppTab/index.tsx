@@ -54,6 +54,21 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     [tabs, activeTabId],
   );
 
+  const moveTab = React.useCallback((fromId: string, toId: string) => {
+    setTabs((prev) => {
+      const fromIndex = prev.findIndex((tab) => tab.id === fromId);
+      const toIndex = prev.findIndex((tab) => tab.id === toId);
+
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return prev;
+
+      const next = [...prev];
+      const [movedTab] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, movedTab);
+
+      return next;
+    });
+  }, []);
+
   const getTab = (tabId: string) => {
     return tabs.find((tab) => tab.id === tabId);
   };
@@ -84,6 +99,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         tabs,
         addTab,
         removeTab,
+        moveTab,
         activeTabId,
         setActiveTabId,
         getTab,
