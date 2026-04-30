@@ -32,6 +32,12 @@ const TableInfo = (props: ITableInfoProps) => {
         addTab({
           id: tabId,
           title: table,
+          data: {
+            type: 'table-info',
+            id_connection: idConnection,
+            schema,
+            table,
+          },
           component: () => (
             <TableInfoWithContext id_connection={idConnection} schema={schema} table={table} />
           ),
@@ -54,6 +60,15 @@ const TableInfo = (props: ITableInfoProps) => {
       const initialWhere = `"${filterColumn}" = '${escapedValue}'`;
       addTab({
         title: tabTitle,
+        data: {
+          type: 'table-info',
+          id_connection: idConnection,
+          schema,
+          table,
+          initialWhere,
+          filterLocked: true,
+          initialTab: 'tabData',
+        },
         component: () => (
           <TableInfoWithContext
             id_connection={idConnection}

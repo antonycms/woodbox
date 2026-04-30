@@ -710,6 +710,15 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                           const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
                           addTab({
                             title: tabTitle,
+                            data: {
+                              type: 'table-info',
+                              id_connection,
+                              schema: ref.reference_table_schema,
+                              table: ref.reference_table_name,
+                              initialWhere,
+                              filterLocked: true,
+                              initialTab: 'tabData',
+                            },
                             component: () => (
                               <TableInfoWithContext
                                 id_connection={id_connection}

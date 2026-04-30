@@ -161,6 +161,11 @@ const ProjectsMenu = () => {
     addTab({
       id: tabId,
       title: script.name,
+      data: {
+        type: 'query-editor',
+        id_connection: script.id_connection,
+        id_script: script.id,
+      },
       component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
   };
@@ -179,6 +184,12 @@ const ProjectsMenu = () => {
         addTab({
           id: tabId,
           title,
+          data: {
+            type: 'table-info',
+            id_connection,
+            schema,
+            table,
+          },
           component: () => (
             <TableInfo id_connection={id_connection} schema={schema} table={table} />
           ),
@@ -196,6 +207,12 @@ const ProjectsMenu = () => {
         addTab({
           id: tabId,
           title: function_name,
+          data: {
+            type: 'function-info',
+            id_connection,
+            schema,
+            function_name,
+          },
           component: () => (
             <FunctionInfo
               id_connection={id_connection}
@@ -235,6 +252,11 @@ const ProjectsMenu = () => {
     addTab({
       id: `script_${script.id}`,
       title: script.name,
+      data: {
+        type: 'query-editor',
+        id_connection: script.id_connection,
+        id_script: script.id,
+      },
       component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
   };

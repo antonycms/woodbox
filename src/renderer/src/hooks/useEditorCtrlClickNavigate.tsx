@@ -26,6 +26,12 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
           addTab({
             id: tabId,
             title: tableMatch.table_name,
+            data: {
+              type: 'table-info',
+              id_connection,
+              schema: tableSchema,
+              table: tableMatch.table_name,
+            },
             component: () => (
               <TableInfo
                 id_connection={id_connection}
@@ -51,6 +57,12 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
           addTab({
             id: tabId,
             title: fnMatch.function_name,
+            data: {
+              type: 'function-info',
+              id_connection,
+              schema: fnSchema,
+              function_name: fnMatch.function_name,
+            },
             component: () => (
               <FunctionInfo
                 id_connection={id_connection}
