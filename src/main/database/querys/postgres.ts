@@ -148,6 +148,19 @@ const getTotalRowsCountInTable = ({
   return /* sql */ `SELECT count(*) as total_rows FROM "${schema}"."${table}" ${whereQuery};`;
 };
 
+const serializeOrderBy = (orderBy?: IOrderBy[]) => {
+  if (!orderBy?.length) return '';
+
+  const columns = orderBy.map(({ columnName, sortType }) => {
+    const safeColumnName = columnName.replace(/"/g, '""');
+    const safeSortType = sortType === 'DESC' ? 'DESC' : 'ASC';
+
+    return `"${safeColumnName}" ${safeSortType}`;
+  });
+
+  return `ORDER BY ${columns.join(', ')}`;
+};
+
 const selectWithOffset = ({
   schema,
   table,
@@ -157,7 +170,7 @@ const selectWithOffset = ({
   actualPage = 1,
 }: IGetTotalRowsCountInTableData) => {
   const offset = limit * (actualPage - 1);
-  const orderByQuery = orderBy ? `ORDER BY ${orderBy.columnName} ${orderBy.sortType}` : '';
+  const orderByQuery = serializeOrderBy(orderBy);
   const whereQuery = where ? `WHERE ${where}` : '';
 
   return /* sql */ `
@@ -301,8 +314,10 @@ export interface IGetTotalRowsCountInTableData {
   limit?: number;
   actualPage?: number;
   where?: string;
-  orderBy?: {
-    columnName: string;
-    sortType: 'DESC' | 'ASC';
-  };
+  orderBy?: IOrderBy[];
+}
+
+export interface IOrderBy {
+  columnName: string;
+  sortType: 'DESC' | 'ASC';
 }

@@ -253,7 +253,15 @@ export const getTableData = async (
     page = 1,
     limit = 200,
     where,
-  }: { table: string; schema: string; page?: number; limit?: number; where?: string },
+    orderBy,
+  }: {
+    table: string;
+    schema: string;
+    page?: number;
+    limit?: number;
+    where?: string;
+    orderBy?: IOrderBy[];
+  },
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -263,7 +271,9 @@ export const getTableData = async (
   const [count, data] = (
     await Promise.all([
       instance.raw(query.getTotalRowsCountInTable({ table, schema, where })),
-      instance.raw(query.selectWithOffset({ table, schema, actualPage: page, limit, where })),
+      instance.raw(
+        query.selectWithOffset({ table, schema, actualPage: page, limit, where, orderBy }),
+      ),
     ])
   ).map((raw) => raw?.rows || []);
 
@@ -273,7 +283,7 @@ export const getTableData = async (
 export const runSql = async (
   connectionId: string,
   sql: string,
-  options?: { page?: number; limit?: number },
+  options?: { page?: number; limit?: number; orderBy?: IOrderBy[] },
 ) => {
   const connection = await getConnection(connectionId);
   const { instance } = connection;
@@ -298,10 +308,12 @@ export const runSql = async (
 
     if (!hasLimit && !hasOffset && Number(limit) > 0 && Number(page) >= 0) {
       auto_paginated = true;
+      const orderByQuery = serializeOrderBy(options?.orderBy);
 
       sql_final = `
         SELECT *
         FROM (${sql_final}) AS __base_query
+        ${orderByQuery}
         LIMIT ${limit} OFFSET ${(page - 1) * limit};
       `;
     }
@@ -327,4 +339,22 @@ export const runSql = async (
   });
 
   return serializedData;
+};
+
+interface IOrderBy {
+  columnName: string;
+  sortType: 'DESC' | 'ASC';
+}
+
+const serializeOrderBy = (orderBy?: IOrderBy[]) => {
+  if (!orderBy?.length) return '';
+
+  const columns = orderBy.map(({ columnName, sortType }) => {
+    const safeColumnName = columnName.replace(/"/g, '""');
+    const safeSortType = sortType === 'DESC' ? 'DESC' : 'ASC';
+
+    return `"${safeColumnName}" ${safeSortType}`;
+  });
+
+  return `ORDER BY ${columns.join(', ')}`;
 };

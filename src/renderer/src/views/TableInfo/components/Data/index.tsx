@@ -19,8 +19,9 @@ import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
-import { IColumn } from '@renderer/components/Table/dtos';
+import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { getNextSort } from '@renderer/utils/tableSort';
 
 interface IDataProps extends ITableInfoProps {
   onOpenTable?: (
@@ -57,6 +58,7 @@ const Data = ({
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
+  const [sort, setSort] = React.useState<ITableSort[]>([]);
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
@@ -96,6 +98,7 @@ const Data = ({
   const columnsSerialized = React.useMemo(
     () =>
       columns.map<IColumn>((column) => ({
+        title: 'Clique para ordenar por essa coluna',
         label: column.column_name,
         attribute: column.column_name,
         required: !!column.is_nullable,
@@ -149,6 +152,7 @@ const Data = ({
       table,
       page: newPage,
       where: appliedWhere || undefined,
+      orderBy: sort,
     });
     setLoading(false);
 
@@ -160,7 +164,7 @@ const Data = ({
 
     setPage(newPage);
     setItems((prevState) => [...prevState, ...data]);
-  }, [id_connection, loading, schema, table, page, appliedWhere]);
+  }, [id_connection, loading, schema, table, page, appliedWhere, sort]);
 
   const handleRefresh = React.useCallback(async () => {
     if (loading) return;
@@ -171,13 +175,43 @@ const Data = ({
       table,
       page: 1,
       where: appliedWhere || undefined,
+      orderBy: sort,
     });
     setLoading(false);
 
-    lastPageSearch.current = 0;
+    lastPageSearch.current = 1;
+    setPage(1);
     setLastFetchDate(new Date());
     setItems(data);
-  }, [id_connection, loading, schema, table, appliedWhere]);
+  }, [id_connection, loading, schema, table, appliedWhere, sort]);
+
+  const handleSort = React.useCallback(
+    async (column: IColumn) => {
+      if (loading || !column.sortable) return;
+
+      const nextSort = getNextSort(sort, column.attribute);
+      setSort(nextSort);
+      setLoading(true);
+
+      try {
+        const { data } = await getTableData(id_connection, {
+          schema,
+          table,
+          page: 1,
+          where: appliedWhere || undefined,
+          orderBy: nextSort,
+        });
+
+        setItems(data);
+        setPage(1);
+        lastPageSearch.current = 1;
+        setLastFetchDate(new Date());
+      } finally {
+        setLoading(false);
+      }
+    },
+    [id_connection, schema, table, appliedWhere, sort, loading],
+  );
 
   const handleFilterKeyDown = React.useCallback(
     async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -192,16 +226,17 @@ const Data = ({
           table,
           page: 1,
           where: newWhere,
+          orderBy: sort,
         });
         setItems(data);
-        setPage(0);
-        lastPageSearch.current = 0;
+        setPage(1);
+        lastPageSearch.current = 1;
         setLastFetchDate(new Date());
       } finally {
         setLoading(false);
       }
     },
-    [id_connection, whereInput, loading, schema, table],
+    [id_connection, whereInput, loading, schema, table, sort],
   );
 
   React.useEffect(() => {
@@ -226,6 +261,8 @@ const Data = ({
       <Table
         columns={columnsSerialized}
         rows={items}
+        sort={sort}
+        onSort={handleSort}
         rowKeyExtractor={(_, index) => index}
         onScrollEnd={loadData}
         loading={isLoading}

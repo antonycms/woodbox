@@ -8,6 +8,7 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import Table from '@renderer/components/Table';
+import type { ITableSort } from '@renderer/components/Table/dtos';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Button } from '@renderer/components/Button';
 import { Spacer } from '@renderer/components/Spacer';
@@ -27,6 +28,7 @@ import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/co
 import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { getTablesFromQuerySql } from '@renderer/utils/sql';
+import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import { toDateTime } from '@renderer/utils/date';
@@ -53,6 +55,7 @@ interface IQueryResult {
   date_run?: string;
   execution_time_ms?: number;
   page?: number;
+  orderBy?: ITableSort[];
   auto_paginated?: boolean;
   tables_info?: ITableQuery[];
 }
@@ -196,9 +199,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, tab.query);
+        await runSql(id_connection, tab.query, { orderBy: tab.orderBy });
 
       updateTabResultData({
+        page: 1,
         columns,
         rows,
         type,
@@ -207,6 +211,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         auto_paginated,
         execution_time_ms,
         loading: false,
+        orderBy: tab.orderBy,
       });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
@@ -373,7 +378,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, query, { page: newPage });
+        await runSql(id_connection, query, { page: newPage, orderBy: lastTabResult.orderBy });
 
       updateTabResultData({
         page: newPage,
@@ -389,6 +394,37 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({ type: 'ERROR', query, message, loading: false });
+    }
+  };
+
+  const handleSortQueryResult = async (idTab: string, columnName: string) => {
+    const tab = querysResultData.get(idTab);
+    if (!tab || tab.loading) return;
+
+    const orderBy = getNextSort(tab.orderBy, columnName);
+    const updateTabResultData = makeUpdateResultTab(idTab);
+
+    updateTabResultData({ loading: true, orderBy });
+
+    try {
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, tab.query, { page: 1, orderBy });
+
+      updateTabResultData({
+        page: 1,
+        columns,
+        rows,
+        type,
+        query: tab.query,
+        affected_rows,
+        auto_paginated,
+        execution_time_ms,
+        loading: false,
+        orderBy,
+      });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({ type: 'ERROR', message, loading: false });
     }
   };
 
@@ -660,6 +696,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       <Table
                         loading={!!data.loading}
                         rows={data.rows}
+                        sort={data.orderBy}
+                        onSort={(column) =>
+                          handleSortQueryResult(tabResult.idTab, column.attribute)
+                        }
                         onScrollEnd={onScrollEnd}
                         onContextMenu={onContextMenuTable}
                         onCellLinkClick={(attribute, value) => {
@@ -683,8 +723,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                           });
                         }}
                         columns={data.columns.map((column) => ({
+                          title: 'Clique para ordenar por essa coluna',
                           attribute: column,
                           label: column,
+                          sortable: true,
                           isLink: tabFkMap.has(column),
                         }))}
                       />

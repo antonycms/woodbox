@@ -13,6 +13,7 @@ export interface IResizableDivProps {
   maxHeight?: number;
   children?: React.ReactNode;
   onResize?: OnResizeCallback;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
   onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
   className?: string;
   style?: React.CSSProperties;
@@ -29,6 +30,7 @@ const ResizableContainer = ({
   height = minHeight,
   onResize,
   children,
+  onClick,
   onDoubleClick,
   title,
   className,
@@ -106,11 +108,13 @@ const ResizableContainer = ({
       title={title}
       className={classes(styles.container, className, direction === 'vertical' && styles.vertical)}
       style={style}
+      onClick={onClick}
     >
       {direction === 'vertical' && (
         <div
           draggable="false"
           className={classes(styles.resizeBar, styles.vertical)}
+          onClick={(event) => event.stopPropagation()}
           onDoubleClick={onDoubleClick}
           onPointerDown={handleResizeVertical}
         />
@@ -132,6 +136,7 @@ const ResizableContainer = ({
         <div
           draggable="false"
           className={classes(styles.resizeBar, styles.horizontal)}
+          onClick={(event) => event.stopPropagation()}
           onDoubleClick={onDoubleClick}
           onPointerDown={handleResizeHorizontal}
         />

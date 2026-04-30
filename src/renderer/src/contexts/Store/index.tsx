@@ -216,9 +216,16 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const getTableData = async (idConnection: string, params: IParamsGetTableData) => {
-    const { table, schema, page = 1, limit = 200, where } = params;
+    const { table, schema, page = 1, limit = 200, where, orderBy } = params;
 
-    return await call('@get:table_data', idConnection, { table, schema, page, limit, where });
+    return await call('@get:table_data', idConnection, {
+      table,
+      schema,
+      page,
+      limit,
+      where,
+      orderBy,
+    });
   };
 
   const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {

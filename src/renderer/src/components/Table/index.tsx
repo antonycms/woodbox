@@ -8,7 +8,7 @@ import TableRow from './components/TableRow';
 import TableColumn from './components/TableColumn';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { IColumn } from './dtos';
+import type { IColumn, ITableSort } from './dtos';
 
 interface ITableProps<Row = any> {
   rowKeyExtractor?(rowData: Row, index: number): React.Key;
@@ -21,6 +21,8 @@ interface ITableProps<Row = any> {
   editedRows?: Map<React.Key, any>;
   rows: Row[];
   columns: IColumn<Row>[];
+  sort?: ITableSort[];
+  onSort?(column: IColumn<Row>): void;
   loading?: boolean;
   onCopy?(selectedRows: Row[]): void;
   onPaste?(selectedRows: Row[]): void;
@@ -42,6 +44,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onScrollEnd,
     editedRows,
     onEditRow,
+    sort,
+    onSort,
     onSelectRow,
     onCopy,
     onPaste,
@@ -196,6 +200,20 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [checkScrollEnd],
   );
 
+  const getSortLabel = React.useCallback(
+    (column: IColumn<Row>) => {
+      const sortIndex = sort?.findIndex((item) => item.columnName === column.attribute) ?? -1;
+      if (sortIndex === -1) return column.label;
+
+      const sortItem = sort[sortIndex];
+      const icon = sortItem.sortType === 'ASC' ? '▲' : '▼';
+      const order = sort.length > 1 ? ` ${sortIndex + 1}` : '';
+
+      return `${column.label} ${icon}${order}`;
+    },
+    [sort],
+  );
+
   const virtualHeader = React.useMemo(() => {
     const { columnsIndexToRender } = columnsDetails;
     return (
@@ -208,20 +226,23 @@ function Table<Row = any>(props: ITableProps<Row>) {
           return (
             <TableColumn
               resizable
+              title={column.title}
               key={String(column.attribute)}
               columnIndex={columnIndex}
               rowHeight={rowHeight}
               width={width}
               onResize={(e) => onResize(columnIndex, e.width)}
+              onClick={column.sortable && onSort ? () => onSort(column) : undefined}
+              style={{ cursor: column.sortable && onSort ? 'pointer' : undefined }}
               // onDoubleClick={onDoubleClick ? () => onDoubleClick(column) : undefined}
               minWidth={minWidth}
-              value={column.label}
+              value={getSortLabel(column)}
             />
           );
         })}
       </TableRow>
     );
-  }, [columns, columnsDetails, minColumnsSize]);
+  }, [columns, columnsDetails, getSortLabel, minColumnsSize, onSort]);
 
   const onSaveCell = React.useCallback(
     (indexRow: number, rowColumnKey: string, newValue: string | number) => {

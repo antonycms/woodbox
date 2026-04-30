@@ -103,17 +103,24 @@ export interface IDataTable {
   data: any[];
 }
 
+export interface IOrderBy {
+  columnName: string;
+  sortType: 'ASC' | 'DESC';
+}
+
 export interface IParamsGetTableData {
   table: string;
   schema?: string;
   page: number;
   limit?: number;
   where?: string;
+  orderBy?: IOrderBy[];
 }
 
 export interface IOptionsRunSql {
   limit?: number;
   page?: number;
+  orderBy?: IOrderBy[];
 }
 
 export interface IStoreContext {

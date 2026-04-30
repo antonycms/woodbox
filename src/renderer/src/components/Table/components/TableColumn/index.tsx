@@ -13,6 +13,8 @@ interface ITableColumnProps {
   rowHeight: number;
   resizable?: boolean;
   onResize?: OnResizeCallback;
+  title?: string;
+  onClick?(): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
   onEditCell?(rowIndex: number, name: string, newValue: string | number): void;
@@ -22,7 +24,7 @@ interface ITableColumnProps {
   value?: number | string;
   name?: string;
   rowColumnKey?: string;
-  width: number;
+  width?: number;
   isLink?: boolean;
   onFkCellClick?(name: string, value: any): void;
   isSelectedCell?: boolean;
@@ -33,18 +35,20 @@ interface ITableColumnProps {
 const TableColumn = ({
   isEditing,
   isEdited,
+  title,
   value,
   indexRow,
   columnIndex,
   rowHeight,
   resizable,
   onResize,
+  onClick,
   onDoubleClick,
   minWidth,
   onBlurCell,
   onEditCell,
   rowColumnKey,
-  width,
+  width = minWidth || 200,
   name,
   style: styleExternal = {},
   isLink,
@@ -141,9 +145,13 @@ const TableColumn = ({
   return (
     <ColumnComponent
       className={className}
+      title={title}
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-      onClick={() => onSelectCell?.(indexRow, columnIndex)}
+      onClick={() => {
+        if (isHeaderColumn) return onClick?.();
+        onSelectCell?.(indexRow, columnIndex);
+      }}
     >
       {isEditing ? null : isLinkClickable ? (
         <span
