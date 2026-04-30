@@ -86,8 +86,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const columnsSizeRef = React.useRef(columnsSize);
   columnsSizeRef.current = columnsSize;
 
-  const [copyData, setCopyData] = React.useState<any[]>(null);
-
   const serializedRows = React.useMemo(() => {
     return rows.map((row, index) => {
       const keyRow = rowKeyExtractor(row, index);
