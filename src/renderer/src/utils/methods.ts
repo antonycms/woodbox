@@ -1,22 +1,3 @@
-import React from 'react';
-
-export const makeOnChangeSetState = (setState: React.Dispatch<React.SetStateAction<any>>) => {
-  if (!setState) return;
-
-  return (event: React.ChangeEvent<any>) => {
-    if (!event?.target?.name) {
-      console.error('[makeOnChangeSetState] element not has "name" property');
-      return;
-    }
-
-    const { name, value = null, checked, type } = event?.target || {};
-
-    const v = type === 'checkbox' ? !!checked : value;
-
-    setState?.((prevState) => ({ ...(prevState || {}), [name]: v }));
-  };
-};
-
 export const getScrollbarWidth = () => {
   // Creating invisible container
   const outer = document.createElement('div');
