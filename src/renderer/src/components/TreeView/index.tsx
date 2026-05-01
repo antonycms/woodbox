@@ -95,6 +95,7 @@ const TreeView = (props: ITreeViewProps) => {
     if (!item) return;
 
     element?.focus();
+    props.onClick?.({ id: item.id, label: item.label, data: item.data, type: item.type });
     props.onContextMenu?.({ id: item.id, label: item.label, data: item.data, type: item.type }, e);
   };
 
