@@ -3,6 +3,7 @@ import React from 'react';
 import IconMdiFileDocumentOutline from '~icons/mdi/file-document-outline';
 import IconMdiPlaylistPlay from '~icons/mdi/playlist-play';
 import IconMdiBookOpenOutline from '~icons/mdi/book-open-outline';
+import IconMdiCloseCircleOutline from '~icons/mdi/close-circle-outline';
 import IconMdiRefresh from '~icons/mdi/refresh';
 import IconFaSolidPlus from '~icons/fa-solid/plus';
 import IconFaSolidCog from '~icons/fa-solid/cog';
@@ -32,6 +33,7 @@ function makeIconWithSize(
 }
 
 export const AddIcon = makeIconWithSize(IconFaSolidPlus);
+export const CancelIcon = makeIconWithSize(IconMdiCloseCircleOutline);
 export const FileSqlIcon = makeIconWithSize(IconBiFiletypeSql);
 export const SaveIcon = makeIconWithSize(IconFeatherSave);
 export const RemoveIcon = makeIconWithSize(IconGgTrash);
