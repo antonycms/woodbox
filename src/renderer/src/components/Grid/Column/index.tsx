@@ -1,6 +1,6 @@
 import React from 'react';
-import { toCssVar } from '@renderer/utils/methods';
 import styles from './styles.module.css';
+import { toCssProperties } from '@renderer/styles/theme';
 
 const calculateSizeCol = (size: number) => {
   if (!size) return;
@@ -12,7 +12,8 @@ const calculateSizeCol = (size: number) => {
 export const Column = React.memo((props: IColumnProps) => {
   const { children, ...gridProps } = props;
   const { xs, sm, md, lg, xl } = gridProps;
-  const gridIsActive = React.useMemo(() => xs || sm || md || lg || xl, [xs, sm, md, lg, xl]);
+
+  const gridIsActive = !!(xs || sm || md || lg || xl);
 
   const widths = React.useMemo(() => {
     const xlWidth = calculateSizeCol(xl || lg || md || sm || xs);
@@ -21,7 +22,7 @@ export const Column = React.memo((props: IColumnProps) => {
     const smWidth = calculateSizeCol(sm || md || lg || xl || xs);
     const xsWidth = calculateSizeCol(xs || sm || md || lg || xl);
 
-    return toCssVar({ xlWidth, lgWidth, mdWidth, smWidth, xsWidth });
+    return toCssProperties({ xlWidth, lgWidth, mdWidth, smWidth, xsWidth });
   }, [xs, sm, md, lg, xl]);
 
   if (!gridIsActive) return <>{children}</>;
