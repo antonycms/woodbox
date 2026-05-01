@@ -67,7 +67,7 @@ export const Input = (props: IInputProps) => {
         <div id={idContainer} className={styles.inputContainer} style={inputContainerStyle}>
           {!!useFakeInputToValidate && (
             <input
-              aria-hidden
+              tabIndex={-1}
               className={classes(styles.input, styles.hidden)}
               required={required}
               maxLength={maxLength}
@@ -88,16 +88,16 @@ export const Input = (props: IInputProps) => {
             id={id}
             name={name}
             title={inputTitle}
-            min={min}
-            max={max}
-            maxLength={maxLength}
-            minLength={minLength}
+            min={!useFakeInputToValidate ? min : undefined}
+            max={!useFakeInputToValidate ? max : undefined}
+            maxLength={!useFakeInputToValidate ? maxLength : undefined}
+            minLength={!useFakeInputToValidate ? minLength : undefined}
             placeholder={placeholder}
             value={value}
             defaultValue={defaultValue}
             data-value={dataValue}
             type={type}
-            required={required}
+            required={!useFakeInputToValidate ? required : undefined}
             onChange={onChange}
             onKeyDown={onKeyDown}
             onKeyUp={onKeyUp}
