@@ -4,9 +4,9 @@ import { useForm } from '@renderer/hooks/useForm';
 import { Row } from '../Grid';
 import { Input } from '../Input';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { Select } from '../Select';
 import { Button } from '../Button';
 import { Spacer } from '../Spacer';
+import { AutocompleteMulti } from '../AutocompleteMulti';
 
 interface IModalCopyProps extends Omit<IModalProps, 'children'> {
   content: any[];
@@ -56,11 +56,11 @@ export const ModalCopy = (props: IModalCopyProps) => {
           />
 
           {!!attributes.length && (
-            <Select
+            <AutocompleteMulti
               label="Atributos"
               backgroundColor={colors.backgroundColor}
               color={colors.color}
-              items={attributes}
+              data={attributes}
               {...register('attributes')}
             />
           )}
