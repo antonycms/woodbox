@@ -114,7 +114,26 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
     e.preventDefault();
 
-    // logic here
+    if (!dataFiltered.length) return;
+
+    if (!isDropdownOpen) {
+      setIsDropdownOpen(true);
+    }
+
+    if (isDown) {
+      setActiveIndex((current) => Math.min(current + 1, dataFiltered.length - 1));
+      return;
+    }
+
+    if (isUp) {
+      setActiveIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+
+    if (isEnter && activeIndex >= 0) {
+      const [realIndex, item] = dataFiltered[activeIndex];
+      onSelect(item, realIndex);
+    }
   };
 
   const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
@@ -150,7 +169,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   React.useEffect(() => {
     if (!isDropdownOpen || activeIndex < 0 || !refScrollElement.current) return;
 
-    refScrollElement.current!.scrollTop = activeIndex * itemSize;
+    refScrollElement.current.scrollTop = activeIndex * itemSize;
   }, [activeIndex, isDropdownOpen]);
 
   return (
@@ -223,13 +242,18 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
               const label = extractLabelRef.current(item);
               const isSelected =
                 selected && extractValueRef.current(selected) === extractValueRef.current(item);
+              const isActive = activeIndex === index;
 
               return (
                 <div
                   key={real_index}
                   onClick={() => onSelect(item, real_index)}
                   title={label}
-                  className={classes(styles.row, isSelected && styles.selected)}
+                  className={classes(
+                    styles.row,
+                    isSelected && styles.selected,
+                    isActive && styles.active,
+                  )}
                 >
                   {label}
                 </div>
