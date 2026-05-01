@@ -11,6 +11,8 @@ import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 
@@ -25,6 +27,7 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
   const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
     [],
   );
+  const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
 
@@ -57,6 +60,11 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
     loadTableRestrictions(id_connection, { schema, table });
   }, []);
 
+  const sortedRestrictions = React.useMemo(
+    () => sortRows(restrictions, sort),
+    [restrictions, sort],
+  );
+
   return (
     <>
       <ContextMenu
@@ -68,17 +76,44 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
       <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
 
       <Table
-        rows={restrictions}
+        rows={sortedRestrictions}
+        sort={sort}
+        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         loading={loading.restrictions}
         rowKeyExtractor={(item) => item.constraint_name}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedRestrictions}
         columns={[
-          { label: 'Nome', attribute: 'constraint_name' },
-          { label: 'Tipo', attribute: 'constraint_type' },
-          { label: 'Colunas', attribute: 'column_names' },
-          { label: 'Expressão', attribute: 'expression' },
-          { label: 'Comentário', attribute: 'comment' },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nome',
+            attribute: 'constraint_name',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Tipo',
+            attribute: 'constraint_type',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Colunas',
+            attribute: 'column_names',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Expressão',
+            attribute: 'expression',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Comentário',
+            attribute: 'comment',
+            sortable: true,
+          },
         ]}
       />
 

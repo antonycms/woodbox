@@ -9,6 +9,8 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 
 interface IReferencesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -22,6 +24,7 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
   } = useThemeContext();
   const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } =
     useTableInfoContext();
+  const [sort, setSort] = React.useState<ITableSort[]>([]);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.usedAsReference);
 
@@ -29,10 +32,16 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     loadTableUsedAsReference(id_connection, { schema, table });
   }, []);
 
-  const rowsSerialized = usedAsReference.map((ref) => ({
-    ...ref,
-    source_table: !ref.table_schema ? ref.table_name : `${ref.table_schema}.${ref.table_name}`,
-  }));
+  const rowsSerialized = React.useMemo(
+    () =>
+      usedAsReference.map((ref) => ({
+        ...ref,
+        source_table: !ref.table_schema ? ref.table_name : `${ref.table_schema}.${ref.table_name}`,
+      })),
+    [usedAsReference],
+  );
+
+  const sortedRows = React.useMemo(() => sortRows(rowsSerialized, sort), [rowsSerialized, sort]);
 
   const handleCellLinkClick = (attribute: string, value: string) => {
     if (attribute !== 'source_table' || !onOpenTable) return;
@@ -47,13 +56,36 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
           `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`
         }
         loading={loading.usedAsReference}
-        rows={rowsSerialized}
+        rows={sortedRows}
+        sort={sort}
+        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         onCellLinkClick={handleCellLinkClick}
         columns={[
-          { label: 'Nome', attribute: 'constraint_name' },
-          { label: 'Tabela', attribute: 'source_table', isLink: true },
-          { label: 'Coluna', attribute: 'column_name' },
-          { label: 'Coluna Referenciada', attribute: 'reference_column_name' },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nome',
+            attribute: 'constraint_name',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Tabela',
+            attribute: 'source_table',
+            isLink: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Coluna',
+            attribute: 'column_name',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Coluna Referenciada',
+            attribute: 'reference_column_name',
+            sortable: true,
+          },
         ]}
       />
 

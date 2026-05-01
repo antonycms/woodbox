@@ -11,6 +11,8 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 import styles from './styles.module.css';
@@ -26,23 +28,26 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedColumns, setSelectedColumns] = React.useState<IColumnInfo[]>([]);
   const [columnFilterText, setColumnFilterText] = React.useState('');
+  const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
   const columnFilterTextSerialized = columnFilterText.trim().toLowerCase();
 
-  const filteredColumns = React.useMemo(() => {
-    if (!columnFilterTextSerialized) return columns;
+  const filteredColumnsAndSortedColumns = React.useMemo(() => {
+    if (!columnFilterTextSerialized) return sortRows(columns, sort);
 
     const texts = columnFilterTextSerialized.split(',').map((t) => t.trim());
 
-    return columns.filter((column) =>
+    const columnsFiltered = columns.filter((column) =>
       [column.column_name, column.data_type].some((value) =>
         texts.some((text) => text && value?.toLowerCase().includes(text)),
       ),
     );
-  }, [columns, columnFilterTextSerialized]);
+
+    return sortRows(columnsFiltered, sort);
+  }, [columns, columnFilterTextSerialized, sort]);
 
   const contextMenuOptions = React.useMemo(() => {
     return [
@@ -118,13 +123,45 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         rowKeyExtractor={(item) => item.column_name}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedColumns}
-        rows={filteredColumns}
+        rows={filteredColumnsAndSortedColumns}
+        sort={sort}
+        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         columns={[
-          { label: 'Nome da coluna', attribute: 'column_name', editable: true },
-          { label: 'Tipo', attribute: 'data_type', editable: true },
-          { label: 'Nulável', attribute: 'is_nullable', editable: true },
-          { label: 'Padrão', attribute: 'column_default', editable: true },
-          { label: 'Comentário', attribute: 'description', editable: true },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nome da coluna',
+            attribute: 'column_name',
+            editable: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Tipo',
+            attribute: 'data_type',
+            editable: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nulável',
+            attribute: 'is_nullable',
+            editable: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Padrão',
+            attribute: 'column_default',
+            editable: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Comentário',
+            attribute: 'description',
+            editable: true,
+            sortable: true,
+          },
         ]}
       />
 
@@ -158,9 +195,9 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredColumns?.length > 1
-            ? `${filteredColumns?.length} Itens`
-            : `${filteredColumns?.length || 0} Item`}
+          {filteredColumnsAndSortedColumns?.length > 1
+            ? `${filteredColumnsAndSortedColumns?.length} Itens`
+            : `${filteredColumnsAndSortedColumns?.length || 0} Item`}
         </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>

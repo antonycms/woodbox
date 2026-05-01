@@ -11,6 +11,8 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateTriggersDdl } from '../Columns/ddl';
@@ -25,6 +27,7 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   const handleFunctionCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedTriggers, setSelectedTriggers] = React.useState<ITriggerInfo[]>([]);
+  const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
 
@@ -51,6 +54,8 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     loadTableTriggers(id_connection, { schema, table });
   }, []);
 
+  const sortedTriggers = React.useMemo(() => sortRows(triggers, sort), [triggers, sort]);
+
   return (
     <>
       <ContextMenu
@@ -66,7 +71,9 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedTriggers}
         loading={loading.triggers}
-        rows={triggers}
+        rows={sortedTriggers}
+        sort={sort}
+        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         onCellLinkClick={(_attr, value) => {
           const words = value.split('.');
 
@@ -76,12 +83,43 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
           handleFunctionCtrlClick(fn, schema);
         }}
         columns={[
-          { label: 'Nome', attribute: 'trigger_name' },
-          { label: 'Momento', attribute: 'timing' },
-          { label: 'Evento', attribute: 'event' },
-          { label: 'Nível', attribute: 'orientation' },
-          { label: 'Função', attribute: 'function_name', isLink: true },
-          { label: 'Status', attribute: 'status' },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nome',
+            attribute: 'trigger_name',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Momento',
+            attribute: 'timing',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Evento',
+            attribute: 'event',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Nível',
+            attribute: 'orientation',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Função',
+            attribute: 'function_name',
+            isLink: true,
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Status',
+            attribute: 'status',
+            sortable: true,
+          },
         ]}
       />
 
