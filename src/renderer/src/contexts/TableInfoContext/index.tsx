@@ -1,5 +1,8 @@
 import React from 'react';
 
+import { useToast } from '@renderer/contexts/Toast';
+import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
+import { generatePendingTableChangesDdl } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import {
   type IColumnInfo,
   type IColumnReferenceInfo,
@@ -11,6 +14,9 @@ import {
 
 import TableInfoContext, {
   type ILastFetchDate,
+  type ILoadTableInfoFilters,
+  type IPendingColumnCreate,
+  type IPendingColumnDrop,
   type ITableInfo,
   type ITableInfoLoading,
   type LoadTableInfo,
@@ -27,9 +33,17 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     getTableDefinition,
     getTableIndexes,
     getTableTriggers,
+    getColumnTypes,
+    runSql,
   } = useStoreContext();
+  const { showToast } = useToast();
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
+  const [pendingColumns, setPendingColumns] = React.useState<IPendingColumnCreate[]>([]);
+  const [pendingDroppedColumns, setPendingDroppedColumns] = React.useState<IPendingColumnDrop[]>(
+    [],
+  );
+  const [columnTypes, setColumnTypes] = React.useState<string[]>([]);
   const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);
   const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
   const [restrictions, setRestrictions] = React.useState<IColumnRestrictionsInfo[]>([]);
@@ -54,6 +68,13 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     indexes: false,
     triggers: false,
   });
+  const [pendingDdlSql, setPendingDdlSql] = React.useState('');
+  const [showPendingDdlModal, setShowPendingDdlModal] = React.useState(false);
+  const [applyingPendingDdl, setApplyingPendingDdl] = React.useState(false);
+  const pendingApplyInfoRef = React.useRef<{
+    idConnection: string;
+    filters: ILoadTableInfoFilters;
+  }>(null);
 
   const updateFetchDate = (attribute: keyof ITableInfo) => {
     setLastFetchDate((prevState) => ({
@@ -80,6 +101,81 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     } finally {
       updateLoading('columns', false);
     }
+  }, []);
+
+  const loadColumnTypes = React.useCallback(async (idConnection: string) => {
+    const items = await getColumnTypes(idConnection);
+    const commonTypes = [
+      'varchar',
+      'text',
+      'integer',
+      'bigint',
+      'serial',
+      'bigserial',
+      'uuid',
+      'boolean',
+      'numeric',
+      'decimal',
+      'date',
+      'timestamp',
+      'timestamptz',
+      'json',
+      'jsonb',
+    ];
+    const loadedTypes = (items || []).map((item) => item.name).filter(Boolean);
+
+    setColumnTypes(
+      [...new Set([...commonTypes, ...loadedTypes])].sort((a, b) => a.localeCompare(b)),
+    );
+  }, []);
+
+  const addPendingColumn = React.useCallback((column: IPendingColumnCreate) => {
+    setPendingColumns((prevState) => [
+      ...prevState,
+      {
+        ...column,
+        __style: column.__style || {
+          backgroundColor: '#3fb95033',
+        },
+      },
+    ]);
+  }, []);
+
+  const removePendingColumn = React.useCallback((pendingId: string) => {
+    setPendingColumns((prevState) =>
+      prevState.filter((column) => column.__pendingId !== pendingId),
+    );
+  }, []);
+
+  const addPendingDroppedColumns = React.useCallback((columnsToDrop: IColumnInfo[]) => {
+    setPendingDroppedColumns((prevState) => {
+      const currentColumnNames = new Set(prevState.map((column) => column.column_name));
+      const nextColumns = columnsToDrop
+        .filter((column) => !currentColumnNames.has(column.column_name))
+        .map<IPendingColumnDrop>((column) => ({
+          ...column,
+          __pendingAction: 'drop',
+          __style: {
+            backgroundColor: '#ff676733',
+            textDecoration: 'line-through',
+          },
+        }));
+
+      return [...prevState, ...nextColumns];
+    });
+  }, []);
+
+  const removePendingDroppedColumns = React.useCallback((columnNames: string[]) => {
+    const columnNamesSet = new Set(columnNames);
+
+    setPendingDroppedColumns((prevState) =>
+      prevState.filter((column) => !columnNamesSet.has(column.column_name)),
+    );
+  }, []);
+
+  const clearPendingChanges = React.useCallback(() => {
+    setPendingColumns([]);
+    setPendingDroppedColumns([]);
   }, []);
 
   const loadTableReferences: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
@@ -163,16 +259,86 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     }
   }, []);
 
+  const openPendingChangesSqlModal = React.useCallback(
+    (idConnection: string, filters: ILoadTableInfoFilters) => {
+      const sql = generatePendingTableChangesDdl(filters.schema, filters.table, {
+        columns: pendingColumns,
+        droppedColumns: pendingDroppedColumns,
+        restrictions,
+        references,
+      });
+
+      if (!sql.trim()) return;
+
+      pendingApplyInfoRef.current = { idConnection, filters };
+      setPendingDdlSql(sql);
+      setShowPendingDdlModal(true);
+    },
+    [pendingColumns, pendingDroppedColumns, references, restrictions, showToast],
+  );
+
+  const applyPendingChangesSql = React.useCallback(
+    async (sql: string) => {
+      const applyInfo = pendingApplyInfoRef.current;
+      if (!applyInfo || !sql.trim()) return;
+
+      try {
+        setApplyingPendingDdl(true);
+
+        await runSql(applyInfo.idConnection, sql);
+        clearPendingChanges();
+        setShowPendingDdlModal(false);
+        showToast({ type: 'success', title: 'Alterações aplicadas com sucesso!' });
+
+        await Promise.all([
+          loadTableColumns(applyInfo.idConnection, applyInfo.filters),
+          loadTableRestrictions(applyInfo.idConnection, applyInfo.filters),
+          loadTableReferences(applyInfo.idConnection, applyInfo.filters),
+          loadTableIndexes(applyInfo.idConnection, applyInfo.filters),
+        ]);
+      } catch (error: any) {
+        showToast({
+          type: 'error',
+          title: 'Erro ao aplicar alterações.',
+          description: error?.message,
+          delay: 8000,
+        });
+      } finally {
+        setApplyingPendingDdl(false);
+      }
+    },
+    [
+      clearPendingChanges,
+      loadTableColumns,
+      loadTableIndexes,
+      loadTableReferences,
+      loadTableRestrictions,
+      runSql,
+      showToast,
+    ],
+  );
+
   return (
     <TableInfoContext.Provider
       value={{
         columns,
+        pendingColumns,
+        pendingDroppedColumns,
+        columnTypes,
         references,
         usedAsReference,
         restrictions,
         definition,
         indexes,
         triggers,
+
+        addPendingColumn,
+        removePendingColumn,
+        addPendingDroppedColumns,
+        removePendingDroppedColumns,
+        clearPendingChanges,
+        loadColumnTypes,
+        openPendingChangesSqlModal,
 
         loadTableColumns,
         loadTableReferences,
@@ -187,6 +353,14 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       }}
     >
       {children}
+
+      <ModalApplyPendingDDL
+        show={showPendingDdlModal}
+        sql={pendingDdlSql}
+        applying={applyingPendingDdl}
+        onClose={() => setShowPendingDdlModal(false)}
+        onApply={applyPendingChangesSql}
+      />
     </TableInfoContext.Provider>
   );
 };

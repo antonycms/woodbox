@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext, type CSSProperties } from 'react';
 
 import type {
   IColumnInfo,
@@ -26,7 +26,32 @@ export type ITableInfoLoading = {
   [key in keyof ITableInfo]: boolean;
 };
 
+export interface IPendingColumnCreate extends IColumnInfo {
+  __pendingId: string;
+  __pendingAction: 'create';
+  __style?: CSSProperties;
+  is_primary_key?: boolean;
+  is_unique?: boolean;
+}
+
+export interface IPendingColumnDrop extends IColumnInfo {
+  __pendingAction: 'drop';
+  __style?: CSSProperties;
+}
+
 export interface ITableInfoContext extends ITableInfo {
+  pendingColumns: IPendingColumnCreate[];
+  pendingDroppedColumns: IPendingColumnDrop[];
+  columnTypes: string[];
+
+  addPendingColumn(column: IPendingColumnCreate): void;
+  removePendingColumn(pendingId: string): void;
+  addPendingDroppedColumns(columns: IColumnInfo[]): void;
+  removePendingDroppedColumns(columnNames: string[]): void;
+  clearPendingChanges(): void;
+  loadColumnTypes(idConnection: string): Promise<void>;
+  openPendingChangesSqlModal(idConnection: string, filters: ILoadTableInfoFilters): void;
+
   loadTableColumns: LoadTableInfo;
   loadTableReferences: LoadTableInfo;
   loadTableUsedAsReference: LoadTableInfo;

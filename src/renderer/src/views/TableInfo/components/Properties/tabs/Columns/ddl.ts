@@ -5,6 +5,7 @@ import type {
   IIndexInfo,
   ITriggerInfo,
 } from '@renderer/contexts/Store';
+import type { IPendingColumnCreate, IPendingColumnDrop } from '@renderer/contexts/TableInfoContext';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
@@ -217,4 +218,112 @@ export const generateAddColumnsDdl = (
     ...getRestrictionsDdlBySelectedColumns(tableName, selectedColumnNames, options?.restrictions),
     ...getReferencesDdlBySelectedColumns(tableName, selectedColumnNames, options?.references),
   ].join('\n\n');
+};
+
+const getConstraintName = (table: string, column: string, suffix: string) => {
+  return `${table}_${column}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+};
+
+const getDropConstraintsDdl = (
+  tableName: string,
+  droppedColumnNames: Set<string>,
+  options: {
+    restrictions?: IColumnRestrictionsInfo[];
+    references?: IColumnReferenceInfo[];
+  },
+) => {
+  const constraintsToDrop = new Set<string>();
+
+  options.restrictions?.forEach((restriction) => {
+    const hasDroppedColumn = restriction.column_names?.some((columnName) =>
+      droppedColumnNames.has(columnName),
+    );
+
+    if (hasDroppedColumn) constraintsToDrop.add(restriction.constraint_name);
+  });
+
+  options.references?.forEach((reference) => {
+    if (droppedColumnNames.has(reference.column_name)) {
+      constraintsToDrop.add(reference.constraint_name);
+    }
+  });
+
+  return [...constraintsToDrop].map(
+    (constraintName) =>
+      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
+  );
+};
+
+export const generatePendingTableChangesDdl = (
+  schema: string | undefined,
+  table: string,
+  changes: {
+    columns: IPendingColumnCreate[];
+    droppedColumns?: IPendingColumnDrop[];
+    restrictions?: IColumnRestrictionsInfo[];
+    references?: IColumnReferenceInfo[];
+  },
+) => {
+  const columns = changes.columns || [];
+  const droppedColumns = changes.droppedColumns || [];
+
+  if (!columns.length && !droppedColumns.length) return '';
+
+  const tableName = getTableName(schema, table);
+  const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
+  const dropColumnStatements = droppedColumns.map(
+    (column) => `ALTER TABLE ${tableName}\n  DROP COLUMN ${quoteIdent(column.column_name)};`,
+  );
+
+  const createColumnStatements = columns
+    .flatMap((column) => {
+      const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
+      const notNull = column.is_nullable ? '' : ' NOT NULL';
+
+      const statements: string[] = [];
+
+      statements.push(
+        `ALTER TABLE ${tableName}\n  ADD COLUMN ${quoteIdent(column.column_name)} ${getColumnType(
+          column,
+        )}${defaultValue}${notNull};`,
+      );
+
+      if (column.is_primary_key) {
+        statements.push(
+          `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+            getConstraintName(table, column.column_name, 'pk'),
+          )} PRIMARY KEY (${quoteIdent(column.column_name)});`,
+        );
+      }
+
+      if (column.is_unique) {
+        statements.push(
+          `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+            getConstraintName(table, column.column_name, 'unique'),
+          )} UNIQUE (${quoteIdent(column.column_name)});`,
+        );
+      }
+
+      if (column.description) {
+        statements.push(
+          `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
+            column.description,
+          )};`,
+        );
+      }
+
+      return statements;
+    })
+    .join('\n\n');
+
+  return [
+    ...getDropConstraintsDdl(tableName, droppedColumnNames, {
+      restrictions: changes.restrictions,
+      references: changes.references,
+    }),
+    ...dropColumnStatements,
+    createColumnStatements,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 };
