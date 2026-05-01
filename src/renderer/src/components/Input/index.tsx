@@ -40,6 +40,7 @@ export const Input = (props: IInputProps) => {
     onClick,
     onFocus,
     onBlur,
+    style,
     'data-value': dataValue,
     icon: Icon,
     id: externalId,
@@ -104,7 +105,7 @@ export const Input = (props: IInputProps) => {
             onClick={onClick}
             onFocus={onFocus}
             onBlur={onBlur}
-            style={inputStyle}
+            style={{ ...(style || {}), ...inputStyle }}
             className={classes(className, styles.input, centerText && styles.centerText)}
           />
 
@@ -182,4 +183,5 @@ export type IInputProps = IGridSystem & {
   onKeyUp?: React.KeyboardEventHandler<HTMLInputElement>;
   autoComplete?: React.HTMLInputAutoCompleteAttribute;
   spellCheck?: boolean | 'true' | 'false';
+  style?: React.CSSProperties;
 };
