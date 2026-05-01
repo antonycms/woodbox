@@ -1,5 +1,5 @@
+import { setObjectProperty } from '@renderer/utils/object';
 import { useCallback, useRef, useState } from 'react';
-import { makeOnChangeSetState } from '../utils/methods';
 
 export function useForm<Data = unknown>(initialValue = {} as Data) {
   const [state, setState] = useState<Data>(initialValue);
@@ -9,9 +9,19 @@ export function useForm<Data = unknown>(initialValue = {} as Data) {
 
   const reset = useCallback(() => setState(initialValue), []);
 
-  const onChange = useCallback(makeOnChangeSetState(setState), []);
-
   const getValue = useCallback(() => valueRef.current, []);
+
+  const onChange = useCallback((event: any) => {
+    const { type, name, value, checked } = event?.target || event || {};
+
+    if (!name) {
+      throw new Error('Error on change event in [useForm], "name" is required.');
+    }
+
+    const v = type === 'checkbox' ? !!checked : value ?? null;
+
+    setState((prevState) => setObjectProperty(prevState as any, name, v, true));
+  }, []);
 
   const register = <U extends keyof Data>(name: U) => {
     return {
