@@ -4,9 +4,8 @@ import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { calculateTextHtmlWidth, copyToClipboard } from '@renderer/utils/methods';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
-import TableRow from './components/TableRow';
-import TableColumn from './components/TableColumn';
 import TableAnalysisView from './components/TableAnalysisView';
+import TableDefaultView from './components/TableDefaultView';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ITableSort } from './dtos';
@@ -255,36 +254,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [sort],
   );
 
-  const virtualHeader = React.useMemo(() => {
-    const { columnsIndexToRender } = columnsDetails;
-    return (
-      <TableRow isHeader>
-        {columnsIndexToRender.map((columnIndex) => {
-          const column = columns[columnIndex];
-          const minWidth = minColumnsSize[columnIndex];
-          const width = columnsSize[columnIndex];
-
-          return (
-            <TableColumn
-              resizable
-              title={column.title}
-              key={String(column.attribute)}
-              columnIndex={columnIndex}
-              rowHeight={rowHeight}
-              width={width}
-              onResize={(e) => onResize(columnIndex, e.width)}
-              onClick={column.sortable && onSort ? () => onSort(column) : undefined}
-              style={{ cursor: column.sortable && onSort ? 'pointer' : undefined }}
-              // onDoubleClick={onDoubleClick ? () => onDoubleClick(column) : undefined}
-              minWidth={minWidth}
-              value={getSortLabel(column)}
-            />
-          );
-        })}
-      </TableRow>
-    );
-  }, [columns, columnsDetails, getSortLabel, minColumnsSize, onResize, onSort]);
-
   const onSaveCell = React.useCallback(
     (indexRow: number, rowColumnKey: string, newValue: string | number) => {
       setCellEditingKey(null);
@@ -384,55 +353,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     },
     [selectAnalysisRange],
   );
-
-  const virtualRows = (() => {
-    const { first, last } = rowsDetails;
-    const { columnsIndexToRender } = columnsDetails;
-    const rowsToRender = serializedRows.slice(first, last);
-
-    return rowsToRender.map((row: any) => {
-      const indexRow = row.__index_row;
-      const styleRow = row.__style;
-      const keyRow = row.__key_row;
-      const isSelected = selectedRows.get(keyRow);
-      const editedRow = editedRows?.get(keyRow);
-
-      return (
-        <TableRow key={keyRow} row={row} isSelected={isSelected}>
-          {columnsIndexToRender.map((columnIndex) => {
-            const column = columns[columnIndex];
-            const rowColumnKey = `${keyRow}:${String(column.attribute)}`;
-            const isEditing = rowColumnKey === cellEditingKey;
-            const width = columnsSize[columnIndex];
-            const editedValue = editedRow?.[column.attribute];
-            const value = editedValue !== undefined ? editedValue : row[column.attribute];
-
-            return (
-              <TableColumn
-                key={rowColumnKey}
-                rowColumnKey={rowColumnKey}
-                columnIndex={columnIndex}
-                indexRow={indexRow}
-                rowHeight={rowHeight}
-                style={styleRow}
-                isEditing={isEditing}
-                onDoubleClick={setCellEditingKey}
-                onEditCell={onSaveCell}
-                onBlurCell={onBlurCell}
-                width={width}
-                name={String(column.attribute)}
-                value={value}
-                isLink={column.isLink}
-                onFkCellClick={onCellLinkClick}
-                isSelectedCell={selectedCells.has(cellKey(indexRow, columnIndex))}
-                onSelectCell={handleSelectCell}
-              />
-            );
-          })}
-        </TableRow>
-      );
-    });
-  })();
 
   const cssVars = toCssProperties({
     ...theme,
@@ -768,10 +688,28 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onSelectCell={handleSelectAnalysisCell}
         />
       ) : (
-        <div className={styles.table_container}>
-          {virtualHeader}
-          {virtualRows}
-        </div>
+        <TableDefaultView
+          columns={columns}
+          rows={serializedRows}
+          rowHeight={rowHeight}
+          columnsSize={columnsSize}
+          minColumnsSize={minColumnsSize}
+          editedRows={editedRows}
+          cellEditingKey={cellEditingKey}
+          selectedCells={selectedCells}
+          selectedRows={selectedRows}
+          columnsIndexToRender={columnsDetails.columnsIndexToRender}
+          firstRowIndex={rowsDetails.first}
+          lastRowIndex={rowsDetails.last}
+          getSortLabel={getSortLabel}
+          onResizeColumn={onResize}
+          onSort={onSort}
+          onDoubleClick={setCellEditingKey}
+          onEditCell={onSaveCell}
+          onBlurCell={onBlurCell}
+          onSelectCell={handleSelectCell}
+          onCellLinkClick={onCellLinkClick}
+        />
       )}
     </div>
   );
