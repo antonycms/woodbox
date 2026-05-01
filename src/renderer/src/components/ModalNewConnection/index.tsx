@@ -6,10 +6,10 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
-import { Select } from '../Select';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { Autocomplete } from '@renderer/components/Autocomplete';
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
@@ -22,7 +22,7 @@ export const ModalNewConnection = React.memo(
       activeTheme: { modal: colors },
     } = useThemeContext();
 
-    const formRef = React.useRef<HTMLFormElement>();
+    const formRef = React.useRef<HTMLFormElement>(null);
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
 
     const { register, handleSubmit, reset, setState, getValue } = useForm<IDataNewConnection>({
@@ -113,15 +113,15 @@ export const ModalNewConnection = React.memo(
               backgroundColor={colors.fieldBackgroundColor}
               {...register('description')}
             />
-            <Select
+            <Autocomplete
               required
+              data={connectionTypes}
               label="Dialeto"
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
               xs={12}
               sm={6}
               md={4}
-              items={connectionTypes}
-              color={colors.fieldColor}
-              backgroundColor={colors.fieldBackgroundColor}
               {...register('dialect')}
             />
             <Input
