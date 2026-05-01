@@ -187,6 +187,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
       title={title}
       labelColor={labelColor}
       color={color}
+      data-value={value}
       maxWidth={maxWidth}
       backgroundColor={backgroundColor}
       placeholderColor={color}
@@ -219,7 +220,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
           );
         }
 
-        return <IconMdiKeyboardArrowDown color={color} />;
+        return <IconMdiKeyboardArrowDown pointerEvents="none" color={color} />;
       }}
     >
       {!!(isDropdownOpen && dataFiltered.length) && (
