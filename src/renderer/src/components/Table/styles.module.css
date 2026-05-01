@@ -105,7 +105,6 @@
   display: grid;
   grid-template-columns: var(--analysisColumnsSize);
   min-width: max-content;
-  min-height: 100%;
 }
 
 .analysis_header,
