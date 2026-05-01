@@ -135,6 +135,12 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
 
         <Spacer />
 
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {referencesSerialized?.length > 1
+            ? `${referencesSerialized?.length} Itens`
+            : `${referencesSerialized?.length || 0} Item`}
+        </Text>
+
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
         </Text>

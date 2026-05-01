@@ -111,6 +111,12 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
 
         <Spacer />
 
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {restrictions?.length > 1
+            ? `${restrictions?.length} Itens`
+            : `${restrictions?.length || 0} Item`}
+        </Text>
+
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
         </Text>

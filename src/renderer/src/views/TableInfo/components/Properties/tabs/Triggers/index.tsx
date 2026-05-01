@@ -98,6 +98,10 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
 
         <Spacer />
 
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {triggers?.length > 1 ? `${triggers?.length} Itens` : `${triggers?.length || 0} Item`}
+        </Text>
+
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {toDateTime(lastFetchDate.triggers)}
         </Text>

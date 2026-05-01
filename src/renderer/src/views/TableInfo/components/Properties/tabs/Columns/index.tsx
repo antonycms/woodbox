@@ -119,7 +119,6 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedColumns}
         rows={filteredColumns}
-        onCopy={(rows) => console.log(rows)}
         columns={[
           { label: 'Nome da coluna', attribute: 'column_name', editable: true },
           { label: 'Tipo', attribute: 'data_type', editable: true },
@@ -157,6 +156,12 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         </Button>
 
         <Spacer />
+
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {filteredColumns?.length > 1
+            ? `${filteredColumns?.length} Itens`
+            : `${filteredColumns?.length || 0} Item`}
+        </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}

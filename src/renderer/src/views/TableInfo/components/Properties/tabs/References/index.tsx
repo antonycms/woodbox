@@ -70,6 +70,12 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
 
         <Spacer />
 
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {rowsSerialized?.length > 1
+            ? `${rowsSerialized?.length} Itens`
+            : `${rowsSerialized?.length || 0} Item`}
+        </Text>
+
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
         </Text>

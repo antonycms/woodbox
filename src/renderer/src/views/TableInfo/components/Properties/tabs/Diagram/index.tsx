@@ -299,6 +299,7 @@ const Diagram = ({
   }, [references, usedAsReference]);
 
   const hasNoRelations = !isLoading && references.length === 0 && usedAsReference.length === 0;
+  const totalItems = (references?.length || 0) + (usedAsReference?.length || 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -376,6 +377,10 @@ const Diagram = ({
         </Button>
 
         <Spacer />
+
+        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
+          {totalItems > 1 ? `${totalItems} Itens` : `${totalItems} Item`}
+        </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
