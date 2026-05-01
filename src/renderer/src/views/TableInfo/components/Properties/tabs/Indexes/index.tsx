@@ -8,7 +8,7 @@ import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { IconRefresh } from '@renderer/styles/icons';
+import { IconRefresh, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -22,7 +22,8 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { indexes, loadTableIndexes, lastFetchDate, loading } = useTableInfoContext();
+  const { indexes, loadTableIndexes, openPendingChangesSqlModal, lastFetchDate, loading } =
+    useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
@@ -125,6 +126,16 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
+        <Button
+          title="Salvar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+        >
+          <SaveIcon size={16} />
+        </Button>
+
         <Button
           title="Atualizar dados"
           text

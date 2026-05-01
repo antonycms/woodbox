@@ -30,7 +30,8 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { references, loadTableReferences, lastFetchDate, loading } = useTableInfoContext();
+  const { references, loadTableReferences, openPendingChangesSqlModal, lastFetchDate, loading } =
+    useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
@@ -153,7 +154,13 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button title="Salvar" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Salvar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+        >
           <SaveIcon size={16} />
         </Button>
 

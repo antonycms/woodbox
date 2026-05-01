@@ -22,7 +22,13 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { restrictions, loadTableRestrictions, lastFetchDate, loading } = useTableInfoContext();
+  const {
+    restrictions,
+    loadTableRestrictions,
+    openPendingChangesSqlModal,
+    lastFetchDate,
+    loading,
+  } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
     [],
@@ -118,7 +124,13 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button title="Salvar" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Salvar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+        >
           <SaveIcon size={16} />
         </Button>
 
