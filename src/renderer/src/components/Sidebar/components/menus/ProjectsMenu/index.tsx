@@ -8,7 +8,6 @@ import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
 import { ModalNewScript } from '@renderer/components/ModalNewScript';
-import { ModalRename } from '@renderer/components/ModalRename';
 import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
@@ -29,45 +28,46 @@ import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
   const {
+    activeTheme: { sideBar: colors },
+  } = useThemeContext();
+
+  const {
     connectionsGroupPerProject,
     removeConnection,
     removeProject,
+    removeScript,
     loadConnectionInfo,
     closeConnection,
     connectionsInfo,
     scripts,
-    addScript,
-    removeScript,
-    editScript,
   } = useStoreContext();
 
-  const {
-    activeTheme: { sideBar: colors },
-  } = useThemeContext();
-
   const { showToast } = useToast();
-  const { addTab, getTab, setActiveTabId, updateTab } = useAppTabContext();
+  const { addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
 
   const [filterText, setFilterText] = React.useState('');
   const [isWholeWordFilter, setIsWholeWordFilter] = React.useState(false);
 
-  const [isNewProject, setIsNewProject] = React.useState(false);
-  const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
-  const [projectNewConnection, setProjectNewConnection] = React.useState<IItemTreeViewData>();
-  const [selectedConnection, setSelectedConnection] = React.useState<ISelectedConnection | null>(
-    null,
-  );
-  const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
-
-  const [showMoodalNewScript, setShowModalNewScript] = React.useState(false);
-  const [scriptToRename, setScriptToRename] = React.useState<IScript | null>(null);
-
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [contextMenuItemSelected, setContextMenuItemSelected] = React.useState<IItemTreeViewData>();
 
+  const [idProjectSelected, setIdProjectSelected] = React.useState<string>();
+  const [idConnectionSelected, setIdConnectionSelected] = React.useState<string>();
+
+  const [isNewProject, setIsNewProject] = React.useState(false);
+  const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
+
+  const [isNewConnection, setIsNewConnection] = React.useState(false);
+  const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
+
+  const [isNewScript, setIsNewScript] = React.useState(false);
+  const [scriptEditing, setScriptEditing] = React.useState<IScript>();
+
   const showModalNewProject = !!(isNewProject || projectEditing);
-  const showModalNewConnection = !!(projectNewConnection || connectionEditing);
+  const showModalNewConnection = !!(isNewConnection || connectionEditing);
+  const showModalNewScript = !!(isNewScript || scriptEditing);
+
   const filterTextSerialized = filterText?.trim?.() ?? '';
 
   const checkFilterText = (text: string, text2?: string) => {
@@ -126,15 +126,20 @@ const ProjectsMenu = () => {
     }
   };
 
-  const onCloseModalProject = () => {
+  const onCloseModalProject = React.useCallback(() => {
     setIsNewProject(false);
     setProjectEditing(null);
-  };
+  }, []);
 
-  const onCloseModalConnection = () => {
-    setProjectNewConnection(null);
+  const onCloseModalConnection = React.useCallback(() => {
+    setIsNewConnection(false);
     setConnectionEditing(null);
-  };
+  }, []);
+
+  const onCloseModalScript = React.useCallback(() => {
+    setIsNewScript(false);
+    setScriptEditing(null);
+  }, []);
 
   const handleOpemItemTreeView = async (item: IItemTreeViewData, itemIsOpen: boolean) => {
     if (itemIsOpen) return;
@@ -146,7 +151,8 @@ const ProjectsMenu = () => {
   };
 
   const handleClickItemThreeView = (item: IItemTreeViewData) => {
-    setSelectedConnection(item?.data?.id_connection && item?.data);
+    setIdConnectionSelected(item?.data?.id_connection);
+    setIdProjectSelected(item?.data?.id_project);
   };
 
   const openTabScriptSql = (script: IScript) => {
@@ -228,45 +234,12 @@ const ProjectsMenu = () => {
     }
   };
 
-  const handleRenameScript = async (name: string) => {
-    await editScript(scriptToRename.id, { name });
-    updateTab(`script_${scriptToRename.id}`, { title: name });
-    setScriptToRename(null);
-  };
-
-  const handleCreateNewScript = async (name: string) => {
-    const { id_connection } = selectedConnection;
-
-    refreshConnectionInfo(id_connection);
-
-    const script = await addScript({
-      name,
-      id_connection,
-      content: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-
-    setShowModalNewScript(false);
-
-    addTab({
-      id: `script_${script.id}`,
-      title: script.name,
-      data: {
-        type: 'query-editor',
-        id_connection: script.id_connection,
-        id_script: script.id,
-      },
-      component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
-    });
-  };
-
   const contextOptions = React.useMemo(() => {
     const optionsAvailable: Record<string, IContextMenuOption[]> = {
       project: [
         {
           text: 'Nova Conexão',
-          onClick: () => setProjectNewConnection(contextMenuItemSelected),
+          onClick: () => setIsNewConnection(true),
         },
         {
           text: 'Editar Projeto',
@@ -337,18 +310,24 @@ const ProjectsMenu = () => {
       scripts: [
         {
           text: 'Novo script SQL',
-          onClick: () => setShowModalNewScript(true),
+          onClick: () => setIsNewScript(true),
         },
       ],
 
       script: [
         {
           text: 'Renomear Script',
-          onClick: () => setScriptToRename(contextMenuItemSelected?.data?.script),
+          onClick: () => setScriptEditing(contextMenuItemSelected?.data?.script),
         },
         {
           text: 'Excluir Script',
-          onClick: () => removeScript(contextMenuItemSelected?.data?.script?.id),
+          onClick: () => {
+            const id_script = contextMenuItemSelected?.data?.script?.id;
+            const tabId = `script_${id_script}`;
+
+            removeTab(tabId);
+            removeScript(id_script);
+          },
         },
       ],
     };
@@ -364,10 +343,12 @@ const ProjectsMenu = () => {
       label: project.description,
       type: 'project' as const,
       icon: 'grid',
+      data: { id_project: project.id },
       childs: project.connections.map((connection) => {
         const connectionInfo = connectionsInfo.get(connection.id);
 
         const dataConnection = {
+          id_project: project.id,
           id_connection: connection.id,
           description_connection: connection.description,
         };
@@ -502,31 +483,25 @@ const ProjectsMenu = () => {
 
   return (
     <>
-      <ModalNewConnection
-        show={showModalNewConnection}
-        idConnection={connectionEditing?.id}
-        idProject={projectNewConnection?.id}
-        onClose={onCloseModalConnection}
-      />
-
       <ModalNewProject
         show={showModalNewProject}
         onClose={onCloseModalProject}
         idProject={projectEditing?.id}
       />
 
-      <ModalNewScript
-        show={showMoodalNewScript}
-        onConfirm={handleCreateNewScript}
-        onClose={() => setShowModalNewScript(false)}
+      <ModalNewConnection
+        show={showModalNewConnection}
+        onClose={onCloseModalConnection}
+        idProject={idProjectSelected}
+        idConnection={connectionEditing?.id}
       />
 
-      <ModalRename
-        title="Renomear Script"
-        show={!!scriptToRename}
-        name={scriptToRename?.name}
-        onConfirm={handleRenameScript}
-        onClose={() => setScriptToRename(null)}
+      <ModalNewScript
+        show={showModalNewScript}
+        onClose={onCloseModalScript}
+        idConnection={idConnectionSelected}
+        idScript={scriptEditing?.id}
+        onNewScriptCreated={openTabScriptSql}
       />
 
       <Row>
@@ -536,7 +511,7 @@ const ProjectsMenu = () => {
 
         <Spacer />
 
-        {!!selectedConnection && (
+        {!!idConnectionSelected && (
           <Button
             smallIcon
             text
@@ -545,12 +520,12 @@ const ProjectsMenu = () => {
             icon={() => <FileSqlIcon size={14} />}
             onClick={() => {
               const connectionScripts = scripts.filter(
-                (s) => s.id_connection === selectedConnection.id_connection,
+                (s) => s.id_connection === idConnectionSelected,
               );
 
               const script = connectionScripts[connectionScripts.length - 1];
 
-              script ? openTabScriptSql(script) : setShowModalNewScript(true);
+              script ? openTabScriptSql(script) : setIsNewScript(true);
             }}
           />
         )}
@@ -613,7 +588,3 @@ const ProjectsMenu = () => {
 };
 
 export default React.memo(ProjectsMenu);
-
-interface ISelectedConnection {
-  id_connection: string;
-}
