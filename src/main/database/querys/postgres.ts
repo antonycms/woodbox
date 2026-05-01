@@ -47,6 +47,16 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
   WHERE c.table_name = '${table}' AND c.table_schema = '${schema}';
 `;
 
+const getColumnTypes = () => /* sql */ `
+  SELECT DISTINCT typname AS name
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE t.typtype IN ('b', 'd', 'e')
+  AND n.nspname NOT IN ('information_schema', 'pg_toast')
+  AND typname NOT LIKE '\\_%'
+  ORDER BY typname;
+`;
+
 const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
   SELECT
     c.conname AS constraint_name,
@@ -319,6 +329,7 @@ export default {
   getAllSchemas,
   getTables,
   getTableColumns,
+  getColumnTypes,
   getTableReferences,
   getTableUsedAsReference,
   getTotalRowsCountInTable,

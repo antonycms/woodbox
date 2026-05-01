@@ -188,6 +188,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:table_columns', idConnection, { table, schema });
   };
 
+  const getColumnTypes = async (idConnection: string) => {
+    return await call('@get:column_types', idConnection);
+  };
+
   const getTableReferences = async (idConnection: string, { table, schema }) => {
     return await call('@get:table_references', idConnection, { table, schema });
   };
@@ -269,6 +273,7 @@ const StoreContextProvider = ({ children }) => {
         getTableData,
 
         getTableColumns,
+        getColumnTypes,
         getTableReferences,
         getTableUsedAsReference,
         getTableRestrictions,

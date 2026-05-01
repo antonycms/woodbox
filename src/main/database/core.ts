@@ -173,6 +173,17 @@ export const getTableColumns = async (connectionId: string, { table, schema }) =
   return raw?.rows || [];
 };
 
+export const getColumnTypes = async (connectionId: string) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+
+  const query = clientsQuery[dialect];
+
+  const raw = await instance.raw(query.getColumnTypes());
+
+  return raw?.rows || [];
+};
+
 export const getTableReferences = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;

@@ -5,6 +5,7 @@ import {
   getConnectionInfo,
   getTableData,
   getTableColumns,
+  getColumnTypes,
   getTableReferences,
   getTableUsedAsReference,
   getTableRestrictions,
@@ -20,6 +21,7 @@ addListener('@get:close_connection', closeConnection);
 addListener('@get:connection_info', getConnectionInfo);
 addListener('@get:table_data', getTableData);
 addListener('@get:table_columns', getTableColumns);
+addListener('@get:column_types', getColumnTypes);
 addListener('@get:table_references', getTableReferences);
 addListener('@get:table_used_as_reference', getTableUsedAsReference);
 addListener('@get:table_restrictions', getTableRestrictions);

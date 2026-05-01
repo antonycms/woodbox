@@ -167,6 +167,8 @@ export interface IStoreContext {
     filters: { table: string; schema: string },
   ): Promise<IColumnInfo[]>;
 
+  getColumnTypes(idConnection: string): Promise<{ name: string }[]>;
+
   getTableReferences(
     idConnection: string,
     filters: { table: string; schema: string },
