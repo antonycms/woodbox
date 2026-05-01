@@ -24,8 +24,6 @@ interface ITableProps<Row = any> {
   sort?: ITableSort[];
   onSort?(column: IColumn<Row>): void;
   loading?: boolean;
-  onCopy?(selectedRows: Row[]): void;
-  onPaste?(selectedRows: Row[]): void;
   onSelectRow?(selectedRows: Row[]): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
@@ -47,8 +45,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     sort,
     onSort,
     onSelectRow,
-    onCopy,
-    onPaste,
     onCellLinkClick,
   } = props;
 
@@ -347,7 +343,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
       const isCopy = window.ctrlPressed && ev.key === 'c';
-      const isPaste = window.ctrlPressed && ev.key === 'v';
 
       if (isCopy) {
         const cells = selectedCellsRef.current;
@@ -381,7 +376,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
           copyToClipboard(lines.join('\n'));
         }
       }
-      isPaste && onPaste?.([...selectedRowsRef.current.values()]);
     };
 
     refScrollContainer.current?.addEventListener?.('keydown', cb);
@@ -389,7 +383,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [onCopy, onPaste]);
+  }, []);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
