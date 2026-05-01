@@ -1,70 +1,275 @@
 import React from 'react';
-import { Column } from '@renderer/components/Grid';
-import { generateHash } from '@renderer/utils/string';
-import { Label } from '@renderer/components/Label';
+import { SpinnerLoading } from '@renderer/components/Loaders';
+import { Input } from '@renderer/components/Input';
+import { VirtualizeList } from '@renderer/components/VirtualizeList';
+import { IGridSystem } from '@renderer/components/Grid';
+import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { classes, toCssProperties } from '@renderer/styles/theme';
-import styles from './styles.module.css';
+import { generateHash } from '@renderer/utils/string';
 
 import IconMdiKeyboardArrowDown from '~icons/mdi/keyboard-arrow-down';
+import IconMdiClose from '~icons/mdi/close';
 
-export const Autocomplete = (props) => {
+import styles from './styles.module.css';
+
+const defaultExtractLabel = (item: any) => (typeof item === 'string' ? item : item?.label);
+const defaultExtractValue = (item: any) => (typeof item === 'string' ? item : item?.value);
+
+export interface IAutoCompleteRef {
+  clear: () => void;
+  open: () => void;
+}
+
+export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   const {
+    ref,
+    data,
     required,
     labelColor,
     label,
     name,
     value,
     onChange,
-    defaultValue,
-    placeholderColor,
     maxWidth,
     color,
     backgroundColor,
     title,
     placeholder,
     className,
-    id: externalId,
+    loading,
+    id,
+    clearable = true,
+    extractLabel = defaultExtractLabel,
+    extractValue = defaultExtractValue,
+    emptyMessage = 'Não há opções disponíveis',
     ...gridSystem
   } = props;
 
-  const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;
+  const itemSize = 41;
 
-  const id = React.useMemo(() => externalId || generateHash(), [externalId]);
+  const refScrollElement = React.useRef<HTMLDivElement>(null);
+  const refInput = React.useRef<HTMLInputElement>(null);
+  const [idContainer] = React.useState(generateHash(10));
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const [activeIndex, setActiveIndex] = React.useState(-1);
+  const [textInput, setTextInput] = useStateWithDebounce('');
 
-  const inputContainerStyle = React.useMemo(() => ({ backgroundColor }), [backgroundColor]);
+  const extractLabelRef = React.useRef(extractLabel);
+  extractLabelRef.current = extractLabel;
 
-  const inputStyle = React.useMemo(() => {
-    return { ...toCssProperties({ placeholderColor }), maxWidth, color };
+  const extractValueRef = React.useRef(extractValue);
+  extractValueRef.current = extractValue;
+
+  const dataFiltered = React.useMemo(() => {
+    if (!textInput) return [...data.entries()];
+
+    const array: [number, T][] = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const textContains = extractLabelRef
+        .current(item)
+        .toLowerCase()
+        .includes(textInput.toLowerCase());
+
+      if (textContains) array.push([i, item]);
+    }
+
+    return array;
+  }, [textInput, data]);
+
+  const selected = React.useMemo(() => {
+    if (value === null || value === undefined || !data) return null;
+
+    return data.find((item) => extractValueRef.current(item) === value);
+  }, [value, data]);
+
+  const selectedLabel = selected ? extractLabelRef.current(selected) : undefined;
+
+  const closeDropdown = () => {
+    refInput.current?.blur();
+    setIsDropdownOpen(false);
+
+    refInput.current!.value = '';
+    setTextInput('');
+  };
+
+  const onSelect = (item: T | null, index: number) => {
+    closeDropdown();
+    setActiveIndex(index);
+    onChange?.({ index, name, item, value: item && extractValueRef.current(item) });
+  };
+
+  const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTextInput(e.target.value);
+    props.onInput?.(e);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const isEnter = e.key === 'Enter';
+    const isUp = e.key === 'ArrowUp';
+    const isDown = e.key === 'ArrowDown';
+
+    if (!isEnter && !isUp && !isDown) return;
+
+    e.preventDefault();
+
+    // logic here
+  };
+
+  const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
+
+  // value ref
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      clear: () => closeDropdown(),
+      open: () => refInput.current?.focus(),
+    }),
+    [],
+  );
+
+  // Clique fora para fechar
+  React.useEffect(() => {
+    const onClickOutside = (e: Event) => {
+      const container = document.getElementById(idContainer);
+
+      if (container && !container.contains(e.target as Node)) closeDropdown();
+    };
+
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('focusin', onClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('focusin', onClickOutside);
+    };
   }, []);
 
+  // Scrolla para o item selecionado ao abrir o dropdown
+  React.useEffect(() => {
+    if (!isDropdownOpen || activeIndex < 0 || !refScrollElement.current) return;
+
+    refScrollElement.current!.scrollTop = activeIndex * itemSize;
+  }, [activeIndex, isDropdownOpen]);
+
   return (
-    <Column {...gridSystem}>
-      <div className={classes(styles.container, required && styles.isRequired)}>
-        {!!label && (
-          <Label color={labelColor} htmlFor={id}>
-            {label}
-          </Label>
-        )}
+    <Input
+      {...gridSystem}
+      useFakeInputToValidate={!!value}
+      autoComplete="off"
+      spellCheck="false"
+      id={id}
+      idContainer={idContainer}
+      label={label}
+      name={name}
+      className={className}
+      required={required}
+      title={title}
+      labelColor={labelColor}
+      color={color}
+      maxWidth={maxWidth}
+      backgroundColor={backgroundColor}
+      placeholderColor={color}
+      placeholder={selected ? selectedLabel : placeholder}
+      ref={refInput}
+      onFocus={() => setIsDropdownOpen(true)}
+      onChange={onInput}
+      onKeyDown={onKeyDown}
+      icon={() => {
+        if (loading) {
+          return (
+            <SpinnerLoading
+              background="transparent"
+              color={color}
+              size={12}
+              thickness={2}
+              padding="0"
+            />
+          );
+        }
 
-        <div className={styles.inputContainer} style={inputContainerStyle}>
-          <input
-            id={id}
-            name={name}
-            title={inputTitle}
-            placeholder={placeholder}
-            value={value}
-            defaultValue={defaultValue}
-            required={required}
-            onChange={onChange}
-            style={inputStyle}
-            className={classes(className, styles.input)}
-          />
+        if (selected && clearable) {
+          return (
+            <IconMdiClose
+              title="Desmarcar"
+              color={color}
+              cursor="pointer"
+              onClick={() => onSelect(null, -1)}
+            />
+          );
+        }
 
-          <div className={styles.iconContainer}>
-            <IconMdiKeyboardArrowDown className={styles.icon} />
-          </div>
+        return <IconMdiKeyboardArrowDown color={color} />;
+      }}
+    >
+      {!!(isDropdownOpen && dataFiltered.length) && (
+        <div
+          className={styles.dropdownContainer}
+          style={{ backgroundColor, ...toCssProperties({ height: `${dropdownHeight}px` }) }}
+        >
+          <VirtualizeList
+            itemSize={itemSize}
+            itemCount={dataFiltered.length}
+            refScrollElement={refScrollElement}
+            childrenStickySize={20}
+            childrenSticky={
+              !dataFiltered.length && <p className={styles.emptyMessage}>{emptyMessage}</p>
+            }
+          >
+            {({ index }) => {
+              const [real_index, item] = dataFiltered[index];
+
+              const label = extractLabelRef.current(item);
+              const isSelected =
+                selected && extractValueRef.current(selected) === extractValueRef.current(item);
+
+              return (
+                <div
+                  key={real_index}
+                  onClick={() => onSelect(item, real_index)}
+                  title={label}
+                  className={classes(styles.row, isSelected && styles.selected)}
+                >
+                  {label}
+                </div>
+              );
+            }}
+          </VirtualizeList>
         </div>
-      </div>
-    </Column>
+      )}
+    </Input>
   );
-};
+}
+
+export interface IAutocompleteProps<T> extends IGridSystem {
+  value?: string | number | boolean | null;
+  name?: string;
+  id?: string;
+  maxWidth?: string;
+  className?: string;
+  centerText?: boolean;
+  required?: boolean;
+  title?: string;
+  icon?: React.ReactElement;
+  color?: string;
+  backgroundColor?: string;
+  label?: string;
+  labelColor?: string;
+  extractLabel?: (item: T) => string;
+  extractValue?: (item: T) => string | number;
+  emptyMessage?: string;
+  clearable?: boolean;
+  ref?: React.Ref<IAutoCompleteRef>;
+  data: T[];
+  loading?: boolean;
+  placeholder?: string;
+  registerable?: boolean;
+  onInput?(e: React.ChangeEvent<HTMLInputElement>): void;
+  onChange?(params: {
+    index: number;
+    name?: string;
+    value: string | number | null;
+    item: T | null;
+  }): void;
+}
