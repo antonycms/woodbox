@@ -99,7 +99,7 @@ export const ModalNewConnection = React.memo(
     }, [idConnection]);
 
     return (
-      <Modal title="Nova Conexão" width="500px" show={show}>
+      <Modal title={idConnection ? 'Editar Conexão' : 'Nova Conexão'} width="500px" show={show}>
         <form id="formNewConnection" onSubmit={onSubmit} ref={formRef}>
           <Row>
             <Input

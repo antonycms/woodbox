@@ -45,7 +45,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
   }, [idProject]);
 
   return (
-    <Modal title="Novo Projeto" width="500px" show={show}>
+    <Modal title={idProject ? 'Editar Projeto' : 'Novo Projeto'} width="500px" show={show}>
       <form onSubmit={onSubmit}>
         <Input
           autoFocus
