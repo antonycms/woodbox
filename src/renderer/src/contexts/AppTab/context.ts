@@ -30,7 +30,7 @@ export interface INewAppTab {
   title?: string;
   unsaved?: boolean;
   data?: IAppTabData;
-  component(): JSX.Element | null;
+  component(): React.ReactElement | null;
 }
 
 export interface IAppTab {
@@ -38,7 +38,7 @@ export interface IAppTab {
   title: string;
   unsaved?: boolean;
   data?: IAppTabData;
-  component(): JSX.Element | null;
+  component(): React.ReactElement | null;
 }
 
 export default createContext<ITabContext>({} as any);

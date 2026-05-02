@@ -152,7 +152,7 @@ export interface IItemTreeView extends IItemTreeViewData {
   labelInfo?: string;
   childs?: IItemTreeViewProps[];
   icon?: AvalailableTreeViewIcon;
-  renderIcon?(): JSX.Element;
+  renderIcon?(): React.ReactElement;
   loading?: boolean;
 }
 

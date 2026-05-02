@@ -33,7 +33,7 @@ export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
 export interface IItemBar {
   id: string;
   title?: string;
-  icon(): JSX.Element;
+  icon(): React.ReactElement;
 }
 
 export interface IMenuBarProps {

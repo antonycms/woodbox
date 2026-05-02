@@ -14,5 +14,5 @@ export interface IColumn<ColumnType = any> {
   editable?: boolean;
   isLink?: boolean;
   type?: 'text' | 'number' | 'select';
-  renderIcon?(): JSX.Element;
+  renderIcon?(): React.ReactElement;
 }

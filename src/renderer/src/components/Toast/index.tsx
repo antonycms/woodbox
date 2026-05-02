@@ -75,7 +75,7 @@ export interface IToastProps {
 export type ToastType = 'error' | 'warn' | 'success';
 
 interface ITypeConfig {
-  icon: () => JSX.Element;
+  icon: () => React.ReactElement;
   background: string;
   color: string;
 }

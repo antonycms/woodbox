@@ -74,7 +74,7 @@ Button.displayName = 'Button';
 export interface IButtonProps extends IGridSystem {
   children?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset';
-  icon?: () => JSX.Element;
+  icon?: () => React.ReactElement;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>;
   title?: string;

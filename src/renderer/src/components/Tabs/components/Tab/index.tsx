@@ -97,7 +97,7 @@ export interface ITabProps {
   children?: React.ReactNode;
   height?: string;
   vertical?: boolean;
-  icon?(): JSX.Element;
+  icon?(): React.ReactElement;
   active?: boolean;
   color: string;
   ascentColor: string;
@@ -105,4 +105,4 @@ export interface ITabProps {
   onContextMenu?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
 }
 
-export type TabComponent = (props: ITabProps) => JSX.Element;
+export type TabComponent = (props: ITabProps) => React.ReactElement;

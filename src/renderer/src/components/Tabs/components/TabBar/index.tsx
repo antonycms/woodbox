@@ -213,7 +213,7 @@ export interface ITab {
   idTab: string;
   title?: string;
   unsaved?: boolean;
-  icon?(): JSX.Element;
+  icon?(): React.ReactElement;
 }
 
 export interface ITabsBarProps {
