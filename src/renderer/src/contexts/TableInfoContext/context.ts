@@ -1,6 +1,7 @@
 import { createContext, type CSSProperties } from 'react';
 
 import type {
+  ConstraintType,
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
@@ -39,15 +40,71 @@ export interface IPendingColumnDrop extends IColumnInfo {
   __style?: CSSProperties;
 }
 
+export interface IPendingIndexCreate extends IIndexInfo {
+  __pendingId: string;
+  __pendingAction: 'create';
+  __style?: CSSProperties;
+}
+
+export interface IPendingIndexDrop extends IIndexInfo {
+  __pendingAction: 'drop';
+  __style?: CSSProperties;
+}
+
+export interface IPendingRestrictionCreate extends IColumnRestrictionsInfo {
+  __pendingId: string;
+  __pendingAction: 'create';
+  __style?: CSSProperties;
+  constraint_type: ConstraintType;
+}
+
+export interface IPendingRestrictionDrop extends IColumnRestrictionsInfo {
+  __pendingAction: 'drop';
+  __style?: CSSProperties;
+}
+
+export interface IPendingReferenceCreate extends IColumnReferenceInfo {
+  __pendingId: string;
+  __pendingAction: 'create';
+  __style?: CSSProperties;
+}
+
+export interface IPendingReferenceDrop extends IColumnReferenceInfo {
+  __pendingAction: 'drop';
+  __style?: CSSProperties;
+}
+
 export interface ITableInfoContext extends ITableInfo {
   pendingColumns: IPendingColumnCreate[];
   pendingDroppedColumns: IPendingColumnDrop[];
+  pendingIndexes: IPendingIndexCreate[];
+  pendingDroppedIndexes: IPendingIndexDrop[];
+  pendingRestrictions: IPendingRestrictionCreate[];
+  pendingDroppedRestrictions: IPendingRestrictionDrop[];
+  pendingReferences: IPendingReferenceCreate[];
+  pendingDroppedReferences: IPendingReferenceDrop[];
   columnTypes: string[];
 
   addPendingColumn(column: IPendingColumnCreate): void;
   removePendingColumn(pendingId: string): void;
   addPendingDroppedColumns(columns: IColumnInfo[]): void;
   removePendingDroppedColumns(columnNames: string[]): void;
+
+  addPendingIndex(index: IPendingIndexCreate): void;
+  removePendingIndex(pendingId: string): void;
+  addPendingDroppedIndexes(indexes: IIndexInfo[]): void;
+  removePendingDroppedIndexes(indexNames: string[]): void;
+
+  addPendingRestriction(restriction: IPendingRestrictionCreate): void;
+  removePendingRestriction(pendingId: string): void;
+  addPendingDroppedRestrictions(restrictions: IColumnRestrictionsInfo[]): void;
+  removePendingDroppedRestrictions(constraintNames: string[]): void;
+
+  addPendingReference(reference: IPendingReferenceCreate): void;
+  removePendingReference(pendingId: string): void;
+  addPendingDroppedReferences(references: IColumnReferenceInfo[]): void;
+  removePendingDroppedReferences(constraintNames: string[]): void;
+
   clearPendingChanges(): void;
   loadColumnTypes(idConnection: string): Promise<void>;
   openPendingChangesSqlModal(idConnection: string, filters: ILoadTableInfoFilters): void;

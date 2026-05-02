@@ -5,7 +5,16 @@ import type {
   IIndexInfo,
   ITriggerInfo,
 } from '@renderer/contexts/Store';
-import type { IPendingColumnCreate, IPendingColumnDrop } from '@renderer/contexts/TableInfoContext';
+import type {
+  IPendingColumnCreate,
+  IPendingColumnDrop,
+  IPendingIndexCreate,
+  IPendingIndexDrop,
+  IPendingReferenceCreate,
+  IPendingReferenceDrop,
+  IPendingRestrictionCreate,
+  IPendingRestrictionDrop,
+} from '@renderer/contexts/TableInfoContext';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
@@ -220,8 +229,10 @@ export const generateAddColumnsDdl = (
   ].join('\n\n');
 };
 
-const getConstraintName = (table: string, column: string, suffix: string) => {
-  return `${table}_${column}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+const getConstraintName = (table: string, columns: string | string[], suffix: string) => {
+  const columnNames = Array.isArray(columns) ? columns.join('_') : columns;
+
+  return `${table}_${columnNames}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
 const getDropConstraintsDdl = (
@@ -254,20 +265,133 @@ const getDropConstraintsDdl = (
   );
 };
 
+const getDropPendingRestrictionsDdl = (
+  tableName: string,
+  restrictions: IPendingRestrictionDrop[] = [],
+) => {
+  const constraintNames = [...new Set(restrictions.map((restriction) => restriction.constraint_name))];
+
+  return constraintNames.map(
+    (constraintName) =>
+      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
+  );
+};
+
+const getDropPendingReferencesDdl = (
+  tableName: string,
+  references: IPendingReferenceDrop[] = [],
+) => {
+  const constraintNames = [...new Set(references.map((reference) => reference.constraint_name))];
+
+  return constraintNames.map(
+    (constraintName) =>
+      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
+  );
+};
+
+const getDropPendingIndexesDdl = (schema: string | undefined, indexes: IPendingIndexDrop[] = []) => {
+  const indexNames = [...new Set(indexes.map((index) => index.index_name))];
+
+  return indexNames.map((indexName) => `DROP INDEX ${getTableName(schema, indexName)};`);
+};
+
+const getRestrictionDefinition = (restriction: IPendingRestrictionCreate) => {
+  if (restriction.constraint_type === 'primary_key') {
+    return `PRIMARY KEY (${(restriction.column_names || []).map(quoteIdent).join(', ')})`;
+  }
+
+  if (restriction.constraint_type === 'unique_key') {
+    return `UNIQUE (${(restriction.column_names || []).map(quoteIdent).join(', ')})`;
+  }
+
+  const expression = String(restriction.expression || '').trim();
+  if (/^check\s*\(/i.test(expression)) return expression;
+
+  return `CHECK (${expression})`;
+};
+
+const getCreateRestrictionsDdl = (
+  tableName: string,
+  restrictions: IPendingRestrictionCreate[] = [],
+) => {
+  return restrictions.map(
+    (restriction) =>
+      `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+        restriction.constraint_name,
+      )} ${getRestrictionDefinition(restriction)};`,
+  );
+};
+
+const getCreateIndexesDdl = (
+  schema: string | undefined,
+  table: string,
+  indexes: IPendingIndexCreate[] = [],
+) => {
+  const tableName = getTableName(schema, table);
+
+  return indexes.map((index) => {
+    const columns = (index.column_names || []).map(quoteIdent).join(', ');
+    const method = index.index_method || 'btree';
+
+    return `CREATE INDEX ${quoteIdent(index.index_name)} ON ${tableName} USING ${method} (${columns});`;
+  });
+};
+
+const getCreateReferencesDdl = (
+  tableName: string,
+  references: IPendingReferenceCreate[] = [],
+) => {
+  return references.map((reference) => {
+    const referenceTableName = getTableName(
+      reference.reference_table_schema,
+      reference.reference_table_name,
+    );
+
+    return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+      reference.constraint_name,
+    )} FOREIGN KEY (${quoteIdent(reference.column_name)}) REFERENCES ${referenceTableName} (${quoteIdent(
+      reference.reference_column_name,
+    )});`;
+  });
+};
+
 export const generatePendingTableChangesDdl = (
   schema: string | undefined,
   table: string,
   changes: {
     columns: IPendingColumnCreate[];
     droppedColumns?: IPendingColumnDrop[];
-    restrictions?: IColumnRestrictionsInfo[];
-    references?: IColumnReferenceInfo[];
+    indexes?: IPendingIndexCreate[];
+    droppedIndexes?: IPendingIndexDrop[];
+    restrictions?: IPendingRestrictionCreate[];
+    droppedRestrictions?: IPendingRestrictionDrop[];
+    references?: IPendingReferenceCreate[];
+    droppedReferences?: IPendingReferenceDrop[];
+    existingRestrictions?: IColumnRestrictionsInfo[];
+    existingReferences?: IColumnReferenceInfo[];
   },
 ) => {
   const columns = changes.columns || [];
   const droppedColumns = changes.droppedColumns || [];
+  const indexes = changes.indexes || [];
+  const droppedIndexes = changes.droppedIndexes || [];
+  const restrictions = changes.restrictions || [];
+  const droppedRestrictions = changes.droppedRestrictions || [];
+  const references = changes.references || [];
+  const droppedReferences = changes.droppedReferences || [];
 
-  if (!columns.length && !droppedColumns.length) return '';
+  if (
+    !columns.length &&
+    !droppedColumns.length &&
+    !indexes.length &&
+    !droppedIndexes.length &&
+    !restrictions.length &&
+    !droppedRestrictions.length &&
+    !references.length &&
+    !droppedReferences.length
+  ) {
+    return '';
+  }
 
   const tableName = getTableName(schema, table);
   const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
@@ -275,54 +399,58 @@ export const generatePendingTableChangesDdl = (
     (column) => `ALTER TABLE ${tableName}\n  DROP COLUMN ${quoteIdent(column.column_name)};`,
   );
 
-  const createColumnStatements = columns
-    .flatMap((column) => {
-      const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
-      const notNull = column.is_nullable ? '' : ' NOT NULL';
+  const createColumnStatements = columns.flatMap((column) => {
+    const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
+    const notNull = column.is_nullable ? '' : ' NOT NULL';
 
-      const statements: string[] = [];
+    const statements: string[] = [];
 
+    statements.push(
+      `ALTER TABLE ${tableName}\n  ADD COLUMN ${quoteIdent(column.column_name)} ${getColumnType(
+        column,
+      )}${defaultValue}${notNull};`,
+    );
+
+    if (column.is_primary_key) {
       statements.push(
-        `ALTER TABLE ${tableName}\n  ADD COLUMN ${quoteIdent(column.column_name)} ${getColumnType(
-          column,
-        )}${defaultValue}${notNull};`,
+        `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+          getConstraintName(table, column.column_name, 'pk'),
+        )} PRIMARY KEY (${quoteIdent(column.column_name)});`,
       );
+    }
 
-      if (column.is_primary_key) {
-        statements.push(
-          `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-            getConstraintName(table, column.column_name, 'pk'),
-          )} PRIMARY KEY (${quoteIdent(column.column_name)});`,
-        );
-      }
+    if (column.is_unique) {
+      statements.push(
+        `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
+          getConstraintName(table, column.column_name, 'unique'),
+        )} UNIQUE (${quoteIdent(column.column_name)});`,
+      );
+    }
 
-      if (column.is_unique) {
-        statements.push(
-          `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-            getConstraintName(table, column.column_name, 'unique'),
-          )} UNIQUE (${quoteIdent(column.column_name)});`,
-        );
-      }
+    if (column.description) {
+      statements.push(
+        `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
+          column.description,
+        )};`,
+      );
+    }
 
-      if (column.description) {
-        statements.push(
-          `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
-            column.description,
-          )};`,
-        );
-      }
-
-      return statements;
-    })
-    .join('\n\n');
+    return statements;
+  });
 
   return [
     ...getDropConstraintsDdl(tableName, droppedColumnNames, {
-      restrictions: changes.restrictions,
-      references: changes.references,
+      restrictions: changes.existingRestrictions,
+      references: changes.existingReferences,
     }),
+    ...getDropPendingRestrictionsDdl(tableName, droppedRestrictions),
+    ...getDropPendingReferencesDdl(tableName, droppedReferences),
+    ...getDropPendingIndexesDdl(schema, droppedIndexes),
     ...dropColumnStatements,
-    createColumnStatements,
+    ...createColumnStatements,
+    ...getCreateRestrictionsDdl(tableName, restrictions),
+    ...getCreateIndexesDdl(schema, table, indexes),
+    ...getCreateReferencesDdl(tableName, references),
   ]
     .filter(Boolean)
     .join('\n\n');

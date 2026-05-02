@@ -17,12 +17,21 @@ import TableInfoContext, {
   type ILoadTableInfoFilters,
   type IPendingColumnCreate,
   type IPendingColumnDrop,
+  type IPendingIndexCreate,
+  type IPendingIndexDrop,
+  type IPendingReferenceCreate,
+  type IPendingReferenceDrop,
+  type IPendingRestrictionCreate,
+  type IPendingRestrictionDrop,
   type ITableInfo,
   type ITableInfoLoading,
   type LoadTableInfo,
 } from './context';
 
 export type * from './context';
+
+const CREATE_STYLE = { backgroundColor: '#3fb95033' };
+const DROP_STYLE = { backgroundColor: '#ff676733', textDecoration: 'line-through' };
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const {
@@ -43,6 +52,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const [pendingDroppedColumns, setPendingDroppedColumns] = React.useState<IPendingColumnDrop[]>(
     [],
   );
+  const [pendingIndexes, setPendingIndexes] = React.useState<IPendingIndexCreate[]>([]);
+  const [pendingDroppedIndexes, setPendingDroppedIndexes] = React.useState<IPendingIndexDrop[]>([]);
+  const [pendingRestrictions, setPendingRestrictions] = React.useState<IPendingRestrictionCreate[]>(
+    [],
+  );
+  const [pendingDroppedRestrictions, setPendingDroppedRestrictions] = React.useState<
+    IPendingRestrictionDrop[]
+  >([]);
+  const [pendingReferences, setPendingReferences] = React.useState<IPendingReferenceCreate[]>([]);
+  const [pendingDroppedReferences, setPendingDroppedReferences] = React.useState<
+    IPendingReferenceDrop[]
+  >([]);
   const [columnTypes, setColumnTypes] = React.useState<string[]>([]);
   const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);
   const [usedAsReference, setUsedAsReference] = React.useState<IColumnReferenceInfo[]>([]);
@@ -134,17 +155,32 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       ...prevState,
       {
         ...column,
-        __style: column.__style || {
-          backgroundColor: '#3fb95033',
-        },
+        __style: column.__style || CREATE_STYLE,
       },
     ]);
   }, []);
 
   const removePendingColumn = React.useCallback((pendingId: string) => {
-    setPendingColumns((prevState) =>
-      prevState.filter((column) => column.__pendingId !== pendingId),
-    );
+    setPendingColumns((prevState) => {
+      const removedColumn = prevState.find((column) => column.__pendingId === pendingId);
+      if (!removedColumn) return prevState;
+
+      const removedColumnName = removedColumn.column_name;
+
+      setPendingIndexes((indexes) =>
+        indexes.filter((index) => !index.column_names?.includes(removedColumnName)),
+      );
+      setPendingRestrictions((restrictions) =>
+        restrictions.filter(
+          (restriction) => !restriction.column_names?.includes(removedColumnName),
+        ),
+      );
+      setPendingReferences((references) =>
+        references.filter((reference) => reference.column_name !== removedColumnName),
+      );
+
+      return prevState.filter((column) => column.__pendingId !== pendingId);
+    });
   }, []);
 
   const addPendingDroppedColumns = React.useCallback((columnsToDrop: IColumnInfo[]) => {
@@ -155,10 +191,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         .map<IPendingColumnDrop>((column) => ({
           ...column,
           __pendingAction: 'drop',
-          __style: {
-            backgroundColor: '#ff676733',
-            textDecoration: 'line-through',
-          },
+          __style: DROP_STYLE,
         }));
 
       return [...prevState, ...nextColumns];
@@ -173,9 +206,145 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     );
   }, []);
 
+  const addPendingIndex = React.useCallback((index: IPendingIndexCreate) => {
+    setPendingIndexes((prevState) => [
+      ...prevState,
+      {
+        ...index,
+        __style: index.__style || CREATE_STYLE,
+      },
+    ]);
+  }, []);
+
+  const removePendingIndex = React.useCallback((pendingId: string) => {
+    setPendingIndexes((prevState) => prevState.filter((index) => index.__pendingId !== pendingId));
+  }, []);
+
+  const addPendingDroppedIndexes = React.useCallback((indexesToDrop: IIndexInfo[]) => {
+    setPendingDroppedIndexes((prevState) => {
+      const currentIndexNames = new Set(prevState.map((index) => index.index_name));
+      const nextIndexes = indexesToDrop
+        .filter((index) => !currentIndexNames.has(index.index_name))
+        .map<IPendingIndexDrop>((index) => ({
+          ...index,
+          __pendingAction: 'drop',
+          __style: DROP_STYLE,
+        }));
+
+      return [...prevState, ...nextIndexes];
+    });
+  }, []);
+
+  const removePendingDroppedIndexes = React.useCallback((indexNames: string[]) => {
+    const indexNamesSet = new Set(indexNames);
+
+    setPendingDroppedIndexes((prevState) =>
+      prevState.filter((index) => !indexNamesSet.has(index.index_name)),
+    );
+  }, []);
+
+  const addPendingRestriction = React.useCallback((restriction: IPendingRestrictionCreate) => {
+    setPendingRestrictions((prevState) => [
+      ...prevState,
+      {
+        ...restriction,
+        __style: restriction.__style || CREATE_STYLE,
+      },
+    ]);
+  }, []);
+
+  const removePendingRestriction = React.useCallback((pendingId: string) => {
+    setPendingRestrictions((prevState) =>
+      prevState.filter((restriction) => restriction.__pendingId !== pendingId),
+    );
+  }, []);
+
+  const addPendingDroppedRestrictions = React.useCallback(
+    (restrictionsToDrop: IColumnRestrictionsInfo[]) => {
+      setPendingDroppedRestrictions((prevState) => {
+        const currentConstraintNames = new Set(
+          prevState.map((restriction) => restriction.constraint_name),
+        );
+        const nextRestrictions = restrictionsToDrop
+          .filter((restriction) => !currentConstraintNames.has(restriction.constraint_name))
+          .map<IPendingRestrictionDrop>((restriction) => ({
+            ...restriction,
+            __pendingAction: 'drop',
+            __style: DROP_STYLE,
+          }));
+
+        return [...prevState, ...nextRestrictions];
+      });
+    },
+    [],
+  );
+
+  const removePendingDroppedRestrictions = React.useCallback((constraintNames: string[]) => {
+    const constraintNamesSet = new Set(constraintNames);
+
+    setPendingDroppedRestrictions((prevState) =>
+      prevState.filter((restriction) => !constraintNamesSet.has(restriction.constraint_name)),
+    );
+  }, []);
+
+  const addPendingReference = React.useCallback((reference: IPendingReferenceCreate) => {
+    setPendingReferences((prevState) => [
+      ...prevState,
+      {
+        ...reference,
+        __style: reference.__style || CREATE_STYLE,
+      },
+    ]);
+  }, []);
+
+  const removePendingReference = React.useCallback((pendingId: string) => {
+    setPendingReferences((prevState) =>
+      prevState.filter((reference) => reference.__pendingId !== pendingId),
+    );
+  }, []);
+
+  const addPendingDroppedReferences = React.useCallback(
+    (referencesToDrop: IColumnReferenceInfo[]) => {
+      setPendingDroppedReferences((prevState) => {
+        const currentConstraintNames = new Set(
+          prevState.map((reference) => reference.constraint_name),
+        );
+        const nextReferencesByConstraint = new Map<string, IPendingReferenceDrop>();
+
+        referencesToDrop.forEach((reference) => {
+          if (currentConstraintNames.has(reference.constraint_name)) return;
+          if (nextReferencesByConstraint.has(reference.constraint_name)) return;
+
+          nextReferencesByConstraint.set(reference.constraint_name, {
+            ...reference,
+            __pendingAction: 'drop',
+            __style: DROP_STYLE,
+          });
+        });
+
+        return [...prevState, ...nextReferencesByConstraint.values()];
+      });
+    },
+    [],
+  );
+
+  const removePendingDroppedReferences = React.useCallback((constraintNames: string[]) => {
+    const constraintNamesSet = new Set(constraintNames);
+
+    setPendingDroppedReferences((prevState) =>
+      prevState.filter((reference) => !constraintNamesSet.has(reference.constraint_name)),
+    );
+  }, []);
+
   const clearPendingChanges = React.useCallback(() => {
     setPendingColumns([]);
     setPendingDroppedColumns([]);
+    setPendingIndexes([]);
+    setPendingDroppedIndexes([]);
+    setPendingRestrictions([]);
+    setPendingDroppedRestrictions([]);
+    setPendingReferences([]);
+    setPendingDroppedReferences([]);
   }, []);
 
   const loadTableReferences: LoadTableInfo = React.useCallback(async (idConnection, filters) => {
@@ -264,8 +433,14 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       const sql = generatePendingTableChangesDdl(filters.schema, filters.table, {
         columns: pendingColumns,
         droppedColumns: pendingDroppedColumns,
-        restrictions,
-        references,
+        indexes: pendingIndexes,
+        droppedIndexes: pendingDroppedIndexes,
+        restrictions: pendingRestrictions,
+        droppedRestrictions: pendingDroppedRestrictions,
+        references: pendingReferences,
+        droppedReferences: pendingDroppedReferences,
+        existingRestrictions: restrictions,
+        existingReferences: references,
       });
 
       if (!sql.trim()) return;
@@ -274,7 +449,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       setPendingDdlSql(sql);
       setShowPendingDdlModal(true);
     },
-    [pendingColumns, pendingDroppedColumns, references, restrictions, showToast],
+    [
+      pendingColumns,
+      pendingDroppedColumns,
+      pendingDroppedIndexes,
+      pendingDroppedReferences,
+      pendingDroppedRestrictions,
+      pendingIndexes,
+      pendingReferences,
+      pendingRestrictions,
+      references,
+      restrictions,
+    ],
   );
 
   const applyPendingChangesSql = React.useCallback(
@@ -324,6 +510,12 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         columns,
         pendingColumns,
         pendingDroppedColumns,
+        pendingIndexes,
+        pendingDroppedIndexes,
+        pendingRestrictions,
+        pendingDroppedRestrictions,
+        pendingReferences,
+        pendingDroppedReferences,
         columnTypes,
         references,
         usedAsReference,
@@ -336,6 +528,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         removePendingColumn,
         addPendingDroppedColumns,
         removePendingDroppedColumns,
+        addPendingIndex,
+        removePendingIndex,
+        addPendingDroppedIndexes,
+        removePendingDroppedIndexes,
+        addPendingRestriction,
+        removePendingRestriction,
+        addPendingDroppedRestrictions,
+        removePendingDroppedRestrictions,
+        addPendingReference,
+        removePendingReference,
+        addPendingDroppedReferences,
+        removePendingDroppedReferences,
         clearPendingChanges,
         loadColumnTypes,
         openPendingChangesSqlModal,
