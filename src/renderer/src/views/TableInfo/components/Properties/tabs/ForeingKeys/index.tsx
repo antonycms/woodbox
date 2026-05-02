@@ -6,15 +6,21 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
+import { useStoreContext } from '@renderer/contexts/Store';
+import {
+  type IPendingReferenceCreate,
+  useTableInfoContext,
+} from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { AddIcon, DuplicateIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateReferencesDdl } from '../Columns/ddl';
+import ModalNewReference from './components/ModalNewReference';
 
 interface IForeingKeysProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -22,7 +28,13 @@ interface IForeingKeysProps extends ITableInfoProps {
 
 interface IReferenceSerialized extends IColumnReferenceInfo {
   table_reference: string;
+  __pendingId?: string;
+  __pendingAction?: 'create' | 'drop';
 }
+
+const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>
+  (reference as IColumnReferenceInfo & { __pendingId?: string }).__pendingId ||
+  `${reference.constraint_name}-${reference.column_name}`;
 
 const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeysProps) => {
   const {
@@ -30,21 +42,161 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { references, loadTableReferences, openPendingChangesSqlModal, lastFetchDate, loading } =
-    useTableInfoContext();
+  const { connectionsInfo } = useStoreContext();
+  const { showToast } = useToast();
+  const {
+    columns,
+    pendingColumns,
+    pendingDroppedColumns,
+    references,
+    pendingReferences,
+    pendingDroppedReferences,
+    addPendingReference,
+    removePendingReference,
+    addPendingDroppedReferences,
+    removePendingDroppedReferences,
+    clearPendingChanges,
+    loadTableReferences,
+    openPendingChangesSqlModal,
+    lastFetchDate,
+    loading,
+  } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+  const [showNewReferenceModal, setShowNewReferenceModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.references);
+  const connectionInfo = connectionsInfo.get(id_connection);
+  const droppedConstraintNames = React.useMemo(
+    () => new Set(pendingDroppedReferences.map((reference) => reference.constraint_name)),
+    [pendingDroppedReferences],
+  );
+  const droppedColumnNames = React.useMemo(
+    () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
+    [pendingDroppedColumns],
+  );
+  const availableColumns = React.useMemo(
+    () => [
+      ...columns.filter((column) => !droppedColumnNames.has(column.column_name)),
+      ...pendingColumns,
+    ],
+    [columns, droppedColumnNames, pendingColumns],
+  );
+
+  const allReferences = React.useMemo<IReferenceSerialized[]>(() => {
+    const existingReferences = references.map<IReferenceSerialized>((ref) => ({
+      ...ref,
+      table_reference: !ref.reference_table_schema
+        ? ref.reference_table_name
+        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
+      ...(droppedConstraintNames.has(ref.constraint_name)
+        ? {
+            __pendingAction: 'drop' as const,
+            __style: {
+              backgroundColor: '#ff676733',
+              textDecoration: 'line-through',
+            },
+          }
+        : {}),
+    }));
+
+    const createdReferences = pendingReferences.map<IReferenceSerialized>((ref) => ({
+      ...ref,
+      table_reference: !ref.reference_table_schema
+        ? ref.reference_table_name
+        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
+    }));
+
+    return [...existingReferences, ...createdReferences];
+  }, [references, droppedConstraintNames, pendingReferences]);
+
+  const sortedReferences = React.useMemo(
+    () => sortRows(allReferences, sort),
+    [allReferences, sort],
+  );
+
+  const handleOpenNewReferenceModal = React.useCallback(() => {
+    setShowNewReferenceModal(true);
+    setContextMenuPosition(null);
+  }, []);
+
+  const handleAddPendingReference = React.useCallback(
+    (reference: IPendingReferenceCreate) => {
+      const constraintName = reference.constraint_name.toLowerCase();
+      const alreadyExists = allReferences.some(
+        (item) => item.constraint_name.toLowerCase() === constraintName,
+      );
+
+      if (alreadyExists) {
+        showToast({ type: 'warn', title: 'Já existe uma chave estrangeira com esse nome.' });
+        return false;
+      }
+
+      addPendingReference({
+        ...reference,
+        table_schema: schema,
+        table_name: table,
+      });
+      return true;
+    },
+    [addPendingReference, allReferences, schema, showToast, table],
+  );
+
+  const handleRemoveSelectedReferences = React.useCallback(() => {
+    if (!selectedReferences.length) {
+      showToast({ type: 'warn', title: 'Selecione uma ou mais chaves estrangeiras para remover.' });
+      return;
+    }
+
+    selectedReferences.forEach((reference) => {
+      const pendingId = (reference as IPendingReferenceCreate).__pendingId;
+
+      if (pendingId) {
+        removePendingReference(pendingId);
+        return;
+      }
+
+      addPendingDroppedReferences(
+        references.filter((item) => item.constraint_name === reference.constraint_name),
+      );
+    });
+
+    setContextMenuPosition(null);
+  }, [
+    selectedReferences,
+    removePendingReference,
+    addPendingDroppedReferences,
+    references,
+    showToast,
+  ]);
+
+  const handleUndoSelectedDroppedReferences = React.useCallback(() => {
+    const constraintNames = selectedReferences
+      .filter(
+        (reference) =>
+          reference.__pendingAction === 'drop' ||
+          droppedConstraintNames.has(reference.constraint_name),
+      )
+      .map((reference) => reference.constraint_name);
+
+    if (!constraintNames.length) return;
+
+    removePendingDroppedReferences(constraintNames);
+    setSelectedReferences([]);
+  }, [selectedReferences, droppedConstraintNames, removePendingDroppedReferences]);
 
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
         text: 'Nova chave',
-        onClick: () => null,
+        onClick: handleOpenNewReferenceModal,
+      },
+      {
+        text: 'Excluir itens selecionados',
+        onClick: handleRemoveSelectedReferences,
       },
       {
         text: 'Gerar DDL',
@@ -54,7 +206,13 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
         },
       },
     ];
-  }, [schema, table, selectedReferences]);
+  }, [
+    schema,
+    table,
+    selectedReferences,
+    handleOpenNewReferenceModal,
+    handleRemoveSelectedReferences,
+  ]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     setContextMenuPosition({
@@ -63,32 +221,76 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
     });
   };
 
+  const handleCellLinkClick = (attribute: string, value: string) => {
+    if (attribute !== 'table_reference' || !onOpenTable) return;
+    const row = allReferences.find((r) => r.table_reference === value);
+    if (row) onOpenTable(id_connection, row.reference_table_schema, row.reference_table_name);
+  };
+
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
+
+      if (isEditableTarget || target?.isContentEditable) return;
+
+      if (event.key === 'Delete') {
+        event.preventDefault();
+        handleRemoveSelectedReferences();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        openPendingChangesSqlModal(id_connection, { schema, table });
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleUndoSelectedDroppedReferences();
+      }
+    },
+    [
+      handleRemoveSelectedReferences,
+      handleUndoSelectedDroppedReferences,
+      id_connection,
+      openPendingChangesSqlModal,
+      schema,
+      table,
+    ],
+  );
+
   React.useEffect(() => {
     loadTableReferences(id_connection, { schema, table });
   }, []);
 
-  const referencesSerialized = React.useMemo(() => {
-    return references.map((ref) => ({
-      ...ref,
-      table_reference: !ref.table_schema
-        ? ref.reference_table_name
-        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
-    }));
-  }, [references]);
+  React.useEffect(() => {
+    setSelectedReferences((currentSelectedReferences) => {
+      if (!currentSelectedReferences.length) return currentSelectedReferences;
 
-  const sortedReferences = React.useMemo(
-    () => sortRows(referencesSerialized, sort),
-    [referencesSerialized, sort],
-  );
+      const referencesByKey = new Map(
+        allReferences.map((reference) => [getReferenceSelectionKey(reference), reference]),
+      );
+      const nextSelectedReferences = currentSelectedReferences
+        .map((reference) => referencesByKey.get(getReferenceSelectionKey(reference)))
+        .filter((reference): reference is IReferenceSerialized => !!reference);
 
-  const handleCellLinkClick = (attribute: string, value: string) => {
-    if (attribute !== 'table_reference' || !onOpenTable) return;
-    const row = referencesSerialized.find((r) => r.table_reference === value);
-    if (row) onOpenTable(id_connection, row.reference_table_schema, row.reference_table_name);
-  };
+      if (
+        nextSelectedReferences.length === currentSelectedReferences.length &&
+        nextSelectedReferences.every(
+          (reference, index) => reference === currentSelectedReferences[index],
+        )
+      ) {
+        return currentSelectedReferences;
+      }
+
+      return nextSelectedReferences;
+    });
+  }, [allReferences]);
 
   return (
-    <>
+    <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
       <ContextMenu
         position={contextMenuPosition}
         options={contextMenuOptions}
@@ -97,8 +299,18 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
 
       <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
 
-      <Table
-        rowKeyExtractor={(item) => `${item.constraint_name}-${item.column_name}`}
+      <ModalNewReference
+        show={showNewReferenceModal}
+        idConnection={id_connection}
+        table={table}
+        columns={availableColumns}
+        tables={connectionInfo?.tables || []}
+        onClose={() => setShowNewReferenceModal(false)}
+        onAdd={handleAddPendingReference}
+      />
+
+      <Table<IReferenceSerialized>
+        rowKeyExtractor={getReferenceSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedReferences}
         loading={loading.references}
@@ -164,15 +376,33 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
           <SaveIcon size={16} />
         </Button>
 
-        <Button title="Adicionar" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Cancelar alterações"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={clearPendingChanges}
+        >
+          <CancelIcon size={16} />
+        </Button>
+
+        <Button
+          title="Adicionar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleOpenNewReferenceModal}
+        >
           <AddIcon size={14} />
         </Button>
 
-        <Button title="Duplicar itens selecionados" text smallIcon color={theme.bar.color}>
-          <DuplicateIcon size={20} />
-        </Button>
-
-        <Button title="Remover itens selecionados" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Remover itens selecionados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleRemoveSelectedReferences}
+        >
           <RemoveIcon size={16} />
         </Button>
 
@@ -189,16 +419,16 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {referencesSerialized?.length > 1
-            ? `${referencesSerialized?.length} Itens`
-            : `${referencesSerialized?.length || 0} Item`}
+          {sortedReferences?.length > 1
+            ? `${sortedReferences?.length} Itens`
+            : `${sortedReferences?.length || 0} Item`}
         </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {lastFetchDateSerialized}
         </Text>
       </Bar>
-    </>
+    </div>
   );
 };
 
