@@ -1,13 +1,16 @@
 import { editor } from 'monaco-editor';
-import type { CSSProperties } from 'react';
 import type { ITheme } from './theme';
 import defaultTheme from './default';
 
-export const toCssProperties = (obj: object) => {
-  return Object.keys(obj).reduce((acm, key) => {
-    return { ...acm, [`--${key}`]: obj[key] };
-  }, {}) as CSSProperties;
-};
+export function toCssProperties(obj: object) {
+  const cssProperties: React.CSSProperties = {};
+
+  for (const key in obj) {
+    cssProperties[`--${key}`] = obj[key];
+  }
+
+  return cssProperties;
+}
 
 export const serializeTheme = (theme: ITheme): ITheme<string> => {
   const { __colors } = theme;
@@ -78,7 +81,7 @@ export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
 export const classes = (...params) => {
   let v = '';
 
-  const add = (str) => {
+  const add = (str: string) => {
     if (!str) return;
     v && (v += ' ');
     v += str;
@@ -91,9 +94,11 @@ export const classes = (...params) => {
       add(param);
     } //
     else if (Array.isArray(param)) {
-      param.forEach((subParam) => add(classes(subParam)));
+      for (const subParam of param) {
+        add(classes(subParam));
+      }
     } //
-    else {
+    else if (typeof param === 'object') {
       for (const attributeObj in param) {
         param[attributeObj] && add(attributeObj);
       }
