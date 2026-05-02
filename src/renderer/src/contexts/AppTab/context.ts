@@ -27,6 +27,7 @@ export type IAppTabData =
 
 export interface INewAppTab {
   id?: string;
+  replaceId?: string;
   title?: string;
   unsaved?: boolean;
   data?: IAppTabData;

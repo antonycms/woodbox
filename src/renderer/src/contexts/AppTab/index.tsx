@@ -11,7 +11,14 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const hasRestoredTabs = React.useRef(false);
 
   const addTab = React.useCallback((tabData: INewAppTab) => {
-    const { id = generateHash(), unsaved = false, title = 'Sem titulo', data, component } = tabData;
+    const {
+      id = generateHash(),
+      replaceId,
+      unsaved = false,
+      title = 'Sem titulo',
+      data,
+      component,
+    } = tabData;
 
     const tab: IAppTab = {
       id,
@@ -21,7 +28,23 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       component: React.memo(component) as any,
     };
 
-    setTabs((prevState) => [...prevState, tab]);
+    setTabs((prevState) => {
+      if (!replaceId) return [...prevState, tab];
+
+      const existingTargetIndex = prevState.findIndex((item) => item.id === id);
+      const replaceIndex = prevState.findIndex((item) => item.id === replaceId);
+
+      if (existingTargetIndex >= 0 && prevState[existingTargetIndex].id !== replaceId) {
+        return prevState.filter((item) => item.id !== replaceId);
+      }
+
+      if (replaceIndex < 0) return [...prevState, tab];
+
+      const next = [...prevState];
+      next[replaceIndex] = tab;
+
+      return next;
+    });
     setActiveTabId(tab.id);
   }, []);
 
