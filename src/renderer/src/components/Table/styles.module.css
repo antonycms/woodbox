@@ -65,7 +65,7 @@
 }
 
 .table_row.selected .table_column {
-  background-color: #72a1ff59 !important;
+  background-color: var(--rowSelectedBackgroundColor, #72a1ff59) !important;
   color: white !important;
 }
 
@@ -79,7 +79,7 @@
 }
 
 .table_column.cell_selected {
-  outline: 2px solid #72a1ff !important;
+  outline: 2px solid var(--rowSelectedBorderColor, #72a1ff) !important;
   outline-offset: -2px;
 }
 
