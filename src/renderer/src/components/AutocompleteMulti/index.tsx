@@ -63,19 +63,29 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
   const dataFiltered = React.useMemo(() => {
     if (!textInput) return [...data.entries()];
 
+    const normalizedTextInput = textInput.toLowerCase();
     const array: [number, T][] = [];
+    const labels = new Map<number, string>();
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i];
-      const textContains = extractLabelRef
-        .current(item)
-        .toLowerCase()
-        .includes(textInput.toLowerCase());
+      const normalizedLabel = extractLabelRef.current(item).toLowerCase();
+      const textContains = normalizedLabel.includes(normalizedTextInput);
 
-      if (textContains) array.push([i, item]);
+      if (textContains) {
+        array.push([i, item]);
+        labels.set(i, normalizedLabel);
+      }
     }
 
-    return array;
+    return array.sort(([indexA], [indexB]) => {
+      const itemAStartsWithTextInput = labels.get(indexA).startsWith(normalizedTextInput);
+      const itemBStartsWithTextInput = labels.get(indexB).startsWith(normalizedTextInput);
+
+      if (itemAStartsWithTextInput === itemBStartsWithTextInput) return indexA - indexB;
+
+      return itemAStartsWithTextInput ? -1 : 1;
+    });
   }, [textInput, data]);
 
   const selected = React.useMemo(() => {
