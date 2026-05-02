@@ -8,266 +8,269 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
 
-const Editor = React.forwardRef<IEditorRef, IEditorProps>(
-  ({ initialValue = '', selections = [], language = 'sql', ...props }, ref) => {
-    const { activeTheme } = useThemeContext();
-    const containerRef = React.useRef<HTMLDivElement>();
-    const { width, height } = useResize({ HTMLElement: containerRef.current });
-    const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
-    const onCtrlClickRef = React.useRef(props.onCtrlClick);
-    React.useEffect(() => {
-      onCtrlClickRef.current = props.onCtrlClick;
-    }, [props.onCtrlClick]);
+const Editor = ({
+  ref,
+  initialValue = '',
+  selections = [],
+  language = 'sql',
+  ...props
+}: IEditorProps) => {
+  const { activeTheme } = useThemeContext();
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const { width, height } = useResize({ HTMLElement: containerRef.current });
+  const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
+  const onCtrlClickRef = React.useRef(props.onCtrlClick);
+  React.useEffect(() => {
+    onCtrlClickRef.current = props.onCtrlClick;
+  }, [props.onCtrlClick]);
 
-    const resize = useDebounce(() => editor?.layout?.(), 10);
+  const resize = useDebounce(() => editor?.layout?.(), 10);
 
-    const getWordAtPosition = (position: monaco.IPosition) => {
-      return editor.getModel().getWordAtPosition(position);
-    };
+  const getWordAtPosition = (position: monaco.IPosition) => {
+    return editor.getModel().getWordAtPosition(position);
+  };
 
-    const setMarkers = (params: IAddMarkerParams[]) => {
-      const model = editor.getModel();
+  const setMarkers = (params: IAddMarkerParams[]) => {
+    const model = editor.getModel();
 
-      const markers: monaco.editor.IMarkerData[] = [];
+    const markers: monaco.editor.IMarkerData[] = [];
 
-      for (const markerParams of params) {
-        const { severity, ...otherParams } = markerParams;
+    for (const markerParams of params) {
+      const { severity, ...otherParams } = markerParams;
 
-        markers.push({
-          ...otherParams,
-          severity: monaco.MarkerSeverity[severity],
-        });
-      }
-
-      monaco.editor.setModelMarkers(model, null, markers);
-    };
-
-    const setScroll = (scroll: IScroll) => {
-      if (typeof scroll !== 'object') return;
-      const { scrollTop = 0, scrollLeft = 0 } = scroll;
-
-      editor?.setScrollTop?.(scrollTop);
-      editor?.setScrollLeft?.(scrollLeft);
-    };
-
-    const getScroll = (): IScroll => {
-      const scrollTop = editor?.getScrollTop?.() || 0;
-      const scrollLeft = editor?.getScrollLeft?.() || 0;
-
-      return { scrollTop, scrollLeft };
-    };
-
-    const setSelections = (selections: monaco.Selection[]) => {
-      if (!selections?.length) return;
-
-      editor?.setSelections?.(selections);
-    };
-
-    const getSelections = () => {
-      return (editor?.getSelections?.() || []) as monaco.Selection[];
-    };
-
-    const getSelection = () => {
-      return editor?.getSelection?.();
-    };
-
-    const getSelectionValue = (selection: monaco.Selection) => {
-      return editor?.getModel?.()?.getValueInRange?.(selection) || '';
-    };
-
-    const setValue = (value: string) => {
-      return editor?.getModel?.()?.setValue?.(value);
-    };
-
-    const getValue = () => {
-      return editor?.getModel()?.getValue?.() || '';
-    };
-
-    const getCurrentValue = () => {
-      const position = editor?.getPosition?.();
-      const model = editor?.getModel?.();
-
-      if (!position || !model) return model?.getValue?.() || '';
-
-      const fullContent = model.getValue();
-      const cursorOffset = model.getOffsetAt(position);
-
-      return getCurrentQuerySqlFromContent(fullContent, cursorOffset);
-    };
-
-    const initEditor = () => {
-      const currentEditor = monaco.editor.create(
-        containerRef.current,
-        {
-          language,
-          tabSize: 2,
-          lineNumbersMinChars: 3,
-          value: initialValue,
-          theme: 'active-theme',
-          readOnly: props.readonly,
-          minimap: { enabled: !props.hidePreview },
-        },
-        {
-          contextMenuService: {
-            showContextMenu: (b) => console.log(b),
-          },
-        },
-      );
-
-      currentEditor.addAction({
-        id: 'ctrl+enter',
-        label: 'ctrl+enter Shortcut',
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-        run: () => {},
+      markers.push({
+        ...otherParams,
+        severity: monaco.MarkerSeverity[severity],
       });
+    }
 
-      currentEditor.onMouseDown((e) => {
-        if (!e.event.ctrlKey) return;
-        if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
-        const position = e.target.position;
-        if (!position) return;
-        const model = currentEditor.getModel();
-        const word = model?.getWordAtPosition(position);
-        if (!word) return;
+    monaco.editor.setModelMarkers(model, null, markers);
+  };
 
-        const lineContent = model?.getLineContent(position.lineNumber) || '';
-        const charBefore = lineContent[word.startColumn - 2];
-        let schema: string | undefined;
-        if (charBefore === '.') {
-          const schemaWord = model?.getWordAtPosition({
-            lineNumber: position.lineNumber,
-            column: word.startColumn - 1,
-          });
-          schema = schemaWord?.word;
-        }
+  const setScroll = (scroll: IScroll) => {
+    if (typeof scroll !== 'object') return;
+    const { scrollTop = 0, scrollLeft = 0 } = scroll;
 
-        onCtrlClickRef.current?.(word.word, schema);
-      });
+    editor?.setScrollTop?.(scrollTop);
+    editor?.setScrollLeft?.(scrollLeft);
+  };
 
-      return currentEditor;
-    };
+  const getScroll = (): IScroll => {
+    const scrollTop = editor?.getScrollTop?.() || 0;
+    const scrollLeft = editor?.getScrollLeft?.() || 0;
 
-    React.useImperativeHandle(
-      ref,
-      () => ({
-        getScroll,
-        setScroll,
-        getSelection,
-        getSelections,
-        setSelections,
-        getSelectionValue,
-        getValue,
-        getCurrentValue,
-        setValue,
-        setMarkers,
-        getWordAtPosition,
-        element: editor?.getDomNode?.(),
-      }),
-      [editor],
+    return { scrollTop, scrollLeft };
+  };
+
+  const setSelections = (selections: monaco.Selection[]) => {
+    if (!selections?.length) return;
+
+    editor?.setSelections?.(selections);
+  };
+
+  const getSelections = () => {
+    return (editor?.getSelections?.() || []) as monaco.Selection[];
+  };
+
+  const getSelection = () => {
+    return editor?.getSelection?.();
+  };
+
+  const getSelectionValue = (selection: monaco.Selection) => {
+    return editor?.getModel?.()?.getValueInRange?.(selection) || '';
+  };
+
+  const setValue = (value: string) => {
+    return editor?.getModel?.()?.setValue?.(value);
+  };
+
+  const getValue = () => {
+    return editor?.getModel()?.getValue?.() || '';
+  };
+
+  const getCurrentValue = () => {
+    const position = editor?.getPosition?.();
+    const model = editor?.getModel?.();
+
+    if (!position || !model) return model?.getValue?.() || '';
+
+    const fullContent = model.getValue();
+    const cursorOffset = model.getOffsetAt(position);
+
+    return getCurrentQuerySqlFromContent(fullContent, cursorOffset);
+  };
+
+  const initEditor = () => {
+    const currentEditor = monaco.editor.create(
+      containerRef.current,
+      {
+        language,
+        tabSize: 2,
+        lineNumbersMinChars: 3,
+        value: initialValue,
+        theme: 'active-theme',
+        readOnly: props.readonly,
+        minimap: { enabled: !props.hidePreview },
+      },
+      {
+        contextMenuService: {
+          showContextMenu: (b) => console.log(b),
+        },
+      },
     );
 
-    React.useEffect(() => {
-      let currentEditor: monaco.editor.IStandaloneCodeEditor;
+    currentEditor.addAction({
+      id: 'ctrl+enter',
+      label: 'ctrl+enter Shortcut',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+      run: () => {},
+    });
 
-      // fix startup freeze
-      setTimeout(() => {
-        currentEditor = initEditor();
-        setEditor(currentEditor);
+    currentEditor.onMouseDown((e) => {
+      if (!e.event.ctrlKey) return;
+      if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
+      const position = e.target.position;
+      if (!position) return;
+      const model = currentEditor.getModel();
+      const word = model?.getWordAtPosition(position);
+      if (!word) return;
+
+      const lineContent = model?.getLineContent(position.lineNumber) || '';
+      const charBefore = lineContent[word.startColumn - 2];
+      let schema: string | undefined;
+      if (charBefore === '.') {
+        const schemaWord = model?.getWordAtPosition({
+          lineNumber: position.lineNumber,
+          column: word.startColumn - 1,
+        });
+        schema = schemaWord?.word;
+      }
+
+      onCtrlClickRef.current?.(word.word, schema);
+    });
+
+    return currentEditor;
+  };
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      getScroll,
+      setScroll,
+      getSelection,
+      getSelections,
+      setSelections,
+      getSelectionValue,
+      getValue,
+      getCurrentValue,
+      setValue,
+      setMarkers,
+      getWordAtPosition,
+      element: editor?.getDomNode?.(),
+    }),
+    [editor],
+  );
+
+  React.useEffect(() => {
+    let currentEditor: monaco.editor.IStandaloneCodeEditor;
+
+    // fix startup freeze
+    setTimeout(() => {
+      currentEditor = initEditor();
+      setEditor(currentEditor);
+    });
+
+    return () => {
+      currentEditor?.dispose?.();
+    };
+  }, []);
+
+  React.useEffect(resize, [width, height]);
+
+  React.useEffect(() => {
+    monaco.editor.setTheme('active-theme');
+  }, [activeTheme, editor]);
+
+  React.useEffect(() => {
+    if (!editor || !props.onUmounted) return;
+
+    return () => {
+      const value = getValue();
+      const selections = getSelections();
+      const scroll = getScroll();
+
+      props.onUmounted?.({ value, selections, scroll });
+    };
+  }, [editor, props.onUmounted]);
+
+  React.useEffect(() => {
+    if (props.value !== undefined) setValue(props.value);
+  }, [editor, props.value]);
+
+  React.useEffect(() => {
+    setScroll(props.scroll);
+  }, [editor, props.scroll]);
+
+  React.useEffect(() => {
+    setSelections(selections);
+  }, [editor, selections]);
+
+  React.useEffect(() => {
+    const monacoListeners: monaco.IDisposable[] = [];
+
+    if (props.onChangeSelections) {
+      const listenerSelections = editor?.onDidChangeCursorSelection?.((e) => {
+        const allSelections = [e.selection, ...e.secondarySelections];
+        props.onChangeSelections?.(allSelections);
       });
 
-      return () => {
-        currentEditor?.dispose?.();
-      };
-    }, []);
+      listenerSelections && monacoListeners.push(listenerSelections);
+    }
 
-    React.useEffect(resize, [width, height]);
-
-    React.useEffect(() => {
-      monaco.editor.setTheme('active-theme');
-    }, [activeTheme, editor]);
-
-    React.useEffect(() => {
-      if (!editor || !props.onUmounted) return;
-
-      return () => {
+    if (props.onChange || props.onChangeCurrentValue) {
+      const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
         const value = getValue();
-        const selections = getSelections();
-        const scroll = getScroll();
+        const currentValue = getCurrentValue();
 
-        props.onUmounted?.({ value, selections, scroll });
-      };
-    }, [editor, props.onUmounted]);
+        props.onChange?.(value);
+        props.onChangeCurrentValue?.(currentValue);
+      });
 
-    React.useEffect(() => {
-      if (props.value !== undefined) setValue(props.value);
-    }, [editor, props.value]);
+      listenerValueChange && monacoListeners.push(listenerValueChange);
+    }
 
-    React.useEffect(() => {
-      setScroll(props.scroll);
-    }, [editor, props.scroll]);
+    if (props.onChangeCurrentValue) {
+      const listenerCursorPosition = editor?.onDidChangeCursorPosition?.(() => {
+        props.onChangeCurrentValue?.(getCurrentValue());
+      });
 
-    React.useEffect(() => {
-      setSelections(selections);
-    }, [editor, selections]);
+      listenerCursorPosition && monacoListeners.push(listenerCursorPosition);
+    }
 
-    React.useEffect(() => {
-      const monacoListeners: monaco.IDisposable[] = [];
+    return () => {
+      monacoListeners.forEach((a) => a?.dispose?.());
+    };
+  }, [editor, props.onChange, props.onChangeCurrentValue]);
 
-      if (props.onChangeSelections) {
-        const listenerSelections = editor?.onDidChangeCursorSelection?.((e) => {
-          const allSelections = [e.selection, ...e.secondarySelections];
-          props.onChangeSelections?.(allSelections);
-        });
+  React.useEffect(() => {
+    if (!editor) return;
 
-        listenerSelections && monacoListeners.push(listenerSelections);
-      }
+    const disposable = defineSQlAutocomplete(props.autocomplete);
 
-      if (props.onChange || props.onChangeCurrentValue) {
-        const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
-          const value = getValue();
-          const currentValue = getCurrentValue();
+    return () => disposable?.dispose();
+  }, [editor, props.autocomplete]);
 
-          props.onChange?.(value);
-          props.onChangeCurrentValue?.(currentValue);
-        });
-
-        listenerValueChange && monacoListeners.push(listenerValueChange);
-      }
-
-      if (props.onChangeCurrentValue) {
-        const listenerCursorPosition = editor?.onDidChangeCursorPosition?.(() => {
-          props.onChangeCurrentValue?.(getCurrentValue());
-        });
-
-        listenerCursorPosition && monacoListeners.push(listenerCursorPosition);
-      }
-
-      return () => {
-        monacoListeners.forEach((a) => a?.dispose?.());
-      };
-    }, [editor, props.onChange, props.onChangeCurrentValue]);
-
-    React.useEffect(() => {
-      if (!editor) return;
-
-      const disposable = defineSQlAutocomplete(props.autocomplete);
-
-      return () => disposable?.dispose();
-    }, [editor, props.autocomplete]);
-
-    return (
-      <div className={styles.outsideContainer}>
-        <div className={styles.container} ref={containerRef} />
-      </div>
-    );
-  },
-);
-
-Editor.displayName = 'Editor';
+  return (
+    <div className={styles.outsideContainer}>
+      <div className={styles.container} ref={containerRef} />
+    </div>
+  );
+};
 
 export default Editor;
 
 export interface IEditorProps {
+  ref?: React.Ref<IEditorRef>;
   language?: 'sql' | 'json';
   dialect: 'postgres';
   value?: string;
