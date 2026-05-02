@@ -19,8 +19,48 @@ const TableInfo = (props: ITableInfoProps) => {
   } = useThemeContext();
   const { addTab, getTab, setActiveTabId } = useAppTabContext();
   const [id] = React.useState(generateHash());
+  const [mode, setMode] = React.useState(props.mode || 'view');
+  const [table, setTable] = React.useState(props.table);
   const [activeTableInfoTabId, setActiveTableInfoTabId] = React.useState(
     props.initialTab || 'tabProperties',
+  );
+  const isCreateMode = mode === 'create';
+
+  const tabsProps = React.useMemo(() => ({ ...props, mode, table }), [mode, props, table]);
+
+  const handleCreateApplied = React.useCallback(
+    (createdTable: string) => {
+      const tabId = `${props.id_connection}_${props.schema}_${createdTable}`;
+      const title = `${props.schema ? `${props.schema}.` : ''}${createdTable}`;
+
+      if (props.draftTabId) {
+        addTab({
+          replaceId: props.draftTabId,
+          id: tabId,
+          title,
+          unsaved: false,
+          data: {
+            type: 'table-info',
+            id_connection: props.id_connection,
+            schema: props.schema,
+            table: createdTable,
+          },
+          component: () => (
+            <TableInfoWithContext
+              id_connection={props.id_connection}
+              schema={props.schema}
+              table={createdTable}
+            />
+          ),
+        });
+
+        return;
+      }
+
+      setTable(createdTable);
+      setMode('view');
+    },
+    [addTab, props.draftTabId, props.id_connection, props.schema],
   );
 
   const handleOpenTableSimple = React.useCallback(
@@ -102,22 +142,28 @@ const TableInfo = (props: ITableInfoProps) => {
             title: 'Propriedades',
             icon: () => <IconFaSolidGripLines className={styles.icon} width={12} height={12} />,
           },
-          {
+          !isCreateMode && {
             idTab: 'tabData',
             title: 'Dados',
             icon: () => <IconFaRegularListAlt className={styles.icon} width={12} height={12} />,
           },
-        ]}
+        ].filter(Boolean)}
       />
 
       <TabWindow idTabBar={id}>
         <TabContent idTab="tabProperties">
-          <Properties {...props} onOpenTable={handleOpenTableSimple} />
+          <Properties
+            {...tabsProps}
+            onOpenTable={handleOpenTableSimple}
+            onCreateApplied={handleCreateApplied}
+          />
         </TabContent>
 
-        <TabContent idTab="tabData">
-          <Data {...props} onOpenTable={handleOpenTable} />
-        </TabContent>
+        {!isCreateMode && (
+          <TabContent idTab="tabData">
+            <Data {...tabsProps} onOpenTable={handleOpenTable} />
+          </TabContent>
+        )}
       </TabWindow>
     </div>
   );

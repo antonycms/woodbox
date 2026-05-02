@@ -63,11 +63,15 @@ const ModalNewColumn = ({ show, types, hasPrimaryKey, onClose, onAdd }: IModalNe
         is_nullable: !data.required,
         column_default: data.column_default.trim() || undefined,
         description: data.description.trim() || undefined,
-        is_primary_key: data.is_primary_key,
-        is_unique: data.is_unique,
       };
 
-      const shouldClose = onAdd?.(column);
+      const shouldClose = onAdd?.(column, {
+        constraintType: data.is_primary_key
+          ? 'primary_key'
+          : data.is_unique
+          ? 'unique_key'
+          : undefined,
+      });
       if (shouldClose !== false) close();
     }),
     [handleSubmit, onAdd, close, showToast],
@@ -133,7 +137,7 @@ const ModalNewColumn = ({ show, types, hasPrimaryKey, onClose, onAdd }: IModalNe
               name="is_primary_key"
               checked={state.is_primary_key}
               disabled={hasPrimaryKey}
-              title={hasPrimaryKey && 'Já existe uma Chave Primária nessa tabela!'}
+              title={hasPrimaryKey ? 'Já existe uma Chave Primária nessa tabela!' : undefined}
               onChange={(event) => {
                 const checked = event.target.checked;
                 setState((prevState) => ({
@@ -202,7 +206,10 @@ interface IModalNewColumnProps {
   types: string[];
   hasPrimaryKey?: boolean;
   onClose?(): void;
-  onAdd?(column: IPendingColumnCreate): boolean | void;
+  onAdd?(
+    column: IPendingColumnCreate,
+    options?: { constraintType?: 'primary_key' | 'unique_key' },
+  ): boolean | void;
 }
 
 interface IFormData {

@@ -25,7 +25,14 @@ const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
   (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||
   restriction.constraint_name;
 
-const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
+const Restrictios = ({
+  id_connection,
+  schema,
+  table,
+  mode,
+  tableComment,
+  onCreateApplied,
+}: ITableInfoProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -112,6 +119,26 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
     setShowNewRestrictionModal(true);
     setContextMenuPosition(null);
   }, []);
+
+  const handleSavePendingChanges = React.useCallback(() => {
+    openPendingChangesSqlModal(
+      id_connection,
+      { schema, table },
+      {
+        mode,
+        tableComment,
+        onApplied: onCreateApplied,
+      },
+    );
+  }, [
+    id_connection,
+    mode,
+    onCreateApplied,
+    openPendingChangesSqlModal,
+    schema,
+    table,
+    tableComment,
+  ]);
 
   const handleAddPendingRestriction = React.useCallback(
     (restriction: IPendingRestrictionCreate) => {
@@ -214,7 +241,7 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        openPendingChangesSqlModal(id_connection, { schema, table });
+        handleSavePendingChanges();
         return;
       }
 
@@ -225,15 +252,14 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
     },
     [
       handleRemoveSelectedRestrictions,
+      handleSavePendingChanges,
       handleUndoSelectedDroppedRestrictions,
-      id_connection,
-      openPendingChangesSqlModal,
-      schema,
-      table,
     ],
   );
 
   React.useEffect(() => {
+    if (mode === 'create') return;
+
     loadTableRestrictions(id_connection, { schema, table });
   }, []);
 
@@ -331,7 +357,7 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+          onClick={handleSavePendingChanges}
         >
           <SaveIcon size={16} />
         </Button>
@@ -366,15 +392,17 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
           <RemoveIcon size={16} />
         </Button>
 
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={() => loadTableRestrictions(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+        {mode !== 'create' && (
+          <Button
+            title="Atualizar dados"
+            text
+            smallIcon
+            color={theme.bar.color}
+            onClick={() => loadTableRestrictions(id_connection, { schema, table })}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        )}
 
         <Spacer />
 
@@ -384,9 +412,11 @@ const Restrictios = ({ id_connection, schema, table }: ITableInfoProps) => {
             : `${sortedRestrictions?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {lastFetchDateSerialized}
-        </Text>
+        {mode !== 'create' && (
+          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
+            Atualizado em {lastFetchDateSerialized}
+          </Text>
+        )}
       </Bar>
     </div>
   );

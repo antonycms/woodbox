@@ -22,6 +22,7 @@ interface IPropertiesProps extends ITableInfoProps {
 
 const Properties = (props: IPropertiesProps) => {
   const { table } = props;
+  const isCreateMode = props.mode === 'create';
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -31,10 +32,32 @@ const Properties = (props: IPropertiesProps) => {
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState<string>('1');
 
-  const { register: registerFormData } = useForm({
+  const { state, register } = useForm({
     table: table || '',
     comment: '',
   });
+
+  const tableName = isCreateMode ? state.table.trim() : table;
+
+  const tabs = React.useMemo(() => {
+    const allowedTabs = [
+      { idTab: '1', title: 'Colunas' },
+      { idTab: '8', title: 'Índices' },
+      { idTab: '2', title: 'Restrições' },
+      { idTab: '3', title: 'Chaves Estrangeiras' },
+    ];
+
+    if (!isCreateMode) {
+      allowedTabs.push(
+        { idTab: '4', title: 'Referências' },
+        { idTab: '7', title: 'Diagrama' },
+        { idTab: '6', title: 'Triggers' },
+        { idTab: '5', title: 'Definição' },
+      );
+    }
+
+    return allowedTabs;
+  }, []);
 
   return (
     <div className={styles.propertiesContainer}>
@@ -49,14 +72,14 @@ const Properties = (props: IPropertiesProps) => {
             label="Tabela"
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
-            {...registerFormData('table')}
+            {...register('table')}
           />
           <Input
             md={6}
             label="Comentário"
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
-            {...registerFormData('comment')}
+            {...register('comment')}
           />
         </Row>
       </div>
@@ -80,50 +103,49 @@ const Properties = (props: IPropertiesProps) => {
           color={theme.bar.color}
           activeTabId={activeTabId}
           onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
-          tabs={[
-            { idTab: '1', title: 'Colunas' },
-            { idTab: '8', title: 'Índices' },
-            { idTab: '2', title: 'Restrições' },
-            { idTab: '3', title: 'Chaves Estrangeiras' },
-            { idTab: '4', title: 'Referências' },
-            { idTab: '7', title: 'Diagrama' },
-            { idTab: '6', title: 'Triggers' },
-            { idTab: '5', title: 'Definição' },
-          ]}
+          tabs={tabs}
         />
 
         <TabWindow idTabBar={id}>
           <TabContent idTab="1">
-            <Columns {...props} />
+            <Columns {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
           <TabContent idTab="8">
-            <Indexes {...props} />
+            <Indexes {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
           <TabContent idTab="2">
-            <Restrictios {...props} />
+            <Restrictios {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
           <TabContent idTab="3">
-            <ForeingKeys {...props} />
+            <ForeingKeys {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
-          <TabContent idTab="4">
-            <References {...props} />
-          </TabContent>
+          {!isCreateMode && (
+            <TabContent idTab="4">
+              <References {...props} />
+            </TabContent>
+          )}
 
-          <TabContent idTab="7">
-            <Diagram active={activeTabId === '7'} {...props} />
-          </TabContent>
+          {!isCreateMode && (
+            <TabContent idTab="7">
+              <Diagram active={activeTabId === '7'} {...props} />
+            </TabContent>
+          )}
 
-          <TabContent idTab="5">
-            <Definition {...props} />
-          </TabContent>
+          {!isCreateMode && (
+            <TabContent idTab="5">
+              <Definition {...props} />
+            </TabContent>
+          )}
 
-          <TabContent idTab="6">
-            <Triggers {...props} />
-          </TabContent>
+          {!isCreateMode && (
+            <TabContent idTab="6">
+              <Triggers {...props} />
+            </TabContent>
+          )}
         </TabWindow>
       </div>
     </div>

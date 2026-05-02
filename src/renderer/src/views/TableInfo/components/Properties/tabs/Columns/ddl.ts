@@ -355,6 +355,53 @@ const getCreateReferencesDdl = (
   });
 };
 
+export const generateCreateTableDdl = (
+  schema: string | undefined,
+  table: string,
+  changes: {
+    columns: IPendingColumnCreate[];
+    indexes?: IPendingIndexCreate[];
+    restrictions?: IPendingRestrictionCreate[];
+    references?: IPendingReferenceCreate[];
+    tableComment?: string;
+  },
+) => {
+  const columns = changes.columns || [];
+  const indexes = changes.indexes || [];
+  const restrictions = changes.restrictions || [];
+  const references = changes.references || [];
+  const tableName = getTableName(schema, table);
+
+  const columnLines = columns.map((column) => {
+    const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
+    const notNull = column.is_nullable ? '' : ' NOT NULL';
+
+    return `  ${quoteIdent(column.column_name)} ${getColumnType(column)}${defaultValue}${notNull}`;
+  });
+
+  const commentOnColumnStatements = columns
+    .filter((column) => !!column.description)
+    .map(
+      (column) =>
+        `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
+          column.description,
+        )};`,
+    );
+
+  return [
+    `CREATE TABLE ${tableName} (\n${columnLines.join(',\n')}\n);`,
+    changes.tableComment?.trim()
+      ? `COMMENT ON TABLE ${tableName} IS ${quoteLiteral(changes.tableComment.trim())};`
+      : '',
+    ...commentOnColumnStatements,
+    ...getCreateRestrictionsDdl(tableName, restrictions),
+    ...getCreateIndexesDdl(schema, table, indexes),
+    ...getCreateReferencesDdl(tableName, references),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+};
+
 export const generatePendingTableChangesDdl = (
   schema: string | undefined,
   table: string,
@@ -410,22 +457,6 @@ export const generatePendingTableChangesDdl = (
         column,
       )}${defaultValue}${notNull};`,
     );
-
-    if (column.is_primary_key) {
-      statements.push(
-        `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-          getConstraintName(table, column.column_name, 'pk'),
-        )} PRIMARY KEY (${quoteIdent(column.column_name)});`,
-      );
-    }
-
-    if (column.is_unique) {
-      statements.push(
-        `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-          getConstraintName(table, column.column_name, 'unique'),
-        )} UNIQUE (${quoteIdent(column.column_name)});`,
-      );
-    }
 
     if (column.description) {
       statements.push(

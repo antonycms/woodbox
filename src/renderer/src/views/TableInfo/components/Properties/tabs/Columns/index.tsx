@@ -24,6 +24,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
@@ -32,7 +33,24 @@ import styles from './styles.module.css';
 const getColumnSelectionKey = (column: IColumnInfo) =>
   (column as IColumnInfo & { __pendingId?: string }).__pendingId || column.column_name;
 
-const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
+const getGeneratedConstraintName = (
+  table: string,
+  type: 'primary_key' | 'unique_key',
+  columns: string[],
+) => {
+  const suffix = type === 'primary_key' ? 'pk' : 'unique';
+
+  return `${table}_${columns.join('_')}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+};
+
+const Columns = ({
+  id_connection,
+  schema,
+  table,
+  mode,
+  tableComment,
+  onCreateApplied,
+}: ITableInfoProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -43,10 +61,12 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
     columns,
     pendingColumns,
     pendingDroppedColumns,
+    pendingRestrictions,
     columnTypes,
     references,
     restrictions,
     addPendingColumn,
+    addPendingRestriction,
     removePendingColumn,
     addPendingDroppedColumns,
     removePendingDroppedColumns,
@@ -94,8 +114,8 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
   const hasPrimaryKey = React.useMemo(
     () =>
       restrictions.some((restriction) => restriction.constraint_type === 'primary_key') ||
-      pendingColumns.some((column) => column.is_primary_key),
-    [pendingColumns, restrictions],
+      pendingRestrictions.some((restriction) => restriction.constraint_type === 'primary_key'),
+    [pendingRestrictions, restrictions],
   );
 
   const filteredColumnsAndSortedColumns = React.useMemo(() => {
@@ -118,7 +138,10 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
   }, []);
 
   const handleAddPendingColumn = React.useCallback(
-    (column: Parameters<typeof addPendingColumn>[0]) => {
+    (
+      column: Parameters<typeof addPendingColumn>[0],
+      options?: { constraintType?: 'primary_key' | 'unique_key' },
+    ) => {
       const columnName = column.column_name.toLowerCase();
       const alreadyExists = allColumns.some(
         (item) => item.column_name.toLowerCase() === columnName,
@@ -130,9 +153,22 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
       }
 
       addPendingColumn(column);
+
+      if (options?.constraintType) {
+        addPendingRestriction({
+          __pendingId: generateHash(),
+          __pendingAction: 'create',
+          constraint_name: getGeneratedConstraintName(table, options.constraintType, [
+            column.column_name,
+          ]),
+          constraint_type: options.constraintType,
+          column_names: [column.column_name],
+        });
+      }
+
       return true;
     },
-    [addPendingColumn, allColumns, showToast],
+    [addPendingColumn, addPendingRestriction, allColumns, showToast, table],
   );
 
   const handleRemoveSelectedColumns = React.useCallback(() => {
@@ -159,6 +195,26 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
     clearPendingChanges();
     setSelectedColumns([]);
   }, [clearPendingChanges]);
+
+  const handleSavePendingChanges = React.useCallback(() => {
+    openPendingChangesSqlModal(
+      id_connection,
+      { schema, table },
+      {
+        mode,
+        tableComment,
+        onApplied: onCreateApplied,
+      },
+    );
+  }, [
+    id_connection,
+    mode,
+    onCreateApplied,
+    openPendingChangesSqlModal,
+    schema,
+    table,
+    tableComment,
+  ]);
 
   const handleUndoSelectedDroppedColumns = React.useCallback(() => {
     const columnNames = selectedColumns
@@ -218,10 +274,13 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
   };
 
   React.useEffect(() => {
+    loadColumnTypes(id_connection);
+
+    if (mode === 'create') return;
+
     loadTableColumns(id_connection, { schema, table });
     loadTableRestrictions(id_connection, { schema, table });
     loadTableReferences(id_connection, { schema, table });
-    loadColumnTypes(id_connection);
   }, []);
 
   React.useEffect(() => {
@@ -265,7 +324,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        openPendingChangesSqlModal(id_connection, { schema, table });
+        handleSavePendingChanges();
         return;
       }
 
@@ -274,14 +333,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
         handleUndoSelectedDroppedColumns();
       }
     },
-    [
-      handleRemoveSelectedColumns,
-      handleUndoSelectedDroppedColumns,
-      id_connection,
-      openPendingChangesSqlModal,
-      schema,
-      table,
-    ],
+    [handleRemoveSelectedColumns, handleSavePendingChanges, handleUndoSelectedDroppedColumns],
   );
 
   return (
@@ -372,7 +424,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+          onClick={handleSavePendingChanges}
         >
           <SaveIcon size={16} />
         </Button>
@@ -411,15 +463,17 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
           <RemoveIcon size={16} />
         </Button>
 
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={() => loadTableColumns(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+        {mode !== 'create' && (
+          <Button
+            title="Atualizar dados"
+            text
+            smallIcon
+            color={theme.bar.color}
+            onClick={() => loadTableColumns(id_connection, { schema, table })}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        )}
 
         <Spacer />
 
@@ -429,9 +483,11 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
             : `${filteredColumnsAndSortedColumns?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {lastFetchDateSerialized}
-        </Text>
+        {mode !== 'create' && (
+          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
+            Atualizado em {lastFetchDateSerialized}
+          </Text>
+        )}
       </Bar>
     </div>
   );

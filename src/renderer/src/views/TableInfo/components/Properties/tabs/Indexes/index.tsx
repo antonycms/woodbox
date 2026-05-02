@@ -21,7 +21,14 @@ import ModalNewIndex from './components/ModalNewIndex';
 const getIndexSelectionKey = (index: IIndexInfo) =>
   (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
 
-const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
+const Indexes = ({
+  id_connection,
+  schema,
+  table,
+  mode,
+  tableComment,
+  onCreateApplied,
+}: ITableInfoProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -94,6 +101,26 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
     setShowNewIndexModal(true);
     setContextMenuPosition(null);
   }, []);
+
+  const handleSavePendingChanges = React.useCallback(() => {
+    openPendingChangesSqlModal(
+      id_connection,
+      { schema, table },
+      {
+        mode,
+        tableComment,
+        onApplied: onCreateApplied,
+      },
+    );
+  }, [
+    id_connection,
+    mode,
+    onCreateApplied,
+    openPendingChangesSqlModal,
+    schema,
+    table,
+    tableComment,
+  ]);
 
   const handleAddPendingIndex = React.useCallback(
     (index: IPendingIndexCreate) => {
@@ -188,7 +215,7 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        openPendingChangesSqlModal(id_connection, { schema, table });
+        handleSavePendingChanges();
         return;
       }
 
@@ -197,17 +224,12 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
         handleUndoSelectedDroppedIndexes();
       }
     },
-    [
-      handleRemoveSelectedIndexes,
-      handleUndoSelectedDroppedIndexes,
-      id_connection,
-      openPendingChangesSqlModal,
-      schema,
-      table,
-    ],
+    [handleRemoveSelectedIndexes, handleSavePendingChanges, handleUndoSelectedDroppedIndexes],
   );
 
   React.useEffect(() => {
+    if (mode === 'create') return;
+
     loadTableIndexes(id_connection, { schema, table });
   }, []);
 
@@ -315,7 +337,7 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+          onClick={handleSavePendingChanges}
         >
           <SaveIcon size={16} />
         </Button>
@@ -350,15 +372,17 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
           <RemoveIcon size={16} />
         </Button>
 
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={() => loadTableIndexes(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+        {mode !== 'create' && (
+          <Button
+            title="Atualizar dados"
+            text
+            smallIcon
+            color={theme.bar.color}
+            onClick={() => loadTableIndexes(id_connection, { schema, table })}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        )}
 
         <Spacer />
 
@@ -368,9 +392,11 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
             : `${sortedIndexes?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {toDateTime(lastFetchDate.indexes)}
-        </Text>
+        {mode !== 'create' && (
+          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
+            Atualizado em {toDateTime(lastFetchDate.indexes)}
+          </Text>
+        )}
       </Bar>
     </div>
   );

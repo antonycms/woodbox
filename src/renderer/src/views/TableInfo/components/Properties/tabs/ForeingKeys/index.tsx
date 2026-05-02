@@ -36,7 +36,15 @@ const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>
   (reference as IColumnReferenceInfo & { __pendingId?: string }).__pendingId ||
   `${reference.constraint_name}-${reference.column_name}`;
 
-const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeysProps) => {
+const ForeingKeys = ({
+  id_connection,
+  schema,
+  table,
+  mode,
+  tableComment,
+  onCreateApplied,
+  onOpenTable,
+}: IForeingKeysProps) => {
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -122,6 +130,26 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
     setShowNewReferenceModal(true);
     setContextMenuPosition(null);
   }, []);
+
+  const handleSavePendingChanges = React.useCallback(() => {
+    openPendingChangesSqlModal(
+      id_connection,
+      { schema, table },
+      {
+        mode,
+        tableComment,
+        onApplied: onCreateApplied,
+      },
+    );
+  }, [
+    id_connection,
+    mode,
+    onCreateApplied,
+    openPendingChangesSqlModal,
+    schema,
+    table,
+    tableComment,
+  ]);
 
   const handleAddPendingReference = React.useCallback(
     (reference: IPendingReferenceCreate) => {
@@ -242,7 +270,7 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        openPendingChangesSqlModal(id_connection, { schema, table });
+        handleSavePendingChanges();
         return;
       }
 
@@ -251,17 +279,12 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
         handleUndoSelectedDroppedReferences();
       }
     },
-    [
-      handleRemoveSelectedReferences,
-      handleUndoSelectedDroppedReferences,
-      id_connection,
-      openPendingChangesSqlModal,
-      schema,
-      table,
-    ],
+    [handleRemoveSelectedReferences, handleSavePendingChanges, handleUndoSelectedDroppedReferences],
   );
 
   React.useEffect(() => {
+    if (mode === 'create') return;
+
     loadTableReferences(id_connection, { schema, table });
   }, []);
 
@@ -371,7 +394,7 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => openPendingChangesSqlModal(id_connection, { schema, table })}
+          onClick={handleSavePendingChanges}
         >
           <SaveIcon size={16} />
         </Button>
@@ -406,15 +429,17 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
           <RemoveIcon size={16} />
         </Button>
 
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={() => loadTableReferences(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+        {mode !== 'create' && (
+          <Button
+            title="Atualizar dados"
+            text
+            smallIcon
+            color={theme.bar.color}
+            onClick={() => loadTableReferences(id_connection, { schema, table })}
+          >
+            <IconRefresh size={18} />
+          </Button>
+        )}
 
         <Spacer />
 
@@ -424,9 +449,11 @@ const ForeingKeys = ({ id_connection, schema, table, onOpenTable }: IForeingKeys
             : `${sortedReferences?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {lastFetchDateSerialized}
-        </Text>
+        {mode !== 'create' && (
+          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
+            Atualizado em {lastFetchDateSerialized}
+          </Text>
+        )}
       </Bar>
     </div>
   );

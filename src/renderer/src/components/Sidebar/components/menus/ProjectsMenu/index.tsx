@@ -24,6 +24,7 @@ import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
@@ -307,6 +308,33 @@ const ProjectsMenu = () => {
         },
       ],
 
+      tables: [
+        {
+          text: 'Criar nova tabela',
+          onClick: () => {
+            const { id_connection, schema_name } = contextMenuItemSelected?.data || {};
+            if (!id_connection) return;
+
+            const tabId = `new_table_${id_connection}_${schema_name || 'public'}_${generateHash()}`;
+
+            addTab({
+              id: tabId,
+              title: 'Nova tabela',
+              unsaved: true,
+              component: () => (
+                <TableInfo
+                  id_connection={id_connection}
+                  schema={schema_name}
+                  table=""
+                  mode="create"
+                  draftTabId={tabId}
+                />
+              ),
+            });
+          },
+        },
+      ],
+
       scripts: [
         {
           text: 'Novo script SQL',
@@ -422,6 +450,8 @@ const ProjectsMenu = () => {
                   label: 'Tabelas',
                   icon: 'multi',
                   childs: tablesSchema,
+                  type: 'tables' as const,
+                  data: { schema_name: schema, ...dataConnection },
                 },
                 functionsSchema?.length && {
                   id: `fns_${connection.id}:${schema}`,

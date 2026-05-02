@@ -31,8 +31,6 @@ export interface IPendingColumnCreate extends IColumnInfo {
   __pendingId: string;
   __pendingAction: 'create';
   __style?: CSSProperties;
-  is_primary_key?: boolean;
-  is_unique?: boolean;
 }
 
 export interface IPendingColumnDrop extends IColumnInfo {
@@ -107,7 +105,11 @@ export interface ITableInfoContext extends ITableInfo {
 
   clearPendingChanges(): void;
   loadColumnTypes(idConnection: string): Promise<void>;
-  openPendingChangesSqlModal(idConnection: string, filters: ILoadTableInfoFilters): void;
+  openPendingChangesSqlModal(
+    idConnection: string,
+    filters: ILoadTableInfoFilters,
+    options?: IOpenPendingChangesSqlModalOptions,
+  ): void;
 
   loadTableColumns: LoadTableInfo;
   loadTableReferences: LoadTableInfo;
@@ -124,6 +126,12 @@ export interface ITableInfoContext extends ITableInfo {
 export interface ILoadTableInfoFilters {
   table: string;
   schema: string;
+}
+
+export interface IOpenPendingChangesSqlModalOptions {
+  mode?: 'view' | 'create';
+  tableComment?: string;
+  onApplied?: (table: string) => void;
 }
 
 export type LoadTableInfo = (idConnection: string, filters: ILoadTableInfoFilters) => Promise<void>;

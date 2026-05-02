@@ -2,7 +2,10 @@ import React from 'react';
 
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
-import { generatePendingTableChangesDdl } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
+import {
+  generateCreateTableDdl,
+  generatePendingTableChangesDdl,
+} from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import {
   type IColumnInfo,
   type IColumnReferenceInfo,
@@ -15,6 +18,7 @@ import {
 import TableInfoContext, {
   type ILastFetchDate,
   type ILoadTableInfoFilters,
+  type IOpenPendingChangesSqlModalOptions,
   type IPendingColumnCreate,
   type IPendingColumnDrop,
   type IPendingIndexCreate,
@@ -43,6 +47,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     getTableIndexes,
     getTableTriggers,
     getColumnTypes,
+    loadConnectionInfo,
     runSql,
   } = useStoreContext();
   const { showToast } = useToast();
@@ -95,6 +100,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const pendingApplyInfoRef = React.useRef<{
     idConnection: string;
     filters: ILoadTableInfoFilters;
+    options?: IOpenPendingChangesSqlModalOptions;
   }>(null);
 
   const updateFetchDate = (attribute: keyof ITableInfo) => {
@@ -429,23 +435,48 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   }, []);
 
   const openPendingChangesSqlModal = React.useCallback(
-    (idConnection: string, filters: ILoadTableInfoFilters) => {
-      const sql = generatePendingTableChangesDdl(filters.schema, filters.table, {
-        columns: pendingColumns,
-        droppedColumns: pendingDroppedColumns,
-        indexes: pendingIndexes,
-        droppedIndexes: pendingDroppedIndexes,
-        restrictions: pendingRestrictions,
-        droppedRestrictions: pendingDroppedRestrictions,
-        references: pendingReferences,
-        droppedReferences: pendingDroppedReferences,
-        existingRestrictions: restrictions,
-        existingReferences: references,
-      });
+    (
+      idConnection: string,
+      filters: ILoadTableInfoFilters,
+      options?: IOpenPendingChangesSqlModalOptions,
+    ) => {
+      if (options?.mode === 'create') {
+        if (!filters.table?.trim()) {
+          showToast({ type: 'warn', title: 'Informe o nome da tabela.' });
+          return;
+        }
+
+        if (!pendingColumns.length) {
+          showToast({ type: 'warn', title: 'Adicione ao menos uma coluna.' });
+          return;
+        }
+      }
+
+      const sql =
+        options?.mode === 'create'
+          ? generateCreateTableDdl(filters.schema, filters.table, {
+              columns: pendingColumns,
+              indexes: pendingIndexes,
+              restrictions: pendingRestrictions,
+              references: pendingReferences,
+              tableComment: options.tableComment,
+            })
+          : generatePendingTableChangesDdl(filters.schema, filters.table, {
+              columns: pendingColumns,
+              droppedColumns: pendingDroppedColumns,
+              indexes: pendingIndexes,
+              droppedIndexes: pendingDroppedIndexes,
+              restrictions: pendingRestrictions,
+              droppedRestrictions: pendingDroppedRestrictions,
+              references: pendingReferences,
+              droppedReferences: pendingDroppedReferences,
+              existingRestrictions: restrictions,
+              existingReferences: references,
+            });
 
       if (!sql.trim()) return;
 
-      pendingApplyInfoRef.current = { idConnection, filters };
+      pendingApplyInfoRef.current = { idConnection, filters, options };
       setPendingDdlSql(sql);
       setShowPendingDdlModal(true);
     },
@@ -460,6 +491,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       pendingRestrictions,
       references,
       restrictions,
+      showToast,
     ],
   );
 
@@ -476,7 +508,12 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         setShowPendingDdlModal(false);
         showToast({ type: 'success', title: 'Alterações aplicadas com sucesso!' });
 
+        if (applyInfo.options?.mode === 'create') {
+          applyInfo.options.onApplied?.(applyInfo.filters.table);
+        }
+
         await Promise.all([
+          loadConnectionInfo(applyInfo.idConnection),
           loadTableColumns(applyInfo.idConnection, applyInfo.filters),
           loadTableRestrictions(applyInfo.idConnection, applyInfo.filters),
           loadTableReferences(applyInfo.idConnection, applyInfo.filters),
@@ -499,6 +536,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       loadTableIndexes,
       loadTableReferences,
       loadTableRestrictions,
+      loadConnectionInfo,
       runSql,
       showToast,
     ],
