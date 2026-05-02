@@ -8,6 +8,8 @@ export interface IPropsSpinner {
   absolute?: boolean;
   thickness?: number;
   background?: string;
+  center?: boolean;
+  padding?: string;
 }
 
 const SpinnerLoading = (props: IPropsSpinner) => {
@@ -16,13 +18,15 @@ const SpinnerLoading = (props: IPropsSpinner) => {
     color,
     size = 60,
     thickness = 3,
+    center,
+    padding = '3px',
     background: backgroundColor = 'rgba(0, 0, 0, 0.1)',
   } = props;
 
   return (
     <div
       className={classes(styles.container, absolute && styles.absolute)}
-      style={{ backgroundColor }}
+      style={{ padding, backgroundColor, margin: center ? '0 auto' : 0 }}
     >
       <div
         className={styles.loader}

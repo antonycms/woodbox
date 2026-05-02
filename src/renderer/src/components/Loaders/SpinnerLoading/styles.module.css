@@ -4,7 +4,6 @@
   align-items: center;
 
   backdrop-filter: blur(2px);
-  padding: 3px;
 }
 
 .container.absolute {
