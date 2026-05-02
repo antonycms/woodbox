@@ -82,8 +82,8 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
           },
           {
             title: 'Clique para ordenar por essa coluna',
-            label: 'Método',
-            attribute: 'index_method',
+            label: 'Colunas',
+            attribute: 'column_names',
             sortable: true,
           },
           {
@@ -94,20 +94,20 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
           },
           {
             title: 'Clique para ordenar por essa coluna',
-            label: 'Primário',
+            label: 'Chave Primária',
             attribute: 'is_primary',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Método',
+            attribute: 'index_method',
             sortable: true,
           },
           {
             title: 'Clique para ordenar por essa coluna',
             label: 'Válido',
             attribute: 'is_valid',
-            sortable: true,
-          },
-          {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Colunas',
-            attribute: 'column_names',
             sortable: true,
           },
           {
