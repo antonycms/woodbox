@@ -6,15 +6,20 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@renderer/contexts/Store';
+import { type IPendingIndexCreate, useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { IconRefresh, SaveIcon } from '@renderer/styles/icons';
+import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateIndexesDdl } from '../Columns/ddl';
+import ModalNewIndex from './components/ModalNewIndex';
+
+const getIndexSelectionKey = (index: IIndexInfo) =>
+  (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
 
 const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -22,16 +27,135 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { indexes, loadTableIndexes, openPendingChangesSqlModal, lastFetchDate, loading } =
-    useTableInfoContext();
+  const { showToast } = useToast();
+  const {
+    columns,
+    pendingColumns,
+    pendingDroppedColumns,
+    indexes,
+    pendingIndexes,
+    pendingDroppedIndexes,
+    addPendingIndex,
+    removePendingIndex,
+    addPendingDroppedIndexes,
+    removePendingDroppedIndexes,
+    clearPendingChanges,
+    loadTableColumns,
+    loadTableIndexes,
+    openPendingChangesSqlModal,
+    lastFetchDate,
+    loading,
+  } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+  const [showNewIndexModal, setShowNewIndexModal] = React.useState(false);
+
+  const droppedIndexNames = React.useMemo(
+    () => new Set(pendingDroppedIndexes.map((index) => index.index_name)),
+    [pendingDroppedIndexes],
+  );
+  const droppedColumnNames = React.useMemo(
+    () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
+    [pendingDroppedColumns],
+  );
+  const availableColumnNames = React.useMemo(
+    () => [
+      ...columns
+        .filter((column) => !droppedColumnNames.has(column.column_name))
+        .map((column) => column.column_name),
+      ...pendingColumns.map((column) => column.column_name),
+    ],
+    [columns, droppedColumnNames, pendingColumns],
+  );
+  const allIndexes = React.useMemo(
+    () => [
+      ...indexes.map((index) => {
+        if (!droppedIndexNames.has(index.index_name)) return index;
+
+        return {
+          ...index,
+          __pendingAction: 'drop',
+          __style: {
+            backgroundColor: '#ff676733',
+            textDecoration: 'line-through',
+          },
+        };
+      }),
+      ...pendingIndexes,
+    ],
+    [indexes, droppedIndexNames, pendingIndexes],
+  );
+  const sortedIndexes = React.useMemo(() => sortRows(allIndexes, sort), [allIndexes, sort]);
+
+  const handleOpenNewIndexModal = React.useCallback(() => {
+    setShowNewIndexModal(true);
+    setContextMenuPosition(null);
+  }, []);
+
+  const handleAddPendingIndex = React.useCallback(
+    (index: IPendingIndexCreate) => {
+      const indexName = index.index_name.toLowerCase();
+      const alreadyExists = allIndexes.some((item) => item.index_name.toLowerCase() === indexName);
+
+      if (alreadyExists) {
+        showToast({ type: 'warn', title: 'Já existe um índice com esse nome.' });
+        return false;
+      }
+
+      addPendingIndex(index);
+      return true;
+    },
+    [addPendingIndex, allIndexes, showToast],
+  );
+
+  const handleRemoveSelectedIndexes = React.useCallback(() => {
+    if (!selectedIndexes.length) {
+      showToast({ type: 'warn', title: 'Selecione um ou mais índices para remover.' });
+      return;
+    }
+
+    selectedIndexes.forEach((index) => {
+      const pendingId = (index as IPendingIndexCreate).__pendingId;
+
+      if (pendingId) {
+        removePendingIndex(pendingId);
+        return;
+      }
+
+      addPendingDroppedIndexes([index]);
+    });
+
+    setContextMenuPosition(null);
+  }, [selectedIndexes, removePendingIndex, addPendingDroppedIndexes, showToast]);
+
+  const handleUndoSelectedDroppedIndexes = React.useCallback(() => {
+    const indexNames = selectedIndexes
+      .filter(
+        (index) =>
+          (index as { __pendingAction?: string }).__pendingAction === 'drop' ||
+          droppedIndexNames.has(index.index_name),
+      )
+      .map((index) => index.index_name);
+
+    if (!indexNames.length) return;
+
+    removePendingDroppedIndexes(indexNames);
+    setSelectedIndexes([]);
+  }, [selectedIndexes, droppedIndexNames, removePendingDroppedIndexes]);
 
   const contextMenuOptions = React.useMemo(() => {
     return [
+      {
+        text: 'Novo índice',
+        onClick: handleOpenNewIndexModal,
+      },
+      {
+        text: 'Excluir itens selecionados',
+        onClick: handleRemoveSelectedIndexes,
+      },
       {
         text: 'Gerar DDL',
         onClick: () => {
@@ -40,7 +164,7 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
         },
       },
     ];
-  }, [selectedIndexes]);
+  }, [selectedIndexes, handleOpenNewIndexModal, handleRemoveSelectedIndexes]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     setContextMenuPosition({
@@ -49,14 +173,66 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
     });
   };
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
+
+      if (isEditableTarget || target?.isContentEditable) return;
+
+      if (event.key === 'Delete') {
+        event.preventDefault();
+        handleRemoveSelectedIndexes();
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        openPendingChangesSqlModal(id_connection, { schema, table });
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleUndoSelectedDroppedIndexes();
+      }
+    },
+    [
+      handleRemoveSelectedIndexes,
+      handleUndoSelectedDroppedIndexes,
+      id_connection,
+      openPendingChangesSqlModal,
+      schema,
+      table,
+    ],
+  );
+
   React.useEffect(() => {
     loadTableIndexes(id_connection, { schema, table });
   }, []);
 
-  const sortedIndexes = React.useMemo(() => sortRows(indexes, sort), [indexes, sort]);
+  React.useEffect(() => {
+    setSelectedIndexes((currentSelectedIndexes) => {
+      if (!currentSelectedIndexes.length) return currentSelectedIndexes;
+
+      const indexesByKey = new Map(allIndexes.map((index) => [getIndexSelectionKey(index), index]));
+      const nextSelectedIndexes = currentSelectedIndexes
+        .map((index) => indexesByKey.get(getIndexSelectionKey(index)))
+        .filter((index): index is IIndexInfo => !!index);
+
+      if (
+        nextSelectedIndexes.length === currentSelectedIndexes.length &&
+        nextSelectedIndexes.every((index, idx) => index === currentSelectedIndexes[idx])
+      ) {
+        return currentSelectedIndexes;
+      }
+
+      return nextSelectedIndexes;
+    });
+  }, [allIndexes]);
 
   return (
-    <>
+    <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
       <ContextMenu
         position={contextMenuPosition}
         options={contextMenuOptions}
@@ -65,8 +241,16 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
 
       <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
 
+      <ModalNewIndex
+        show={showNewIndexModal}
+        table={table}
+        columns={availableColumnNames}
+        onClose={() => setShowNewIndexModal(false)}
+        onAdd={handleAddPendingIndex}
+      />
+
       <Table
-        rowKeyExtractor={(item) => item.index_name}
+        rowKeyExtractor={getIndexSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedIndexes}
         loading={loading.indexes}
@@ -137,6 +321,36 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
         </Button>
 
         <Button
+          title="Cancelar alterações"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={clearPendingChanges}
+        >
+          <CancelIcon size={16} />
+        </Button>
+
+        <Button
+          title="Adicionar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleOpenNewIndexModal}
+        >
+          <AddIcon size={14} />
+        </Button>
+
+        <Button
+          title="Remover itens selecionados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleRemoveSelectedIndexes}
+        >
+          <RemoveIcon size={16} />
+        </Button>
+
+        <Button
           title="Atualizar dados"
           text
           smallIcon
@@ -149,14 +363,16 @@ const Indexes = ({ id_connection, schema, table }: ITableInfoProps) => {
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {indexes?.length > 1 ? `${indexes?.length} Itens` : `${indexes?.length || 0} Item`}
+          {sortedIndexes?.length > 1
+            ? `${sortedIndexes?.length} Itens`
+            : `${sortedIndexes?.length || 0} Item`}
         </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
           Atualizado em {toDateTime(lastFetchDate.indexes)}
         </Text>
       </Bar>
-    </>
+    </div>
   );
 };
 
