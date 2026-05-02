@@ -7,7 +7,10 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import type { IColumnInfo } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { type IPendingColumnCreate, useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import {
+  type IPendingColumnCreate,
+  useTableInfoContext,
+} from '@renderer/contexts/TableInfoContext';
 import {
   AddIcon,
   CancelIcon,
@@ -250,9 +253,7 @@ const Columns = ({ id_connection, schema, table }: ITableInfoProps) => {
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(
-        target?.tagName,
-      );
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
 
       if (isEditableTarget || target?.isContentEditable) return;
 
