@@ -51,7 +51,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const {
     activeTheme: { table: theme },
   } = useThemeContext();
-  const refScrollContainer = React.useRef<HTMLDivElement>();
+  const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const rowHeight = React.useMemo(() => 35, []);
   const maxColumnSize = React.useMemo(() => 760, []);
   const defaultColumnSize = React.useMemo(() => 200, []);
@@ -354,6 +354,63 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [selectAnalysisRange],
   );
 
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (!onContextMenu) return;
+
+    const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
+    const rowMap = new Map<number, number[]>();
+
+    cells.forEach((key) => {
+      const [r, c] = key.split(':').map(Number);
+      if (!rowMap.has(r)) rowMap.set(r, []);
+      rowMap.get(r)!.push(c);
+    });
+
+    const cellLines = [...rowMap.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([rowIndex, colIndices]) => {
+        colIndices.sort((a, b) => a - b);
+        return colIndices
+          .map((ci) => {
+            const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
+            return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+          })
+          .join(', ');
+      });
+
+    const rowLines = [...rowMap.keys()]
+      .sort((a, b) => a - b)
+      .map((rowIndex) => {
+        const row = serializedRowsRef.current[rowIndex];
+        return columnsRef.current
+          .map((col) => {
+            const v = row?.[col.attribute];
+            return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+          })
+          .join(', ');
+      });
+
+    const sortedRowIndices = [...rowMap.keys()].sort((a, b) => a - b);
+
+    const rowObjects = sortedRowIndices.map((rowIndex) => {
+      const row = serializedRowsRef.current[rowIndex];
+      return Object.fromEntries(
+        columnsRef.current.map((col) => [col.attribute, row?.[col.attribute] ?? null]),
+      );
+    });
+
+    const rowsJson =
+      rowObjects.length === 1
+        ? JSON.stringify(rowObjects[0], null, 2)
+        : JSON.stringify(rowObjects, null, 2);
+
+    onContextMenu(event, {
+      cellsText: cellLines.join('\n'),
+      rowsText: rowLines.join('\n'),
+      rowsJson,
+    });
+  };
+
   const cssVars = toCssProperties({
     ...theme,
     height: `${rows.length * rowHeight}px`,
@@ -610,62 +667,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       ref={refScrollContainer}
       onScroll={analysisMode ? undefined : onScroll}
       className={styles.table_outside_container}
-      onContextMenu={(event) => {
-        if (!onContextMenu) return;
-
-        const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
-        const rowMap = new Map<number, number[]>();
-
-        cells.forEach((key) => {
-          const [r, c] = key.split(':').map(Number);
-          if (!rowMap.has(r)) rowMap.set(r, []);
-          rowMap.get(r)!.push(c);
-        });
-
-        const cellLines = [...rowMap.entries()]
-          .sort((a, b) => a[0] - b[0])
-          .map(([rowIndex, colIndices]) => {
-            colIndices.sort((a, b) => a - b);
-            return colIndices
-              .map((ci) => {
-                const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
-                return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
-              })
-              .join(', ');
-          });
-
-        const rowLines = [...rowMap.keys()]
-          .sort((a, b) => a - b)
-          .map((rowIndex) => {
-            const row = serializedRowsRef.current[rowIndex];
-            return columnsRef.current
-              .map((col) => {
-                const v = row?.[col.attribute];
-                return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
-              })
-              .join(', ');
-          });
-
-        const sortedRowIndices = [...rowMap.keys()].sort((a, b) => a - b);
-
-        const rowObjects = sortedRowIndices.map((rowIndex) => {
-          const row = serializedRowsRef.current[rowIndex];
-          return Object.fromEntries(
-            columnsRef.current.map((col) => [col.attribute, row?.[col.attribute] ?? null]),
-          );
-        });
-
-        const rowsJson =
-          rowObjects.length === 1
-            ? JSON.stringify(rowObjects[0], null, 2)
-            : JSON.stringify(rowObjects, null, 2);
-
-        onContextMenu(event, {
-          cellsText: cellLines.join('\n'),
-          rowsText: rowLines.join('\n'),
-          rowsJson,
-        });
-      }}
+      onContextMenu={handleContextMenu}
       style={cssVars}
       tabIndex={0}
     >
