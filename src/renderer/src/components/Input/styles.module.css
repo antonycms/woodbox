@@ -3,6 +3,7 @@
   display: flex;
   align-items: center;
   border-radius: 4px;
+  position: relative;
 }
 
 .isRequired label::after {
@@ -34,9 +35,21 @@
 }
 
 .iconContainer {
+  right: 8px;
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 28px;
+  height: 100%;
+}
+
+.input.hidden {
+  pointer-events: none;
+  position: absolute;
+  background-color: transparent;
+  color: transparent;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
 }

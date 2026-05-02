@@ -5,8 +5,11 @@ import { Label } from '@renderer/components/Label';
 import { classes, toCssProperties } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
-export const Input = React.memo((props: IInputProps) => {
+const fakeHandle = () => {};
+
+export const Input = (props: IInputProps) => {
   const {
+    ref,
     value,
     defaultValue,
     onChange,
@@ -29,6 +32,15 @@ export const Input = React.memo((props: IInputProps) => {
     placeholderColor,
     disabled,
     autoFocus,
+    useFakeInputToValidate,
+    children,
+    idContainer,
+    onKeyDown,
+    onKeyUp,
+    onClick,
+    onFocus,
+    onBlur,
+    'data-value': dataValue,
     icon: Icon,
     id: externalId,
     ...gridSystem
@@ -51,8 +63,26 @@ export const Input = React.memo((props: IInputProps) => {
             {label}
           </Label>
         )}
-        <div className={styles.inputContainer} style={inputContainerStyle}>
+
+        <div id={idContainer} className={styles.inputContainer} style={inputContainerStyle}>
+          {!!useFakeInputToValidate && (
+            <input
+              aria-hidden
+              className={classes(styles.input, styles.hidden)}
+              required={required}
+              maxLength={maxLength}
+              minLength={minLength}
+              min={min}
+              max={max}
+              value={value || dataValue || ''}
+              type={type}
+              onChange={fakeHandle}
+              disabled={disabled}
+            />
+          )}
+
           <input
+            ref={ref}
             autoFocus={autoFocus}
             disabled={disabled}
             id={id}
@@ -65,9 +95,15 @@ export const Input = React.memo((props: IInputProps) => {
             placeholder={placeholder}
             value={value}
             defaultValue={defaultValue}
+            data-value={dataValue}
             type={type}
             required={required}
             onChange={onChange}
+            onKeyDown={onKeyDown}
+            onKeyUp={onKeyUp}
+            onClick={onClick}
+            onFocus={onFocus}
+            onBlur={onBlur}
             style={inputStyle}
             className={classes(className, styles.input, centerText && styles.centerText)}
           />
@@ -77,13 +113,13 @@ export const Input = React.memo((props: IInputProps) => {
               <Icon />
             </div>
           )}
+
+          {children}
         </div>
       </div>
     </Column>
   );
-});
-
-Input.displayName = 'Input';
+};
 
 export type InputTypes =
   | 'button'
@@ -110,8 +146,12 @@ export type InputTypes =
   | 'week';
 
 export type IInputProps = IGridSystem & {
+  ref?: React.Ref<HTMLInputElement>;
+  children?: React.ReactNode;
   disabled?: boolean;
   value?: string | number;
+  'data-value'?: any;
+  useFakeInputToValidate?: boolean;
   placeholder?: string;
   onChange?(event: React.ChangeEvent<HTMLInputElement>): void;
   min?: string | number;
@@ -120,6 +160,7 @@ export type IInputProps = IGridSystem & {
   minLength?: number;
   name?: string;
   id?: string;
+  idContainer?: string;
   defaultValue?: string;
   maxWidth?: string;
   className?: string;
@@ -127,11 +168,18 @@ export type IInputProps = IGridSystem & {
   centerText?: boolean;
   required?: boolean;
   title?: string;
-  icon?(): JSX.Element;
+  icon?(): React.ReactElement;
   color: string;
   backgroundColor: string;
   placeholderColor?: string;
   label?: string;
   labelColor?: string;
   autoFocus?: boolean;
+  onClick?: React.MouseEventHandler<HTMLInputElement>;
+  onFocus?: React.FocusEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onKeyUp?: React.KeyboardEventHandler<HTMLInputElement>;
+  autoComplete?: React.HTMLInputAutoCompleteAttribute;
+  spellCheck?: boolean | 'true' | 'false';
 };
