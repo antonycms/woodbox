@@ -8,6 +8,7 @@ import { Spacer } from '@renderer/components/Spacer';
 import { ModalNewProject } from '@renderer/components/ModalNewProject';
 import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
 import { ModalNewScript } from '@renderer/components/ModalNewScript';
+import { Modal } from '@renderer/components/Modal';
 import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
@@ -29,7 +30,7 @@ import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
   const {
-    activeTheme: { sideBar: colors },
+    activeTheme: { sideBar: colors, modal: modalColors },
   } = useThemeContext();
 
   const {
@@ -41,6 +42,7 @@ const ProjectsMenu = () => {
     closeConnection,
     connectionsInfo,
     scripts,
+    runSql,
   } = useStoreContext();
 
   const { showToast } = useToast();
@@ -65,11 +67,23 @@ const ProjectsMenu = () => {
   const [isNewScript, setIsNewScript] = React.useState(false);
   const [scriptEditing, setScriptEditing] = React.useState<IScript>();
 
+  const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
+  const [isDeletingTable, setIsDeletingTable] = React.useState(false);
+
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
   const showModalNewScript = !!(isNewScript || scriptEditing);
+  const tableToDeleteName = tableToDelete?.data
+    ? [tableToDelete.data.table_schema, tableToDelete.data.table_name].filter(Boolean).join('.')
+    : '';
 
   const filterTextSerialized = filterText?.trim?.() ?? '';
+
+  const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+
+  const getQualifiedTableName = (schema: string | undefined, table: string) => {
+    return [schema, table].filter(Boolean).map(quoteIdent).join('.');
+  };
 
   const checkFilterText = (text: string, text2?: string) => {
     const filterWithSchema = filterTextSerialized.includes('.');
@@ -142,6 +156,12 @@ const ProjectsMenu = () => {
     setScriptEditing(null);
   }, []);
 
+  const closeDeleteTableModal = React.useCallback(() => {
+    if (isDeletingTable) return;
+
+    setTableToDelete(null);
+  }, [isDeletingTable]);
+
   const handleOpemItemTreeView = async (item: IItemTreeViewData, itemIsOpen: boolean) => {
     if (itemIsOpen) return;
 
@@ -176,6 +196,36 @@ const ProjectsMenu = () => {
       component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
   };
+
+  const handleDeleteTable = React.useCallback(async () => {
+    const { id_connection, table_schema, table_name } = tableToDelete?.data || {};
+    if (!id_connection || !table_name) return;
+
+    try {
+      setIsDeletingTable(true);
+
+      await runSql(id_connection, `DROP TABLE ${getQualifiedTableName(table_schema, table_name)};`);
+
+      removeTab(`${id_connection}_${table_schema}_${table_name}`);
+      await loadConnectionInfo(id_connection);
+
+      showToast({
+        type: 'success',
+        title: 'Tabela excluída com sucesso!',
+      });
+
+      setTableToDelete(null);
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        title: 'Erro ao excluir tabela.',
+        description: error?.message,
+        delay: 8000,
+      });
+    } finally {
+      setIsDeletingTable(false);
+    }
+  }, [tableToDelete, runSql, removeTab, loadConnectionInfo, showToast]);
 
   const handleDoubleClickItemThreeView = (item: IItemTreeViewData) => {
     if (item.type === 'table') {
@@ -304,7 +354,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Excluir Tabela',
-          onClick: () => {},
+          onClick: () => setTableToDelete(contextMenuItemSelected),
         },
       ],
 
@@ -533,6 +583,48 @@ const ProjectsMenu = () => {
         idScript={scriptEditing?.id}
         onNewScriptCreated={openTabScriptSql}
       />
+
+      <Modal
+        width="420px"
+        closeOutside
+        show={!!tableToDelete}
+        title="Excluir Tabela"
+        onClose={closeDeleteTableModal}
+      >
+        <Text color={modalColors.color}>
+          Tem certeza que deseja excluir a tabela "{tableToDeleteName}"?
+        </Text>
+
+        <Divider />
+
+        <Row>
+          <Spacer />
+
+          <Button
+            color={modalColors.cancelButtonColor}
+            backgroundColor={modalColors.cancelButtonBackgroundColor}
+            disabled={isDeletingTable}
+            onClick={closeDeleteTableModal}
+            xs={6}
+            sm={4}
+            md={3}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            color={modalColors.saveButtonColor}
+            backgroundColor={modalColors.saveButtonBackgroundColor}
+            loading={isDeletingTable}
+            onClick={handleDeleteTable}
+            xs={6}
+            sm={4}
+            md={3}
+          >
+            Confirmar
+          </Button>
+        </Row>
+      </Modal>
 
       <Row>
         <Text bold color={colors.color} userSelect={false}>
