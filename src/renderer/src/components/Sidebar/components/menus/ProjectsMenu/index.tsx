@@ -5,10 +5,6 @@ import { Text } from '@renderer/components/Text';
 import { Button } from '@renderer/components/Button';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import { ModalNewProject } from '@renderer/components/ModalNewProject';
-import { ModalNewConnection } from '@renderer/components/ModalNewConnection';
-import { ModalNewScript } from '@renderer/components/ModalNewScript';
-import { ModalDeleteTable } from '@renderer/components/ModalDeleteTable';
 import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
@@ -26,6 +22,10 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
 import { generateHash } from '@renderer/utils/string';
+import { ModalNewProject } from './components/ModalNewProject';
+import { ModalNewConnection } from './components/ModalNewConnection';
+import { ModalNewScript } from './components/ModalNewScript';
+import { ModalDeleteTable } from './components/ModalDeleteTable';
 import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
