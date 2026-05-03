@@ -26,6 +26,8 @@ import { ModalNewProject } from './components/ModalNewProject';
 import { ModalNewConnection } from './components/ModalNewConnection';
 import { ModalNewScript } from './components/ModalNewScript';
 import { ModalDeleteTable } from './components/ModalDeleteTable';
+import { ModalNewSchema } from './components/ModalNewSchema';
+import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
@@ -66,6 +68,8 @@ const ProjectsMenu = () => {
   const [isNewScript, setIsNewScript] = React.useState(false);
   const [scriptEditing, setScriptEditing] = React.useState<IScript>();
 
+  const [schemaToCreate, setSchemaToCreate] = React.useState<IItemTreeViewData>();
+  const [schemaToDelete, setSchemaToDelete] = React.useState<IItemTreeViewData>();
   const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
 
   const showModalNewProject = !!(isNewProject || projectEditing);
@@ -143,6 +147,14 @@ const ProjectsMenu = () => {
   const onCloseModalScript = React.useCallback(() => {
     setIsNewScript(false);
     setScriptEditing(null);
+  }, []);
+
+  const closeNewSchemaModal = React.useCallback(() => {
+    setSchemaToCreate(null);
+  }, []);
+
+  const closeDeleteSchemaModal = React.useCallback(() => {
+    setSchemaToDelete(null);
   }, []);
 
   const closeDeleteTableModal = React.useCallback(() => {
@@ -282,6 +294,13 @@ const ProjectsMenu = () => {
         },
       ],
 
+      schemas: [
+        {
+          text: 'Criar novo schema',
+          onClick: () => setSchemaToCreate(contextMenuItemSelected),
+        },
+      ],
+
       schema: [
         {
           text: 'Copiar',
@@ -293,7 +312,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Excluir Esquema',
-          onClick: () => {},
+          onClick: () => setSchemaToDelete(contextMenuItemSelected),
         },
       ],
 
@@ -452,7 +471,7 @@ const ProjectsMenu = () => {
               icon: 'folder' as const,
               type: 'schema' as const,
               childs: [
-                tablesSchema?.length && {
+                {
                   id: `tables_${connection.id}:${schema}`,
                   label: 'Tabelas',
                   icon: 'multi',
@@ -460,7 +479,7 @@ const ProjectsMenu = () => {
                   type: 'tables' as const,
                   data: { schema_name: schema, ...dataConnection },
                 },
-                functionsSchema?.length && {
+                {
                   id: `fns_${connection.id}:${schema}`,
                   label: 'Funções',
                   childs: functionsSchema,
@@ -539,6 +558,19 @@ const ProjectsMenu = () => {
         idConnection={idConnectionSelected}
         idScript={scriptEditing?.id}
         onNewScriptCreated={openTabScriptSql}
+      />
+
+      <ModalNewSchema
+        show={!!schemaToCreate}
+        idConnection={schemaToCreate?.data?.id_connection}
+        onClose={closeNewSchemaModal}
+      />
+
+      <ModalDeleteSchema
+        show={!!schemaToDelete}
+        idConnection={schemaToDelete?.data?.id_connection}
+        schema={schemaToDelete?.data?.schema_name}
+        onClose={closeDeleteSchemaModal}
       />
 
       <ModalDeleteTable
