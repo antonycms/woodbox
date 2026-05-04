@@ -458,7 +458,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         }
       }
 
-      const isCopy = window.ctrlPressed && ev.key === 'c';
+      const isCopy = window.ctrlPressed && ev.key?.toLowerCase() === 'c';
 
       if (isCopy) {
         const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
