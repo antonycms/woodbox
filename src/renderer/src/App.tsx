@@ -5,6 +5,7 @@ import '@renderer/init';
 import { ContainerApp } from '@renderer/components/ContainerApp';
 import { Sidebar } from '@renderer/components/Sidebar';
 import { MainContent } from '@renderer/components/MainContent';
+import { CentralSearchModal } from '@renderer/components/CentralSearchModal';
 
 import AppTabProvider from '@renderer/contexts/AppTab';
 import StoreContextProvider from '@renderer/contexts/Store';
@@ -21,6 +22,8 @@ const App = () => {
               <Sidebar />
 
               <MainContent />
+
+              <CentralSearchModal />
             </AppTabProvider>
           </ToastProvider>
         </ContainerApp>
