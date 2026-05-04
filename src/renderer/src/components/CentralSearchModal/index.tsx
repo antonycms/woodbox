@@ -343,7 +343,8 @@ export const CentralSearchModal = React.memo(() => {
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isCtrlK = event.ctrlKey && event.key.toLowerCase() === 'k';
+      const isCtrlK =
+        event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k';
 
       if (isCtrlK) {
         event.preventDefault();
