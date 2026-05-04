@@ -137,11 +137,25 @@
   color: var(--ascentColor);
 }
 
-.tab .title {
+.tabLabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   margin-right: 6px;
+  gap: 2px;
+}
+
+.tab .title,
+.tab .subtitle {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tab .subtitle {
+  opacity: 0.72;
+  line-height: 12px;
+  font-size: 10px;
 }
 
 .tabCloseBtn {

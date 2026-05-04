@@ -11,6 +11,7 @@ const Tab = (props: ITabProps) => {
     tabId,
     active,
     title,
+    subtitle,
     isDraging,
     onDragStart,
     onDragEnter,
@@ -43,16 +44,20 @@ const Tab = (props: ITabProps) => {
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
       onDragEnd={onDragEnd}
-      title={`${title}${unsaved ? ' - Modificado' : ''}`}
+      title={[title, subtitle, unsaved ? 'Modificado' : undefined].filter(Boolean).join(' - ')}
     >
       {!!Icon && <Icon />}
-      <Text
-        userSelect={false}
-        color={active ? ascentColor : color}
-        className={classes(styles.ignoreTabDrag, styles.title)}
-      >
-        {title}
-      </Text>
+      <div className={classes(styles.ignoreTabDrag, styles.tabLabel)}>
+        <Text userSelect={false} color={active ? ascentColor : color} className={styles.title}>
+          {title}
+        </Text>
+
+        {!!subtitle && (
+          <Text userSelect={false} small color={color} className={styles.subtitle}>
+            {subtitle}
+          </Text>
+        )}
+      </div>
 
       {!!allowClose && (
         <button
@@ -86,6 +91,7 @@ export interface ITabProps {
   tabId?: string;
   unsaved?: boolean;
   title: string;
+  subtitle?: string;
   isDraging?: boolean;
   draggable?: 'true' | 'false';
   allowClose?: boolean;

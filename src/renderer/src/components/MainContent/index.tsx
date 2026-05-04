@@ -1,25 +1,23 @@
 import React from 'react';
 import { TabBar, TabWindow, TabContent, IActiveTabContextMenu } from '@renderer/components/Tabs';
 import { Welcolme } from '@renderer/components/Welcome';
-import { IAppTab, IAppTabData, useAppTabContext } from '@renderer/contexts/AppTab';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useStoreContext } from '@renderer/contexts/Store';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { IContextMenuOption } from '@renderer/components/ContextMenu';
-import { usRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 import styles from './styles.module.css';
-
-export interface IAppTabsSession {
-  tabs?: Array<Pick<IAppTab, 'id' | 'title' | 'unsaved'> & { data?: IAppTabData }>;
-  activeTabId?: string;
-}
 
 export const MainContent = () => {
   const { tabs, removeTab, moveTab, activeTabId, setActiveTabId } = useAppTabContext();
+  const { connections } = useStoreContext();
   const {
     activeTheme: { mainTab: theme },
   } = useThemeContext();
 
-  usRestoreTabsFromStorage();
+  const connectionNameById = React.useMemo(() => {
+    return new Map(connections.map((connection) => [connection.id, connection.description]));
+  }, [connections]);
 
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
     () => [
@@ -82,8 +80,14 @@ export const MainContent = () => {
         idTabBar="app_tabs"
         onRemoveTab={(tab) => removeTab(tab.idTab)}
         onMoveTab={moveTab}
-        tabs={tabs.map(({ id: idTab, title, unsaved }) => ({ idTab, title, unsaved }))}
+        height="42px"
         contextMenuOptions={contextMenuOptions}
+        tabs={tabs.map(({ id: idTab, title, subtitle, unsaved, data }) => ({
+          idTab,
+          unsaved,
+          title,
+          subtitle: subtitle || connectionNameById.get(data?.id_connection),
+        }))}
       />
 
       <TabWindow idTabBar="app_tabs">

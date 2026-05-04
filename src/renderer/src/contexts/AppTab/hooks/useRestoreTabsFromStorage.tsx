@@ -1,26 +1,25 @@
 import React from 'react';
-import { IAppTab, useAppTabContext } from '@renderer/contexts/AppTab';
+import { IAppTab } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
-import type { IAppTabsSession } from '@renderer/components/MainContent';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
+import { APP_TABS_SESSION_STORAGE_KEY, IAppTabsSession } from '../context';
 
-const APP_TABS_SESSION_STORAGE_KEY = 'app_tabs_session';
-
-export const usRestoreTabsFromStorage = () => {
-  const { restoreTabs } = useAppTabContext();
+export const useRestoreTabsFromStorage = (
+  setActiveTabId: React.Dispatch<React.SetStateAction<string>>,
+  setTabs: React.Dispatch<React.SetStateAction<IAppTab[]>>,
+) => {
   const { loadConnectionInfo } = useStoreContext();
   const { showToast } = useToast();
+
+  const hasRestoredTabsRef = React.useRef(false);
 
   React.useEffect(() => {
     const rawSession = window.localStorage.getItem(APP_TABS_SESSION_STORAGE_KEY);
 
-    if (!rawSession) {
-      restoreTabs([]);
-      return;
-    }
+    if (!rawSession) return;
 
     try {
       const session = JSON.parse(rawSession) as IAppTabsSession;
@@ -90,9 +89,19 @@ export const usRestoreTabsFromStorage = () => {
         });
       });
 
-      restoreTabs(restoredTabs, session.activeTabId);
-    } catch {
-      restoreTabs([]);
+      setTabs(restoredTabs);
+
+      setActiveTabId(
+        restoredTabs.some((tab) => tab.id === session.activeTabId)
+          ? session.activeTabId
+          : restoredTabs[0]?.id,
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      hasRestoredTabsRef.current = true;
     }
   }, []);
+
+  return hasRestoredTabsRef.current;
 };

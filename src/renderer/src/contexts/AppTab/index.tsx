@@ -1,14 +1,13 @@
 import React from 'react';
 import { generateHash } from '@renderer/utils/string';
 import AppTabContext, { type IAppTab, type INewAppTab } from './context';
+import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
+import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 export type * from './context';
-
-const APP_TABS_SESSION_STORAGE_KEY = 'app_tabs_session';
 
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
-  const hasRestoredTabs = React.useRef(false);
 
   const addTab = React.useCallback((tabData: INewAppTab) => {
     const {
@@ -16,6 +15,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       replaceId,
       unsaved = false,
       title = 'Sem titulo',
+      subtitle,
       data,
       component,
     } = tabData;
@@ -23,6 +23,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     const tab: IAppTab = {
       id,
       title,
+      subtitle,
       unsaved,
       data,
       component: React.memo(component) as any,
@@ -46,14 +47,6 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       return next;
     });
     setActiveTabId(tab.id);
-  }, []);
-
-  const restoreTabs = React.useCallback((nextTabs: IAppTab[], nextActiveTabId?: string) => {
-    hasRestoredTabs.current = true;
-    setTabs(nextTabs);
-    setActiveTabId(
-      nextTabs.some((tab) => tab.id === nextActiveTabId) ? nextActiveTabId : nextTabs[0]?.id,
-    );
   }, []);
 
   const removeTab = React.useCallback(
@@ -109,11 +102,15 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateTab = React.useCallback(
-    (id: string, data: Partial<Pick<IAppTab, 'title' | 'unsaved'>>) => {
+    (id: string, data: Partial<Pick<IAppTab, 'title' | 'subtitle' | 'unsaved'>>) => {
       setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
     },
     [],
   );
+
+  const hasRestoredTabs = useRestoreTabsFromStorage(setActiveTabId, setTabs);
+
+  useSaveTabsOnStorage(activeTabId, tabs, hasRestoredTabs);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -128,29 +125,11 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTabId, removeTab]);
 
-  React.useEffect(() => {
-    if (!hasRestoredTabs.current) return;
-
-    const serializableTabs = tabs
-      .filter((tab) => tab.data)
-      .map(({ id, title, unsaved, data }) => ({ id, title, unsaved, data }));
-
-    const nextActiveTabId = serializableTabs.some((tab) => tab.id === activeTabId)
-      ? activeTabId
-      : serializableTabs[0]?.id;
-
-    window.localStorage.setItem(
-      APP_TABS_SESSION_STORAGE_KEY,
-      JSON.stringify({ tabs: serializableTabs, activeTabId: nextActiveTabId }),
-    );
-  }, [tabs, activeTabId]);
-
   return (
     <AppTabContext.Provider
       value={{
         tabs,
         addTab,
-        restoreTabs,
         removeTab,
         moveTab,
         activeTabId,

@@ -5,11 +5,10 @@ export interface ITabContext {
   activeTabId: string | undefined;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>;
   addTab(tab: INewAppTab): void;
-  restoreTabs(tabs: IAppTab[], activeTabId?: string): void;
   removeTab(tabId: string | string[]): void;
   moveTab(fromId: string, toId: string): void;
   getTab(tabId: string): IAppTab | undefined;
-  updateTab(id: string, data: Partial<Pick<IAppTab, 'title' | 'unsaved'>>): void;
+  updateTab(id: string, data: Partial<Pick<IAppTab, 'title' | 'subtitle' | 'unsaved'>>): void;
 }
 
 export type IAppTabData =
@@ -29,6 +28,7 @@ export interface INewAppTab {
   id?: string;
   replaceId?: string;
   title?: string;
+  subtitle?: string;
   unsaved?: boolean;
   data?: IAppTabData;
   component(): React.ReactElement | null;
@@ -37,9 +37,17 @@ export interface INewAppTab {
 export interface IAppTab {
   id: string;
   title: string;
+  subtitle?: string;
   unsaved?: boolean;
   data?: IAppTabData;
   component(): React.ReactElement | null;
 }
+
+export interface IAppTabsSession {
+  tabs?: Array<Pick<IAppTab, 'id' | 'title' | 'subtitle' | 'unsaved'> & { data?: IAppTabData }>;
+  activeTabId?: string;
+}
+
+export const APP_TABS_SESSION_STORAGE_KEY = 'app_tabs_session';
 
 export default createContext<ITabContext>({} as any);

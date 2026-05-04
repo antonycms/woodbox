@@ -34,7 +34,7 @@ const TabsBar = (props: ITabsBarProps) => {
     width = '100%',
   } = props;
 
-  const ref = React.useRef<HTMLDivElement>();
+  const ref = React.useRef<HTMLDivElement>(null);
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
   const [activeTabContextMenu, setActiveTabContextMenu] = React.useState<IActiveTabContextMenu>();
   const noHasContent = !tabs.length;
@@ -168,6 +168,7 @@ const TabsBar = (props: ITabsBarProps) => {
             id={`tab_${idTabBar}_${tab.idTab}`}
             tabId={tab.idTab}
             title={tab.title || 'Sem título'}
+            subtitle={tab.subtitle}
             ascentColor={ascentColor}
             color={color}
             backgroundColor={backgroundColor}
@@ -212,6 +213,7 @@ export default TabsBar;
 export interface ITab {
   idTab: string;
   title?: string;
+  subtitle?: string;
   unsaved?: boolean;
   icon?(): React.ReactElement;
 }
