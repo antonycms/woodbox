@@ -117,7 +117,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'w' && activeTabId) {
+      if (e.ctrlKey && e.key?.toLowerCase?.() === 'w' && activeTabId) {
         e.preventDefault();
         removeTab(activeTabId);
       }
