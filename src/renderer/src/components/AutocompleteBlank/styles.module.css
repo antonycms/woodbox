@@ -1,0 +1,73 @@
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.container .input {
+  width: 100%;
+  border: 0;
+  background-color: transparent;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+}
+
+.dropdownContainer {
+  position: absolute;
+  z-index: 2;
+  top: 40px;
+
+  display: flex;
+  width: 100%;
+  max-height: 200px;
+  height: var(--height);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14),
+    0 1px 10px 0 rgba(0, 0, 0, 0.12);
+}
+
+.row {
+  display: flex;
+  cursor: pointer;
+  padding: 10px 4px;
+  max-width: 100%;
+  max-height: 41px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.row:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.row.selected {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.row.active {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.emptyMessage {
+  padding: 4px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.8;
+  user-select: none;
+  margin-top: 4px;
+}
+
+.iconContainer {
+  right: 8px;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+}
