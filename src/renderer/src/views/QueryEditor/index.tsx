@@ -84,7 +84,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   const id = React.useMemo(() => generateHash(), []);
-  const refEditor = React.useRef<IEditorRef>();
+  const refEditor = React.useRef<IEditorRef>(null);
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
@@ -557,6 +557,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
         runCurrentSQLRef.current();
       }
+
+      if (e.ctrlKey && e.key.toLocaleLowerCase() === '\\') {
+        return runCurrentSQLRef.current(true);
+      }
     };
 
     element.addEventListener('keydown', keypressCallback);
@@ -705,7 +709,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         onCellLinkClick={(attribute, value) => {
                           const ref = tabFkMap.get(attribute);
                           if (!ref || value === null || value === undefined) return;
-                          const tabTitle = `${ref.reference_table_schema ? `${ref.reference_table_schema}.` : ''}${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
+                          const tabTitle = `${
+                            ref.reference_table_schema ? `${ref.reference_table_schema}.` : ''
+                          }${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
                           const escapedValue = String(value).replace(/'/g, "''");
                           const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
                           addTab({
