@@ -140,10 +140,6 @@ const Editor = ({
       run: () => {},
     });
 
-    currentEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
-      currentEditor.trigger('keyboard', 'editor.action.deleteLines', null);
-    });
-
     currentEditor.onMouseDown((e) => {
       if (!e.event.ctrlKey) return;
       if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
