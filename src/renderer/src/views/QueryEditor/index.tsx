@@ -7,7 +7,7 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import Table from '@renderer/components/Table';
+import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Button } from '@renderer/components/Button';
@@ -40,7 +40,7 @@ import { ContextMenu } from '@renderer/components/ContextMenu';
 import IconMdiAlertCircle from '~icons/mdi/alert-circle';
 
 interface IContextMenuTable {
-  data: { cellsText: string; rowsText: string; rowsJson: string } | null;
+  data: ITableContextMenuData | null;
   position: { x: number; y: number };
 }
 
@@ -105,7 +105,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: { cellsText: string; rowsText: string; rowsJson: string },
+    data: ITableContextMenuData,
   ) => {
     setContextMenuTable({ data, position: { x: event.clientX, y: event.clientY } });
   };

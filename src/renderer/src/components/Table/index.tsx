@@ -10,11 +10,19 @@ import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ITableSort } from './dtos';
 
+export interface ITableContextMenuData {
+  cellsText: string;
+  rowsText: string;
+  rowsJson: string;
+  rows: Record<string, any>[];
+  selectedCellRows: Record<string, any>[];
+}
+
 interface ITableProps<Row = any> {
   rowKeyExtractor?(rowData: Row, index: number): React.Key;
   onContextMenu?(
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: { cellsText: string; rowsText: string; rowsJson: string },
+    data: ITableContextMenuData,
   ): void;
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any): void;
@@ -399,6 +407,24 @@ function Table<Row = any>(props: ITableProps<Row>) {
       );
     });
 
+    const selectedCellRows = [...rowMap.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([rowIndex, colIndices]) => {
+        const row = serializedRowsRef.current[rowIndex];
+        const sortedColIndices = [...colIndices].sort((a, b) => a - b);
+
+        return Object.fromEntries(
+          sortedColIndices
+            .map((colIndex) => {
+              const col = columnsRef.current[colIndex];
+              if (!col) return null;
+
+              return [col.attribute, row?.[col.attribute] ?? null];
+            })
+            .filter((entry): entry is [string, any] => !!entry),
+        );
+      });
+
     const rowsJson =
       rowObjects.length === 1
         ? JSON.stringify(rowObjects[0], null, 2)
@@ -408,6 +434,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
       cellsText: cellLines.join('\n'),
       rowsText: rowLines.join('\n'),
       rowsJson,
+      rows: rowObjects,
+      selectedCellRows,
     });
   };
 

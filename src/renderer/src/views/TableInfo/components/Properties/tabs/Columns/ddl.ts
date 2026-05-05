@@ -20,10 +20,74 @@ const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
 const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
+const serializeInsertValue = (value: any) => {
+  if (value === null || value === undefined) return 'NULL';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  if (value instanceof Date) return quoteLiteral(value.toISOString());
+  if (typeof value === 'object') return quoteLiteral(JSON.stringify(value));
+
+  return quoteLiteral(String(value));
+};
+
+const getInsertColumns = (row: Record<string, any>, columnOrder?: string[]) => {
+  const rowColumns = Object.keys(row);
+
+  if (!columnOrder?.length) return rowColumns;
+
+  const orderedColumns = columnOrder.filter((column) => rowColumns.includes(column));
+  const extraColumns = rowColumns.filter((column) => !orderedColumns.includes(column));
+
+  return [...orderedColumns, ...extraColumns];
+};
+
+const getInsertGroupKey = (columns: string[]) => columns.join('\0');
+
 const getTableName = (schema: string | undefined, table: string) => {
   if (!schema) return quoteIdent(table);
 
   return `${quoteIdent(schema)}.${quoteIdent(table)}`;
+};
+
+export const generateInsertDdl = (
+  schema: string | undefined,
+  table: string,
+  rows: Record<string, any>[],
+  columnOrder?: string[],
+) => {
+  if (!rows.length) return '';
+
+  const tableName = getTableName(schema, table);
+  const groups = new Map<string, { columns: string[]; rows: Record<string, any>[] }>();
+
+  rows.forEach((row) => {
+    const columns = getInsertColumns(row, columnOrder);
+    if (!columns.length) return;
+
+    const key = getInsertGroupKey(columns);
+    const group = groups.get(key);
+
+    if (group) {
+      group.rows.push(row);
+      return;
+    }
+
+    groups.set(key, { columns, rows: [row] });
+  });
+
+  return [...groups.values()]
+    .map(({ columns, rows: groupRows }) => {
+      const columnsSql = columns.map(quoteIdent).join(', ');
+      const valuesSql = groupRows
+        .map(
+          (row) =>
+            `  (${columns.map((column) => serializeInsertValue(row[column])).join(', ')})`,
+        )
+        .join(',\n');
+
+      return `INSERT INTO ${tableName} (${columnsSql})\nVALUES\n${valuesSql};`;
+    })
+    .join('\n\n');
 };
 
 const getColumnType = (column: IColumnInfo) => {

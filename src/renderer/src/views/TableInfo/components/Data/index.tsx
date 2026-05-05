@@ -1,5 +1,5 @@
 import React from 'react';
-import Table from '@renderer/components/Table';
+import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
@@ -22,6 +22,8 @@ import { toDateTime } from '@renderer/utils/date';
 import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { getNextSort } from '@renderer/utils/tableSort';
+import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
+import { generateInsertDdl } from '../Properties/tabs/Columns/ddl';
 
 interface IDataProps extends ITableInfoProps {
   onOpenTable?: (
@@ -64,6 +66,8 @@ const Data = ({
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
   const [whereInput, setWhereInput] = React.useState(initialWhere || '');
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
+  const [ddlSql, setDdlSql] = React.useState('');
+  const [showDdlModal, setShowDdlModal] = React.useState(false);
 
   React.useEffect(() => {
     if (references.length === 0) {
@@ -110,7 +114,7 @@ const Data = ({
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: { cellsText: string; rowsText: string; rowsJson: string },
+    data: ITableContextMenuData,
   ) => {
     setContextMenuTable({
       data,
@@ -319,6 +323,8 @@ const Data = ({
         </Text>
       </Bar>
 
+      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+
       <ContextMenu
         position={contextMenuTable?.position}
         onClose={() => setContextMenuTable(undefined)}
@@ -335,6 +341,34 @@ const Data = ({
             text: 'Copiar linha como JSON',
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
           },
+          {
+            text: 'Gerar DDL de INSERT da linha',
+            onClick: () => {
+              setDdlSql(
+                generateInsertDdl(
+                  schema,
+                  table,
+                  contextMenuTable?.data?.rows || [],
+                  columns.map((column) => column.column_name),
+                ),
+              );
+              setShowDdlModal(true);
+            },
+          },
+          {
+            text: 'Gerar DDL de INSERT das células selecionadas',
+            onClick: () => {
+              setDdlSql(
+                generateInsertDdl(
+                  schema,
+                  table,
+                  contextMenuTable?.data?.selectedCellRows || [],
+                  columns.map((column) => column.column_name),
+                ),
+              );
+              setShowDdlModal(true);
+            },
+          },
           { text: 'Definir como null' },
         ]}
       />
@@ -345,7 +379,7 @@ const Data = ({
 export default Data;
 
 export interface IContextMenuTable {
-  data: { cellsText: string; rowsText: string; rowsJson: string } | null;
+  data: ITableContextMenuData | null;
   position: {
     x: number;
     y: number;
