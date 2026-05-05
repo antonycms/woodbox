@@ -126,6 +126,24 @@ const Editor = ({
       run: () => {},
     });
 
+    currentEditor.addAction({
+      id: 'ctrl+shift+enter',
+      label: 'ctrl+shift+enter Shortcut',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter],
+      run: () => {},
+    });
+
+    currentEditor.addAction({
+      id: 'ctrl+backslash',
+      label: 'ctrl+backslash Shortcut',
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Backslash],
+      run: () => {},
+    });
+
+    currentEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, () => {
+      currentEditor.trigger('keyboard', 'editor.action.deleteLines', null);
+    });
+
     currentEditor.onMouseDown((e) => {
       if (!e.event.ctrlKey) return;
       if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
