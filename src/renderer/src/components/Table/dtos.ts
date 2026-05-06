@@ -13,6 +13,7 @@ export interface IColumn<ColumnType = any> {
   sortable?: boolean;
   editable?: boolean;
   isLink?: boolean;
-  type?: 'text' | 'number' | 'select';
+  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
+  dataAutocomplete?: string[];
   renderIcon?(): React.ReactElement;
 }

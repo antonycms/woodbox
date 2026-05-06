@@ -291,6 +291,7 @@ const Indexes = ({
             label: 'Colunas',
             attribute: 'column_names',
             sortable: true,
+            type: 'autocomplete-multi',
           },
           {
             title: 'Clique para ordenar por essa coluna',

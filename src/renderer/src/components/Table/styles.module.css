@@ -49,6 +49,21 @@
   cursor: text;
 }
 
+.table_row .table_column.autocomplete_cell,
+.analysis_value.autocomplete_cell {
+  overflow: visible;
+}
+
+.table_autocomplete_input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  outline: transparent;
+}
+
 .table_row .table_column.even {
   background-color: var(--backgroundColorRowEven);
   color: var(--colorRowEven);

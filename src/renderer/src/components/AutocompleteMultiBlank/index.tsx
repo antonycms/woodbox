@@ -6,17 +6,19 @@ import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { generateHash } from '@renderer/utils/string';
 
+import IconMdiClose from '~icons/mdi/close';
+
 import styles from './styles.module.css';
 
 const defaultExtractLabel = (item: any) => (typeof item === 'string' ? item : item?.label);
 const defaultExtractValue = (item: any) => (typeof item === 'string' ? item : item?.value);
 
-export interface IAutoCompleteRef {
+export interface IAutoCompleteMultiBlankRef {
   clear: () => void;
   open: () => void;
 }
 
-export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
+export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankProps<T>) {
   const {
     ref,
     data,
@@ -34,6 +36,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     autoFocus,
     loading,
     id,
+    clearable = true,
     extractLabel = defaultExtractLabel,
     extractValue = defaultExtractValue,
     emptyMessage = 'Não há opções disponíveis',
@@ -90,12 +93,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   }, [textInput, data]);
 
   const selected = React.useMemo(() => {
-    if (value === null || value === undefined || !data) return null;
+    if (value === null || value === undefined || !data) return [];
 
-    return data.find((item) => extractValueRef.current(item) === value);
+    return data.filter((item) => value?.includes?.(extractValueRef.current(item)));
   }, [value, data]);
 
-  const selectedLabel = selected ? extractLabelRef.current(selected) : undefined;
+  const selectedLabel = selected.length
+    ? selected.map((item) => extractLabelRef.current(item)).join(', ')
+    : undefined;
 
   const closeDropdown = (notifyBlurWithoutChange = false) => {
     refInput.current?.blur();
@@ -106,10 +111,24 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     if (notifyBlurWithoutChange) onBlurWithoutChangeRef.current?.();
   };
 
-  const onSelect = (item: T | null, index: number) => {
+  const onSelect = (item: T | null) => {
+    const newValue = [...(value || [])];
+
+    const itemValue = item ? extractValueRef.current(item) : null;
+    const selectedIndex = itemValue !== null ? newValue.indexOf(itemValue) : -1;
+
+    if (selectedIndex >= 0) {
+      newValue.splice(selectedIndex, 1);
+    } else if (itemValue !== null) {
+      newValue.push(itemValue);
+    }
+
+    onChange?.({ name, value: newValue });
+  };
+
+  const onClear = () => {
     closeDropdown();
-    setActiveIndex(index);
-    onChange?.({ index, name, item, value: item && extractValueRef.current(item) });
+    onChange?.({ name, value: [] });
   };
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,24 +165,22 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     }
 
     if (isEnter && activeIndex >= 0) {
-      const [realIndex, item] = dataFiltered[activeIndex];
-      onSelect(item, realIndex);
+      const [, item] = dataFiltered[activeIndex];
+      onSelect(item);
     }
   };
 
   const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
 
-  // value ref
   React.useImperativeHandle(
     ref,
     () => ({
-      clear: () => closeDropdown(),
+      clear: () => onClear(),
       open: () => refInput.current?.focus(),
     }),
-    [],
+    [value],
   );
 
-  // Clique fora para fechar
   React.useEffect(() => {
     const onClickOutside = (e: Event) => {
       const container = document.getElementById(idContainer);
@@ -180,7 +197,6 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     };
   }, []);
 
-  // Scrolla para o item selecionado ao abrir o dropdown
   React.useEffect(() => {
     if (!isDropdownOpen || activeIndex < 0 || !refScrollElement.current) return;
 
@@ -201,9 +217,9 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         name={name}
         className={className}
         required={required}
-        title={title}
-        data-value={value}
-        placeholder={selected ? selectedLabel : placeholder}
+        title={selected.length ? selectedLabel : title}
+        data-value={value?.join(',')}
+        placeholder={selected.length ? selectedLabel : placeholder}
         ref={refInput}
         onChange={onInput}
         onKeyDown={onKeyDown}
@@ -211,7 +227,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         onFocus={() => setIsDropdownOpen(true)}
       />
 
-      {!!(isDropdownOpen && dataFiltered.length) && (
+      {!!isDropdownOpen && (
         <div
           className={styles.dropdownContainer}
           style={{ backgroundColor, ...toCssProperties({ height: `${dropdownHeight}px` }) }}
@@ -230,17 +246,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
               const label = extractLabelRef.current(item);
               const isSelected =
-                selected && extractValueRef.current(selected) === extractValueRef.current(item);
+                selected.length &&
+                selected.find((v) => extractValueRef.current(v) === extractValueRef.current(item));
               const isActive = activeIndex === index;
 
               return (
                 <div
                   key={real_index}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onSelect(item, real_index);
-                  }}
+                  onClick={() => onSelect(item)}
                   title={label}
                   className={classes(
                     styles.row,
@@ -256,23 +269,29 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         </div>
       )}
 
-      {!!loading && (
+      {!!(loading || (selected.length && clearable)) && (
         <div className={styles.iconContainer}>
-          <SpinnerLoading
-            background="transparent"
-            color={color}
-            size={12}
-            thickness={2}
-            padding="0"
-          />
+          {!!loading && (
+            <SpinnerLoading
+              background="transparent"
+              color={color}
+              size={12}
+              thickness={2}
+              padding="0"
+            />
+          )}
+
+          {!!(selected.length && clearable) && (
+            <IconMdiClose title="Desmarcar" color={color} cursor="pointer" onClick={onClear} />
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export interface IAutocompleteProps<T> extends IGridSystem {
-  value?: string | number | boolean | null;
+export interface IAutocompleteMultiBlankProps<T> extends IGridSystem {
+  value?: (string | number)[];
   name?: string;
   id?: string;
   maxWidth?: string;
@@ -292,7 +311,7 @@ export interface IAutocompleteProps<T> extends IGridSystem {
   extractValue?: (item: T) => string | number;
   emptyMessage?: string;
   clearable?: boolean;
-  ref?: React.Ref<IAutoCompleteRef>;
+  ref?: React.Ref<IAutoCompleteMultiBlankRef>;
   data: T[];
   loading?: boolean;
   placeholder?: string;
@@ -300,10 +319,5 @@ export interface IAutocompleteProps<T> extends IGridSystem {
   onBlurWithoutChange?(): void;
   onInput?(e: React.ChangeEvent<HTMLInputElement>): void;
   onKeyDown?(e: React.KeyboardEvent<HTMLInputElement>): void;
-  onChange?(params: {
-    index: number;
-    name?: string;
-    value: string | number | null;
-    item: T | null;
-  }): void;
+  onChange?(params: { name?: string; value: (string | number)[] }): void;
 }

@@ -10,6 +10,8 @@ import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ITableSort } from './dtos';
 
+type TableCellEditValue = string | number | (string | number)[];
+
 export interface ITableContextMenuData {
   cellsText: string;
   rowsText: string;
@@ -116,6 +118,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
   analysisRowsRef.current = analysisRows;
   const analysisColumnsSizeRef = React.useRef(analysisColumnsSize);
   analysisColumnsSizeRef.current = analysisColumnsSize;
+  const analysisModeEnterRef = React.useRef(analysisMode);
+  analysisModeEnterRef.current = analysisMode;
 
   const selectedRows = React.useMemo(() => {
     const map = new Map<React.Key, any>();
@@ -263,15 +267,24 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const onSaveCell = React.useCallback(
-    (indexRow: number, rowColumnKey: string, newValue: string | number) => {
-      setCellEditingKey(null);
+    (
+      indexRow: number,
+      rowColumnKey: string,
+      newValue: TableCellEditValue,
+      keepEditing?: boolean,
+    ) => {
+      if (!keepEditing) {
+        setCellEditingKey(null);
+        refScrollContainer.current?.focus();
+      }
       onEditRow?.(indexRow, rowColumnKey, newValue);
     },
-    [],
+    [onEditRow],
   );
 
   const onBlurCell = React.useCallback(() => {
     setCellEditingKey(null);
+    refScrollContainer.current?.focus();
   }, []);
 
   const handleSelectCell = React.useCallback((rowIndex: number, colIndex: number) => {
@@ -484,6 +497,24 @@ function Table<Row = any>(props: ITableProps<Row>) {
           analysisArrowCursorRef.current = lastSelectedCellRef.current;
           setAnalysisMode(true);
         }
+      }
+
+      if (ev.key === 'Enter' && !cellEditingKeyRef.current) {
+        const anchor = analysisModeEnterRef.current
+          ? lastAnalysisSelectedCellRef.current
+          : lastSelectedCellRef.current;
+        if (!anchor) return;
+
+        ev.preventDefault();
+
+        const row = analysisModeEnterRef.current
+          ? analysisRowsRef.current.find((item) => item.__index_row === anchor.rowIndex)
+          : serializedRowsRef.current[anchor.rowIndex];
+        const column = columnsRef.current[anchor.colIndex];
+
+        if (!row || !column?.editable) return;
+
+        setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
 
       const isCopy = window.ctrlPressed && ev.key?.toLowerCase() === 'c';

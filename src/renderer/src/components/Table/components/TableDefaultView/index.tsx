@@ -4,6 +4,8 @@ import styles from '../../styles.module.css';
 import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
 
+type TableCellEditValue = string | number | (string | number)[];
+
 interface ITableDefaultViewProps<Row = any> {
   columns: IColumn<Row>[];
   rows: Row[];
@@ -22,7 +24,12 @@ interface ITableDefaultViewProps<Row = any> {
   onSort?(column: IColumn<Row>): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
-  onEditCell?(rowIndex: number, attribute: string, value: string | number): void;
+  onEditCell?(
+    rowIndex: number,
+    attribute: string,
+    value: TableCellEditValue,
+    keepEditing?: boolean,
+  ): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
@@ -105,6 +112,8 @@ const TableDefaultView = <Row,>({
                   width={columnsSize[columnIndex]}
                   name={String(column.attribute)}
                   value={value}
+                  type={column.type}
+                  dataAutocomplete={column.dataAutocomplete}
                   isLink={column.isLink}
                   onFkCellClick={onCellLinkClick}
                   isSelectedCell={selectedCells?.has(cellKey(indexRow, columnIndex))}

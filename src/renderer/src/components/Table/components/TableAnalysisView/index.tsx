@@ -3,6 +3,10 @@ import type { IColumn } from '../../dtos';
 import styles from '../../styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer from '@renderer/components/ResizableContainer';
+import { Autocomplete } from '@renderer/components/AutocompleteBlank';
+import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
+
+type TableCellEditValue = string | number | (string | number)[];
 
 interface ITableAnalysisViewProps<Row = any> {
   columns: IColumn<Row>[];
@@ -16,7 +20,12 @@ interface ITableAnalysisViewProps<Row = any> {
   onResizeColumn?(index: number, size: number): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
-  onEditCell?(rowIndex: number, attribute: string, value: string | number): void;
+  onEditCell?(
+    rowIndex: number,
+    attribute: string,
+    value: TableCellEditValue,
+    keepEditing?: boolean,
+  ): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
 }
 
@@ -28,17 +37,24 @@ const serializeTableValue = (value: any) => {
 };
 
 const TableAnalysisInput = ({
+  column,
   value,
   rowIndex,
   attribute,
   onBlurCell,
   onEditCell,
 }: {
+  column: IColumn;
   value: any;
   rowIndex: number;
   attribute: string;
   onBlurCell?(): void;
-  onEditCell?(rowIndex: number, attribute: string, value: string | number): void;
+  onEditCell?(
+    rowIndex: number,
+    attribute: string,
+    value: TableCellEditValue,
+    keepEditing?: boolean,
+  ): void;
 }) => {
   const editedValue = React.useRef<string | number>(serializeTableValue(value));
 
@@ -49,6 +65,48 @@ const TableAnalysisInput = ({
 
     onEditCell?.(rowIndex, attribute, editedValue.current);
   }, [attribute, onBlurCell, onEditCell, rowIndex, value]);
+
+  if (column.type === 'autocomplete') {
+    return (
+      <Autocomplete
+        autoFocus
+        backgroundColor={'var(--backgroundColor)'}
+        color={'white'}
+        data={column.dataAutocomplete ?? []}
+        value={value}
+        name={attribute}
+        containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
+        className={styles.table_autocomplete_input}
+        placeholder={editedValue.current === undefined ? '' : String(editedValue.current)}
+        onBlurWithoutChange={onBlurCell}
+        onChange={({ value: newValue }) => {
+          onBlurCell?.();
+          if (newValue === null || value === newValue) return;
+          onEditCell?.(rowIndex, attribute, newValue);
+        }}
+      />
+    );
+  }
+
+  if (column.type === 'autocomplete-multi') {
+    return (
+      <AutocompleteMultiBlank
+        autoFocus
+        backgroundColor={'var(--backgroundColor)'}
+        color={'white'}
+        data={column.dataAutocomplete ?? []}
+        value={Array.isArray(value) ? value : []}
+        name={attribute}
+        containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
+        className={styles.table_autocomplete_input}
+        placeholder={editedValue.current === undefined ? '' : String(editedValue.current)}
+        onBlurWithoutChange={onBlurCell}
+        onChange={({ value: newValue }) => {
+          onEditCell?.(rowIndex, attribute, newValue, true);
+        }}
+      />
+    );
+  }
 
   return (
     <input
@@ -135,6 +193,7 @@ const TableAnalysisView = ({
                 return (
                   <TableAnalysisInput
                     key={rowColumnKey}
+                    column={column}
                     value={value}
                     rowIndex={row.__index_row}
                     attribute={attribute}

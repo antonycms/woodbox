@@ -334,6 +334,7 @@ const Restrictios = ({
             title: 'Clique para ordenar por essa coluna',
             label: 'Colunas',
             attribute: 'column_names',
+            type: 'autocomplete-multi',
             sortable: true,
           },
           {

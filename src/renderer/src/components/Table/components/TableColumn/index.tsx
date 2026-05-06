@@ -1,7 +1,11 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
+import { Autocomplete } from '@renderer/components/AutocompleteBlank';
+import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import styles from '../../styles.module.css';
+
+type TableCellEditValue = string | number | (string | number)[];
 
 interface ITableColumnProps {
   indexRow?: number;
@@ -14,19 +18,25 @@ interface ITableColumnProps {
   onClick?(): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
-  onEditCell?(rowIndex: number, name: string, newValue: string | number): void;
+  onEditCell?(
+    rowIndex: number,
+    name: string,
+    newValue: TableCellEditValue,
+    keepEditing?: boolean,
+  ): void;
   style?: React.CSSProperties;
   isEditing?: boolean;
   isEdited?: boolean;
-  value?: number | string;
+  value?: number | string | boolean | null | (string | number)[];
   name?: string;
   rowColumnKey?: string;
   width?: number;
   isLink?: boolean;
+  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
+  dataAutocomplete?: string[];
   onFkCellClick?(name: string, value: any): void;
   isSelectedCell?: boolean;
   onSelectCell?(rowIndex: number, colIndex: number): void;
-  // type: 'string' | 'number' | 'boolean';
 }
 
 const getInheritedSelectionStyle = (
@@ -89,11 +99,12 @@ const TableColumn = ({
   name,
   style: styleExternal = {},
   isLink,
+  type,
+  dataAutocomplete,
   onFkCellClick,
   isSelectedCell,
   onSelectCell,
 }: ITableColumnProps) => {
-  const editedValue = React.useRef(value);
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
 
@@ -112,7 +123,8 @@ const TableColumn = ({
   const serializedValue = (() => {
     let v: any = value;
 
-    if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
+    if (Array.isArray(v) && type === 'autocomplete-multi') v = v.join(', ');
+    else if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
     else if (v instanceof Date) v = v.toISOString();
     else if (typeof v === 'object') v = JSON.stringify(v);
     else if (typeof v !== 'string') return v;
@@ -122,6 +134,10 @@ const TableColumn = ({
 
     return isEditing ? v : v.slice(0, valueLenght);
   })();
+
+  const editedValue = React.useRef<string | number>(
+    serializedValue === undefined || serializedValue === null ? '' : String(serializedValue),
+  );
 
   const style = React.useMemo(() => {
     return {
@@ -181,6 +197,64 @@ const TableColumn = ({
   }
 
   if (isEditing) {
+    if (type === 'autocomplete') {
+      return (
+        <Autocomplete
+          autoFocus
+          backgroundColor={'var(--backgroundColor)'}
+          color={'white'}
+          data={dataAutocomplete ?? []}
+          value={Array.isArray(value) ? null : value}
+          name={name}
+          containerClassName={classes(className, styles.autocomplete_cell)}
+          containerStyle={style}
+          className={styles.table_autocomplete_input}
+          placeholder={serializedValue === undefined ? '' : String(serializedValue)}
+          onBlurWithoutChange={onBlurCell}
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            onBlurCell?.();
+          }}
+          onChange={({ value: newValue }) => {
+            onBlurCell?.();
+            if (newValue === null || value === newValue) return;
+            onEditCell?.(indexRow, name, newValue);
+          }}
+        />
+      );
+    }
+
+    if (type === 'autocomplete-multi') {
+      return (
+        <AutocompleteMultiBlank
+          autoFocus
+          backgroundColor={'var(--backgroundColor)'}
+          color={'white'}
+          data={dataAutocomplete ?? []}
+          value={Array.isArray(value) ? value : []}
+          name={name}
+          containerClassName={classes(className, styles.autocomplete_cell)}
+          containerStyle={style}
+          className={styles.table_autocomplete_input}
+          placeholder={serializedValue === undefined ? '' : String(serializedValue)}
+          onBlurWithoutChange={onBlurCell}
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            onBlurCell?.();
+          }}
+          onChange={({ value: newValue }) => {
+            onEditCell?.(indexRow, name, newValue, true);
+          }}
+        />
+      );
+    }
+
     return (
       <input
         className={className}
@@ -190,6 +264,18 @@ const TableColumn = ({
         spellCheck={false}
         defaultValue={serializedValue}
         onBlur={handleSaveInputValue}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== 'Escape') return;
+
+          e.preventDefault();
+
+          if (e.key === 'Escape') {
+            onBlurCell?.();
+            return;
+          }
+
+          handleSaveInputValue();
+        }}
         onChange={(e) => {
           editedValue.current = e.target.value;
         }}
