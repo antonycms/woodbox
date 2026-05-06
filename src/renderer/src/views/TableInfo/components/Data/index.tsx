@@ -68,6 +68,7 @@ const Data = ({
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<
@@ -292,6 +293,20 @@ const Data = ({
     applyEditedRows(columns.map((column) => column.column_name));
   }, [applyEditedRows, columns]);
 
+  const handleCancelSelectedRowsEditions = React.useCallback(() => {
+    if (!selectedRows.length) return;
+
+    setEditedFieldsRows((prevState) => {
+      const newState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        newState.delete(row.__key_row);
+      });
+
+      return newState;
+    });
+  }, [selectedRows]);
+
   const handleSort = React.useCallback(
     async (column: IColumn) => {
       if (loading || !column.sortable) return;
@@ -348,12 +363,24 @@ const Data = ({
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handleSaveItems();
+        return;
+      }
 
-      event.preventDefault();
-      handleSaveItems();
+      const target = event.target as HTMLElement;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
+
+      if (isEditableTarget || target?.isContentEditable) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleCancelSelectedRowsEditions();
+        return;
+      }
     },
-    [handleSaveItems],
+    [handleCancelSelectedRowsEditions, handleSaveItems],
   );
 
   React.useEffect(() => {
@@ -384,6 +411,7 @@ const Data = ({
         onScrollEnd={loadData}
         loading={isLoading}
         onContextMenu={onContextMenuTable}
+        onSelectRow={setSelectedRows}
         editedRows={editedFieldsRows}
         onCellLinkClick={handleFkCellClick}
         onEditRow={(index, attribute, value) => {
