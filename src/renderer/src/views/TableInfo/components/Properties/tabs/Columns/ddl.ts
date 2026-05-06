@@ -17,9 +17,9 @@ import type {
   IPendingRestrictionDrop,
 } from '@renderer/contexts/TableInfoContext';
 
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+export const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
-const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
+export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
 const serializeInsertValue = (value: any) => {
   if (value === null || value === undefined) return 'NULL';
@@ -87,6 +87,43 @@ export const generateInsertDdl = (
 
       return `INSERT INTO ${tableName} (${columnsSql})\nVALUES\n${valuesSql};`;
     })
+    .join('\n\n');
+};
+
+const serializeUpdateValue = serializeInsertValue;
+
+const serializeWhereValue = (column: string, value: any) => {
+  if (value === null || value === undefined) return `${quoteIdent(column)} IS NULL`;
+
+  return `${quoteIdent(column)} = ${serializeUpdateValue(value)}`;
+};
+
+export const generateUpdateDdl = (
+  schema: string | undefined,
+  table: string,
+  rows: Array<{
+    originalRow: Record<string, any>;
+    changes: Record<string, any>;
+  }>,
+  whereColumns: string[],
+) => {
+  const tableName = getTableName(schema, table);
+
+  return rows
+    .map(({ originalRow, changes }) => {
+      const setSql = Object.entries(changes)
+        .map(([column, value]) => `  ${quoteIdent(column)} = ${serializeUpdateValue(value)}`)
+        .join(',\n');
+
+      const whereSql = whereColumns
+        .map((column) => serializeWhereValue(column, originalRow[column]))
+        .join('\n  AND ');
+
+      if (!setSql || !whereSql) return null;
+
+      return `UPDATE ${tableName}\nSET\n${setSql}\nWHERE ${whereSql};`;
+    })
+    .filter((sql): sql is string => !!sql)
     .join('\n\n');
 };
 
