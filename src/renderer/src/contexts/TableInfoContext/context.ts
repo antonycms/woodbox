@@ -38,6 +38,12 @@ export interface IPendingColumnDrop extends IColumnInfo {
   __style?: CSSProperties;
 }
 
+export interface IPendingColumnChange extends IColumnInfo {
+  __pendingAction: 'change';
+  __originalColumn: IColumnInfo;
+  __style?: CSSProperties;
+}
+
 export interface IPendingIndexCreate extends IIndexInfo {
   __pendingId: string;
   __pendingAction: 'create';
@@ -75,6 +81,7 @@ export interface IPendingReferenceDrop extends IColumnReferenceInfo {
 export interface ITableInfoContext extends ITableInfo {
   pendingColumns: IPendingColumnCreate[];
   pendingDroppedColumns: IPendingColumnDrop[];
+  pendingChangedColumns: IPendingColumnChange[];
   pendingIndexes: IPendingIndexCreate[];
   pendingDroppedIndexes: IPendingIndexDrop[];
   pendingRestrictions: IPendingRestrictionCreate[];
@@ -84,9 +91,12 @@ export interface ITableInfoContext extends ITableInfo {
   columnTypes: string[];
 
   addPendingColumn(column: IPendingColumnCreate): void;
+  updatePendingColumn(pendingId: string, column: Partial<IColumnInfo>): void;
   removePendingColumn(pendingId: string): void;
   addPendingDroppedColumns(columns: IColumnInfo[]): void;
   removePendingDroppedColumns(columnNames: string[]): void;
+  addPendingChangedColumn(column: IColumnInfo, changes: Partial<IColumnInfo>): void;
+  removePendingChangedColumns(columnNames: string[]): void;
 
   addPendingIndex(index: IPendingIndexCreate): void;
   removePendingIndex(pendingId: string): void;

@@ -6,6 +6,7 @@ import type {
   ITriggerInfo,
 } from '@renderer/contexts/Store';
 import type {
+  IPendingColumnChange,
   IPendingColumnCreate,
   IPendingColumnDrop,
   IPendingIndexCreate,
@@ -80,8 +81,7 @@ export const generateInsertDdl = (
       const columnsSql = columns.map(quoteIdent).join(', ');
       const valuesSql = groupRows
         .map(
-          (row) =>
-            `  (${columns.map((column) => serializeInsertValue(row[column])).join(', ')})`,
+          (row) => `  (${columns.map((column) => serializeInsertValue(row[column])).join(', ')})`,
         )
         .join(',\n');
 
@@ -333,7 +333,9 @@ const getDropPendingRestrictionsDdl = (
   tableName: string,
   restrictions: IPendingRestrictionDrop[] = [],
 ) => {
-  const constraintNames = [...new Set(restrictions.map((restriction) => restriction.constraint_name))];
+  const constraintNames = [
+    ...new Set(restrictions.map((restriction) => restriction.constraint_name)),
+  ];
 
   return constraintNames.map(
     (constraintName) =>
@@ -353,7 +355,10 @@ const getDropPendingReferencesDdl = (
   );
 };
 
-const getDropPendingIndexesDdl = (schema: string | undefined, indexes: IPendingIndexDrop[] = []) => {
+const getDropPendingIndexesDdl = (
+  schema: string | undefined,
+  indexes: IPendingIndexDrop[] = [],
+) => {
   const indexNames = [...new Set(indexes.map((index) => index.index_name))];
 
   return indexNames.map((indexName) => `DROP INDEX ${getTableName(schema, indexName)};`);
@@ -397,14 +402,13 @@ const getCreateIndexesDdl = (
     const columns = (index.column_names || []).map(quoteIdent).join(', ');
     const method = index.index_method || 'btree';
 
-    return `CREATE INDEX ${quoteIdent(index.index_name)} ON ${tableName} USING ${method} (${columns});`;
+    return `CREATE INDEX ${quoteIdent(
+      index.index_name,
+    )} ON ${tableName} USING ${method} (${columns});`;
   });
 };
 
-const getCreateReferencesDdl = (
-  tableName: string,
-  references: IPendingReferenceCreate[] = [],
-) => {
+const getCreateReferencesDdl = (tableName: string, references: IPendingReferenceCreate[] = []) => {
   return references.map((reference) => {
     const referenceTableName = getTableName(
       reference.reference_table_schema,
@@ -413,10 +417,74 @@ const getCreateReferencesDdl = (
 
     return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
       reference.constraint_name,
-    )} FOREIGN KEY (${quoteIdent(reference.column_name)}) REFERENCES ${referenceTableName} (${quoteIdent(
-      reference.reference_column_name,
-    )});`;
+    )} FOREIGN KEY (${quoteIdent(
+      reference.column_name,
+    )}) REFERENCES ${referenceTableName} (${quoteIdent(reference.reference_column_name)});`;
   });
+};
+
+const normalizeOptionalString = (value?: string) => {
+  const trimmedValue = value?.trim();
+
+  return trimmedValue || undefined;
+};
+
+const getChangeColumnDdl = (tableName: string, column: IPendingColumnChange) => {
+  const originalColumn = column.__originalColumn;
+  const originalColumnName = originalColumn.column_name;
+  const currentColumnName = column.column_name;
+  const targetColumnName = currentColumnName || originalColumnName;
+  const statements: string[] = [];
+
+  if (currentColumnName && currentColumnName !== originalColumnName) {
+    statements.push(
+      `ALTER TABLE ${tableName}\n  RENAME COLUMN ${quoteIdent(originalColumnName)} TO ${quoteIdent(
+        currentColumnName,
+      )};`,
+    );
+  }
+
+  if (column.data_type && column.data_type !== originalColumn.data_type) {
+    statements.push(
+      `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(
+        targetColumnName,
+      )} TYPE ${getColumnType(column)};`,
+    );
+  }
+
+  if (column.is_nullable !== originalColumn.is_nullable) {
+    statements.push(
+      `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(targetColumnName)} ${
+        column.is_nullable ? 'DROP NOT NULL' : 'SET NOT NULL'
+      };`,
+    );
+  }
+
+  const originalDefault = normalizeOptionalString(originalColumn.column_default);
+  const currentDefault = normalizeOptionalString(column.column_default);
+
+  if (currentDefault !== originalDefault) {
+    statements.push(
+      currentDefault
+        ? `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(
+            targetColumnName,
+          )} SET DEFAULT ${currentDefault};`
+        : `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(targetColumnName)} DROP DEFAULT;`,
+    );
+  }
+
+  const originalDescription = normalizeOptionalString(originalColumn.description);
+  const currentDescription = normalizeOptionalString(column.description);
+
+  if (currentDescription !== originalDescription) {
+    statements.push(
+      `COMMENT ON COLUMN ${tableName}.${quoteIdent(targetColumnName)} IS ${
+        currentDescription ? quoteLiteral(currentDescription) : 'NULL'
+      };`,
+    );
+  }
+
+  return statements;
 };
 
 export const generateCreateTableDdl = (
@@ -472,6 +540,7 @@ export const generatePendingTableChangesDdl = (
   changes: {
     columns: IPendingColumnCreate[];
     droppedColumns?: IPendingColumnDrop[];
+    changedColumns?: IPendingColumnChange[];
     indexes?: IPendingIndexCreate[];
     droppedIndexes?: IPendingIndexDrop[];
     restrictions?: IPendingRestrictionCreate[];
@@ -484,6 +553,7 @@ export const generatePendingTableChangesDdl = (
 ) => {
   const columns = changes.columns || [];
   const droppedColumns = changes.droppedColumns || [];
+  const changedColumns = changes.changedColumns || [];
   const indexes = changes.indexes || [];
   const droppedIndexes = changes.droppedIndexes || [];
   const restrictions = changes.restrictions || [];
@@ -494,6 +564,7 @@ export const generatePendingTableChangesDdl = (
   if (
     !columns.length &&
     !droppedColumns.length &&
+    !changedColumns.length &&
     !indexes.length &&
     !droppedIndexes.length &&
     !restrictions.length &&
@@ -508,6 +579,9 @@ export const generatePendingTableChangesDdl = (
   const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
   const dropColumnStatements = droppedColumns.map(
     (column) => `ALTER TABLE ${tableName}\n  DROP COLUMN ${quoteIdent(column.column_name)};`,
+  );
+  const changeColumnStatements = changedColumns.flatMap((column) =>
+    getChangeColumnDdl(tableName, column),
   );
 
   const createColumnStatements = columns.flatMap((column) => {
@@ -542,6 +616,7 @@ export const generatePendingTableChangesDdl = (
     ...getDropPendingReferencesDdl(tableName, droppedReferences),
     ...getDropPendingIndexesDdl(schema, droppedIndexes),
     ...dropColumnStatements,
+    ...changeColumnStatements,
     ...createColumnStatements,
     ...getCreateRestrictionsDdl(tableName, restrictions),
     ...getCreateIndexesDdl(schema, table, indexes),

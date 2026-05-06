@@ -19,6 +19,7 @@ import TableInfoContext, {
   type ILastFetchDate,
   type ILoadTableInfoFilters,
   type IOpenPendingChangesSqlModalOptions,
+  type IPendingColumnChange,
   type IPendingColumnCreate,
   type IPendingColumnDrop,
   type IPendingIndexCreate,
@@ -36,6 +37,27 @@ export type * from './context';
 
 const CREATE_STYLE = { backgroundColor: '#3fb95033' };
 const DROP_STYLE = { backgroundColor: '#ff676733', textDecoration: 'line-through' };
+const CHANGE_STYLE = { backgroundColor: '#d2992233' };
+const COLUMN_COMPARE_ATTRIBUTES: Array<keyof IColumnInfo> = [
+  'column_name',
+  'data_type',
+  'is_nullable',
+  'column_default',
+  'description',
+];
+
+const normalizeColumnCompareValue = (value: unknown) => {
+  if (value === '') return undefined;
+
+  return value;
+};
+
+const hasColumnChanges = (originalColumn: IColumnInfo, changedColumn: IColumnInfo) =>
+  COLUMN_COMPARE_ATTRIBUTES.some(
+    (attribute) =>
+      normalizeColumnCompareValue(originalColumn[attribute]) !==
+      normalizeColumnCompareValue(changedColumn[attribute]),
+  );
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const {
@@ -57,6 +79,9 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const [pendingDroppedColumns, setPendingDroppedColumns] = React.useState<IPendingColumnDrop[]>(
     [],
   );
+  const [pendingChangedColumns, setPendingChangedColumns] = React.useState<
+    IPendingColumnChange[]
+  >([]);
   const [pendingIndexes, setPendingIndexes] = React.useState<IPendingIndexCreate[]>([]);
   const [pendingDroppedIndexes, setPendingDroppedIndexes] = React.useState<IPendingIndexDrop[]>([]);
   const [pendingRestrictions, setPendingRestrictions] = React.useState<IPendingRestrictionCreate[]>(
@@ -166,6 +191,49 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     ]);
   }, []);
 
+  const updatePendingColumn = React.useCallback(
+    (pendingId: string, columnChanges: Partial<IColumnInfo>) => {
+      setPendingColumns((prevState) => {
+        const currentColumn = prevState.find((column) => column.__pendingId === pendingId);
+        if (!currentColumn) return prevState;
+
+        const oldColumnName = currentColumn.column_name;
+        const newColumnName = columnChanges.column_name;
+
+        if (newColumnName && newColumnName !== oldColumnName) {
+          setPendingIndexes((indexes) =>
+            indexes.map((index) => ({
+              ...index,
+              column_names: index.column_names?.map((columnName) =>
+                columnName === oldColumnName ? newColumnName : columnName,
+              ),
+            })),
+          );
+          setPendingRestrictions((restrictions) =>
+            restrictions.map((restriction) => ({
+              ...restriction,
+              column_names: restriction.column_names?.map((columnName) =>
+                columnName === oldColumnName ? newColumnName : columnName,
+              ),
+            })),
+          );
+          setPendingReferences((references) =>
+            references.map((reference) =>
+              reference.column_name === oldColumnName
+                ? { ...reference, column_name: newColumnName }
+                : reference,
+            ),
+          );
+        }
+
+        return prevState.map((column) =>
+          column.__pendingId === pendingId ? { ...column, ...columnChanges } : column,
+        );
+      });
+    },
+    [],
+  );
+
   const removePendingColumn = React.useCallback((pendingId: string) => {
     setPendingColumns((prevState) => {
       const removedColumn = prevState.find((column) => column.__pendingId === pendingId);
@@ -189,7 +257,62 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     });
   }, []);
 
+  const addPendingChangedColumn = React.useCallback(
+    (column: IColumnInfo, columnChanges: Partial<IColumnInfo>) => {
+      const pendingColumn = column as IPendingColumnChange;
+      const originalColumn = pendingColumn.__originalColumn || column;
+      const currentColumn = pendingColumn.__originalColumn ? pendingColumn : originalColumn;
+      const changedColumn = { ...currentColumn, ...columnChanges, __originalColumn: undefined };
+
+      delete (changedColumn as Partial<IPendingColumnChange>).__originalColumn;
+
+      setPendingChangedColumns((prevState) => {
+        const nextColumn: IPendingColumnChange = {
+          ...originalColumn,
+          ...changedColumn,
+          __pendingAction: 'change',
+          __originalColumn: originalColumn,
+          __style: CHANGE_STYLE,
+        };
+
+        if (!hasColumnChanges(originalColumn, nextColumn)) {
+          return prevState.filter(
+            (item) => item.__originalColumn.column_name !== originalColumn.column_name,
+          );
+        }
+
+        const currentColumnIndex = prevState.findIndex(
+          (item) => item.__originalColumn.column_name === originalColumn.column_name,
+        );
+
+        if (currentColumnIndex === -1) return [...prevState, nextColumn];
+
+        const nextState = [...prevState];
+        nextState[currentColumnIndex] = nextColumn;
+
+        return nextState;
+      });
+    },
+    [],
+  );
+
+  const removePendingChangedColumns = React.useCallback((columnNames: string[]) => {
+    const columnNamesSet = new Set(columnNames);
+
+    setPendingChangedColumns((prevState) =>
+      prevState.filter(
+        (column) =>
+          !columnNamesSet.has(column.column_name) &&
+          !columnNamesSet.has(column.__originalColumn.column_name),
+      ),
+    );
+  }, []);
+
   const addPendingDroppedColumns = React.useCallback((columnsToDrop: IColumnInfo[]) => {
+    const droppedColumnNames = columnsToDrop.map((column) => column.column_name);
+
+    removePendingChangedColumns(droppedColumnNames);
+
     setPendingDroppedColumns((prevState) => {
       const currentColumnNames = new Set(prevState.map((column) => column.column_name));
       const nextColumns = columnsToDrop
@@ -202,7 +325,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
 
       return [...prevState, ...nextColumns];
     });
-  }, []);
+  }, [removePendingChangedColumns]);
 
   const removePendingDroppedColumns = React.useCallback((columnNames: string[]) => {
     const columnNamesSet = new Set(columnNames);
@@ -345,6 +468,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const clearPendingChanges = React.useCallback(() => {
     setPendingColumns([]);
     setPendingDroppedColumns([]);
+    setPendingChangedColumns([]);
     setPendingIndexes([]);
     setPendingDroppedIndexes([]);
     setPendingRestrictions([]);
@@ -464,6 +588,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
           : generatePendingTableChangesDdl(filters.schema, filters.table, {
               columns: pendingColumns,
               droppedColumns: pendingDroppedColumns,
+              changedColumns: pendingChangedColumns,
               indexes: pendingIndexes,
               droppedIndexes: pendingDroppedIndexes,
               restrictions: pendingRestrictions,
@@ -482,6 +607,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     },
     [
       pendingColumns,
+      pendingChangedColumns,
       pendingDroppedColumns,
       pendingDroppedIndexes,
       pendingDroppedReferences,
@@ -548,6 +674,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         columns,
         pendingColumns,
         pendingDroppedColumns,
+        pendingChangedColumns,
         pendingIndexes,
         pendingDroppedIndexes,
         pendingRestrictions,
@@ -563,9 +690,12 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         triggers,
 
         addPendingColumn,
+        updatePendingColumn,
         removePendingColumn,
         addPendingDroppedColumns,
         removePendingDroppedColumns,
+        addPendingChangedColumn,
+        removePendingChangedColumns,
         addPendingIndex,
         removePendingIndex,
         addPendingDroppedIndexes,
