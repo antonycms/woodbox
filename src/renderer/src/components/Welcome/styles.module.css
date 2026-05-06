@@ -51,6 +51,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 28px;
+  user-select: none;
 }
 
 .shortcutLabel {
