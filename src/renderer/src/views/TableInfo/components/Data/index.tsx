@@ -16,14 +16,17 @@ import { useStoreContext } from '@renderer/contexts/Store';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
+import { Modal } from '@renderer/components/Modal';
+import { Row } from '@renderer/components/Grid';
 import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useToast } from '@renderer/contexts/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
-import { generateInsertDdl } from '../Properties/tabs/Columns/ddl';
+import { generateInsertDdl, generateUpdateDdl } from '../Properties/tabs/Columns/ddl';
 
 interface IDataProps extends ITableInfoProps {
   onOpenTable?: (
@@ -46,16 +49,20 @@ const Data = ({
   const {
     activeTheme: {
       tableInfo: { data: theme },
+      modal: colors,
     },
   } = useThemeContext();
   const {
     columns,
     references,
+    restrictions,
     loadTableReferences,
+    loadTableRestrictions,
     loading: loadingTableInfo,
   } = useTableInfoContext();
 
-  const { getTableData } = useStoreContext();
+  const { getTableData, runSql } = useStoreContext();
+  const { showToast } = useToast();
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
@@ -63,7 +70,11 @@ const Data = ({
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
-  const [editedFieldsRows, setEditedFieldsRows] = React.useState<Map<React.Key, any>>(new Map());
+  const [editedFieldsRows, setEditedFieldsRows] = React.useState<
+    Map<React.Key, Record<string, any>>
+  >(new Map());
+  const [showNoPkModal, setShowNoPkModal] = React.useState(false);
+  const [applyingChanges, setApplyingChanges] = React.useState(false);
   const [whereInput, setWhereInput] = React.useState(initialWhere || '');
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
@@ -73,7 +84,19 @@ const Data = ({
     if (references.length === 0) {
       loadTableReferences(id_connection, { table, schema });
     }
-  }, [id_connection, table, schema]);
+
+    if (restrictions.length === 0) {
+      loadTableRestrictions(id_connection, { table, schema });
+    }
+  }, [
+    id_connection,
+    table,
+    schema,
+    references.length,
+    restrictions.length,
+    loadTableReferences,
+    loadTableRestrictions,
+  ]);
 
   const fkMap = React.useMemo(
     () => new Map(references.map((r) => [r.column_name, r])),
@@ -107,9 +130,33 @@ const Data = ({
         attribute: column.column_name,
         required: !!column.is_nullable,
         sortable: true,
+        editable: true,
         isLink: fkMap.has(column.column_name),
       })),
     [columns, fkMap],
+  );
+
+  const primaryKeyColumns = React.useMemo(
+    () =>
+      restrictions.find((restriction) => restriction.constraint_type === 'primary_key')
+        ?.column_names || [],
+    [restrictions],
+  );
+
+  const itemsWithPendingStyles = React.useMemo(
+    () =>
+      items.map((item, index) => {
+        if (!editedFieldsRows.has(index)) return item;
+
+        return {
+          ...item,
+          __style: {
+            ...(item as any).__style,
+            backgroundColor: '#d2992233',
+          },
+        };
+      }),
+    [items, editedFieldsRows],
   );
 
   const onContextMenuTable = (
@@ -123,11 +170,6 @@ const Data = ({
         y: event.clientY,
       },
     });
-  };
-
-  const handleSaveItems = () => {
-    // if (!editedItems.length) return;
-    // console.log(editedItems);
   };
 
   const handleAddItem = () => {
@@ -189,6 +231,67 @@ const Data = ({
     setItems(data);
   }, [id_connection, loading, schema, table, appliedWhere, sort]);
 
+  const applyEditedRows = React.useCallback(
+    async (whereColumns: string[]) => {
+      if (!editedFieldsRows.size || applyingChanges) return;
+
+      const rowsToUpdate = [...editedFieldsRows.entries()]
+        .map(([rowKey, changes]) => ({
+          originalRow: items[Number(rowKey)],
+          changes,
+        }))
+        .filter((row) => row.originalRow && Object.keys(row.changes).length);
+
+      const sql = generateUpdateDdl(schema, table, rowsToUpdate, whereColumns);
+      if (!sql.trim()) return;
+
+      setApplyingChanges(true);
+
+      try {
+        await runSql(id_connection, sql);
+        setEditedFieldsRows(new Map());
+        setShowNoPkModal(false);
+        showToast({ type: 'success', title: 'Dados atualizados com sucesso!' });
+        await handleRefresh();
+      } catch (error: any) {
+        showToast({
+          type: 'error',
+          title: 'Erro ao atualizar dados.',
+          description: error?.message,
+          delay: 8000,
+        });
+      } finally {
+        setApplyingChanges(false);
+      }
+    },
+    [
+      editedFieldsRows,
+      applyingChanges,
+      items,
+      schema,
+      table,
+      runSql,
+      id_connection,
+      showToast,
+      handleRefresh,
+    ],
+  );
+
+  const handleSaveItems = React.useCallback(() => {
+    if (!editedFieldsRows.size) return;
+
+    if (!primaryKeyColumns.length) {
+      setShowNoPkModal(true);
+      return;
+    }
+
+    applyEditedRows(primaryKeyColumns);
+  }, [editedFieldsRows, primaryKeyColumns, applyEditedRows]);
+
+  const handleApplyWithoutPrimaryKey = React.useCallback(() => {
+    applyEditedRows(columns.map((column) => column.column_name));
+  }, [applyEditedRows, columns]);
+
   const handleSort = React.useCallback(
     async (column: IColumn) => {
       if (loading || !column.sortable) return;
@@ -243,12 +346,22 @@ const Data = ({
     [id_connection, whereInput, loading, schema, table, sort],
   );
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+
+      event.preventDefault();
+      handleSaveItems();
+    },
+    [handleSaveItems],
+  );
+
   React.useEffect(() => {
     loadData();
   }, []);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onKeyDown={handleKeyDown}>
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
         <input
           className={styles.filterInput}
@@ -264,7 +377,7 @@ const Data = ({
 
       <Table
         columns={columnsSerialized}
-        rows={items}
+        rows={itemsWithPendingStyles}
         sort={sort}
         onSort={handleSort}
         rowKeyExtractor={(_, index) => index}
@@ -276,8 +389,18 @@ const Data = ({
         onEditRow={(index, attribute, value) => {
           setEditedFieldsRows((prevState) => {
             const newState = new Map(prevState);
+            const prevRowEdited = { ...(newState.get(index) || {}) };
+            const originalValue = items[index]?.[attribute];
 
-            const prevRowEdited = newState.get(index) || {};
+            if (String(originalValue ?? '') === String(value ?? '')) {
+              delete prevRowEdited[attribute];
+
+              if (Object.keys(prevRowEdited).length) newState.set(index, prevRowEdited);
+              else newState.delete(index);
+
+              return newState;
+            }
+
             newState.set(index, { ...prevRowEdited, [attribute]: value });
 
             return newState;
@@ -286,7 +409,14 @@ const Data = ({
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button title="Salvar" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Salvar"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleSaveItems}
+          loading={applyingChanges}
+        >
           <SaveIcon size={16} />
         </Button>
 
@@ -324,6 +454,56 @@ const Data = ({
       </Bar>
 
       <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+
+      <Modal
+        title="Tabela sem primary key"
+        width="560px"
+        show={showNoPkModal}
+        closeOutside={!applyingChanges}
+        onClose={applyingChanges ? undefined : () => setShowNoPkModal(false)}
+      >
+        <Text color={colors.color || theme.bar.color}>
+          A tabela não possui primary key. Usar todas as colunas no WHERE pode atualizar nenhuma
+          linha ou múltiplas linhas se existirem registros duplicados.
+        </Text>
+
+        <div style={{ height: 16 }} />
+
+        <Text color={colors.color || theme.bar.color}>
+          Deseja continuar usando todas as colunas originais para tentar localizar cada linha?
+        </Text>
+
+        <div style={{ height: 16 }} />
+
+        <Row>
+          <Spacer />
+
+          <Button
+            text
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+            onClick={() => setShowNoPkModal(false)}
+            disabled={applyingChanges}
+            xs={6}
+            sm={4}
+            md={3}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            color={colors.saveButtonColor}
+            backgroundColor={colors.saveButtonBackgroundColor}
+            onClick={handleApplyWithoutPrimaryKey}
+            loading={applyingChanges}
+            xs={6}
+            sm={5}
+            md={4}
+          >
+            Usar todas as colunas
+          </Button>
+        </Row>
+      </Modal>
 
       <ContextMenu
         position={contextMenuTable?.position}
