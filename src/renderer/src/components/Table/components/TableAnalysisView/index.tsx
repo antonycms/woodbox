@@ -185,7 +185,8 @@ const TableAnalysisView = ({
               const selectedCellKey = `${row.__index_row}:${columnIndex}`;
               const editedRow = editedRows?.get(keyRow);
               const editedValue = editedRow?.[column.attribute];
-              const value = editedValue !== undefined ? editedValue : row[column.attribute];
+              const isEdited = editedValue !== undefined;
+              const value = isEdited ? editedValue : row[column.attribute];
               const serializedValue = serializeTableValue(value, column.type);
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
@@ -206,7 +207,11 @@ const TableAnalysisView = ({
 
               return (
                 <div
-                  className={classes(styles.analysis_value, isSelected && styles.cell_selected)}
+                  className={classes(
+                    styles.analysis_value,
+                    isEdited && styles.edited,
+                    isSelected && styles.cell_selected,
+                  )}
                   key={rowColumnKey}
                   title={serializedValue}
                   onDoubleClick={() => onDoubleClick?.(rowColumnKey)}

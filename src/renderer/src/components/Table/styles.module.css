@@ -74,9 +74,10 @@
   color: var(--colorRowOdd);
 }
 
-.table_row .table_column.edited {
-  background-color: var(--backgroundColorColumnEdited);
-  color: var(--colorColumnEdited);
+.table_row .table_column.edited,
+.analysis_value.edited {
+  background-color: var(--backgroundColorColumnEdited) !important;
+  color: var(--colorColumnEdited) !important;
 }
 
 .table_row.selected .table_column {

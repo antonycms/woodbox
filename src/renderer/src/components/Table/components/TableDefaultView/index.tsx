@@ -95,7 +95,8 @@ const TableDefaultView = <Row,>({
               const column = columns[columnIndex];
               const rowColumnKey = `${keyRow}:${String(column.attribute)}`;
               const editedValue = editedRow?.[column.attribute];
-              const value = editedValue !== undefined ? editedValue : row[column.attribute];
+              const isEdited = editedValue !== undefined;
+              const value = isEdited ? editedValue : row[column.attribute];
 
               return (
                 <TableColumn
@@ -105,6 +106,7 @@ const TableDefaultView = <Row,>({
                   indexRow={indexRow}
                   rowHeight={rowHeight}
                   style={row.__style}
+                  isEdited={isEdited}
                   isEditing={rowColumnKey === cellEditingKey}
                   onDoubleClick={onDoubleClick}
                   onEditCell={onEditCell}
