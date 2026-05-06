@@ -287,6 +287,15 @@ function Table<Row = any>(props: ITableProps<Row>) {
     refScrollContainer.current?.focus();
   }, []);
 
+  const handleDoubleClickCell = React.useCallback((rowColumnKey: string) => {
+    const [, attribute] = rowColumnKey.split(':');
+    const column = columnsRef.current.find((item) => String(item.attribute) === attribute);
+
+    if (!column?.editable) return;
+
+    setCellEditingKey(rowColumnKey);
+  }, []);
+
   const handleSelectCell = React.useCallback((rowIndex: number, colIndex: number) => {
     if (!window.shiftPressed || !lastSelectedCellRef.current) {
       lastSelectedCellRef.current = { rowIndex, colIndex };
@@ -743,7 +752,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           cellEditingKey={cellEditingKey}
           selectedCells={analysisSelectedCells}
           onResizeColumn={onResizeAnalysisColumn}
-          onDoubleClick={setCellEditingKey}
+          onDoubleClick={handleDoubleClickCell}
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectAnalysisCell}
@@ -765,7 +774,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           getSortLabel={getSortLabel}
           onResizeColumn={onResize}
           onSort={onSort}
-          onDoubleClick={setCellEditingKey}
+          onDoubleClick={handleDoubleClickCell}
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectCell}
