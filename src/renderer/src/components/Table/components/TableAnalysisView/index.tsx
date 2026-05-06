@@ -29,8 +29,9 @@ interface ITableAnalysisViewProps<Row = any> {
   onSelectCell?(rowIndex: number, colIndex: number): void;
 }
 
-const serializeTableValue = (value: any) => {
+const serializeTableValue = (value: any, type?: IColumn['type']) => {
   if (value === undefined) return '';
+  if (Array.isArray(value) && type === 'autocomplete-multi') return value.join(', ');
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -56,15 +57,15 @@ const TableAnalysisInput = ({
     keepEditing?: boolean,
   ): void;
 }) => {
-  const editedValue = React.useRef<string | number>(serializeTableValue(value));
+  const editedValue = React.useRef<string | number>(serializeTableValue(value, column.type));
 
   const handleSaveInputValue = React.useCallback(() => {
     onBlurCell?.();
 
-    if (serializeTableValue(value) === editedValue.current) return;
+    if (serializeTableValue(value, column.type) === editedValue.current) return;
 
     onEditCell?.(rowIndex, attribute, editedValue.current);
-  }, [attribute, onBlurCell, onEditCell, rowIndex, value]);
+  }, [attribute, column.type, onBlurCell, onEditCell, rowIndex, value]);
 
   if (column.type === 'autocomplete') {
     return (
@@ -185,7 +186,7 @@ const TableAnalysisView = ({
               const editedRow = editedRows?.get(keyRow);
               const editedValue = editedRow?.[column.attribute];
               const value = editedValue !== undefined ? editedValue : row[column.attribute];
-              const serializedValue = serializeTableValue(value);
+              const serializedValue = serializeTableValue(value, column.type);
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
 
