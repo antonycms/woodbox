@@ -26,7 +26,7 @@ const getTables = () => /* sql */ `
 const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
   SELECT
       c.column_name,
-      c.data_type,
+      COALESCE(t.typname, c.data_type) AS data_type,
       c.udt_name,
       c.character_maximum_length,
       c.numeric_precision,
@@ -36,6 +36,8 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
       pgd.description,
       (c.is_nullable = 'YES') AS is_nullable
   FROM information_schema.columns c
+  LEFT JOIN pg_catalog.pg_namespace tn ON tn.nspname = c.udt_schema
+  LEFT JOIN pg_catalog.pg_type t ON t.typname = c.udt_name AND t.typnamespace = tn.oid
   LEFT JOIN pg_catalog.pg_statio_all_tables AS st ON (
     c.table_schema = st.schemaname AND
     c.table_name = st.relname
