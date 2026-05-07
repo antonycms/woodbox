@@ -213,6 +213,36 @@ const Data = ({
     setNewRows((prevState) => new Map(prevState).set(key, {}));
   }, []);
 
+  const handleDuplicateSelectedRows = React.useCallback(() => {
+    if (!selectedRows.length) {
+      showToast({ type: 'warn', title: 'Selecione uma ou mais linhas para duplicar.' });
+      return;
+    }
+
+    setNewRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        const sourceRow = {
+          ...row,
+          ...(newRows.get(row.__key_row) || {}),
+          ...(editedFieldsRows.get(row.__key_row) || {}),
+        };
+
+        const duplicatedRow = columns.reduce<Record<string, any>>((acc, column) => {
+          acc[column.column_name] = sourceRow[column.column_name];
+          return acc;
+        }, {});
+
+        nextState.set(`new_${generateHash()}`, duplicatedRow);
+      });
+
+      return nextState;
+    });
+
+    setContextMenuTable(undefined);
+  }, [columns, editedFieldsRows, newRows, selectedRows, showToast]);
+
   const loadData = React.useCallback(async () => {
     const newPage = page + 1;
 
@@ -593,7 +623,13 @@ const Data = ({
           <AddIcon size={14} />
         </Button>
 
-        <Button title="Duplicar itens selecionados" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Duplicar itens selecionados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleDuplicateSelectedRows}
+        >
           <DuplicateIcon size={20} />
         </Button>
 
