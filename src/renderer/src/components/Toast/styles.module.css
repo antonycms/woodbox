@@ -1,15 +1,18 @@
 .container {
   width: 300px;
-  min-height: 48px;
+  min-height: 58px;
   position: relative;
-  padding: 10px;
-  border-radius: 4px;
+  overflow: hidden;
+  padding: 12px 36px 12px 12px;
+  border-radius: 10px;
   user-select: none;
-  margin-top: 6px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
 
   background: var(--toast-background);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  animation: toast-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .container,
@@ -22,18 +25,33 @@
 .titleContainer {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.iconContainer {
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .title {
   font-weight: bold;
   font-size: 14px;
-  margin-left: 4px;
+  line-height: 18px;
 }
 
 .description {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 12px;
-  margin-left: 2px;
+  line-height: 16px;
+  margin-left: 40px;
+  opacity: 0.9;
 }
 
 .closeBtn {
@@ -43,17 +61,50 @@
 
   border: 0;
   background-color: transparent;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.closeBtn:hover {
+  opacity: 1;
+}
+
+.progressBar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--toast-progress);
+  height: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--toast-color);
+  opacity: 0.7;
+  transition: width 50ms linear;
 }
 
 .toastsWrapper {
   position: fixed;
-  top: 14px;
-  right: 6px;
-  z-index: 10;
+  top: 24px;
+  right: 12px;
+  z-index: 1000;
   overflow-y: auto;
   max-height: 100vh;
+  padding: 0 8px 8px;
 }
 
 .toastsWrapper::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }

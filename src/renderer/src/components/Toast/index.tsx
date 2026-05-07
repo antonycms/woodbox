@@ -10,6 +10,8 @@ import IconMdiAlert from '~icons/mdi/alert';
 export const Toast = ({ close, title, description, type, delay }: IToastProps) => {
   const handleClose = React.useRef(close);
   handleClose.current = close;
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [remainingTime, setRemainingTime] = React.useState(delay);
 
   const {
     activeTheme: { toast: colors },
@@ -38,19 +40,50 @@ export const Toast = ({ close, title, description, type, delay }: IToastProps) =
   React.useEffect(() => {
     if (!delay) return;
 
-    const id = setTimeout(() => handleClose.current(), delay);
-    return () => clearTimeout(id);
+    setRemainingTime(delay);
   }, [delay]);
+
+  React.useEffect(() => {
+    if (!delay || isHovered) return;
+
+    if (remainingTime <= 0) {
+      handleClose.current();
+      return;
+    }
+
+    const startedAt = Date.now();
+    const id = setTimeout(() => {
+      const elapsedTime = Date.now() - startedAt;
+
+      setRemainingTime((currentRemainingTime) => Math.max(currentRemainingTime - elapsedTime, 0));
+    }, 50);
+
+    return () => clearTimeout(id);
+  }, [delay, isHovered, remainingTime]);
 
   if (!config) return null;
 
   const { icon: Icon, background, color } = config;
-  const style = { '--toast-background': background, '--toast-color': color } as React.CSSProperties;
+  const progress = delay ? Math.max((remainingTime / delay) * 100, 0) : 0;
+  const style = {
+    '--toast-background': background,
+    '--toast-color': color,
+    '--toast-progress': `${progress}%`,
+  } as React.CSSProperties;
 
   return (
-    <div className={styles.container} style={style}>
+    <div
+      className={styles.container}
+      style={style}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className={styles.titleContainer}>
-        {!!Icon && <Icon />}
+        {!!Icon && (
+          <div className={styles.iconContainer}>
+            <Icon />
+          </div>
+        )}
 
         <div className={styles.title}>{title}</div>
       </div>
@@ -58,8 +91,10 @@ export const Toast = ({ close, title, description, type, delay }: IToastProps) =
       {!!description && <div className={styles.description}>{description}</div>}
 
       <button type="button" onClick={close} className={styles.closeBtn}>
-        <IconMdiClose color="white" width={14} height={14} />
+        <IconMdiClose width={14} height={14} />
       </button>
+
+      {!!delay && <div className={styles.progressBar} />}
     </div>
   );
 };
