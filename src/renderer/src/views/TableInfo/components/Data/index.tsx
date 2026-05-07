@@ -27,6 +27,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
 import { generateInsertDdl, generateUpdateDdl } from '../Properties/tabs/Columns/ddl';
+import { generateHash } from '@renderer/utils/string';
 
 interface IDataProps extends ITableInfoProps {
   onOpenTable?: (
@@ -37,6 +38,8 @@ interface IDataProps extends ITableInfoProps {
     filterValue: string,
   ) => void;
 }
+
+const normalizeCellValue = (value: any) => (value === '' ? null : value);
 
 const Data = ({
   id_connection,
@@ -64,7 +67,7 @@ const Data = ({
   const { getTableData, runSql } = useStoreContext();
   const { showToast } = useToast();
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
-  const [items, setItems] = React.useState([]);
+  const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
@@ -74,12 +77,22 @@ const Data = ({
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<
     Map<React.Key, Record<string, any>>
   >(new Map());
+  const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
   const [whereInput, setWhereInput] = React.useState(initialWhere || '');
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+
+  const serializeRows = React.useCallback(
+    (rows: any[]) =>
+      rows.map((row) => ({
+        ...row,
+        __table_hash_item: `row_${generateHash()}`,
+      })),
+    [],
+  );
 
   React.useEffect(() => {
     if (references.length === 0) {
@@ -147,7 +160,9 @@ const Data = ({
   const itemsWithPendingStyles = React.useMemo(
     () =>
       items.map((item, index) => {
-        if (!editedFieldsRows.has(index)) return item;
+        const key = item.__table_hash_item ?? index;
+
+        if (!editedFieldsRows.has(key)) return item;
 
         return {
           ...item,
@@ -173,20 +188,19 @@ const Data = ({
     });
   };
 
-  const handleAddItem = () => {
-    // setItems((prevState) => [
-    //   {
-    //     id: 'kaskakdksa ',
-    //     name: 'testando',
-    //     age: null,
-    //     dj: null,
-    //     __table_hash_item: `${generateHash()}_${prevState.length}`,
-    //     __style: { backgroundColor: theme.green, color: theme.dark },
-    //     __table_disable_cell_edited_color: true,
-    //   },
-    //   ...prevState,
-    // ]);
-  };
+  const handleAddItem = React.useCallback(() => {
+    const key = `new_${generateHash()}`;
+
+    setNewRows((prevState) => new Map(prevState).set(key, {}));
+    setItems((prevState) => [
+      {
+        __table_hash_item: key,
+        __is_new_row: true,
+        __style: { backgroundColor: '#61ffca', color: '#1c1b22' },
+      },
+      ...prevState,
+    ]);
+  }, []);
 
   const loadData = React.useCallback(async () => {
     const newPage = page + 1;
@@ -210,8 +224,8 @@ const Data = ({
     if (!data.length) return;
 
     setPage(newPage);
-    setItems((prevState) => [...prevState, ...data]);
-  }, [id_connection, loading, schema, table, page, appliedWhere, sort]);
+    setItems((prevState) => [...prevState, ...serializeRows(data)]);
+  }, [id_connection, loading, schema, table, page, appliedWhere, sort, serializeRows]);
 
   const handleRefresh = React.useCallback(async () => {
     if (loading) return;
@@ -229,35 +243,50 @@ const Data = ({
     lastPageSearch.current = 1;
     setPage(1);
     setLastFetchDate(new Date());
-    setItems(data);
-  }, [id_connection, loading, schema, table, appliedWhere, sort]);
+    setNewRows(new Map());
+    setEditedFieldsRows(new Map());
+    setItems(serializeRows(data));
+  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows]);
 
-  const applyEditedRows = React.useCallback(
+  const applyPendingRows = React.useCallback(
     async (whereColumns: string[]) => {
-      if (!editedFieldsRows.size || applyingChanges) return;
+      const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
+      const hasEditedRows = !!editedFieldsRows.size;
+
+      if ((!rowsToInsert.length && !hasEditedRows) || applyingChanges) return;
 
       const rowsToUpdate = [...editedFieldsRows.entries()]
         .map(([rowKey, changes]) => ({
-          originalRow: items[Number(rowKey)],
+          originalRow:
+            items.find((item) => item.__table_hash_item === rowKey) || items[Number(rowKey)],
           changes,
         }))
         .filter((row) => row.originalRow && Object.keys(row.changes).length);
 
-      const sql = generateUpdateDdl(schema, table, rowsToUpdate, whereColumns);
+      const insertSql = generateInsertDdl(
+        schema,
+        table,
+        rowsToInsert,
+        columns.map((column) => column.column_name),
+      );
+      const updateSql = generateUpdateDdl(schema, table, rowsToUpdate, whereColumns);
+      const sql = [insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
+
       if (!sql.trim()) return;
 
       setApplyingChanges(true);
 
       try {
         await runSql(id_connection, sql);
+        setNewRows(new Map());
         setEditedFieldsRows(new Map());
         setShowNoPkModal(false);
-        showToast({ type: 'success', title: 'Dados atualizados com sucesso!' });
+        showToast({ type: 'success', title: 'Dados salvos com sucesso!' });
         await handleRefresh();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao atualizar dados.',
+          title: 'Erro ao salvar dados.',
           description: error?.message,
           delay: 8000,
         });
@@ -267,10 +296,12 @@ const Data = ({
     },
     [
       editedFieldsRows,
+      newRows,
       applyingChanges,
       items,
       schema,
       table,
+      columns,
       runSql,
       id_connection,
       showToast,
@@ -279,19 +310,21 @@ const Data = ({
   );
 
   const handleSaveItems = React.useCallback(() => {
-    if (!editedFieldsRows.size) return;
+    const hasNewRows = [...newRows.values()].some((row) => Object.keys(row).length);
 
-    if (!primaryKeyColumns.length) {
+    if (!hasNewRows && !editedFieldsRows.size) return;
+
+    if (editedFieldsRows.size && !primaryKeyColumns.length) {
       setShowNoPkModal(true);
       return;
     }
 
-    applyEditedRows(primaryKeyColumns);
-  }, [editedFieldsRows, primaryKeyColumns, applyEditedRows]);
+    applyPendingRows(primaryKeyColumns);
+  }, [newRows, editedFieldsRows, primaryKeyColumns, applyPendingRows]);
 
   const handleApplyWithoutPrimaryKey = React.useCallback(() => {
-    applyEditedRows(columns.map((column) => column.column_name));
-  }, [applyEditedRows, columns]);
+    applyPendingRows(columns.map((column) => column.column_name));
+  }, [applyPendingRows, columns]);
 
   const handleCancelSelectedRowsEditions = React.useCallback(() => {
     if (!selectedRows.length) return;
@@ -324,7 +357,9 @@ const Data = ({
           orderBy: nextSort,
         });
 
-        setItems(data);
+        setNewRows(new Map());
+        setEditedFieldsRows(new Map());
+        setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
         setLastFetchDate(new Date());
@@ -332,7 +367,7 @@ const Data = ({
         setLoading(false);
       }
     },
-    [id_connection, schema, table, appliedWhere, sort, loading],
+    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows],
   );
 
   const handleFilterKeyDown = React.useCallback(
@@ -350,7 +385,9 @@ const Data = ({
           where: newWhere,
           orderBy: sort,
         });
-        setItems(data);
+        setNewRows(new Map());
+        setEditedFieldsRows(new Map());
+        setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
         setLastFetchDate(new Date());
@@ -358,7 +395,7 @@ const Data = ({
         setLoading(false);
       }
     },
-    [id_connection, whereInput, loading, schema, table, sort],
+    [id_connection, whereInput, loading, schema, table, sort, serializeRows],
   );
 
   const handleKeyDown = React.useCallback(
@@ -407,29 +444,46 @@ const Data = ({
         rows={itemsWithPendingStyles}
         sort={sort}
         onSort={handleSort}
-        rowKeyExtractor={(_, index) => index}
+        rowKeyExtractor={(row, index) => row.__table_hash_item ?? index}
         onScrollEnd={loadData}
         loading={isLoading}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedRows}
         editedRows={editedFieldsRows}
+        newRows={newRows}
         onCellLinkClick={handleFkCellClick}
         onEditRow={(index, attribute, value) => {
+          const normalizedValue = normalizeCellValue(value);
+          const row = items[index];
+          const key = row?.__table_hash_item ?? index;
+
+          if (row?.__is_new_row) {
+            setNewRows((prevState) => {
+              const newState = new Map(prevState);
+              const prevRowEdited = { ...(newState.get(key) || {}) };
+
+              newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
+
+              return newState;
+            });
+            return;
+          }
+
           setEditedFieldsRows((prevState) => {
             const newState = new Map(prevState);
-            const prevRowEdited = { ...(newState.get(index) || {}) };
+            const prevRowEdited = { ...(newState.get(key) || {}) };
             const originalValue = items[index]?.[attribute];
 
-            if (String(originalValue ?? '') === String(value ?? '')) {
+            if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
               delete prevRowEdited[attribute];
 
-              if (Object.keys(prevRowEdited).length) newState.set(index, prevRowEdited);
-              else newState.delete(index);
+              if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
+              else newState.delete(key);
 
               return newState;
             }
 
-            newState.set(index, { ...prevRowEdited, [attribute]: value });
+            newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
 
             return newState;
           });
@@ -448,7 +502,7 @@ const Data = ({
           <SaveIcon size={16} />
         </Button>
 
-        <Button title="Adicionar" text smallIcon color={theme.bar.color}>
+        <Button title="Adicionar" text smallIcon color={theme.bar.color} onClick={handleAddItem}>
           <AddIcon size={14} />
         </Button>
 
