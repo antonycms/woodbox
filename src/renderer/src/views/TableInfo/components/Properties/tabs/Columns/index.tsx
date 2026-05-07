@@ -8,6 +8,7 @@ import { Text } from '@renderer/components/Text';
 import type { IColumnInfo } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import {
+  type IPendingColumnChange,
   type IPendingColumnCreate,
   useTableInfoContext,
 } from '@renderer/contexts/TableInfoContext';
@@ -31,7 +32,9 @@ import ModalNewColumn from './components/ModalNewColumn';
 import styles from './styles.module.css';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
-  (column as IColumnInfo & { __pendingId?: string }).__pendingId || column.column_name;
+  (column as IColumnInfo & { __pendingId?: string }).__pendingId ||
+  (column as IPendingColumnChange).__originalColumn?.column_name ||
+  column.column_name;
 
 const getGeneratedConstraintName = (
   table: string,
@@ -42,6 +45,28 @@ const getGeneratedConstraintName = (
 
   return `${table}_${columns.join('_')}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
+
+const normalizeOptionalString = (value: unknown) => {
+  const normalizedValue = String(value ?? '').trim();
+
+  return normalizedValue || undefined;
+};
+
+const parseNullableValue = (value: unknown) => {
+  if (typeof value === 'boolean') return value;
+
+  const normalizedValue = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (['true', 'sim', 'yes', '1'].includes(normalizedValue)) return true;
+  if (['false', 'não', 'nao', 'no', '0'].includes(normalizedValue)) return false;
+
+  return null;
+};
+
+const getOriginalColumnName = (column: IColumnInfo) =>
+  (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
 
 const Columns = ({
   id_connection,
@@ -61,15 +86,19 @@ const Columns = ({
     columns,
     pendingColumns,
     pendingDroppedColumns,
+    pendingChangedColumns,
     pendingRestrictions,
     columnTypes,
     references,
     restrictions,
     addPendingColumn,
+    updatePendingColumn,
     addPendingRestriction,
     removePendingColumn,
     addPendingDroppedColumns,
     removePendingDroppedColumns,
+    addPendingChangedColumn,
+    removePendingChangedColumns,
     clearPendingChanges,
     loadColumnTypes,
     loadTableColumns,
@@ -93,23 +122,30 @@ const Columns = ({
     () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
     [pendingDroppedColumns],
   );
+  const changedColumnsByOriginalName = React.useMemo(
+    () =>
+      new Map(pendingChangedColumns.map((column) => [column.__originalColumn.column_name, column])),
+    [pendingChangedColumns],
+  );
   const allColumns = React.useMemo(
     () => [
       ...columns.map((column) => {
-        if (!droppedColumnNames.has(column.column_name)) return column;
+        if (droppedColumnNames.has(column.column_name)) {
+          return {
+            ...column,
+            __pendingAction: 'drop',
+            __style: {
+              backgroundColor: '#ff676733',
+              textDecoration: 'line-through',
+            },
+          };
+        }
 
-        return {
-          ...column,
-          __pendingAction: 'drop',
-          __style: {
-            backgroundColor: '#ff676733',
-            textDecoration: 'line-through',
-          },
-        };
+        return changedColumnsByOriginalName.get(column.column_name) || column;
       }),
       ...pendingColumns,
     ],
-    [columns, droppedColumnNames, pendingColumns],
+    [changedColumnsByOriginalName, columns, droppedColumnNames, pendingColumns],
   );
   const hasPrimaryKey = React.useMemo(
     () =>
@@ -171,6 +207,84 @@ const Columns = ({
     [addPendingColumn, addPendingRestriction, allColumns, showToast, table],
   );
 
+  const handleEditColumn = React.useCallback(
+    (indexRow: number, attribute: string, value: unknown) => {
+      const column = filteredColumnsAndSortedColumns[indexRow];
+      if (!column) return;
+
+      let nextValue: unknown = value;
+
+      if (attribute === 'column_name') {
+        nextValue = String(value ?? '').trim();
+
+        if (!nextValue) {
+          showToast({ type: 'warn', title: 'Informe o nome da coluna.' });
+          return;
+        }
+
+        const currentPendingId = (column as IPendingColumnCreate).__pendingId;
+        const currentOriginalColumnName = getOriginalColumnName(column);
+        const alreadyExists = allColumns.some((item) => {
+          const itemPendingId = (item as IPendingColumnCreate).__pendingId;
+          const itemOriginalColumnName = getOriginalColumnName(item);
+
+          if (currentPendingId && itemPendingId === currentPendingId) return false;
+          if (!currentPendingId && itemOriginalColumnName === currentOriginalColumnName) {
+            return false;
+          }
+
+          return item.column_name.toLowerCase() === String(nextValue).toLowerCase();
+        });
+
+        if (alreadyExists) {
+          showToast({ type: 'warn', title: 'Já existe uma coluna com esse nome.' });
+          return;
+        }
+      } else if (attribute === 'data_type') {
+        nextValue = String(value ?? '').trim();
+
+        if (!nextValue) {
+          showToast({ type: 'warn', title: 'Informe o tipo da coluna.' });
+          return;
+        }
+      } else if (attribute === 'is_nullable') {
+        const parsedNullableValue = parseNullableValue(value);
+
+        if (parsedNullableValue === null) {
+          showToast({
+            type: 'warn',
+            title: 'Valor inválido para nulável.',
+            description: 'Use true/false, sim/não, yes/no ou 1/0.',
+          });
+          return;
+        }
+
+        nextValue = parsedNullableValue;
+      } else if (['column_default', 'description'].includes(attribute)) {
+        nextValue = normalizeOptionalString(value);
+      } else {
+        return;
+      }
+
+      const columnChanges = { [attribute]: nextValue } as Partial<IColumnInfo>;
+      const pendingId = (column as IPendingColumnCreate).__pendingId;
+
+      if (pendingId && (column as IPendingColumnCreate).__pendingAction === 'create') {
+        updatePendingColumn(pendingId, columnChanges);
+        return;
+      }
+
+      addPendingChangedColumn(column, columnChanges);
+    },
+    [
+      addPendingChangedColumn,
+      allColumns,
+      filteredColumnsAndSortedColumns,
+      showToast,
+      updatePendingColumn,
+    ],
+  );
+
   const handleRemoveSelectedColumns = React.useCallback(() => {
     if (!selectedColumns.length) {
       showToast({ type: 'warn', title: 'Selecione uma ou mais colunas para remover.' });
@@ -185,7 +299,7 @@ const Columns = ({
         return;
       }
 
-      addPendingDroppedColumns([column]);
+      addPendingDroppedColumns([(column as IPendingColumnChange).__originalColumn || column]);
     });
 
     setContextMenuPosition(null);
@@ -217,19 +331,28 @@ const Columns = ({
   ]);
 
   const handleUndoSelectedDroppedColumns = React.useCallback(() => {
-    const columnNames = selectedColumns
+    const droppedColumnNamesToUndo = selectedColumns
       .filter(
         (column) =>
           (column as { __pendingAction?: string }).__pendingAction === 'drop' ||
           droppedColumnNames.has(column.column_name),
       )
       .map((column) => column.column_name);
+    const changedColumnNamesToUndo = selectedColumns
+      .filter((column) => (column as { __pendingAction?: string }).__pendingAction === 'change')
+      .map(getOriginalColumnName);
 
-    if (!columnNames.length) return;
+    if (!droppedColumnNamesToUndo.length && !changedColumnNamesToUndo.length) return;
 
-    removePendingDroppedColumns(columnNames);
+    if (droppedColumnNamesToUndo.length) removePendingDroppedColumns(droppedColumnNamesToUndo);
+    if (changedColumnNamesToUndo.length) removePendingChangedColumns(changedColumnNamesToUndo);
     setSelectedColumns([]);
-  }, [selectedColumns, droppedColumnNames, removePendingDroppedColumns]);
+  }, [
+    selectedColumns,
+    droppedColumnNames,
+    removePendingDroppedColumns,
+    removePendingChangedColumns,
+  ]);
 
   const contextMenuOptions = React.useMemo(() => {
     return [
@@ -377,6 +500,7 @@ const Columns = ({
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedColumns}
         rows={filteredColumnsAndSortedColumns}
+        onEditRow={handleEditColumn}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         columns={[
@@ -393,6 +517,8 @@ const Columns = ({
             attribute: 'data_type',
             editable: true,
             sortable: true,
+            type: 'autocomplete',
+            dataAutocomplete: columnTypes,
           },
           {
             title: 'Clique para ordenar por essa coluna',
