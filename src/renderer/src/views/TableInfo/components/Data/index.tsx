@@ -26,7 +26,11 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
-import { generateInsertDdl, generateUpdateDdl } from '../Properties/tabs/Columns/ddl';
+import {
+  generateDeleteDdl,
+  generateInsertDdl,
+  generateUpdateDdl,
+} from '../Properties/tabs/Columns/ddl';
 import { generateHash } from '@renderer/utils/string';
 
 interface IDataProps extends ITableInfoProps {
@@ -77,6 +81,9 @@ const Data = ({
   const [editedFieldsRows, setEditedFieldsRows] = React.useState<
     Map<React.Key, Record<string, any>>
   >(new Map());
+  const [droppedRows, setDroppedRows] = React.useState<Map<React.Key, Record<string, any>>>(
+    new Map(),
+  );
   const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
@@ -162,6 +169,18 @@ const Data = ({
       items.map((item, index) => {
         const key = item.__table_hash_item ?? index;
 
+        if (droppedRows.has(key)) {
+          return {
+            ...item,
+            __pendingAction: 'drop',
+            __style: {
+              ...(item as any).__style,
+              backgroundColor: '#ff676733',
+              textDecoration: 'line-through',
+            },
+          };
+        }
+
         if (!editedFieldsRows.has(key)) return item;
 
         return {
@@ -172,7 +191,7 @@ const Data = ({
           },
         };
       }),
-    [items, editedFieldsRows],
+    [items, droppedRows, editedFieldsRows],
   );
 
   const onContextMenuTable = (
@@ -237,6 +256,7 @@ const Data = ({
     setLastFetchDate(new Date());
     setNewRows(new Map());
     setEditedFieldsRows(new Map());
+    setDroppedRows(new Map());
     setItems(serializeRows(data));
   }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows]);
 
@@ -244,17 +264,23 @@ const Data = ({
     async (whereColumns: string[]) => {
       const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
       const hasEditedRows = !!editedFieldsRows.size;
+      const hasDroppedRows = !!droppedRows.size;
 
-      if ((!rowsToInsert.length && !hasEditedRows) || applyingChanges) return;
+      if ((!rowsToInsert.length && !hasEditedRows && !hasDroppedRows) || applyingChanges) return;
 
       const rowsToUpdate = [...editedFieldsRows.entries()]
         .map(([rowKey, changes]) => ({
           originalRow:
             items.find((item) => item.__table_hash_item === rowKey) || items[Number(rowKey)],
+          rowKey,
           changes,
         }))
-        .filter((row) => row.originalRow && Object.keys(row.changes).length);
+        .filter(
+          (row) =>
+            row.originalRow && Object.keys(row.changes).length && !droppedRows.has(row.rowKey),
+        );
 
+      const deleteSql = generateDeleteDdl(schema, table, [...droppedRows.values()], whereColumns);
       const insertSql = generateInsertDdl(
         schema,
         table,
@@ -262,7 +288,7 @@ const Data = ({
         columns.map((column) => column.column_name),
       );
       const updateSql = generateUpdateDdl(schema, table, rowsToUpdate, whereColumns);
-      const sql = [insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
+      const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
 
       if (!sql.trim()) return;
 
@@ -272,6 +298,7 @@ const Data = ({
         await runSql(id_connection, sql);
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
+        setDroppedRows(new Map());
         setShowNoPkModal(false);
         showToast({ type: 'success', title: 'Dados salvos com sucesso!' });
         await handleRefresh();
@@ -288,6 +315,7 @@ const Data = ({
     },
     [
       editedFieldsRows,
+      droppedRows,
       newRows,
       applyingChanges,
       items,
@@ -304,15 +332,15 @@ const Data = ({
   const handleSaveItems = React.useCallback(() => {
     const hasNewRows = [...newRows.values()].some((row) => Object.keys(row).length);
 
-    if (!hasNewRows && !editedFieldsRows.size) return;
+    if (!hasNewRows && !editedFieldsRows.size && !droppedRows.size) return;
 
-    if (editedFieldsRows.size && !primaryKeyColumns.length) {
+    if ((editedFieldsRows.size || droppedRows.size) && !primaryKeyColumns.length) {
       setShowNoPkModal(true);
       return;
     }
 
     applyPendingRows(primaryKeyColumns);
-  }, [newRows, editedFieldsRows, primaryKeyColumns, applyPendingRows]);
+  }, [newRows, editedFieldsRows, droppedRows, primaryKeyColumns, applyPendingRows]);
 
   const handleApplyWithoutPrimaryKey = React.useCallback(() => {
     applyPendingRows(columns.map((column) => column.column_name));
@@ -331,6 +359,59 @@ const Data = ({
       return newState;
     });
   }, [selectedRows]);
+
+  const handleUndoSelectedDroppedRows = React.useCallback(() => {
+    if (!selectedRows.length) return;
+
+    setDroppedRows((prevState) => {
+      const newState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        newState.delete(row.__key_row);
+      });
+
+      return newState;
+    });
+  }, [selectedRows]);
+
+  const handleRemoveSelectedRows = React.useCallback(() => {
+    if (!selectedRows.length) {
+      showToast({ type: 'warn', title: 'Selecione uma ou mais linhas para remover.' });
+      return;
+    }
+
+    setNewRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        if (row.__is_new_row) nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+
+    setDroppedRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        if (!row.__is_new_row) nextState.set(row.__key_row, row);
+      });
+
+      return nextState;
+    });
+
+    setEditedFieldsRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+
+    setContextMenuTable(undefined);
+  }, [selectedRows, showToast]);
 
   const handleSort = React.useCallback(
     async (column: IColumn) => {
@@ -351,6 +432,7 @@ const Data = ({
 
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
+        setDroppedRows(new Map());
         setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
@@ -379,6 +461,7 @@ const Data = ({
         });
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
+        setDroppedRows(new Map());
         setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
@@ -403,13 +486,25 @@ const Data = ({
 
       if (isEditableTarget || target?.isContentEditable) return;
 
+      if (event.key === 'Delete') {
+        event.preventDefault();
+        handleRemoveSelectedRows();
+        return;
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault();
         handleCancelSelectedRowsEditions();
+        handleUndoSelectedDroppedRows();
         return;
       }
     },
-    [handleCancelSelectedRowsEditions, handleSaveItems],
+    [
+      handleCancelSelectedRowsEditions,
+      handleRemoveSelectedRows,
+      handleSaveItems,
+      handleUndoSelectedDroppedRows,
+    ],
   );
 
   React.useEffect(() => {
@@ -502,7 +597,13 @@ const Data = ({
           <DuplicateIcon size={20} />
         </Button>
 
-        <Button title="Remover itens selecionados" text smallIcon color={theme.bar.color}>
+        <Button
+          title="Remover itens selecionados"
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleRemoveSelectedRows}
+        >
           <RemoveIcon size={16} />
         </Button>
 
@@ -594,6 +695,10 @@ const Data = ({
           {
             text: 'Copiar linha como JSON',
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+          },
+          {
+            text: 'Excluir itens selecionados',
+            onClick: handleRemoveSelectedRows,
           },
           {
             text: 'Gerar DDL de INSERT da linha',

@@ -127,6 +127,28 @@ export const generateUpdateDdl = (
     .join('\n\n');
 };
 
+export const generateDeleteDdl = (
+  schema: string | undefined,
+  table: string,
+  rows: Record<string, any>[],
+  whereColumns: string[],
+) => {
+  const tableName = getTableName(schema, table);
+
+  return rows
+    .map((row) => {
+      const whereSql = whereColumns
+        .map((column) => serializeWhereValue(column, row[column]))
+        .join('\n  AND ');
+
+      if (!whereSql) return null;
+
+      return `DELETE FROM ${tableName}\nWHERE ${whereSql};`;
+    })
+    .filter((sql): sql is string => !!sql)
+    .join('\n\n');
+};
+
 const getColumnType = (column: IColumnInfo) => {
   if (column.character_maximum_length) {
     return `${column.data_type}(${column.character_maximum_length})`;
