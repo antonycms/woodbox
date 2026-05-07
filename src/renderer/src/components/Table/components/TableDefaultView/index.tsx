@@ -13,6 +13,7 @@ interface ITableDefaultViewProps<Row = any> {
   columnsSize: number[];
   minColumnsSize: number[];
   editedRows?: Map<React.Key, any>;
+  newRows?: Map<React.Key, any>;
   cellEditingKey?: string;
   selectedCells?: Set<string>;
   selectedRows: Map<React.Key, any>;
@@ -43,6 +44,7 @@ const TableDefaultView = <Row,>({
   columnsSize,
   minColumnsSize,
   editedRows,
+  newRows,
   cellEditingKey,
   selectedCells,
   selectedRows,
@@ -88,6 +90,7 @@ const TableDefaultView = <Row,>({
         const indexRow = row.__index_row;
         const keyRow = row.__key_row;
         const editedRow = editedRows?.get(keyRow);
+        const newRow = newRows?.get(keyRow);
 
         return (
           <TableRow key={keyRow} row={row} isSelected={selectedRows.get(keyRow)}>
@@ -95,8 +98,10 @@ const TableDefaultView = <Row,>({
               const column = columns[columnIndex];
               const rowColumnKey = `${keyRow}:${String(column.attribute)}`;
               const editedValue = editedRow?.[column.attribute];
+              const newValue = newRow?.[column.attribute];
               const isEdited = editedValue !== undefined;
-              const value = isEdited ? editedValue : row[column.attribute];
+              const hasNewValue = newValue !== undefined;
+              const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
 
               return (
                 <TableColumn

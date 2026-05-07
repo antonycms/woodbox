@@ -15,6 +15,7 @@ interface ITableAnalysisViewProps<Row = any> {
   columnsSize: number[];
   minColumnsSize: number[];
   editedRows?: Map<React.Key, any>;
+  newRows?: Map<React.Key, any>;
   cellEditingKey?: string;
   selectedCells?: Set<string>;
   onResizeColumn?(index: number, size: number): void;
@@ -130,6 +131,7 @@ const TableAnalysisView = ({
   columnsSize,
   minColumnsSize,
   editedRows,
+  newRows,
   cellEditingKey,
   selectedCells,
   onResizeColumn,
@@ -184,9 +186,12 @@ const TableAnalysisView = ({
               const rowColumnKey = `${keyRow}:${attribute}`;
               const selectedCellKey = `${row.__index_row}:${columnIndex}`;
               const editedRow = editedRows?.get(keyRow);
+              const newRow = newRows?.get(keyRow);
               const editedValue = editedRow?.[column.attribute];
+              const newValue = newRow?.[column.attribute];
               const isEdited = editedValue !== undefined;
-              const value = isEdited ? editedValue : row[column.attribute];
+              const hasNewValue = newValue !== undefined;
+              const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
               const serializedValue = serializeTableValue(value, column.type);
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);

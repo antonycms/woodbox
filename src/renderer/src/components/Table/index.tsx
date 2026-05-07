@@ -29,6 +29,7 @@ interface ITableProps<Row = any> {
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any): void;
   editedRows?: Map<React.Key, any>;
+  newRows?: Map<React.Key, any>;
   rows: Row[];
   columns: IColumn<Row>[];
   sort?: ITableSort[];
@@ -51,6 +52,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onContextMenu,
     onScrollEnd,
     editedRows,
+    newRows,
     onEditRow,
     sort,
     onSort,
@@ -749,6 +751,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           columnsSize={analysisColumnsSize}
           minColumnsSize={analysisMinColumnsSize}
           editedRows={editedRows}
+          newRows={newRows}
           cellEditingKey={cellEditingKey}
           selectedCells={analysisSelectedCells}
           onResizeColumn={onResizeAnalysisColumn}
@@ -765,6 +768,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           columnsSize={columnsSize}
           minColumnsSize={minColumnsSize}
           editedRows={editedRows}
+          newRows={newRows}
           cellEditingKey={cellEditingKey}
           selectedCells={selectedCells}
           selectedRows={selectedRows}
