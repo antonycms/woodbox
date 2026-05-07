@@ -367,7 +367,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const onScrollEnd = async () => {
     const lastTabResult = querysResultData.get(activeTabId);
 
-    if (!lastTabResult || !lastTabResult.auto_paginated) return;
+    if (!lastTabResult || lastTabResult.loading || !lastTabResult.auto_paginated) return;
 
     const updateTabResultData = makeUpdateResultTab(activeTabId);
 

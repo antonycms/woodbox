@@ -252,10 +252,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
     const element = refScrollContainer.current;
     if (!element || !onScrollEnd) return;
 
-    const hasHorizontalScrollbar = element.scrollWidth > element.clientWidth;
-    const scrollbarSize = 6;
-    const scrollHeight = element.scrollHeight + (hasHorizontalScrollbar ? scrollbarSize : 0);
-    const isEndVerticalScroll = Math.ceil(element.offsetHeight + element.scrollTop) >= scrollHeight;
+    const hasVerticalScroll = element.scrollHeight > element.clientHeight;
+    if (!hasVerticalScroll) return;
+
+    const threshold = 8;
+    const isEndVerticalScroll =
+      Math.ceil(element.clientHeight + element.scrollTop) >= element.scrollHeight - threshold;
 
     if (isEndVerticalScroll) {
       onScrollEnd();
@@ -264,10 +266,18 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const onScroll = React.useCallback(
     (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
-      checkScrollEnd();
-      setScroll({ left: event.currentTarget.scrollLeft, top: event.currentTarget.scrollTop });
+      const nextScroll = {
+        left: event.currentTarget.scrollLeft,
+        top: event.currentTarget.scrollTop,
+      };
+
+      setScroll(nextScroll);
+
+      if (nextScroll.top !== scroll.top) {
+        checkScrollEnd();
+      }
     },
-    [checkScrollEnd],
+    [checkScrollEnd, scroll.top],
   );
 
   const getSortLabel = React.useCallback(
