@@ -192,14 +192,6 @@ const Data = ({
     const key = `new_${generateHash()}`;
 
     setNewRows((prevState) => new Map(prevState).set(key, {}));
-    setItems((prevState) => [
-      {
-        __table_hash_item: key,
-        __is_new_row: true,
-        __style: { backgroundColor: '#61ffca', color: '#1c1b22' },
-      },
-      ...prevState,
-    ]);
   }, []);
 
   const loadData = React.useCallback(async () => {
@@ -452,27 +444,27 @@ const Data = ({
         editedRows={editedFieldsRows}
         newRows={newRows}
         onCellLinkClick={handleFkCellClick}
-        onEditRow={(index, attribute, value) => {
+        onEditNewRow={(rowKey, attribute, value) => {
           const normalizedValue = normalizeCellValue(value);
+
+          setNewRows((prevState) => {
+            const newState = new Map(prevState);
+            const prevRowEdited = { ...(newState.get(rowKey) || {}) };
+
+            newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
+
+            return newState;
+          });
+        }}
+        onEditRow={(index, attribute, value, rowKey) => {
+          const normalizedValue = normalizeCellValue(value);
+          const key = rowKey ?? index;
           const row = items[index];
-          const key = row?.__table_hash_item ?? index;
-
-          if (row?.__is_new_row) {
-            setNewRows((prevState) => {
-              const newState = new Map(prevState);
-              const prevRowEdited = { ...(newState.get(key) || {}) };
-
-              newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
-
-              return newState;
-            });
-            return;
-          }
 
           setEditedFieldsRows((prevState) => {
             const newState = new Map(prevState);
             const prevRowEdited = { ...(newState.get(key) || {}) };
-            const originalValue = items[index]?.[attribute];
+            const originalValue = row?.[attribute];
 
             if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
               delete prevRowEdited[attribute];

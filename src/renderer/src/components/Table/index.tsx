@@ -27,7 +27,8 @@ interface ITableProps<Row = any> {
     data: ITableContextMenuData,
   ): void;
   onScrollEnd?(): void;
-  onEditRow?(indexRow: number, attribute: string, value: any): void;
+  onEditRow?(indexRow: number, attribute: string, value: any, rowKey?: React.Key): void;
+  onEditNewRow?(rowKey: React.Key, attribute: string, value: any): void;
   editedRows?: Map<React.Key, any>;
   newRows?: Map<React.Key, any>;
   rows: Row[];
@@ -54,6 +55,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     editedRows,
     newRows,
     onEditRow,
+    onEditNewRow,
     sort,
     onSort,
     onSelectRow,
@@ -98,16 +100,30 @@ function Table<Row = any>(props: ITableProps<Row>) {
   columnsSizeRef.current = columnsSize;
 
   const serializedRows = React.useMemo(() => {
-    return rows.map((row, index) => {
+    const newRowsLength = newRows?.size ?? 0;
+
+    const serializedNewRows = [...(newRows?.entries() ?? [])].map(([keyRow, row], index) => ({
+      ...row,
+      __index_row: index,
+      __row_index: index,
+      __key_row: keyRow,
+      __is_new_row: true,
+      __style: { backgroundColor: '#61ffca', color: '#1c1b22' },
+    }));
+
+    const serializedRows = rows.map((row, index) => {
       const keyRow = rowKeyExtractor(row, index);
 
       return {
         ...row,
-        __index_row: index,
+        __index_row: index + newRowsLength,
+        __row_index: index,
         __key_row: keyRow,
       };
     });
-  }, [rows]);
+
+    return [...serializedNewRows, ...serializedRows];
+  }, [rows, newRows]);
 
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;
@@ -279,9 +295,16 @@ function Table<Row = any>(props: ITableProps<Row>) {
         setCellEditingKey(null);
         refScrollContainer.current?.focus();
       }
-      onEditRow?.(indexRow, rowColumnKey, newValue);
+      const row = serializedRowsRef.current[indexRow];
+
+      if (row?.__is_new_row) {
+        onEditNewRow?.(row.__key_row, rowColumnKey, newValue);
+        return;
+      }
+
+      onEditRow?.(row?.__row_index ?? indexRow, rowColumnKey, newValue, row?.__key_row);
     },
-    [onEditRow],
+    [onEditNewRow, onEditRow],
   );
 
   const onBlurCell = React.useCallback(() => {
@@ -465,10 +488,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const cssVars = toCssProperties({
     ...theme,
-    height: `${rows.length * rowHeight}px`,
+    height: `${serializedRows.length * rowHeight}px`,
     width: `${tableDetails.width}px`,
     rowHeight: `${rowHeight}px`,
-    totalRows: rows.length,
+    totalRows: serializedRows.length,
     columnsSize: tableDetails.columnsSizeStr,
     analysisRows: analysisRows.length,
   });
@@ -709,14 +732,22 @@ function Table<Row = any>(props: ITableProps<Row>) {
       return Math.ceil(calculateTextHtmlWidth(column.label) + 40);
     });
 
-    if (columnsSize.length !== columns.length) {
-      setColumnsSize(
-        defaultColumnsSize.map((size) => (size > defaultColumnSize ? size : defaultColumnSize)),
-      );
-    }
+    setColumnsSize((prevState) => {
+      if (prevState.length === columns.length) return prevState;
 
-    setMinColumnsSize(defaultColumnsSize);
-  }, [columns]);
+      return defaultColumnsSize.map((size) =>
+        size > defaultColumnSize ? size : defaultColumnSize,
+      );
+    });
+
+    setMinColumnsSize((prevState) => {
+      const isSameState =
+        prevState.length === defaultColumnsSize.length &&
+        prevState.every((size, index) => size === defaultColumnsSize[index]);
+
+      return isSameState ? prevState : defaultColumnsSize;
+    });
+  }, [columns, defaultColumnSize]);
 
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
