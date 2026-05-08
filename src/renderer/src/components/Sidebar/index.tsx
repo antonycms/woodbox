@@ -46,7 +46,7 @@ export const Sidebar = React.memo(() => {
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
         items={[
           { id: 'projects', title: 'Projetos', icon: () => <IconDatabase /> },
-          { id: 'settings', title: 'Configurações', icon: () => <IconSettings /> },
+          // { id: 'settings', title: 'Configurações', icon: () => <IconSettings /> },
         ]}
       />
 
