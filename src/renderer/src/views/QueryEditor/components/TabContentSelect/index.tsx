@@ -7,18 +7,22 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
+import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { CancelIcon, ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
+import { generateHash } from '@renderer/utils/string';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
 import { IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
 import { IColumn } from '@renderer/components/Table/dtos';
 import { IQueryResult } from '../../dtos';
 import styles from './styles.module.css';
+
+import IconMdiClose from '~icons/mdi/close';
 
 interface ITabContentSelectProps {
   id_connection: string;
@@ -40,6 +44,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [showValuePreview, setShowValuePreview] = React.useState(false);
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
+  const [previewTabBarId] = React.useState(`select_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<'value' | 'reference'>('value');
   const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
   const [referenceError, setReferenceError] = React.useState<string>();
@@ -254,37 +259,35 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onResize={(size) => size.width && setPreviewWidth(size.width)}
           >
             <div className={styles.preview}>
-              <div className={styles.previewTabs}>
-                <button
-                  className={
-                    activePreviewTab === 'value' ? styles.previewTabActive : styles.previewTab
-                  }
-                  onClick={() => setActivePreviewTab('value')}
-                >
-                  Valor
-                </button>
+              <div className={styles.previewHeader}>
+                <TabBar
+                  borderBottom
+                  idTabBar={previewTabBarId}
+                  activeTabId={activePreviewTab}
+                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as 'value' | 'reference')}
+                  ascentColor={activeTheme.queryEditor.tab.ascentColor}
+                  backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                  backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
+                  borderColor={activeTheme.queryEditor.tab.borderColor}
+                  color={activeTheme.queryEditor.tab.color}
+                  tabs={[
+                    { idTab: 'value', title: 'Valor' },
+                    selectedReference && { idTab: 'reference', title: 'Referência' },
+                  ].filter(Boolean)}
+                />
 
-                <button
-                  className={
-                    activePreviewTab === 'reference' ? styles.previewTabActive : styles.previewTab
-                  }
-                  disabled={!selectedReference}
-                  onClick={() => setActivePreviewTab('reference')}
-                >
-                  Referência
-                </button>
-
-                <button
-                  className={styles.previewCloseButton}
+                <Button
                   title="Fechar visualização"
+                  backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                  color={activeTheme.queryEditor.tab.color}
                   onClick={closeValuePreview}
-                >
-                  <CancelIcon size={14} />
-                </button>
+                  width="auto"
+                  icon={() => <IconMdiClose width={16} />}
+                />
               </div>
 
-              <div className={styles.previewContent}>
-                {activePreviewTab === 'value' && (
+              <TabWindow idTabBar={previewTabBarId}>
+                <TabContent idTab="value">
                   <Editor
                     dialect="postgres"
                     language="json"
@@ -292,25 +295,28 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                     hidePreview
                     value={previewValue}
                   />
-                )}
+                </TabContent>
 
-                {activePreviewTab === 'reference' &&
-                  (referenceLoading ? (
-                    <div className={styles.previewLoading}>
-                      <MultiplesBarLoading />
-                    </div>
-                  ) : referenceError ? (
-                    <Text color={activeTheme.queryEditor.bar.color}>{referenceError}</Text>
-                  ) : (
-                    <Editor
-                      dialect="postgres"
-                      language="json"
-                      readonly
-                      hidePreview
-                      value={referencePreviewValue}
-                    />
-                  ))}
-              </div>
+                {!!selectedReference && (
+                  <TabContent idTab="reference">
+                    {referenceLoading ? (
+                      <div className={styles.previewLoading}>
+                        <MultiplesBarLoading background="transparent" />
+                      </div>
+                    ) : referenceError ? (
+                      <Text color={activeTheme.queryEditor.bar.color}>{referenceError}</Text>
+                    ) : (
+                      <Editor
+                        dialect="postgres"
+                        language="json"
+                        readonly
+                        hidePreview
+                        value={referencePreviewValue}
+                      />
+                    )}
+                  </TabContent>
+                )}
+              </TabWindow>
             </div>
           </ResizableContainer>
         )}
