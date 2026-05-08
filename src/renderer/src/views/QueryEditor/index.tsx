@@ -7,23 +7,7 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import Table, { type ITableContextMenuData } from '@renderer/components/Table';
-import type { ITableSort } from '@renderer/components/Table/dtos';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
-import { Button } from '@renderer/components/Button';
-import { Spacer } from '@renderer/components/Spacer';
-import { Text } from '@renderer/components/Text';
-import { Bar } from '@renderer/components/Bar';
-import {
-  ExportIcon,
-  IconFileWrited,
-  IconRefresh,
-  PanelFile,
-  RunFileIcon,
-  RunIcon,
-  SaveIcon,
-} from '@renderer/styles/icons';
-import { RunSelectionIcon } from '../../styles/icons';
 import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
 import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
@@ -31,57 +15,24 @@ import { getTablesFromQuerySql } from '@renderer/utils/sql';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
-import { toDateTime } from '@renderer/utils/date';
-import TableInfoWithContext from '@renderer/views/TableInfo';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
-import { copyToClipboard } from '@renderer/utils/methods';
-import { ContextMenu } from '@renderer/components/ContextMenu';
-import IconMdiAlertCircle from '~icons/mdi/alert-circle';
 import { ModalQueryVariables } from './components/ModalQueryVariables';
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
+import type {
+  IDataMakeTabResult,
+  IDataUpdateabResult,
+  IExecuteQueryParams,
+  IPendingQueryExecution,
+  IQueryEditorProps,
+  IQueryResult,
+} from './dtos';
 
-interface IContextMenuTable {
-  data: ITableContextMenuData | null;
-  position: { x: number; y: number };
-}
-
-interface IQueryResult {
-  type: string;
-  rows?: any[];
-  columns?: string[];
-  loading?: boolean;
-  message?: string;
-  query: string;
-  affected_rows?: number;
-  date_run?: string;
-  execution_time_ms?: number;
-  page?: number;
-  orderBy?: ITableSort[];
-  auto_paginated?: boolean;
-  tables_info?: ITableQuery[];
-  variableValues?: Record<string, string>;
-}
-
-interface IPendingQueryExecution {
-  query: string;
-  openNewTab?: boolean;
-  forceNewTab?: boolean;
-  markErrors?: boolean;
-}
-
-interface IExecuteQueryParams extends IPendingQueryExecution {
-  variableValues?: Record<string, string>;
-}
-
-type IDataMakeTabResult = IQueryResult & { title?: string };
-
-type IDataUpdateabResult = Partial<IDataMakeTabResult>;
-
-interface IQueryEditorProps {
-  id_connection: string;
-  id_script?: string;
-}
+import { LateralBar } from './components/LateralBar';
+import { TabContentDelete } from './components/TabContentDelete';
+import { TabContentAlter } from './components/TabContentAlter';
+import { TabcontentError } from './components/TabContentError';
+import { TabContentGeneric } from './components/TabContentGeneric';
+import { TabContentSelect } from './components/TabContentSelect';
 
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
@@ -94,7 +45,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   } = useStoreContext();
 
   const { activeTheme } = useThemeContext();
-  const { addTab } = useAppTabContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   const id = React.useMemo(() => generateHash(), []);
@@ -115,16 +65,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
-  const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [pendingQueryExecution, setPendingQueryExecution] =
     React.useState<IPendingQueryExecution>();
-
-  const onContextMenuTable = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: ITableContextMenuData,
-  ) => {
-    setContextMenuTable({ data, position: { x: event.clientX, y: event.clientY } });
-  };
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -629,50 +571,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       <div
         style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}
       >
-        <Bar
-          vertical
-          backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
-          borderColor={activeTheme.queryEditor.bar.borderColor}
-        >
-          <Button
-            text
-            smallIcon
-            title="Executar script SQL (Ctrl + Shift + Alt + Enter)"
-            onClick={runAllSQL}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <RunFileIcon size={16} />
-          </Button>
-
-          <Button
-            text
-            smallIcon
-            title="Executar SQL selecionado (Ctrl + Alt + Enter)"
-            onClick={runSelectionsSQL}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <RunSelectionIcon size={20} />
-          </Button>
-
-          <Button
-            text
-            smallIcon
-            title="Executar SQL atual (Ctrl + Shift + Enter)"
-            onClick={() => runCurrentSQL(true)}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <RunIcon size={16} />
-          </Button>
-
-          <Button
-            text
-            smallIcon
-            title="Mostrar saída do servidor"
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <IconFileWrited size={16} />
-          </Button>
-        </Bar>
+        <LateralBar
+          runAllSQL={runAllSQL}
+          runSelectionsSQL={runSelectionsSQL}
+          runCurrentSQL={runCurrentSQL}
+        />
 
         <Editor
           ref={refEditor}
@@ -683,6 +586,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           onCtrlClick={handleEditorCtrlClick}
         />
       </div>
+
+      <ModalQueryVariables
+        show={!!pendingQueryExecution}
+        variables={getQueryVariables(pendingQueryExecution?.query || '')}
+        onCancel={closeVariablesModal}
+        onExecute={executePendingQuery}
+      />
 
       {!!tabsResult.length && (
         <ResizableContainer
@@ -714,14 +624,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
               if (!data) return null;
 
-              const tabFkMap = new Map<string, IColumnReferenceInfo>();
-              (data.tables_info || []).forEach(({ name, schema }) => {
-                const key = `${schema ? schema + '.' : ''}${name}`;
-                (tableReferences.get(key) || []).forEach((ref) => {
-                  if (!tabFkMap.has(ref.column_name)) tabFkMap.set(ref.column_name, ref);
-                });
-              });
-
               return (
                 <TabContent
                   key={tabResult.idTab}
@@ -729,193 +631,24 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                   backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
                 >
                   {data.type === 'SELECT' && (
-                    <>
-                      <Table
-                        loading={!!data.loading}
-                        rows={data.rows}
-                        sort={data.orderBy}
-                        onSort={(column) =>
-                          handleSortQueryResult(tabResult.idTab, column.attribute)
-                        }
-                        onScrollEnd={onScrollEnd}
-                        onContextMenu={onContextMenuTable}
-                        onCellLinkClick={(attribute, value) => {
-                          const ref = tabFkMap.get(attribute);
-                          if (!ref || value === null || value === undefined) return;
-                          const tabTitle = `${
-                            ref.reference_table_schema ? `${ref.reference_table_schema}.` : ''
-                          }${ref.reference_table_name} [${ref.reference_column_name}=${value}]`;
-                          const escapedValue = String(value).replace(/'/g, "''");
-                          const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
-                          addTab({
-                            title: tabTitle,
-                            data: {
-                              type: 'table-info',
-                              id_connection,
-                              schema: ref.reference_table_schema,
-                              table: ref.reference_table_name,
-                              initialWhere,
-                              filterLocked: true,
-                              initialTab: 'tabData',
-                            },
-                            component: () => (
-                              <TableInfoWithContext
-                                id_connection={id_connection}
-                                schema={ref.reference_table_schema}
-                                table={ref.reference_table_name}
-                                initialWhere={initialWhere}
-                                filterLocked
-                                initialTab="tabData"
-                              />
-                            ),
-                          });
-                        }}
-                        columns={data.columns.map((column) => ({
-                          title: 'Clique para ordenar por essa coluna',
-                          attribute: column,
-                          label: column,
-                          sortable: true,
-                          isLink: tabFkMap.has(column),
-                        }))}
-                      />
-
-                      <Bar
-                        backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
-                        borderColor={activeTheme.queryEditor.bar.borderColor}
-                      >
-                        <Button
-                          text
-                          smallIcon
-                          title="Salvar"
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          <SaveIcon size={16} />
-                        </Button>
-
-                        <Button
-                          text
-                          smallIcon
-                          title="Exportar"
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          <ExportIcon size={16} />
-                        </Button>
-
-                        <Button
-                          text
-                          smallIcon
-                          title="Mostrar dados do vínculo"
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          <PanelFile size={16} />
-                        </Button>
-
-                        <Button
-                          text
-                          smallIcon
-                          title="Atualizar dados"
-                          onClick={() => refreshResultSqlTab(tabResult.idTab)}
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          <IconRefresh size={18} />
-                        </Button>
-
-                        <Spacer />
-
-                        <Text
-                          title="Tempo de execução da query"
-                          userSelect={false}
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          {data.execution_time_ms < 1000
-                            ? `${data.execution_time_ms}ms`
-                            : `${(data.execution_time_ms / 1000).toFixed(2)}s`}
-                        </Text>
-
-                        <Text
-                          title="Total de Linhas sendo exibidas"
-                          userSelect={false}
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          Linhas exibidas: {data.rows.length}
-                        </Text>
-
-                        <Text
-                          title="Data da última atualização"
-                          userSelect={false}
-                          color={activeTheme.queryEditor.bar.color}
-                        >
-                          Atualizado em {toDateTime(data.date_run)}
-                        </Text>
-                      </Bar>
-                    </>
+                    <TabContentSelect
+                      data={data}
+                      id_connection={id_connection}
+                      references={tableReferences}
+                      onSort={(column) => handleSortQueryResult(tabResult.idTab, column.attribute)}
+                      onScrollEnd={onScrollEnd}
+                      onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
+                    />
                   )}
 
-                  {data.type === 'DELETE' && (
-                    <div className={styles.paddingContent}>
-                      <Text bold color={activeTheme.queryEditor.tab.color}>
-                        Remoção executada com sucesso
-                      </Text>
+                  {data.type === 'DELETE' && <TabContentDelete data={data} />}
 
-                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-                      <Text color={activeTheme.queryEditor.tab.color}>
-                        Total de linhas afetadas: {data.affected_rows}
-                      </Text>
+                  {data.type === 'ALTER' && <TabContentAlter data={data} />}
 
-                      <Text color={activeTheme.queryEditor.tab.color}>
-                        Executado em {toDateTime(data.date_run)}
-                      </Text>
-                    </div>
-                  )}
-
-                  {data.type === 'ALTER' && (
-                    <div className={styles.paddingContent}>
-                      <Text bold color={activeTheme.queryEditor.tab.color}>
-                        Alteração realizada com sucesso
-                      </Text>
-
-                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-
-                      <Text color={activeTheme.queryEditor.tab.color}>
-                        Executado em {toDateTime(data.date_run)}
-                      </Text>
-                    </div>
-                  )}
-
-                  {data.type === 'ERROR' && (
-                    <div className={styles.resultContainer}>
-                      <div className={styles.resultCard}>
-                        <div className={styles.resultHeader}>
-                          <IconMdiAlertCircle width={18} height={18} />
-
-                          <Text bold color="#ffb4b4">
-                            Erro ao executar a query
-                          </Text>
-                        </div>
-
-                        <div className={styles.resultMessage}>
-                          <Text color="#ffe1e1">{data.message || 'Erro desconhecido'}</Text>
-                        </div>
-
-                        <Text small color="#c9a0a0">
-                          Executado em {toDateTime(data.date_run)}
-                        </Text>
-                      </div>
-                    </div>
-                  )}
+                  {data.type === 'ERROR' && <TabcontentError data={data} />}
 
                   {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
-                    <div className={styles.paddingContent}>
-                      <Text bold color={activeTheme.queryEditor.tab.color}>
-                        Query executada com sucesso
-                      </Text>
-
-                      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-
-                      <Text color={activeTheme.queryEditor.tab.color}>
-                        Executado em {toDateTime(data.date_run)}
-                      </Text>
-                    </div>
+                    <TabContentGeneric data={data} />
                   )}
                 </TabContent>
               );
@@ -923,32 +656,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           </TabWindow>
         </ResizableContainer>
       )}
-
-      <ModalQueryVariables
-        show={!!pendingQueryExecution}
-        variables={getQueryVariables(pendingQueryExecution?.query || '')}
-        onCancel={closeVariablesModal}
-        onExecute={executePendingQuery}
-      />
-
-      <ContextMenu
-        position={contextMenuTable?.position}
-        onClose={() => setContextMenuTable(undefined)}
-        options={[
-          {
-            text: 'Copiar',
-            onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
-          },
-          {
-            text: 'Copiar linha',
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
-          },
-          {
-            text: 'Copiar linha como JSON',
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
-          },
-        ]}
-      />
     </div>
   );
 };
