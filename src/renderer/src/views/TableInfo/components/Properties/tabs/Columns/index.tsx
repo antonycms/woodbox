@@ -617,10 +617,6 @@ const Columns = ({
           <AddIcon size={14} />
         </Button>
 
-        <Button title="Duplicar itens selecionados" text smallIcon color={theme.bar.color}>
-          <DuplicateIcon size={20} />
-        </Button>
-
         <Button
           title="Remover itens selecionados"
           text
