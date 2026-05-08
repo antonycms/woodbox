@@ -33,6 +33,7 @@ import { ModalDeleteTable } from './components/ModalDeleteTable';
 import { ModalRenameTable } from './components/ModalRenameTable';
 import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
+import { ModalRenameSchema } from './components/ModalRenameSchema';
 import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
@@ -76,6 +77,7 @@ const ProjectsMenu = () => {
 
   const [schemaToCreate, setSchemaToCreate] = React.useState<IItemTreeViewData>();
   const [schemaToDelete, setSchemaToDelete] = React.useState<IItemTreeViewData>();
+  const [schemaToRename, setSchemaToRename] = React.useState<IItemTreeViewData>();
   const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
   const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
 
@@ -162,6 +164,10 @@ const ProjectsMenu = () => {
 
   const closeDeleteSchemaModal = React.useCallback(() => {
     setSchemaToDelete(null);
+  }, []);
+
+  const closeRenameSchemaModal = React.useCallback(() => {
+    setSchemaToRename(null);
   }, []);
 
   const closeDeleteTableModal = React.useCallback(() => {
@@ -322,7 +328,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Renomear Esquema',
-          onClick: () => {},
+          onClick: () => setSchemaToRename(contextMenuItemSelected),
         },
         {
           text: 'Excluir Esquema',
@@ -585,6 +591,13 @@ const ProjectsMenu = () => {
         idConnection={schemaToDelete?.data?.id_connection}
         schema={schemaToDelete?.data?.schema_name}
         onClose={closeDeleteSchemaModal}
+      />
+
+      <ModalRenameSchema
+        show={!!schemaToRename}
+        idConnection={schemaToRename?.data?.id_connection}
+        schema={schemaToRename?.data?.schema_name}
+        onClose={closeRenameSchemaModal}
       />
 
       <ModalDeleteTable
