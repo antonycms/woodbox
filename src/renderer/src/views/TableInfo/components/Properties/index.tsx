@@ -5,6 +5,7 @@ import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { generateHash } from '@renderer/utils/string';
 import { useForm } from '@renderer/hooks/useForm';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '../../dtos';
 import Columns from './tabs/Columns';
 import ForeingKeys from './tabs/ForeingKeys';
@@ -18,6 +19,7 @@ import styles from './styles.module.css';
 
 interface IPropertiesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+  onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
 }
 
 const Properties = (props: IPropertiesProps) => {
@@ -31,6 +33,15 @@ const Properties = (props: IPropertiesProps) => {
 
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState<string>('1');
+  const {
+    loadTableColumns,
+    loadTableReferences,
+    loadTableUsedAsReference,
+    loadTableRestrictions,
+    loadTableDefinition,
+    loadTableIndexes,
+    loadTableTriggers,
+  } = useTableInfoContext();
 
   const { state, register } = useForm({
     table: table || '',
@@ -38,6 +49,41 @@ const Properties = (props: IPropertiesProps) => {
   });
 
   const tableName = isCreateMode ? state.table.trim() : table;
+
+  const handleRefreshActiveTab = React.useCallback(() => {
+    if (isCreateMode) return;
+
+    const filters = { schema: props.schema, table };
+
+    if (activeTabId === '1') return loadTableColumns(props.id_connection, filters);
+    if (activeTabId === '8') return loadTableIndexes(props.id_connection, filters);
+    if (activeTabId === '2') return loadTableRestrictions(props.id_connection, filters);
+    if (activeTabId === '3') return loadTableReferences(props.id_connection, filters);
+    if (activeTabId === '4') return loadTableUsedAsReference(props.id_connection, filters);
+    if (activeTabId === '7') {
+      loadTableReferences(props.id_connection, filters);
+      return loadTableUsedAsReference(props.id_connection, filters);
+    }
+    if (activeTabId === '6') return loadTableTriggers(props.id_connection, filters);
+    if (activeTabId === '5') return loadTableDefinition(props.id_connection, filters);
+  }, [
+    activeTabId,
+    isCreateMode,
+    loadTableColumns,
+    loadTableDefinition,
+    loadTableIndexes,
+    loadTableReferences,
+    loadTableRestrictions,
+    loadTableTriggers,
+    loadTableUsedAsReference,
+    props.id_connection,
+    props.schema,
+    table,
+  ]);
+
+  React.useEffect(() => {
+    props.onRegisterRefresh?.(handleRefreshActiveTab);
+  }, [props.onRegisterRefresh, handleRefreshActiveTab]);
 
   const tabs = React.useMemo(() => {
     const allowedTabs = [

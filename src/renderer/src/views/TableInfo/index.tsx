@@ -24,6 +24,8 @@ const TableInfo = (props: ITableInfoProps) => {
   const [activeTableInfoTabId, setActiveTableInfoTabId] = React.useState(
     props.initialTab || 'tabProperties',
   );
+  const propertiesRefreshRef = React.useRef<(() => void | Promise<void>) | undefined>(undefined);
+  const dataRefreshRef = React.useRef<(() => void | Promise<void>) | undefined>(undefined);
   const isCreateMode = mode === 'create';
 
   const tabsProps = React.useMemo(() => ({ ...props, mode, table }), [mode, props, table]);
@@ -124,8 +126,26 @@ const TableInfo = (props: ITableInfoProps) => {
     [addTab],
   );
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'F5') return;
+
+      event.preventDefault();
+
+      if (activeTableInfoTabId === 'tabProperties') {
+        propertiesRefreshRef.current?.();
+        return;
+      }
+
+      if (activeTableInfoTabId === 'tabData') {
+        dataRefreshRef.current?.();
+      }
+    },
+    [activeTableInfoTabId],
+  );
+
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onKeyDown={handleKeyDown}>
       <TabBar
         borderBottom
         idTabBar={id}
@@ -156,12 +176,21 @@ const TableInfo = (props: ITableInfoProps) => {
             {...tabsProps}
             onOpenTable={handleOpenTableSimple}
             onCreateApplied={handleCreateApplied}
+            onRegisterRefresh={(refresh) => {
+              propertiesRefreshRef.current = refresh;
+            }}
           />
         </TabContent>
 
         {!isCreateMode && (
           <TabContent idTab="tabData">
-            <Data {...tabsProps} onOpenTable={handleOpenTable} />
+            <Data
+              {...tabsProps}
+              onOpenTable={handleOpenTable}
+              onRegisterRefresh={(refresh) => {
+                dataRefreshRef.current = refresh;
+              }}
+            />
           </TabContent>
         )}
       </TabWindow>

@@ -46,6 +46,7 @@ interface IDataProps extends ITableInfoProps {
     filterColumn: string,
     filterValue: string,
   ) => void;
+  onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
 }
 
 const normalizeCellValue = (value: any) => (value === '' ? null : value);
@@ -57,6 +58,7 @@ const Data = ({
   initialWhere,
   filterLocked,
   onOpenTable,
+  onRegisterRefresh,
 }: IDataProps) => {
   const {
     activeTheme: {
@@ -313,6 +315,10 @@ const Data = ({
     setDroppedRows(new Map());
     setItems(serializeRows(data));
   }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows]);
+
+  React.useEffect(() => {
+    onRegisterRefresh?.(handleRefresh);
+  }, [onRegisterRefresh, handleRefresh]);
 
   const applyPendingRows = React.useCallback(
     async (whereColumns: string[]) => {
