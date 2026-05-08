@@ -1,7 +1,13 @@
 import React from 'react';
 import Editor, { IEditorRef } from '@renderer/components/Editor';
 import styles from './styles.module.css';
-import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
+import {
+  TabBar,
+  TabContent,
+  TabWindow,
+  type IActiveTabContextMenu,
+} from '@renderer/components/Tabs';
+import type { IContextMenuOption } from '@renderer/components/ContextMenu';
 import { generateHash } from '@renderer/utils/string';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
@@ -128,15 +134,20 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     return updateTabResultData;
   };
 
-  const removeTabResult = (idTab: string) => {
-    setTabsResult((prevState) => prevState.filter((tab) => tab.idTab !== idTab));
+  const removeTabResult = (idTab: string | string[]) => {
+    const tabsIdToRemove = new Set(Array.isArray(idTab) ? idTab : [idTab]);
+
+    setTabsResult((prevState) => prevState.filter((tab) => !tabsIdToRemove.has(tab.idTab)));
 
     setQuerysResultData((prevState) => {
-      prevState.delete(idTab);
-      return new Map(prevState);
+      const newMap = new Map(prevState);
+
+      tabsIdToRemove.forEach((id) => newMap.delete(id));
+
+      return newMap;
     });
 
-    if (activeTabId === idTab) setActiveTabId(null);
+    if (activeTabId && tabsIdToRemove.has(activeTabId)) setActiveTabId(null);
   };
 
   const getSelectionsValues = () => {
@@ -500,6 +511,41 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     return { schemas: schemasSerialized, tablesAvailable, tablesUsed, columns };
   }, [connectionsInfo, currentQueryTablesInfo, tableColumns]);
 
+  const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
+    () => [
+      {
+        text: 'Fechar aba',
+        onClick: (info) => removeTabResult(info.tab.idTab),
+      },
+      tabsResult.length > 1 && {
+        text: 'Fechar outras abas',
+        onClick: (info) => {
+          setActiveTabId(info.tab.idTab);
+          removeTabResult(
+            tabsResult.filter((tab) => tab.idTab !== info.tab.idTab).map((tab) => tab.idTab),
+          );
+        },
+      },
+      tabsResult.length > 1 && {
+        text: 'Fechar abas à esquerda',
+        onClick: (info) => {
+          removeTabResult(tabsResult.slice(0, info.index).map((tab) => tab.idTab));
+        },
+      },
+      tabsResult.length > 1 && {
+        text: 'Fechar abas à direita',
+        onClick: (info) => {
+          removeTabResult(tabsResult.slice(info.index + 1).map((tab) => tab.idTab));
+        },
+      },
+      tabsResult.length > 1 && {
+        text: 'Fechar todas as abas',
+        onClick: () => removeTabResult(tabsResult.map((tab) => tab.idTab)),
+      },
+    ],
+    [tabsResult, activeTabId],
+  );
+
   const runAllRef = React.useRef(runAllSQL);
   runAllRef.current = runAllSQL;
 
@@ -611,6 +657,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
             onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
             idTabBar={`bottomTabEditor_${id}`}
             onRemoveTab={(tab) => removeTabResult(tab.idTab)}
+            contextMenuOptions={contextMenuOptions}
             ascentColor={activeTheme.queryEditor.tab.ascentColor}
             backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
             backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
