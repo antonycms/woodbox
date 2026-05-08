@@ -1,5 +1,10 @@
 import React from 'react';
-import Table, { type ITableContextMenuData } from '@renderer/components/Table';
+import Table, {
+  type ITableContextMenuData,
+  type ITableSelectedCellData,
+} from '@renderer/components/Table';
+import Editor from '@renderer/components/Editor';
+import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
@@ -91,6 +96,25 @@ const Data = ({
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+  const [showValuePreview, setShowValuePreview] = React.useState(false);
+  const [previewWidth, setPreviewWidth] = React.useState(420);
+  const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
+
+  const previewValue = React.useMemo(() => {
+    const value = selectedCell?.value;
+
+    if (value === undefined || value === null) return '';
+
+    if (typeof value === 'string') {
+      try {
+        return JSON.stringify(JSON.parse(value), null, 2);
+      } catch {
+        return value;
+      }
+    }
+
+    return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+  }, [selectedCell]);
 
   const serializeRows = React.useCallback(
     (rows: any[]) =>
@@ -556,56 +580,83 @@ const Data = ({
         />
       </div>
 
-      <Table
-        columns={columnsSerialized}
-        rows={itemsWithPendingStyles}
-        sort={sort}
-        onSort={handleSort}
-        rowKeyExtractor={(row, index) => row.__table_hash_item ?? index}
-        onScrollEnd={loadData}
-        loading={isLoading}
-        onContextMenu={onContextMenuTable}
-        onSelectRow={setSelectedRows}
-        editedRows={editedFieldsRows}
-        newRows={newRows}
-        onCellLinkClick={handleFkCellClick}
-        onEditNewRow={(rowKey, attribute, value) => {
-          const normalizedValue = normalizeCellValue(value);
+      <div className={styles.content}>
+        <div className={styles.tableWrapper}>
+          <Table
+            columns={columnsSerialized}
+            rows={itemsWithPendingStyles}
+            sort={sort}
+            onSort={handleSort}
+            rowKeyExtractor={(row, index) => row.__table_hash_item ?? index}
+            onScrollEnd={loadData}
+            loading={isLoading}
+            onContextMenu={onContextMenuTable}
+            onSelectRow={setSelectedRows}
+            onSelectCellData={setSelectedCell}
+            editedRows={editedFieldsRows}
+            newRows={newRows}
+            onCellLinkClick={handleFkCellClick}
+            onEditNewRow={(rowKey, attribute, value) => {
+              const normalizedValue = normalizeCellValue(value);
 
-          setNewRows((prevState) => {
-            const newState = new Map(prevState);
-            const prevRowEdited = { ...(newState.get(rowKey) || {}) };
+              setNewRows((prevState) => {
+                const newState = new Map(prevState);
+                const prevRowEdited = { ...(newState.get(rowKey) || {}) };
 
-            newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
+                newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
 
-            return newState;
-          });
-        }}
-        onEditRow={(index, attribute, value, rowKey) => {
-          const normalizedValue = normalizeCellValue(value);
-          const key = rowKey ?? index;
-          const row = items[index];
+                return newState;
+              });
+            }}
+            onEditRow={(index, attribute, value, rowKey) => {
+              const normalizedValue = normalizeCellValue(value);
+              const key = rowKey ?? index;
+              const row = items[index];
 
-          setEditedFieldsRows((prevState) => {
-            const newState = new Map(prevState);
-            const prevRowEdited = { ...(newState.get(key) || {}) };
-            const originalValue = row?.[attribute];
+              setEditedFieldsRows((prevState) => {
+                const newState = new Map(prevState);
+                const prevRowEdited = { ...(newState.get(key) || {}) };
+                const originalValue = row?.[attribute];
 
-            if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
-              delete prevRowEdited[attribute];
+                if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
+                  delete prevRowEdited[attribute];
 
-              if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
-              else newState.delete(key);
+                  if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
+                  else newState.delete(key);
 
-              return newState;
-            }
+                  return newState;
+                }
 
-            newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
+                newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
 
-            return newState;
-          });
-        }}
-      />
+                return newState;
+              });
+            }}
+          />
+        </div>
+
+        {showValuePreview && (
+          <ResizableContainer
+            width={previewWidth}
+            minWidth={260}
+            maxWidth={900}
+            direction="horizontal"
+            horizontalResizeSide="left"
+            className={styles.previewResizable}
+            onResize={(size) => size.width && setPreviewWidth(size.width)}
+          >
+            <div className={styles.preview}>
+              <Editor
+                dialect="postgres"
+                language="json"
+                readonly
+                hidePreview
+                value={previewValue}
+              />
+            </div>
+          </ResizableContainer>
+        )}
+      </div>
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
@@ -643,7 +694,13 @@ const Data = ({
           <RemoveIcon size={16} />
         </Button>
 
-        <Button title="Mostrar dados do vínculo" text smallIcon color={theme.bar.color}>
+        <Button
+          title={showValuePreview ? 'Fechar visualizacão' : 'Abrir visualizacão'}
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={() => setShowValuePreview((value) => !value)}
+        >
           <PanelFile size={16} />
         </Button>
 

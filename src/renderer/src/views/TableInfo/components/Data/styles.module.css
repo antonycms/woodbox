@@ -28,6 +28,31 @@
   opacity: 0.5;
 }
 
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.previewResizable {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.preview {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid #ffffff22;
+}
+
 .bottomBarInfoContainer {
   flex: 1;
   display: flex;
