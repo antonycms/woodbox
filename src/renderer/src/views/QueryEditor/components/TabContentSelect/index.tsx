@@ -10,7 +10,7 @@ import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
+import { CancelIcon, ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
 import TableInfoWithContext from '@renderer/views/TableInfo';
@@ -46,6 +46,14 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [referenceCache, setReferenceCache] = React.useState<Map<string, Record<string, any>>>(
     new Map(),
   );
+
+  const closeValuePreview = () => {
+    setShowValuePreview(false);
+    setActivePreviewTab('value');
+    setReferenceCache(new Map());
+    setReferenceError(undefined);
+    setReferenceLoadingKeys(new Set());
+  };
 
   const previewValue = React.useMemo(() => {
     const value = selectedCell?.value;
@@ -265,6 +273,14 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 >
                   Referência
                 </button>
+
+                <button
+                  className={styles.previewCloseButton}
+                  title="Fechar visualização"
+                  onClick={closeValuePreview}
+                >
+                  <CancelIcon size={14} />
+                </button>
               </div>
 
               <div className={styles.previewContent}>
@@ -317,16 +333,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           smallIcon
           title={showValuePreview ? 'Fechar visualizacão' : 'Abrir visualizacão'}
           onClick={() => {
-            setShowValuePreview((value) => {
-              if (value) {
-                setActivePreviewTab('value');
-                setReferenceCache(new Map());
-                setReferenceError(undefined);
-                setReferenceLoadingKeys(new Set());
-              }
+            if (showValuePreview) {
+              closeValuePreview();
+              return;
+            }
 
-              return !value;
-            });
+            setShowValuePreview(true);
           }}
           color={activeTheme.queryEditor.bar.color}
         >

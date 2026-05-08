@@ -27,6 +27,7 @@
 .previewTabs {
   display: flex;
   flex-shrink: 0;
+  align-items: center;
   height: 30px;
   border-bottom: 1px solid #ffffff22;
 }
@@ -48,6 +49,23 @@
 
 .previewTabActive {
   border-bottom: 1px solid currentColor;
+}
+
+.previewCloseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.previewCloseButton:hover {
+  opacity: 0.75;
 }
 
 .previewContent {
