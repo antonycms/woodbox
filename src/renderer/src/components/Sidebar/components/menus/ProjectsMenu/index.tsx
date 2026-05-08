@@ -30,6 +30,7 @@ import { ModalNewProject } from './components/ModalNewProject';
 import { ModalNewConnection } from './components/ModalNewConnection';
 import { ModalNewScript } from './components/ModalNewScript';
 import { ModalDeleteTable } from './components/ModalDeleteTable';
+import { ModalRenameTable } from './components/ModalRenameTable';
 import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import styles from './styles.module.css';
@@ -76,6 +77,7 @@ const ProjectsMenu = () => {
   const [schemaToCreate, setSchemaToCreate] = React.useState<IItemTreeViewData>();
   const [schemaToDelete, setSchemaToDelete] = React.useState<IItemTreeViewData>();
   const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
+  const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
@@ -164,6 +166,10 @@ const ProjectsMenu = () => {
 
   const closeDeleteTableModal = React.useCallback(() => {
     setTableToDelete(null);
+  }, []);
+
+  const closeRenameTableModal = React.useCallback(() => {
+    setTableToRename(null);
   }, []);
 
   const handleOpemItemTreeView = async (item: IItemTreeViewData, itemIsOpen: boolean) => {
@@ -334,7 +340,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Renomear Tabela',
-          onClick: () => {},
+          onClick: () => setTableToRename(contextMenuItemSelected),
         },
         {
           text: 'Excluir Tabela',
@@ -587,6 +593,14 @@ const ProjectsMenu = () => {
         schema={tableToDelete?.data?.table_schema}
         table={tableToDelete?.data?.table_name}
         onClose={closeDeleteTableModal}
+      />
+
+      <ModalRenameTable
+        show={!!tableToRename}
+        idConnection={tableToRename?.data?.id_connection}
+        schema={tableToRename?.data?.table_schema}
+        table={tableToRename?.data?.table_name}
+        onClose={closeRenameTableModal}
       />
 
       <Row>
