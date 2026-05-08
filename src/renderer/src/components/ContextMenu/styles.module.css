@@ -1,6 +1,6 @@
 .container {
   position: fixed;
-  z-index: 2;
+  z-index: 4;
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
   border-radius: 4px;
