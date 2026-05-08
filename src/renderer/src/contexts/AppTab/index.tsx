@@ -9,45 +9,58 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
 
-  const addTab = React.useCallback((tabData: INewAppTab) => {
-    const {
-      id = generateHash(),
-      replaceId,
-      unsaved = false,
-      title = 'Sem titulo',
-      subtitle,
-      data,
-      component,
-    } = tabData;
+  const addTab = React.useCallback(
+    (tabData: INewAppTab) => {
+      const {
+        id = generateHash(),
+        replaceId,
+        unsaved = false,
+        title = 'Sem titulo',
+        subtitle,
+        data,
+        component,
+      } = tabData;
 
-    const tab: IAppTab = {
-      id,
-      title,
-      subtitle,
-      unsaved,
-      data,
-      component: React.memo(component) as any,
-    };
+      const tab: IAppTab = {
+        id,
+        title,
+        subtitle,
+        unsaved,
+        data,
+        component: React.memo(component) as any,
+      };
 
-    setTabs((prevState) => {
-      if (!replaceId) return [...prevState, tab];
+      setTabs((prevState) => {
+        const tabsIndex = new Map(prevState.map((t, i) => [t.id, i]));
 
-      const existingTargetIndex = prevState.findIndex((item) => item.id === id);
-      const replaceIndex = prevState.findIndex((item) => item.id === replaceId);
+        const activeTabIndex = tabsIndex.get(activeTabId) ?? -1;
+        const replaceTabIndex = tabsIndex.get(replaceId) ?? -1;
 
-      if (existingTargetIndex >= 0 && prevState[existingTargetIndex].id !== replaceId) {
-        return prevState.filter((item) => item.id !== replaceId);
-      }
+        const newState = [...prevState];
 
-      if (replaceIndex < 0) return [...prevState, tab];
+        const insertAfterActiveTab = () => {
+          if (activeTabIndex < 0) newState.push(tab);
+          else newState.splice(activeTabIndex + 1, 0, tab);
 
-      const next = [...prevState];
-      next[replaceIndex] = tab;
+          return newState;
+        };
 
-      return next;
-    });
-    setActiveTabId(tab.id);
-  }, []);
+        if (!replaceId || replaceTabIndex < 0) return insertAfterActiveTab();
+
+        const existingTarget = tabsIndex.get(id) >= 0;
+
+        if (existingTarget && id !== replaceId) {
+          newState.splice(replaceTabIndex, 1);
+        } else {
+          newState[replaceTabIndex] = tab;
+        }
+
+        return newState;
+      });
+      setActiveTabId(tab.id);
+    },
+    [activeTabId],
+  );
 
   const removeTab = React.useCallback(
     (tabId: string | string[]) => {
