@@ -1,9 +1,14 @@
 import React from 'react';
 import styles from './styles.module.css';
 
-const MultiplesBarLoading = () => {
+interface IMultiplesBarLoadingProps {
+  background?: string;
+}
+const MultiplesBarLoading = (props: IMultiplesBarLoadingProps) => {
+  const { background = 'rgba(0, 0, 0, 0.5)' } = props;
+
   return (
-    <div className={styles.container}>
+    <div style={{ background }} className={styles.container}>
       <div className={styles.loader}>
         <div className={styles.bar1}></div>
         <div className={styles.bar2}></div>
