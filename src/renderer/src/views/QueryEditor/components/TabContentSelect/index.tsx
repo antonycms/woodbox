@@ -2,8 +2,10 @@ import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { ContextMenu } from '@renderer/components/ContextMenu';
+import Editor from '@renderer/components/Editor';
+import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
-import Table, { ITableContextMenuData } from '@renderer/components/Table';
+import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -15,6 +17,7 @@ import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Dat
 import { IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { IColumn } from '@renderer/components/Table/dtos';
 import { IQueryResult } from '../../dtos';
+import styles from './styles.module.css';
 
 interface ITabContentSelectProps {
   id_connection: string;
@@ -32,6 +35,25 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const { addTab } = useAppTabContext();
 
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
+  const [showValuePreview, setShowValuePreview] = React.useState(false);
+  const [previewWidth, setPreviewWidth] = React.useState(420);
+  const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
+
+  const previewValue = React.useMemo(() => {
+    const value = selectedCell?.value;
+
+    if (value === undefined || value === null) return '';
+
+    if (typeof value === 'string') {
+      try {
+        return JSON.stringify(JSON.parse(value), null, 2);
+      } catch {
+        return value;
+      }
+    }
+
+    return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+  }, [selectedCell]);
 
   const tabFkMap = new Map<string, IColumnReferenceInfo>();
 
@@ -86,22 +108,49 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   return (
     <>
-      <Table
-        loading={!!data.loading}
-        rows={data.rows}
-        sort={data.orderBy}
-        onSort={onSort}
-        onScrollEnd={onScrollEnd}
-        onContextMenu={onContextMenuTable}
-        onCellLinkClick={onCellLinkClick}
-        columns={data.columns.map((column) => ({
-          title: 'Clique para ordenar por essa coluna',
-          attribute: column,
-          label: column,
-          sortable: true,
-          isLink: tabFkMap.has(column),
-        }))}
-      />
+      <div className={styles.content}>
+        <div className={styles.tableWrapper}>
+          <Table
+            loading={!!data.loading}
+            rows={data.rows}
+            sort={data.orderBy}
+            onSort={onSort}
+            onScrollEnd={onScrollEnd}
+            onContextMenu={onContextMenuTable}
+            onSelectCellData={setSelectedCell}
+            onCellLinkClick={onCellLinkClick}
+            columns={data.columns.map((column) => ({
+              title: 'Clique para ordenar por essa coluna',
+              attribute: column,
+              label: column,
+              sortable: true,
+              isLink: tabFkMap.has(column),
+            }))}
+          />
+        </div>
+
+        {showValuePreview && (
+          <ResizableContainer
+            width={previewWidth}
+            minWidth={260}
+            maxWidth={900}
+            direction="horizontal"
+            horizontalResizeSide="left"
+            className={styles.previewResizable}
+            onResize={(size) => size.width && setPreviewWidth(size.width)}
+          >
+            <div className={styles.preview}>
+              <Editor
+                dialect="postgres"
+                language="json"
+                readonly
+                hidePreview
+                value={previewValue}
+              />
+            </div>
+          </ResizableContainer>
+        )}
+      </div>
 
       <Bar
         backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
@@ -118,7 +167,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Button
           text
           smallIcon
-          title="Mostrar dados do vínculo"
+          title={showValuePreview ? 'Fechar visualizacão' : 'Abrir visualizacão'}
+          onClick={() => setShowValuePreview((value) => !value)}
           color={activeTheme.queryEditor.bar.color}
         >
           <PanelFile size={16} />
