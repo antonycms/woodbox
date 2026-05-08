@@ -38,6 +38,8 @@ import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNaviga
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
 import IconMdiAlertCircle from '~icons/mdi/alert-circle';
+import { ModalQueryVariables } from './components/ModalQueryVariables';
+import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
 
 interface IContextMenuTable {
   data: ITableContextMenuData | null;
@@ -58,6 +60,18 @@ interface IQueryResult {
   orderBy?: ITableSort[];
   auto_paginated?: boolean;
   tables_info?: ITableQuery[];
+  variableValues?: Record<string, string>;
+}
+
+interface IPendingQueryExecution {
+  query: string;
+  openNewTab?: boolean;
+  forceNewTab?: boolean;
+  markErrors?: boolean;
+}
+
+interface IExecuteQueryParams extends IPendingQueryExecution {
+  variableValues?: Record<string, string>;
 }
 
 type IDataMakeTabResult = IQueryResult & { title?: string };
@@ -102,6 +116,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     new Map(),
   );
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
+  const [pendingQueryExecution, setPendingQueryExecution] =
+    React.useState<IPendingQueryExecution>();
 
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -139,6 +155,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       affected_rows,
       page,
       title = `Result ${tabsResult.length + 1}`,
+      variableValues,
     } = data;
 
     const idTab = generateHash();
@@ -157,6 +174,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       page,
       affected_rows,
       tables_info: getTablesFromQuerySql(query),
+      variableValues,
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
@@ -191,53 +209,32 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     return selectionsValue;
   };
 
-  const refreshResultSqlTab = async (idTab: string) => {
-    const tab = querysResultData.get(idTab);
-    const updateTabResultData = makeUpdateResultTab(idTab);
+  const executeQuery = async (params: IExecuteQueryParams) => {
+    const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
+    const preparedQuery = prepareQueryVariables(query, variableValues);
+
+    const updateTabResultData =
+      !forceNewTab && !openNewTab && activeTabId
+        ? makeUpdateResultTab(activeTabId)
+        : makeNewTabResult({
+            query,
+            variableValues,
+            type: 'SELECT',
+            date_run: new Date().toISOString(),
+          });
 
     updateTabResultData({ loading: true, date_run: new Date().toISOString() });
 
     try {
+      if (markErrors) refEditor.current.setMarkers([]);
+
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, tab.query, { orderBy: tab.orderBy });
-
-      updateTabResultData({
-        page: 1,
-        columns,
-        rows,
-        type,
-        query: tab.query,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-        orderBy: tab.orderBy,
-      });
-    } catch (error) {
-      const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', message, query: tab.query, loading: false });
-    }
-  };
-
-  const runCurrentSQL = async (openNewTab?: boolean) => {
-    const query = getSelectionsValues().join('\n') || refEditor.current?.getCurrentValue?.();
-
-    if (!query) return;
-
-    const updateTabResultData =
-      !openNewTab && activeTabId
-        ? makeUpdateResultTab(activeTabId)
-        : makeNewTabResult({ query, type: 'SELECT', date_run: new Date().toISOString() });
-
-    updateTabResultData({ loading: true });
-
-    try {
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, query);
+        await runSql(id_connection, preparedQuery);
 
       updateTabResultData({
         page: 1,
         query,
+        variableValues,
         columns,
         rows,
         type,
@@ -247,77 +244,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         loading: false,
       });
     } catch (error) {
-      const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', query, message, loading: false });
-    }
-  };
+      const message = markErrors
+        ? error?.message?.split?.(' - ')?.[1] || error?.message
+        : `${error?.message} (position: ${error.position})`;
 
-  const runSelectionsSQL = async () => {
-    const selectionsValue = getSelectionsValues();
-    const query = selectionsValue.join('\n');
+      updateTabResultData({ type: 'ERROR', query, variableValues, message, loading: false });
 
-    if (!query) return;
-
-    const updateTabResultData = makeNewTabResult({
-      type: 'SELECT',
-      query,
-      loading: true,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, query);
-
-      updateTabResultData({
-        page: 1,
-        columns,
-        rows,
-        type,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-      });
-    } catch (error) {
-      const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', message, loading: false });
-    }
-  };
-
-  const runAllSQL = async () => {
-    const query = refEditor.current?.getValue?.();
-
-    if (!query) return;
-
-    const updateTabResultData = makeNewTabResult({
-      type: 'SELECT',
-      loading: true,
-      query,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      refEditor.current.setMarkers([]);
-
-      const x = await runSql(id_connection, query);
-
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] = x;
-
-      updateTabResultData({
-        page: 1,
-        columns,
-        rows,
-        type,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-      });
-    } catch (error) {
-      const message = error?.message?.split?.(' - ')?.[1];
-
-      updateTabResultData({ type: 'ERROR', message, loading: false });
+      if (!markErrors) return;
 
       const position = Number(error.position) + 1;
 
@@ -364,6 +297,90 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
+  const requestQueryExecution = (params: IPendingQueryExecution) => {
+    const variables = getQueryVariables(params.query);
+
+    if (variables.length) {
+      setPendingQueryExecution(params);
+      return;
+    }
+
+    executeQuery(params);
+  };
+
+  const closeVariablesModal = () => setPendingQueryExecution(undefined);
+
+  const executePendingQuery = (variableValues: Record<string, string>) => {
+    if (!pendingQueryExecution) return;
+
+    const params = { ...pendingQueryExecution, variableValues };
+    setPendingQueryExecution(undefined);
+    executeQuery(params);
+  };
+
+  const refreshResultSqlTab = async (idTab: string) => {
+    const tab = querysResultData.get(idTab);
+    const updateTabResultData = makeUpdateResultTab(idTab);
+    const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
+
+    updateTabResultData({ loading: true, date_run: new Date().toISOString() });
+
+    try {
+      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
+        await runSql(id_connection, preparedQuery, {
+          orderBy: tab.orderBy,
+        });
+
+      updateTabResultData({
+        page: 1,
+        columns,
+        rows,
+        type,
+        query: tab.query,
+        variableValues: tab.variableValues,
+        affected_rows,
+        auto_paginated,
+        execution_time_ms,
+        loading: false,
+        orderBy: tab.orderBy,
+      });
+    } catch (error) {
+      const message = `${error?.message} (position: ${error.position})`;
+      updateTabResultData({
+        type: 'ERROR',
+        message,
+        query: tab.query,
+        variableValues: tab.variableValues,
+        loading: false,
+      });
+    }
+  };
+
+  const runCurrentSQL = async (openNewTab?: boolean) => {
+    const query = getSelectionsValues().join('\n') || refEditor.current?.getCurrentValue?.();
+
+    if (!query) return;
+
+    requestQueryExecution({ query, openNewTab });
+  };
+
+  const runSelectionsSQL = async () => {
+    const selectionsValue = getSelectionsValues();
+    const query = selectionsValue.join('\n');
+
+    if (!query) return;
+
+    requestQueryExecution({ query, forceNewTab: true });
+  };
+
+  const runAllSQL = async () => {
+    const query = refEditor.current?.getValue?.();
+
+    if (!query) return;
+
+    requestQueryExecution({ query, forceNewTab: true, markErrors: true });
+  };
+
   const onScrollEnd = async () => {
     const lastTabResult = querysResultData.get(activeTabId);
 
@@ -372,13 +389,17 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const updateTabResultData = makeUpdateResultTab(activeTabId);
 
     const query = lastTabResult.query;
+    const preparedQuery = prepareQueryVariables(query, lastTabResult.variableValues);
     const newPage = (lastTabResult.page || 1) + 1;
 
     updateTabResultData({ loading: true });
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, query, { page: newPage, orderBy: lastTabResult.orderBy });
+        await runSql(id_connection, preparedQuery, {
+          page: newPage,
+          orderBy: lastTabResult.orderBy,
+        });
 
       updateTabResultData({
         page: newPage,
@@ -386,6 +407,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         rows: [...lastTabResult.rows, ...rows],
         type,
         query,
+        variableValues: lastTabResult.variableValues,
         affected_rows,
         auto_paginated,
         loading: false,
@@ -393,7 +415,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       });
     } catch (error) {
       const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', query, message, loading: false });
+      updateTabResultData({
+        type: 'ERROR',
+        query,
+        variableValues: lastTabResult.variableValues,
+        message,
+        loading: false,
+      });
     }
   };
 
@@ -403,12 +431,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     const orderBy = getNextSort(tab.orderBy, columnName);
     const updateTabResultData = makeUpdateResultTab(idTab);
+    const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
 
     updateTabResultData({ loading: true, orderBy });
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, tab.query, { page: 1, orderBy });
+        await runSql(id_connection, preparedQuery, {
+          page: 1,
+          orderBy,
+        });
 
       updateTabResultData({
         page: 1,
@@ -416,6 +448,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         rows,
         type,
         query: tab.query,
+        variableValues: tab.variableValues,
         affected_rows,
         auto_paginated,
         execution_time_ms,
@@ -890,6 +923,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           </TabWindow>
         </ResizableContainer>
       )}
+
+      <ModalQueryVariables
+        show={!!pendingQueryExecution}
+        variables={getQueryVariables(pendingQueryExecution?.query || '')}
+        onCancel={closeVariablesModal}
+        onExecute={executePendingQuery}
+      />
 
       <ContextMenu
         position={contextMenuTable?.position}
