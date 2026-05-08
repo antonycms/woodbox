@@ -18,7 +18,45 @@
 
 .preview {
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   border-left: 1px solid #ffffff22;
+}
+
+.previewTabs {
+  display: flex;
+  flex-shrink: 0;
+  height: 30px;
+  border-bottom: 1px solid #ffffff22;
+}
+
+.previewTab,
+.previewTabActive {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.previewTab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.previewTabActive {
+  border-bottom: 1px solid currentColor;
+}
+
+.previewContent {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.previewLoading {
+  width: 100%;
+  padding: 12px;
 }
