@@ -99,19 +99,31 @@ const TreeView = (props: ITreeViewProps) => {
     props.onContextMenu?.({ id: item.id, label: item.label, data: item.data, type: item.type }, e);
   };
 
-  const handleSwitchItem = async (item: IItemTreeView) => {
+  const handleSwitchItem = async (item: IItemTreeView, open?: boolean) => {
     const itemIsOpen = openedItemsId.some((id) => id === item.id);
+
+    if (typeof open === 'boolean' && itemIsOpen === open) return;
 
     const succes = await props.onSwitchItem?.(item, itemIsOpen);
 
     if (succes === false) return;
 
-    if (itemIsOpen) {
+    if (open === false || itemIsOpen) {
       setOpenedItemsId((prevState) => prevState.filter((id) => id !== item.id));
     } else {
       setOpenedItemsId((prevState) => [...prevState, item.id]);
     }
   };
+
+  React.useImperativeHandle(props.ref, () => ({
+    switch: async (id: string, open?: boolean) => {
+      const item = getItemRecursive(props.items, id);
+
+      if (!item) return;
+
+      await handleSwitchItem(item, open);
+    },
+  }));
 
   return (
     <div
@@ -156,7 +168,12 @@ export interface IItemTreeView extends IItemTreeViewData {
   loading?: boolean;
 }
 
+export interface ITreeViewRef {
+  switch(id: string, open?: boolean): Promise<void>;
+}
+
 interface ITreeViewProps {
+  ref?: React.Ref<ITreeViewRef>;
   items: IItemTreeView[];
   color?: string;
   onClick?(itemData: IItemTreeViewData): void;

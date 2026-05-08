@@ -11,7 +11,11 @@ import {
   IContextMenuOption,
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import TreeView, { IItemTreeView, IItemTreeViewData } from '@renderer/components/TreeView';
+import TreeView, {
+  IItemTreeView,
+  IItemTreeViewData,
+  ITreeViewRef,
+} from '@renderer/components/TreeView';
 import { IScript, useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
@@ -48,6 +52,7 @@ const ProjectsMenu = () => {
 
   const { showToast } = useToast();
   const { addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
+  const treeViewRef = React.useRef<ITreeViewRef>(null);
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
 
   const [filterText, setFilterText] = React.useState('');
@@ -278,7 +283,10 @@ const ProjectsMenu = () => {
         },
         checkHasConnection(contextMenuItemSelected?.id) && {
           text: 'Desconectar',
-          onClick: () => closeConnection(contextMenuItemSelected?.id),
+          onClick: async () => {
+            await closeConnection(contextMenuItemSelected?.id);
+            await treeViewRef.current?.switch(contextMenuItemSelected?.id, false);
+          },
         },
         {
           text: 'Recarregar',
@@ -643,6 +651,7 @@ const ProjectsMenu = () => {
 
       <div className={styles.containerTreeViewProjects}>
         <TreeView
+          ref={treeViewRef}
           onContextMenu={onContextMenuTreeView}
           onSwitchItem={handleOpemItemTreeView}
           onDoubleClick={handleDoubleClickItemThreeView}
