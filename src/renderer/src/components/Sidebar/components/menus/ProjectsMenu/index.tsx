@@ -521,6 +521,7 @@ const ProjectsMenu = () => {
         return {
           id: connection.id,
           label: connection.description,
+          labelInfo: `${connection.host}:${connection.port}`,
           loading: loadingConnectionsId.includes(connection.id),
           icon: 'database' as const,
           type: 'connection' as const,
