@@ -847,6 +847,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectAnalysisCell}
+          onCellLinkClick={onCellLinkClick}
         />
       ) : (
         <TableDefaultView
