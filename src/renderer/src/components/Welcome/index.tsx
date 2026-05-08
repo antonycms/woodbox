@@ -11,9 +11,9 @@ export const Welcolme = () => {
   const shortcuts = [
     { label: 'Busca centralizada', keys: ['Ctrl', 'K'] },
     { label: 'Filtrar projetos', keys: ['Ctrl', 'Shift', 'F'] },
-    { label: 'Executar SQL', keys: ['Ctrl', 'Enter'] },
     { label: 'Fechar aba ativa', keys: ['Ctrl', 'W'] },
-    { label: 'Salvar alterações', keys: ['Ctrl', 'S'] },
+    { label: 'Executar SQL', keys: ['Ctrl', 'Enter'] },
+    { label: 'Executar SQL em outra aba', keys: ['Ctrl', 'Shift', 'Enter'] },
   ];
 
   return (
