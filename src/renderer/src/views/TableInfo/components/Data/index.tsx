@@ -764,7 +764,6 @@ const Data = ({
               setShowDdlModal(true);
             },
           },
-          { text: 'Definir como null' },
         ]}
       />
     </div>
