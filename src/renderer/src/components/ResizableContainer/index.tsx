@@ -19,6 +19,7 @@ export interface IResizableDivProps {
   style?: React.CSSProperties;
   title?: string;
   direction?: 'horizontal' | 'vertical';
+  horizontalResizeSide?: 'left' | 'right';
 }
 
 const ResizableContainer = ({
@@ -36,8 +37,9 @@ const ResizableContainer = ({
   className,
   style,
   direction = 'horizontal',
+  horizontalResizeSide = 'right',
 }: IResizableDivProps) => {
-  const refContentDiv = React.useRef<HTMLDivElement>();
+  const refContentDiv = React.useRef<HTMLDivElement>(null);
 
   function clampSize(width: number, min: number, max: number): number {
     if (width > max) return max;
@@ -56,7 +58,10 @@ const ResizableContainer = ({
     const startWidth = width || currentTarget.parentElement?.getBoundingClientRect().width || 0;
 
     function onPointerMove(event: PointerEvent) {
-      const width = startWidth + event.clientX - startX;
+      const width =
+        horizontalResizeSide === 'left'
+          ? startWidth + startX - event.clientX
+          : startWidth + event.clientX - startX;
 
       if (width > 0) {
         onResize?.({ width: clampSize(width, minWidth, maxWidth) });
@@ -134,7 +139,11 @@ const ResizableContainer = ({
       {direction === 'horizontal' && (
         <div
           draggable="false"
-          className={classes(styles.resizeBar, styles.horizontal)}
+          className={classes(
+            styles.resizeBar,
+            styles.horizontal,
+            horizontalResizeSide === 'left' && styles.left,
+          )}
           onClick={(event) => event.stopPropagation()}
           onDoubleClick={onDoubleClick}
           onPointerDown={handleResizeHorizontal}

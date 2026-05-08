@@ -28,6 +28,11 @@
   width: 4px;
 }
 
+.resizeBar.horizontal.left {
+  left: -2px;
+  right: unset;
+}
+
 .resizeBar.vertical {
   cursor: n-resize;
   top: 0;
