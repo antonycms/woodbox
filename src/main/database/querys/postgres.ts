@@ -9,18 +9,24 @@ const getAllSchemas = () => /* sql */ `
   WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
   AND schema_name NOT LIKE 'pg_temp_%'
   AND schema_name NOT LIKE 'pg_toast_temp_%'
+  AND has_schema_privilege(schema_name, 'USAGE')
   ORDER BY schema_name;
 `;
 
 const getTables = () => /* sql */ `
   SELECT
-    table_name,
-    table_schema,
-    pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name)) AS total_size
-  FROM information_schema.tables
-  WHERE table_type='BASE TABLE'
-  AND table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-  ORDER BY table_name;
+    c.relname AS table_name,
+    n.nspname AS table_schema,
+    pg_total_relation_size(c.oid) AS total_size
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'p')
+  AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  AND n.nspname NOT LIKE 'pg_temp_%'
+  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+  AND has_schema_privilege(n.oid, 'USAGE')
+  AND has_table_privilege(c.oid, 'SELECT')
+  ORDER BY c.relname;
 `;
 
 const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
@@ -310,6 +316,9 @@ const getFunctions = () => /* sql */ `
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  AND n.nspname NOT LIKE 'pg_temp_%'
+  AND n.nspname NOT LIKE 'pg_toast_temp_%'
+  AND has_schema_privilege(n.oid, 'USAGE')
   ORDER BY n.nspname, p.proname;
 `;
 
