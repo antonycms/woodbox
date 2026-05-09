@@ -27,12 +27,16 @@ const StoreContextProvider = ({ children }) => {
       const group = acm[connection.id_project] || [];
 
       return { ...acm, [connection.id_project]: [...group, connection] };
-    }, {});
+    }, {} as { [key: string]: IConnection[] });
 
     const projectsWithConnections = projects.map((project) => ({
       ...project,
-      connections: groupedConnections[project.id] || [],
+      connections: (groupedConnections[project.id] || []).sort((a, b) =>
+        a.description.localeCompare(b.description),
+      ),
     }));
+
+    projectsWithConnections.sort((a, b) => a.description.localeCompare(b.description));
 
     return projectsWithConnections;
   }, [connections, projects]);
