@@ -439,6 +439,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleSelectAnalysisCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
+      notifySelectedCell(rowIndex, colIndex);
+
       if (!window.shiftPressed || !lastAnalysisSelectedCellRef.current) {
         lastAnalysisSelectedCellRef.current = { rowIndex, colIndex };
       }
@@ -457,7 +459,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         setAnalysisSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
       }
     },
-    [selectAnalysisRange],
+    [notifySelectedCell, selectAnalysisRange],
   );
 
   const handleContextMenu = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -687,6 +689,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
           lastAnalysisSelectedCellRef.current = target;
           setAnalysisSelectedCells(new Set([cellKey(target.rowIndex, target.colIndex)]));
         }
+
+        notifySelectedCell(target.rowIndex, target.colIndex);
 
         const container = refScrollContainer.current?.querySelector(
           `.${styles.analysis_container}`,
