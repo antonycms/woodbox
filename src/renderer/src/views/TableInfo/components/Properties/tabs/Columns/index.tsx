@@ -5,11 +5,12 @@ import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextM
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
-import type { IColumnInfo } from '@renderer/contexts/Store';
+import { type IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import {
   type IPendingColumnChange,
   type IPendingColumnCreate,
+  type IPendingReferenceCreate,
   useTableInfoContext,
 } from '@renderer/contexts/TableInfoContext';
 import {
@@ -81,6 +82,7 @@ const Columns = ({
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { connectionsInfo } = useStoreContext();
   const { showToast } = useToast();
   const {
     columns,
@@ -88,12 +90,14 @@ const Columns = ({
     pendingDroppedColumns,
     pendingChangedColumns,
     pendingRestrictions,
+    pendingReferences,
     columnTypes,
     references,
     restrictions,
     addPendingColumn,
     updatePendingColumn,
     addPendingRestriction,
+    addPendingReference,
     removePendingColumn,
     addPendingDroppedColumns,
     removePendingDroppedColumns,
@@ -117,6 +121,7 @@ const Columns = ({
   const [showNewColumnModal, setShowNewColumnModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
+  const connectionInfo = connectionsInfo.get(id_connection);
   const columnFilterTextSerialized = columnFilterText.trim().toLowerCase();
   const droppedColumnNames = React.useMemo(
     () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
@@ -176,7 +181,10 @@ const Columns = ({
   const handleAddPendingColumn = React.useCallback(
     (
       column: Parameters<typeof addPendingColumn>[0],
-      options?: { constraintType?: 'primary_key' | 'unique_key' },
+      options?: {
+        constraintType?: 'primary_key' | 'unique_key';
+        reference?: IPendingReferenceCreate;
+      },
     ) => {
       const columnName = column.column_name.toLowerCase();
       const alreadyExists = allColumns.some(
@@ -186,6 +194,18 @@ const Columns = ({
       if (alreadyExists) {
         showToast({ type: 'warn', title: 'Já existe uma coluna com esse nome.' });
         return false;
+      }
+
+      if (options?.reference) {
+        const referenceConstraintName = options.reference.constraint_name.toLowerCase();
+        const referenceAlreadyExists = [...references, ...pendingReferences].some(
+          (item) => item.constraint_name.toLowerCase() === referenceConstraintName,
+        );
+
+        if (referenceAlreadyExists) {
+          showToast({ type: 'warn', title: 'Já existe uma chave estrangeira com esse nome.' });
+          return false;
+        }
       }
 
       addPendingColumn(column);
@@ -202,9 +222,28 @@ const Columns = ({
         });
       }
 
+      if (options?.reference) {
+        addPendingReference({
+          ...options.reference,
+          table_schema: schema,
+          table_name: table,
+          column_name: column.column_name,
+        });
+      }
+
       return true;
     },
-    [addPendingColumn, addPendingRestriction, allColumns, showToast, table],
+    [
+      addPendingColumn,
+      addPendingReference,
+      addPendingRestriction,
+      allColumns,
+      pendingReferences,
+      references,
+      schema,
+      showToast,
+      table,
+    ],
   );
 
   const handleEditColumn = React.useCallback(
@@ -471,7 +510,10 @@ const Columns = ({
 
       <ModalNewColumn
         show={showNewColumnModal}
+        idConnection={id_connection}
+        table={table}
         types={columnTypes}
+        tables={connectionInfo?.tables || []}
         hasPrimaryKey={hasPrimaryKey}
         onClose={() => setShowNewColumnModal(false)}
         onAdd={handleAddPendingColumn}
