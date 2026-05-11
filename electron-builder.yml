@@ -1,5 +1,5 @@
 appId: com.woodbox.app
-productName: woodbox
+productName: Woodbox
 directories:
   buildResources: build
 files:
@@ -11,7 +11,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: woodbox
+  executableName: Woodbox
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
