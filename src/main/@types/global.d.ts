@@ -1,8 +1,6 @@
 import type { Knex } from 'knex';
 
 declare global {
-  export type Dialect = 'postgres';
-
   export interface IConnectionConfig {
     id: string;
     id_project: string;

@@ -10,7 +10,7 @@ export interface IConnectionConfig {
   id: string;
   id_project: string;
   description: string;
-  dialect: Dialect;
+  dialect: string;
   database: string;
   host: string;
   port: number;

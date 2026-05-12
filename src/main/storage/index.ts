@@ -1,9 +1,6 @@
 import * as store from './store';
 import addListener from '../utils/addListener';
 
-// dialect
-addListener('@get:dialects', store.getDialects);
-
 // project
 addListener('@get:projects', store.getProjects);
 addListener('@add:projects', store.addProject);

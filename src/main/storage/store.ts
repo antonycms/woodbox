@@ -34,12 +34,6 @@ export const {
   edit: editProject,
 } = getModuleProjects(store);
 
-export const getDialects = (): Dialect[] => {
-  const dialects: Dialect[] = ['postgres'];
-
-  return [...new Set<Dialect>(dialects)];
-};
-
 export const {
   add: addConnectionSaved,
   get: getConnectionsSaved,

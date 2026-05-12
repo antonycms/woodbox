@@ -1,5 +1,6 @@
 import addListener from '../utils/addListener';
 import {
+  getDialects,
   testConnection,
   closeConnection,
   getConnectionInfo,
@@ -16,6 +17,8 @@ import {
   runSql,
 } from './core';
 
+// dialect
+addListener('@get:dialects', getDialects);
 addListener('@get:test_connection', testConnection);
 addListener('@get:close_connection', closeConnection);
 addListener('@get:connection_info', getConnectionInfo);

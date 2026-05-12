@@ -88,6 +88,12 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   return instance;
 };
 
+export const getDialects = () => {
+  const dialects = ['postgres'] as const;
+
+  return dialects;
+};
+
 export const testConnection = async (config: IConnectionConfig) => {
   const instance = await makeConnectionInstance(config, true);
   await instance.destroy();
