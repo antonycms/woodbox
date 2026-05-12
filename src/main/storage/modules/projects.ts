@@ -6,11 +6,6 @@ import {
   makeFnRemoveStoredItemFromArray,
 } from '../utils';
 
-export interface IProject {
-  id: string;
-  description: string;
-}
-
 export const initialValue = {
   type: 'array',
   default: [] as IProject[],

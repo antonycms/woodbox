@@ -1,14 +1,5 @@
 import type Store from 'electron-store';
 
-export interface IScript {
-  id: string;
-  name: string;
-  id_connection: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export type IScriptMeta = Omit<IScript, 'content'>;
 
 const contentKey = (id: string) => `script_content_${id}`;

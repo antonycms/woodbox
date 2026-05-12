@@ -6,18 +6,6 @@ import {
   makeFnRemoveStoredItemFromArray,
 } from '../utils';
 
-export interface IConnectionConfig {
-  id: string;
-  id_project: string;
-  description: string;
-  dialect: string;
-  database: string;
-  host: string;
-  port: number;
-  username?: string;
-  password?: string;
-}
-
 export const initialValue = {
   type: 'array',
   default: [] as IConnectionConfig[],

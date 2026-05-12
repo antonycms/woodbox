@@ -89,7 +89,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 };
 
 export const getDialects = () => {
-  const dialects = ['postgres'] as const;
+  const dialects: Dialect[] = ['postgres'];
 
   return dialects;
 };
