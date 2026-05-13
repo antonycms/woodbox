@@ -47,6 +47,8 @@ const TabsBar = (props: ITabsBarProps) => {
       return console.error(`[TabBar(${idTabBar})] TabWindow not found.`);
     }
 
+    document.dispatchEvent(new CustomEvent('tab_change', { detail: { idTabBar, activeTabId } }));
+
     const AllElementsContent: NodeListOf<HTMLDivElement> = document.querySelectorAll(
       `#tab_window_${idTabBar} > .${styles.tabContent}`,
     );

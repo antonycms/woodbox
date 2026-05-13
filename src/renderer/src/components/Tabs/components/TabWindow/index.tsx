@@ -1,11 +1,14 @@
 import React from 'react';
 import styles from '../../styles.module.css';
+import TabProvider from '../TabProvider';
 
 const TabWindow = ({ children, idTabBar, width, height }: ITabWindowProps) => {
   return (
-    <div className={styles.tabWindow} id={`tab_window_${idTabBar}`} style={{ width, height }}>
-      {children}
-    </div>
+    <TabProvider>
+      <div className={styles.tabWindow} id={`tab_window_${idTabBar}`} style={{ width, height }}>
+        {children}
+      </div>
+    </TabProvider>
   );
 };
 
