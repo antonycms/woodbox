@@ -34,10 +34,13 @@ export interface IConnectionInfo {
   schemas?: string[];
 }
 
+export type ConnectionEnvironment = 'development' | 'production';
+
 export interface IConnectionCreate {
   id_project: string;
   description: string;
   dialect: string;
+  environment?: ConnectionEnvironment;
   database: string;
   host: string;
   port: number;

@@ -4,6 +4,56 @@ export interface ITableQuery {
   alias?: string;
 }
 
+const unsafeSqlCommands = [
+  'insert',
+  'update',
+  'delete',
+  'alter',
+  'drop',
+  'truncate',
+  'create',
+  'grant',
+  'revoke',
+  'merge',
+  'call',
+  'do',
+];
+
+const removeSqlComments = (sql: string) => {
+  return sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--.*$/gm, ' ');
+};
+
+const removeSqlLiterals = (sql: string) => {
+  return sql.replace(/'([^']|'')*'/g, ' ').replace(/"([^"]|"")*"/g, ' ');
+};
+
+const getFirstSqlWord = (sql: string) => {
+  return sql.trim().match(/^[a-z_]+/i)?.[0]?.toLowerCase();
+};
+
+export const hasUnsafeSqlMutation = (sql: string) => {
+  if (!sql || typeof sql !== 'string') return false;
+
+  const normalizedSql = removeSqlLiterals(removeSqlComments(sql));
+  const commands = normalizedSql
+    .split(';')
+    .map((command) => command.trim())
+    .filter(Boolean);
+
+  return commands.some((command) => {
+    const firstWord = getFirstSqlWord(command);
+
+    if (!firstWord) return false;
+    if (unsafeSqlCommands.includes(firstWord)) return true;
+
+    if (firstWord === 'with') {
+      return new RegExp(`\\b(${unsafeSqlCommands.join('|')})\\b`, 'i').test(command);
+    }
+
+    return firstWord !== 'select';
+  });
+};
+
 const reserverdWordsToIgnoreAlias = [
   'where',
   'full',

@@ -10,6 +10,12 @@ import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
+import type { ConnectionEnvironment } from '@renderer/contexts/Store';
+
+const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironment }[] = [
+  { label: 'Desenvolvimento', value: 'development' },
+  { label: 'Produção', value: 'production' },
+];
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
@@ -27,6 +33,7 @@ export const ModalNewConnection = React.memo(
 
     const { register, handleSubmit, reset, setState, getValue } = useForm<IDataNewConnection>({
       dialect: 'postgres',
+      environment: 'development',
       description: '',
       host: '',
       port: '',
@@ -91,7 +98,11 @@ export const ModalNewConnection = React.memo(
 
       const connectionSavedData = connections.find((connection) => connection.id === idConnection);
 
-      setState((prevState) => ({ ...prevState, ...connectionSavedData }));
+      setState((prevState) => ({
+        ...prevState,
+        ...connectionSavedData,
+        environment: connectionSavedData?.environment || 'development',
+      }));
     };
 
     React.useEffect(() => {
@@ -108,11 +119,26 @@ export const ModalNewConnection = React.memo(
               label="Descrição"
               xs={12}
               sm={6}
-              md={8}
+              md={6}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
               {...register('description')}
             />
+            <Autocomplete
+              required
+              clearable={false}
+              data={connectionEnvironmentOptions}
+              label="Tipo"
+              extractLabel={(item) => item.label}
+              extractValue={(item) => item.value}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              xs={12}
+              sm={6}
+              md={6}
+              {...register('environment')}
+            />
+
             <Autocomplete
               required
               data={connectionTypes}
@@ -128,7 +154,7 @@ export const ModalNewConnection = React.memo(
               required
               label="Host"
               sm={8}
-              md={10}
+              md={6}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
               {...register('host')}
@@ -235,6 +261,7 @@ interface IDataNewConnection {
 
   description: string;
   dialect: string;
+  environment?: ConnectionEnvironment;
   host: string;
   port: string | number;
   database: string;

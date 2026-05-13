@@ -15,14 +15,14 @@ import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
-import { ITableQuery } from '@renderer/utils/sql';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
-import { getTablesFromQuerySql } from '@renderer/utils/sql';
+import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { ModalQueryVariables } from './components/ModalQueryVariables';
+import { ModalConfirmProductionQuery } from './components/ModalConfirmProductionQuery';
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
 import type {
   IDataMakeTabResult,
@@ -43,6 +43,7 @@ import { TabContentSelect } from './components/TabContentSelect';
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
     runSql,
+    connections,
     connectionsInfo,
     getTableColumns,
     getTableReferences,
@@ -52,6 +53,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   const { activeTheme } = useThemeContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
+  const currentConnection = React.useMemo(
+    () => connections.find((connection) => connection.id === id_connection),
+    [connections, id_connection],
+  );
+  const isProductionConnection = currentConnection?.environment === 'production';
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>(null);
@@ -73,6 +79,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   );
   const [pendingQueryExecution, setPendingQueryExecution] =
     React.useState<IPendingQueryExecution>();
+  const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
+    React.useState<IExecuteQueryParams>();
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -250,6 +258,17 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
+  const confirmOrExecuteQuery = (params: IExecuteQueryParams) => {
+    const preparedQuery = prepareQueryVariables(params.query, params.variableValues);
+
+    if (isProductionConnection && hasUnsafeSqlMutation(preparedQuery)) {
+      setPendingProductionQueryExecution(params);
+      return;
+    }
+
+    executeQuery(params);
+  };
+
   const requestQueryExecution = (params: IPendingQueryExecution) => {
     const variables = getQueryVariables(params.query);
 
@@ -258,16 +277,25 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       return;
     }
 
-    executeQuery(params);
+    confirmOrExecuteQuery(params);
   };
 
   const closeVariablesModal = () => setPendingQueryExecution(undefined);
+  const closeProductionConfirmModal = () => setPendingProductionQueryExecution(undefined);
 
   const executePendingQuery = (variableValues: Record<string, string>) => {
     if (!pendingQueryExecution) return;
 
     const params = { ...pendingQueryExecution, variableValues };
     setPendingQueryExecution(undefined);
+    confirmOrExecuteQuery(params);
+  };
+
+  const executePendingProductionQuery = () => {
+    if (!pendingProductionQueryExecution) return;
+
+    const params = pendingProductionQueryExecution;
+    setPendingProductionQueryExecution(undefined);
     executeQuery(params);
   };
 
@@ -638,6 +666,20 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         variables={getQueryVariables(pendingQueryExecution?.query || '')}
         onCancel={closeVariablesModal}
         onExecute={executePendingQuery}
+      />
+
+      <ModalConfirmProductionQuery
+        show={!!pendingProductionQueryExecution}
+        sql={
+          pendingProductionQueryExecution
+            ? prepareQueryVariables(
+                pendingProductionQueryExecution.query,
+                pendingProductionQueryExecution.variableValues,
+              )
+            : ''
+        }
+        onCancel={closeProductionConfirmModal}
+        onConfirm={executePendingProductionQuery}
       />
 
       {!!tabsResult.length && (

@@ -1,0 +1,74 @@
+import React from 'react';
+import { Button } from '@renderer/components/Button';
+import Editor from '@renderer/components/Editor';
+import { Row } from '@renderer/components/Grid';
+import { Modal } from '@renderer/components/Modal';
+import { Spacer } from '@renderer/components/Spacer';
+import { Text } from '@renderer/components/Text';
+import { useThemeContext } from '@renderer/contexts/Theme';
+import styles from './styles.module.css';
+
+export const ModalConfirmProductionQuery = React.memo(
+  ({ show, sql, onCancel, onConfirm }: IModalConfirmProductionQueryProps) => {
+    const {
+      activeTheme: { modal: colors },
+    } = useThemeContext();
+
+    return (
+      <Modal
+        title="Confirmar operação em Produção"
+        width="900px"
+        height="520px"
+        show={show}
+        closeOutside
+        onClose={onCancel}
+      >
+        <div className={styles.message}>
+          <Text color={colors.color}>
+            Esta conexão está marcada como Produção. Confirme para executar uma operação que pode
+            alterar dados ou estrutura.
+          </Text>
+        </div>
+
+        <div className={styles.editorContainer}>
+          <Editor readonly hidePreview dialect="postgres" language="sql" value={sql} />
+        </div>
+
+        <Row>
+          <Spacer />
+
+          <Button
+            xs={6}
+            sm={4}
+            md={3}
+            onClick={onCancel}
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            xs={6}
+            sm={4}
+            md={3}
+            onClick={onConfirm}
+            color={colors.saveButtonColor}
+            backgroundColor={colors.saveButtonBackgroundColor}
+          >
+            Executar
+          </Button>
+        </Row>
+      </Modal>
+    );
+  },
+);
+
+ModalConfirmProductionQuery.displayName = 'ModalConfirmProductionQuery';
+
+interface IModalConfirmProductionQueryProps {
+  show?: boolean;
+  sql: string;
+  onCancel?(): void;
+  onConfirm?(): void;
+}
