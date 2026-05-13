@@ -6,7 +6,7 @@ import { SpinnerLoading } from '@renderer/components/Loaders';
 import IconItemTreeView from '../IconItemTreeView';
 
 const ItemTreeView = (props: IItemTreeViewProps) => {
-  const { icon, loading, color = 'white', childs, openedItemsId = [] } = props;
+  const { icon, loading, color = 'white', iconColor = 'white', childs, openedItemsId = [] } = props;
 
   const isOpen = openedItemsId.some((id) => id === props.id);
 
@@ -37,7 +37,7 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
           />
         )}
 
-        {props?.renderIcon?.() || <IconItemTreeView icon={icon} color={color} />}
+        {props?.renderIcon?.() || <IconItemTreeView icon={icon} color={iconColor} />}
 
         <span
           className={classes(styles.containerItemLabel, styles.ignorePointerEvents)}

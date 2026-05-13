@@ -141,7 +141,8 @@ const TreeView = (props: ITreeViewProps) => {
             {...item}
             isFirst
             key={item.id}
-            color={props.color}
+            color={item.color}
+            iconColor={item.iconColor}
             openedItemsId={openedItemsId}
             onSwitch={handleSwitchItem}
           />
@@ -164,6 +165,8 @@ export interface IItemTreeView extends IItemTreeViewData {
   labelInfo?: string;
   childs?: IItemTreeViewProps[];
   icon?: AvalailableTreeViewIcon;
+  color?: string;
+  iconColor?: string;
   renderIcon?(): React.ReactElement;
   loading?: boolean;
 }
@@ -175,7 +178,6 @@ export interface ITreeViewRef {
 interface ITreeViewProps {
   ref?: React.Ref<ITreeViewRef>;
   items: IItemTreeView[];
-  color?: string;
   onClick?(itemData: IItemTreeViewData): void;
   onDoubleClick?(itemData: IItemTreeViewData): void;
   onSwitchItem?(

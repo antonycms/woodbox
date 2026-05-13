@@ -38,7 +38,7 @@ import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
   const {
-    activeTheme: { sideBar: colors },
+    activeTheme: { __colors, sideBar: colors },
   } = useThemeContext();
 
   const {
