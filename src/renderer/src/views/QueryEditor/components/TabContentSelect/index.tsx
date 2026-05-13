@@ -445,7 +445,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 />
               </div>
 
-              <TabWindow idTabBar={previewTabBarId}>
+              <TabWindow activeTabId={activePreviewTab}>
                 <TabContent idTab="value">
                   <Editor
                     dialect="postgres"

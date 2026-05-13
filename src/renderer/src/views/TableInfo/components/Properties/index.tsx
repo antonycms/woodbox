@@ -152,7 +152,7 @@ const Properties = (props: IPropertiesProps) => {
           tabs={tabs}
         />
 
-        <TabWindow idTabBar={id}>
+        <TabWindow activeTabId={activeTabId}>
           <TabContent idTab="1">
             <Columns {...props} table={tableName} tableComment={state.comment} />
           </TabContent>

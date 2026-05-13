@@ -707,7 +707,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
             borderColor={activeTheme.queryEditor.tab.borderColor}
           />
 
-          <TabWindow idTabBar={`bottomTabEditor_${id}`}>
+          <TabWindow activeTabId={activeTabId}>
             {tabsResult.map((tabResult) => {
               const data = querysResultData.get(tabResult.idTab);
 

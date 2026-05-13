@@ -2,10 +2,10 @@ import React from 'react';
 import styles from '../../styles.module.css';
 import TabProvider from '../TabProvider';
 
-const TabWindow = ({ children, idTabBar, width, height }: ITabWindowProps) => {
+const TabWindow = ({ children, activeTabId, width, height }: ITabWindowProps) => {
   return (
-    <TabProvider>
-      <div className={styles.tabWindow} id={`tab_window_${idTabBar}`} style={{ width, height }}>
+    <TabProvider activeTabId={activeTabId}>
+      <div className={styles.tabWindow} style={{ width, height }}>
         {children}
       </div>
     </TabProvider>
@@ -15,7 +15,7 @@ const TabWindow = ({ children, idTabBar, width, height }: ITabWindowProps) => {
 export default TabWindow;
 
 export interface ITabWindowProps {
-  idTabBar: string;
+  activeTabId: string | null;
   children?: React.ReactNode;
   width?: string;
   height?: string;

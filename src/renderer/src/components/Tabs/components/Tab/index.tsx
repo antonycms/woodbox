@@ -7,7 +7,6 @@ import IconMdiClose from '~icons/mdi/close';
 
 const Tab = (props: ITabProps) => {
   const {
-    id,
     tabId,
     active,
     title,
@@ -23,6 +22,7 @@ const Tab = (props: ITabProps) => {
     allowClose,
     height,
     vertical,
+    dragTarget,
     color,
     ascentColor,
     backgroundColor,
@@ -34,8 +34,12 @@ const Tab = (props: ITabProps) => {
 
   return (
     <div
-      className={classes(styles.tab, active && styles.active, vertical && styles.vertical)}
-      id={id}
+      className={classes(
+        styles.tab,
+        active && styles.active,
+        vertical && styles.vertical,
+        dragTarget && styles.tabIsDragging,
+      )}
       data-tab-id={tabId}
       style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
@@ -87,7 +91,6 @@ const Tab = (props: ITabProps) => {
 export default Tab;
 
 export interface ITabProps {
-  id?: string;
   tabId?: string;
   unsaved?: boolean;
   title: string;
@@ -103,6 +106,7 @@ export interface ITabProps {
   children?: React.ReactNode;
   height?: string;
   vertical?: boolean;
+  dragTarget?: boolean;
   icon?(): React.ReactElement;
   active?: boolean;
   color: string;

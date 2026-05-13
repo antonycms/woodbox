@@ -36,48 +36,19 @@ const TabsBar = (props: ITabsBarProps) => {
 
   const ref = React.useRef<HTMLDivElement>(null);
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
+  const [idTabDragTarget, setIdTabDragTarget] = React.useState<string>(null);
   const [activeTabContextMenu, setActiveTabContextMenu] = React.useState<IActiveTabContextMenu>();
   const noHasContent = !tabs.length;
 
-  const changeTabContent = () => {
-    const element = document.querySelector(`#tab_window_${idTabBar}`);
-    const idTabContentActive = `tab_content_${activeTabId}`;
-
-    if (!element) {
-      return console.error(`[TabBar(${idTabBar})] TabWindow not found.`);
-    }
-
-    document.dispatchEvent(new CustomEvent('tab_change', { detail: { idTabBar, activeTabId } }));
-
-    const AllElementsContent: NodeListOf<HTMLDivElement> = document.querySelectorAll(
-      `#tab_window_${idTabBar} > .${styles.tabContent}`,
-    );
-
-    AllElementsContent.forEach((content) => {
-      content.id === idTabContentActive
-        ? content.classList.add(styles.active)
-        : content.classList.remove(styles.active);
-    });
-  };
-
   const tabDragEnd = (e?: React.DragEvent<HTMLDivElement>) => {
-    const children = ref.current?.children;
-
     if (e && idTabDraging) setIdTabDraging(null);
-
-    for (let i = 0; i < children?.length; i++) {
-      children[i].classList.remove(styles.tabIsDragging);
-    }
+    setIdTabDragTarget(null);
   };
 
-  const tabDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    const currentElement = e.currentTarget as EventTarget & HTMLDivElement;
-
-    tabDragEnd();
-
+  const tabDragEnter = (idTab: string) => {
     if (!idTabDraging) return;
 
-    currentElement.classList.add(styles.tabIsDragging);
+    setIdTabDragTarget(idTab);
   };
 
   const tabDragStart = (e: React.DragEvent<HTMLDivElement>, idTab: string) => {
@@ -142,22 +113,18 @@ const TabsBar = (props: ITabsBarProps) => {
   }, []);
 
   React.useLayoutEffect(() => {
-    changeTabContent();
+    if (!tabs.length) return;
 
     const activeTab = tabs.find((t) => t.idTab === activeTabId);
 
     if (!activeTab) {
       onActiveTab(tabs[tabs.length - 1]);
-    } //
-    else if (activeTab?.idTab != activeTabId) {
-      onActiveTab(activeTab);
     }
   }, [tabs, activeTabId]);
 
   return (
-    <div className={classes(styles.outsideBar, classes)} style={styleOutsideContainer}>
+    <div className={styles.outsideBar} style={styleOutsideContainer}>
       <div
-        id={`tab_bar_${idTabBar}`}
         ref={ref}
         onDrop={draggable ? onDrop : undefined}
         onDragOver={(e) => e.preventDefault()}
@@ -167,7 +134,6 @@ const TabsBar = (props: ITabsBarProps) => {
         {tabs.map((tab, index) => (
           <Tab
             key={`tab_${idTabBar}_${tab.idTab}`}
-            id={`tab_${idTabBar}_${tab.idTab}`}
             tabId={tab.idTab}
             title={tab.title || 'Sem título'}
             subtitle={tab.subtitle}
@@ -179,11 +145,12 @@ const TabsBar = (props: ITabsBarProps) => {
             icon={tab.icon}
             draggable={draggable ? 'true' : 'false'}
             onDragStart={draggable ? (event) => tabDragStart(event, tab.idTab) : undefined}
-            onDragEnter={draggable ? tabDragEnter : undefined}
+            onDragEnter={draggable ? () => tabDragEnter(tab.idTab) : undefined}
             onDragEnd={draggable ? tabDragEnd : undefined}
             height={height}
             vertical={vertical}
             isDraging={!!idTabDraging}
+            dragTarget={idTabDragTarget === tab.idTab}
             onClick={() => handleClickTab(tab)}
             onRemove={() => onRemoveTab?.(tab)}
             unsaved={tab.unsaved}

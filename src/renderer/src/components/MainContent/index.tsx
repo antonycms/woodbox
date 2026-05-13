@@ -90,7 +90,7 @@ export const MainContent = () => {
         }))}
       />
 
-      <TabWindow idTabBar="app_tabs">
+      <TabWindow activeTabId={activeTabId}>
         {tabs.map(({ id, component: TabComponent }) => (
           <TabContent key={id} idTab={id}>
             <TabComponent />

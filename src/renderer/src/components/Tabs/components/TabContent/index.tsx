@@ -1,13 +1,15 @@
 import React from 'react';
+import { classes } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
+import { useTabContext } from '../TabProvider';
 
 const TabContent = (props: ITabWindowProps) => {
   const { children, idTab, backgroundColor, hasPadding } = props;
+  const { activeTabId } = useTabContext();
 
   return (
     <div
-      className={styles.tabContent}
-      id={`tab_content_${idTab}`}
+      className={classes(styles.tabContent, activeTabId === idTab && styles.active)}
       style={{ backgroundColor, padding: hasPadding ? '10px' : null }}
     >
       {children}

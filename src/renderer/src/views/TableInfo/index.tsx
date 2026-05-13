@@ -170,7 +170,7 @@ const TableInfo = (props: ITableInfoProps) => {
         ].filter(Boolean)}
       />
 
-      <TabWindow idTabBar={id}>
+      <TabWindow activeTabId={activeTableInfoTabId}>
         <TabContent idTab="tabProperties">
           <Properties
             {...tabsProps}

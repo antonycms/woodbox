@@ -1,20 +1,13 @@
 import React from 'react';
 import { ITabContext, TabContext } from './context';
 
-export default function TabProvider({ children }) {
-  const [value, setValue] = React.useState<ITabContext>({ activeTabId: null, idTabBar: null });
+interface ITabProviderProps {
+  activeTabId: string | null;
+  children?: React.ReactNode;
+}
 
-  React.useEffect(() => {
-    const onReceiveChangeTabEvent = (event: CustomEvent) => {
-      setValue(event.detail);
-    };
-
-    document.addEventListener('tab_change', onReceiveChangeTabEvent);
-
-    return () => {
-      document.removeEventListener('tab_change', onReceiveChangeTabEvent);
-    };
-  }, []);
+export default function TabProvider({ children, activeTabId }: ITabProviderProps) {
+  const value = React.useMemo<ITabContext>(() => ({ activeTabId }), [activeTabId]);
 
   return <TabContext.Provider value={value}>{children}</TabContext.Provider>;
 }

@@ -78,7 +78,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         ]}
       />
 
-      <TabWindow idTabBar={topTabId}>
+      <TabWindow activeTabId="tabProperties">
         <TabContent idTab="tabProperties">
           <div className={styles.propertiesContainer}>
             <div
@@ -126,7 +126,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                 tabs={[{ idTab: 'tabDefinition', title: 'Definição' }]}
               />
 
-              <TabWindow idTabBar={sideTabId}>
+              <TabWindow activeTabId="tabDefinition">
                 <TabContent idTab="tabDefinition">
                   <div className={styles.editorContainer}>
                     <Editor
