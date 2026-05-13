@@ -124,7 +124,8 @@ export const generateUpdateDdl = (
       return `UPDATE ${tableName}\nSET\n${setSql}\nWHERE ${whereSql};`;
     })
     .filter((sql): sql is string => !!sql)
-    .join('\n\n');
+    .join('\n\n')
+    .trim();
 };
 
 export const generateDeleteDdl = (
