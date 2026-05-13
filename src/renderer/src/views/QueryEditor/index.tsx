@@ -134,6 +134,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
+    setActiveTabId(idTab);
 
     const updateTabResultData = makeUpdateResultTab(idTab);
 
@@ -145,7 +146,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const removeTabResult = (idTab: string | string[]) => {
     const tabsIdToRemove = new Set(Array.isArray(idTab) ? idTab : [idTab]);
 
-    setTabsResult((prevState) => prevState.filter((tab) => !tabsIdToRemove.has(tab.idTab)));
+    setTabsResult((prevState) => {
+      if (activeTabId && tabsIdToRemove.has(activeTabId)) {
+        const activeTabIndex = prevState.findIndex((tab) => tab.idTab === activeTabId);
+        const nextTab =
+          prevState.slice(activeTabIndex + 1).find((tab) => !tabsIdToRemove.has(tab.idTab)) ||
+          prevState
+            .slice(0, activeTabIndex)
+            .reverse()
+            .find((tab) => !tabsIdToRemove.has(tab.idTab));
+
+        setActiveTabId(nextTab?.idTab || null);
+      }
+
+      return prevState.filter((tab) => !tabsIdToRemove.has(tab.idTab));
+    });
 
     setQuerysResultData((prevState) => {
       const newMap = new Map(prevState);
@@ -154,8 +169,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
       return newMap;
     });
-
-    if (activeTabId && tabsIdToRemove.has(activeTabId)) setActiveTabId(null);
   };
 
   const getSelectionsValues = () => {
@@ -628,13 +641,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     return () => clearTimeout(timeout);
   }, [id_script]);
-
-  React.useEffect(() => {
-    if (tabsResult.length) {
-      const lastTabIndex = tabsResult.length - 1;
-      setActiveTabId(tabsResult[lastTabIndex].idTab);
-    }
-  }, [tabsResult]);
 
   React.useEffect(() => {
     loadTableReferences();
