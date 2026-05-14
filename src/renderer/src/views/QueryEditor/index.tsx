@@ -15,7 +15,6 @@ import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
-import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
@@ -65,10 +64,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
-  const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = useStateWithDebounce<ITableQuery[]>(
-    [],
-    500,
-  );
+  const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = React.useState<ITableQuery[]>([]);
   const [tableColumns, setTableColumn] = React.useState<Map<string, IColumnInfo[]>>(new Map());
   const [tableReferences, setTableReferences] = React.useState<Map<string, IColumnReferenceInfo[]>>(
     new Map(),

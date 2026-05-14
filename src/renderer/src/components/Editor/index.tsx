@@ -26,6 +26,14 @@ const Editor = ({
 
   const resize = useDebounce(() => editor?.layout?.(), 10);
 
+  const emitCurrentValueChange = useDebounce(() => {
+    props.onChangeCurrentValue?.(getCurrentValue());
+  }, 500);
+
+  const emitValueChange = useDebounce(() => {
+    props.onChange?.(getValue());
+  }, 500);
+
   const getWordAtPosition = (position: monaco.IPosition) => {
     return editor.getModel().getWordAtPosition(position);
   };
@@ -243,11 +251,8 @@ const Editor = ({
 
     if (props.onChange || props.onChangeCurrentValue) {
       const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
-        const value = getValue();
-        const currentValue = getCurrentValue();
-
-        props.onChange?.(value);
-        props.onChangeCurrentValue?.(currentValue);
+        emitValueChange();
+        emitCurrentValueChange();
       });
 
       listenerValueChange && monacoListeners.push(listenerValueChange);
@@ -255,7 +260,7 @@ const Editor = ({
 
     if (props.onChangeCurrentValue) {
       const listenerCursorPosition = editor?.onDidChangeCursorPosition?.(() => {
-        props.onChangeCurrentValue?.(getCurrentValue());
+        emitCurrentValueChange();
       });
 
       listenerCursorPosition && monacoListeners.push(listenerCursorPosition);
