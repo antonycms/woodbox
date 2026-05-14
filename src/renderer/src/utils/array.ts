@@ -34,3 +34,14 @@ export const arrayIsEquals = (array1: any[], array2: any[]) => {
 
   return check;
 };
+
+export const chunkArray = <Item = unknown>(myArray: Item[] = [], chunkSize: number) => {
+  const localArr = [...myArray];
+  const chunks: Item[][] = [];
+
+  while (localArr.length) {
+    chunks.push(localArr.splice(0, chunkSize));
+  }
+
+  return chunks;
+};
