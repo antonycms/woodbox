@@ -65,7 +65,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
   const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = React.useState<ITableQuery[]>([]);
-  const [tableColumns, setTableColumn] = React.useState<Map<string, IColumnInfo[]>>(new Map());
+  const [tableColumns, setTableColumns] = React.useState<Map<string, IColumnInfo[]>>(new Map());
   const [tableReferences, setTableReferences] = React.useState<Map<string, IColumnReferenceInfo[]>>(
     new Map(),
   );
@@ -466,7 +466,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     if (!items?.length) return;
 
-    setTableColumn((prevState) => {
+    setTableColumns((prevState) => {
       const newState = new Map(prevState);
       const key = `${schema ? schema + '.' : ''}${table}`;
       newState.set(key, items);
