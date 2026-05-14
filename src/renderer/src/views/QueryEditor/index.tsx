@@ -18,6 +18,7 @@ import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/co
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
+import { executePromisesBatch } from '@renderer/utils/promise';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { ModalQueryVariables } from './components/ModalQueryVariables';
@@ -60,6 +61,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>(null);
+  const loadingColumnsKeysRef = React.useRef(new Set<string>());
+  const loadingReferencesKeysRef = React.useRef(new Set<string>());
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
@@ -451,47 +454,84 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
+  const getTableInfoKey = ({ name, schema }: ITableQuery) => `${schema ? schema + '.' : ''}${name}`;
+
   const loadTableColumns = async () => {
-    const newTable = currentQueryTablesInfo.find((tableInfo) => {
-      const { name, schema } = tableInfo;
-      const key = `${schema ? schema + '.' : ''}${name}`;
-      return !tableColumns.get(key);
-    });
+    const pendingTables = new Map<string, ITableQuery>();
 
-    if (!newTable) return;
+    for (const tableInfo of currentQueryTablesInfo) {
+      const key = getTableInfoKey(tableInfo);
 
-    const { name: table, schema } = newTable;
+      const isPending = !tableColumns.has(key) && !loadingColumnsKeysRef.current.has(key);
 
-    const items = await getTableColumns(id_connection, { schema, table });
+      if (isPending) {
+        loadingColumnsKeysRef.current.add(key);
+        pendingTables.set(key, tableInfo);
+      }
+    }
 
-    if (!items?.length) return;
+    if (!pendingTables.size) return;
 
-    setTableColumns((prevState) => {
-      const newState = new Map(prevState);
-      const key = `${schema ? schema + '.' : ''}${table}`;
-      newState.set(key, items);
-      return newState;
-    });
+    try {
+      const results = await executePromisesBatch(
+        [...pendingTables.entries()],
+        async ([key, tableInfo]) => {
+          const columns = await getTableColumns(id_connection, {
+            schema: tableInfo.schema,
+            table: tableInfo.name,
+          });
+
+          return { key, columns };
+        },
+      );
+
+      setTableColumns((prevState) => {
+        const newState = new Map(prevState);
+        results.forEach(({ key, columns }) => newState.set(key, columns));
+        return newState;
+      });
+    } finally {
+      pendingTables.forEach((_, key) => loadingColumnsKeysRef.current.delete(key));
+    }
   };
 
   const loadTableReferences = async () => {
-    const newTable = currentQueryTablesInfo.find((tableInfo) => {
-      const { name, schema } = tableInfo;
-      const key = `${schema ? schema + '.' : ''}${name}`;
-      return !tableReferences.get(key);
-    });
+    const pendingTables = new Map<string, ITableQuery>();
 
-    if (!newTable) return;
+    for (const tableInfo of currentQueryTablesInfo) {
+      const key = getTableInfoKey(tableInfo);
 
-    const { name: table, schema } = newTable;
-    const items = await getTableReferences(id_connection, { schema, table });
+      const isPending = !tableReferences.has(key) && !loadingReferencesKeysRef.current.has(key);
 
-    setTableReferences((prevState) => {
-      const newState = new Map(prevState);
-      const key = `${schema ? schema + '.' : ''}${table}`;
-      newState.set(key, items || []);
-      return newState;
-    });
+      if (isPending) {
+        loadingReferencesKeysRef.current.add(key);
+        pendingTables.set(key, tableInfo);
+      }
+    }
+
+    if (!pendingTables.size) return;
+
+    try {
+      const results = await executePromisesBatch(
+        [...pendingTables.entries()],
+        async ([key, tableInfo]) => {
+          const references = await getTableReferences(id_connection, {
+            schema: tableInfo.schema,
+            table: tableInfo.name,
+          });
+
+          return { key, references };
+        },
+      );
+
+      setTableReferences((prevState) => {
+        const newState = new Map(prevState);
+        results.forEach(({ key, references }) => newState.set(key, references));
+        return newState;
+      });
+    } finally {
+      pendingTables.forEach((_, key) => loadingReferencesKeysRef.current.delete(key));
+    }
   };
 
   const loadScriptContent = async () => {
@@ -630,7 +670,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   React.useEffect(() => {
     loadTableColumns();
-  }, [id_connection, currentQueryTablesInfo]);
+  }, [id_connection, currentQueryTablesInfo, tableColumns]);
 
   React.useEffect(() => {
     const timeout = setTimeout(loadScriptContent);
@@ -640,7 +680,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   React.useEffect(() => {
     loadTableReferences();
-  }, [id_connection, currentQueryTablesInfo]);
+  }, [id_connection, currentQueryTablesInfo, tableReferences]);
 
   return (
     <div className={styles.queryEditorContainer}>
