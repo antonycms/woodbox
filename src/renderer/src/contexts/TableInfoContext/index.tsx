@@ -79,9 +79,9 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const [pendingDroppedColumns, setPendingDroppedColumns] = React.useState<IPendingColumnDrop[]>(
     [],
   );
-  const [pendingChangedColumns, setPendingChangedColumns] = React.useState<
-    IPendingColumnChange[]
-  >([]);
+  const [pendingChangedColumns, setPendingChangedColumns] = React.useState<IPendingColumnChange[]>(
+    [],
+  );
   const [pendingIndexes, setPendingIndexes] = React.useState<IPendingIndexCreate[]>([]);
   const [pendingDroppedIndexes, setPendingDroppedIndexes] = React.useState<IPendingIndexDrop[]>([]);
   const [pendingRestrictions, setPendingRestrictions] = React.useState<IPendingRestrictionCreate[]>(
@@ -308,24 +308,27 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     );
   }, []);
 
-  const addPendingDroppedColumns = React.useCallback((columnsToDrop: IColumnInfo[]) => {
-    const droppedColumnNames = columnsToDrop.map((column) => column.column_name);
+  const addPendingDroppedColumns = React.useCallback(
+    (columnsToDrop: IColumnInfo[]) => {
+      const droppedColumnNames = columnsToDrop.map((column) => column.column_name);
 
-    removePendingChangedColumns(droppedColumnNames);
+      removePendingChangedColumns(droppedColumnNames);
 
-    setPendingDroppedColumns((prevState) => {
-      const currentColumnNames = new Set(prevState.map((column) => column.column_name));
-      const nextColumns = columnsToDrop
-        .filter((column) => !currentColumnNames.has(column.column_name))
-        .map<IPendingColumnDrop>((column) => ({
-          ...column,
-          __pendingAction: 'drop',
-          __style: DROP_STYLE,
-        }));
+      setPendingDroppedColumns((prevState) => {
+        const currentColumnNames = new Set(prevState.map((column) => column.column_name));
+        const nextColumns = columnsToDrop
+          .filter((column) => !currentColumnNames.has(column.column_name))
+          .map<IPendingColumnDrop>((column) => ({
+            ...column,
+            __pendingAction: 'drop',
+            __style: DROP_STYLE,
+          }));
 
-      return [...prevState, ...nextColumns];
-    });
-  }, [removePendingChangedColumns]);
+        return [...prevState, ...nextColumns];
+      });
+    },
+    [removePendingChangedColumns],
+  );
 
   const removePendingDroppedColumns = React.useCallback((columnNames: string[]) => {
     const columnNamesSet = new Set(columnNames);

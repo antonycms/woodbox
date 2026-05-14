@@ -13,14 +13,7 @@ import {
   type IPendingReferenceCreate,
   useTableInfoContext,
 } from '@renderer/contexts/TableInfoContext';
-import {
-  AddIcon,
-  CancelIcon,
-  DuplicateIcon,
-  IconRefresh,
-  RemoveIcon,
-  SaveIcon,
-} from '@renderer/styles/icons';
+import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
