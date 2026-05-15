@@ -6,17 +6,17 @@ Objetivo: servir como backlog incremental para criar planos pequenos e aplicar c
 
 ## Sumário de prioridades
 
-1. Debounce real do parse de SQL/current query.
+1. Debounce real do parse de SQL/current query. ✅ Resolvido
 2. Memoizar `columns` e callbacks em `TabContentSelect`.
 3. Evitar renderização pesada de abas ocultas.
 4. Refatorar `loadReferenceRow`.
 5. Otimizar serialização/clonagem de linhas na `Table`.
 6. Estabilizar provider de autocomplete do Monaco.
-7. Revisar carregamento de colunas/referências para múltiplas tabelas.
+7. Revisar carregamento de colunas/referências para múltiplas tabelas. ✅ Resolvido
 
 ---
 
-## 1. Parsing de SQL roda em excesso durante digitação/cursor
+## 1. Parsing de SQL roda em excesso durante digitação/cursor ✅ Resolvido
 
 **Arquivos envolvidos:**
 
@@ -66,10 +66,10 @@ Aplicar debounce no callback inteiro ou dentro do `Editor`, antes de executar `g
 
 ### Checklist
 
-- [ ] Criar debounce para `handleUpdateCurrentQueryInfo`.
-- [ ] Garantir que `getTablesFromQuerySql` não rode a cada movimento de cursor.
-- [ ] Validar autocomplete após a mudança.
-- [ ] Testar digitação em scripts grandes.
+- [x] Criar debounce para `handleUpdateCurrentQueryInfo`.
+- [x] Garantir que `getTablesFromQuerySql` não rode a cada movimento de cursor.
+- [x] Validar autocomplete após a mudança.
+- [x] Testar digitação em scripts grandes.
 
 ---
 
@@ -337,7 +337,7 @@ Durante digitação/movimentação de cursor em queries com tabelas diferentes, 
 
 ---
 
-## 7. Carregamento de colunas/referências só busca uma tabela por effect
+## 7. Carregamento de colunas/referências só busca uma tabela por effect ✅ Resolvido
 
 **Arquivo envolvido:**
 
@@ -372,16 +372,16 @@ Queries com múltiplas tabelas podem carregar colunas/referências apenas da pri
 
 ### Checklist
 
-- [ ] Identificar comportamento esperado para múltiplas tabelas.
-- [ ] Trocar busca unitária por batch de pendentes.
-- [ ] Evitar chamadas duplicadas para mesma tabela.
-- [ ] Testar autocomplete e links FK em queries com múltiplas tabelas.
+- [x] Identificar comportamento esperado para múltiplas tabelas.
+- [x] Trocar busca unitária por batch de pendentes.
+- [x] Evitar chamadas duplicadas para mesma tabela.
+- [x] Testar autocomplete e links FK em queries com múltiplas tabelas.
 
 ---
 
 ## Backlog sugerido de planos pequenos
 
-### Plano A — reduzir custo ao digitar no editor
+### Plano A — reduzir custo ao digitar no editor ✅ Resolvido
 
 Itens:
 
@@ -432,7 +432,7 @@ Resultado esperado:
 
 - melhor escalabilidade com muitos registros.
 
-### Plano F — melhorar carregamento de metadados SQL
+### Plano F — melhorar carregamento de metadados SQL ✅ Resolvido
 
 Itens:
 
@@ -441,4 +441,3 @@ Itens:
 Resultado esperado:
 
 - autocomplete/referências funcionam melhor com múltiplas tabelas.
-
