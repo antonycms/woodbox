@@ -4,8 +4,10 @@ import Table, {
   type ITableSelectedCellData,
 } from '@renderer/components/Table';
 import Editor from '@renderer/components/Editor';
+import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
+import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
 import {
@@ -62,7 +64,7 @@ const Data = ({
 }: IDataProps) => {
   const {
     activeTheme: {
-      tableInfo: { data: theme },
+      tableInfo: { data: theme, tab: tabTheme },
       modal: colors,
     },
   } = useThemeContext();
@@ -101,6 +103,13 @@ const Data = ({
   const [showValuePreview, setShowValuePreview] = React.useState(false);
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
+  const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
+  const [activePreviewTab, setActivePreviewTab] = React.useState<'value' | 'reference'>('value');
+  const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
+  const [referenceError, setReferenceError] = React.useState<string>();
+  const [referenceCache, setReferenceCache] = React.useState(
+    new Map<string, Record<string, any>>(),
+  );
 
   const previewValue = React.useMemo(() => {
     const value = selectedCell?.value;
@@ -150,6 +159,52 @@ const Data = ({
     [references],
   );
 
+  const selectedReference = selectedCell
+    ? fkMap.get(String(selectedCell.column.attribute))
+    : undefined;
+
+  const selectedReferenceCacheKey = React.useMemo(() => {
+    if (!selectedReference) return undefined;
+    if (selectedCell?.value === null || selectedCell?.value === undefined) return undefined;
+
+    return [
+      selectedReference.reference_table_schema,
+      selectedReference.reference_table_name,
+      selectedReference.reference_column_name,
+      String(selectedCell.value),
+    ].join('.');
+  }, [selectedReference, selectedCell?.value]);
+
+  const referenceRow = selectedReferenceCacheKey
+    ? referenceCache.get(selectedReferenceCacheKey)
+    : undefined;
+
+  const referenceLoading = selectedReferenceCacheKey
+    ? referenceLoadingKeys.has(selectedReferenceCacheKey)
+    : false;
+
+  const referencePreviewValue = React.useMemo(() => {
+    const referenceTableName = selectedReference
+      ? `${
+          selectedReference.reference_table_schema
+            ? `${selectedReference.reference_table_schema}.`
+            : ''
+        }${selectedReference.reference_table_name}`
+      : '';
+
+    return referenceTableName
+      ? `// ${referenceTableName}\n\n${JSON.stringify(referenceRow || {}, null, 2)}`
+      : JSON.stringify(referenceRow || {}, null, 2);
+  }, [selectedReference, referenceRow]);
+
+  const closeValuePreview = React.useCallback(() => {
+    setShowValuePreview(false);
+    setActivePreviewTab('value');
+    setReferenceCache(new Map());
+    setReferenceError(undefined);
+    setReferenceLoadingKeys(new Set());
+  }, []);
+
   const handleFkCellClick = React.useCallback(
     (attribute: string, value: any) => {
       const ref = fkMap.get(attribute);
@@ -164,6 +219,62 @@ const Data = ({
     },
     [fkMap, id_connection, onOpenTable],
   );
+
+  const loadReferenceRow = React.useCallback(async () => {
+    setReferenceError(undefined);
+
+    if (activePreviewTab !== 'reference') return;
+    if (!selectedReference || !selectedReferenceCacheKey) return;
+    if (referenceCache.has(selectedReferenceCacheKey)) return;
+    if (referenceLoadingKeys.has(selectedReferenceCacheKey)) return;
+    if (referenceError) return;
+
+    setReferenceLoadingKeys((prevState) => {
+      const newState = new Set(prevState);
+      newState.add(selectedReferenceCacheKey);
+      return newState;
+    });
+
+    try {
+      const escapedValue = String(selectedCell?.value).replace(/'/g, "''");
+
+      const result = await getTableData(id_connection, {
+        schema: selectedReference.reference_table_schema,
+        table: selectedReference.reference_table_name,
+        page: 1,
+        limit: 1,
+        where: `"${selectedReference.reference_column_name}" = '${escapedValue}'`,
+      });
+
+      setReferenceCache((prevState) => {
+        const newState = new Map(prevState);
+        newState.set(selectedReferenceCacheKey, result.data?.[0] || {});
+        return newState;
+      });
+    } catch (error: any) {
+      setReferenceError(error?.message || 'Erro ao carregar referência');
+    } finally {
+      setReferenceLoadingKeys((prevState) => {
+        const newState = new Set(prevState);
+        newState.delete(selectedReferenceCacheKey);
+        return newState;
+      });
+    }
+  }, [
+    activePreviewTab,
+    selectedReference,
+    selectedReferenceCacheKey,
+    referenceCache,
+    referenceLoadingKeys,
+    referenceError,
+    selectedCell?.value,
+    getTableData,
+    id_connection,
+  ]);
+
+  React.useEffect(() => {
+    loadReferenceRow();
+  }, [loadReferenceRow]);
 
   const isLoading = loadingTableInfo.columns || loading;
 
@@ -652,13 +763,55 @@ const Data = ({
             onResize={(size) => size.width && setPreviewWidth(size.width)}
           >
             <div className={styles.preview}>
-              <Editor
-                dialect="postgres"
-                language="json"
-                readonly
-                hidePreview
-                value={previewValue}
-              />
+              <div className={styles.previewHeader}>
+                <TabBar
+                  borderBottom
+                  idTabBar={previewTabBarId}
+                  activeTabId={activePreviewTab}
+                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as 'value' | 'reference')}
+                  ascentColor={tabTheme.ascentColor}
+                  backgroundColor={tabTheme.backgroundColor}
+                  backgroundColorBar={tabTheme.bar.backgroundColor}
+                  borderColor={tabTheme.borderColor}
+                  color={tabTheme.color}
+                  tabs={[
+                    { idTab: 'value', title: 'Valor' },
+                    selectedReference && { idTab: 'reference', title: 'Referência' },
+                  ].filter(Boolean)}
+                />
+              </div>
+
+              <TabWindow activeTabId={activePreviewTab}>
+                <TabContent idTab="value">
+                  <Editor
+                    dialect="postgres"
+                    language="json"
+                    readonly
+                    hidePreview
+                    value={previewValue}
+                  />
+                </TabContent>
+
+                {!!selectedReference && (
+                  <TabContent idTab="reference">
+                    {referenceLoading ? (
+                      <div className={styles.previewLoading}>
+                        <MultiplesBarLoading background="transparent" />
+                      </div>
+                    ) : referenceError ? (
+                      <Text color={theme.bar.color}>{referenceError}</Text>
+                    ) : (
+                      <Editor
+                        dialect="postgres"
+                        language="json"
+                        readonly
+                        hidePreview
+                        value={referencePreviewValue}
+                      />
+                    )}
+                  </TabContent>
+                )}
+              </TabWindow>
             </div>
           </ResizableContainer>
         )}
@@ -705,7 +858,14 @@ const Data = ({
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => setShowValuePreview((value) => !value)}
+          onClick={() => {
+            if (showValuePreview) {
+              closeValuePreview();
+              return;
+            }
+
+            setShowValuePreview(true);
+          }}
         >
           <PanelFile size={16} />
         </Button>

@@ -48,9 +48,26 @@
 
 .preview {
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   border-left: 1px solid #ffffff22;
+}
+
+.previewHeader {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.previewHeader > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.previewLoading {
+  width: 100%;
+  height: 100%;
+  padding: 12px;
 }
 
 .bottomBarInfoContainer {
