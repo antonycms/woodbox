@@ -135,9 +135,9 @@ const TableColumn = ({
     return isEditing ? v : v.slice(0, valueLenght);
   })();
 
-  const editedValue = React.useRef<string | number>(
-    serializedValue === undefined || serializedValue === null ? '' : String(serializedValue),
-  );
+  const editedValue = React.useRef<string | number | null>(null);
+
+  editedValue.current = [undefined, null].includes(serializedValue) ? '' : serializedValue;
 
   const style = React.useMemo(() => {
     return {
