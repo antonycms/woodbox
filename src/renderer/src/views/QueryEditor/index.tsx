@@ -65,6 +65,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const loadingReferencesKeysRef = React.useRef(new Set<string>());
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
+  const [queryVariableValuesByConnection, setQueryVariableValuesByConnection] = useStorage<
+    Record<string, Record<string, string>>
+  >('query_editor_variable_values', {});
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
   const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = React.useState<ITableQuery[]>([]);
@@ -295,8 +298,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const closeVariablesModal = () => setPendingQueryExecution(undefined);
   const closeProductionConfirmModal = () => setPendingProductionQueryExecution(undefined);
 
+  const queryVariableInitialValues = React.useMemo(
+    () => queryVariableValuesByConnection[id_connection] || {},
+    [id_connection, queryVariableValuesByConnection],
+  );
+
   const executePendingQuery = (variableValues: Record<string, string>) => {
     if (!pendingQueryExecution) return;
+
+    setQueryVariableValuesByConnection((prevState) => ({
+      ...prevState,
+      [id_connection]: {
+        ...(prevState[id_connection] || {}),
+        ...variableValues,
+      },
+    }));
 
     const params = { ...pendingQueryExecution, variableValues };
     setPendingQueryExecution(undefined);
@@ -706,6 +722,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       <ModalQueryVariables
         show={!!pendingQueryExecution}
         variables={getQueryVariables(pendingQueryExecution?.query || '')}
+        initialValues={queryVariableInitialValues}
         onCancel={closeVariablesModal}
         onExecute={executePendingQuery}
       />
