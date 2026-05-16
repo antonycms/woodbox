@@ -136,24 +136,6 @@ const Data = ({
     [],
   );
 
-  React.useEffect(() => {
-    if (references.length === 0) {
-      loadTableReferences(id_connection, { table, schema });
-    }
-
-    if (restrictions.length === 0) {
-      loadTableRestrictions(id_connection, { table, schema });
-    }
-  }, [
-    id_connection,
-    table,
-    schema,
-    references.length,
-    restrictions.length,
-    loadTableReferences,
-    loadTableRestrictions,
-  ]);
-
   const fkMap = React.useMemo(
     () => new Map(references.map((r) => [r.column_name, r])),
     [references],
@@ -271,10 +253,6 @@ const Data = ({
     getTableData,
     id_connection,
   ]);
-
-  React.useEffect(() => {
-    loadReferenceRow();
-  }, [loadReferenceRow]);
 
   const isLoading = loadingTableInfo.columns || loading;
 
@@ -426,10 +404,6 @@ const Data = ({
     setDroppedRows(new Map());
     setItems(serializeRows(data));
   }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows]);
-
-  React.useEffect(() => {
-    onRegisterRefresh?.(handleRefresh);
-  }, [onRegisterRefresh, handleRefresh]);
 
   const applyPendingRows = React.useCallback(
     async (whereColumns: string[]) => {
@@ -681,6 +655,32 @@ const Data = ({
   React.useEffect(() => {
     loadData();
   }, []);
+
+  React.useEffect(() => {
+    loadReferenceRow();
+  }, [loadReferenceRow]);
+
+  React.useEffect(() => {
+    onRegisterRefresh?.(handleRefresh);
+  }, [onRegisterRefresh, handleRefresh]);
+
+  React.useEffect(() => {
+    if (references.length === 0) {
+      loadTableReferences(id_connection, { table, schema });
+    }
+
+    if (restrictions.length === 0) {
+      loadTableRestrictions(id_connection, { table, schema });
+    }
+  }, [
+    id_connection,
+    table,
+    schema,
+    references.length,
+    restrictions.length,
+    loadTableReferences,
+    loadTableRestrictions,
+  ]);
 
   return (
     <div className={styles.container} onKeyDown={handleKeyDown}>
