@@ -199,7 +199,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
             date_run: new Date().toISOString(),
           });
 
-    updateTabResultData({ loading: true, date_run: new Date().toISOString() });
+    updateTabResultData({ type: 'SELECT', loading: true, date_run: new Date().toISOString() });
 
     try {
       if (markErrors) refEditor.current.setMarkers([]);
