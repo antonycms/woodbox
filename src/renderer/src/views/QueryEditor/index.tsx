@@ -749,59 +749,63 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           maxHeight={800}
           onResize={(size) => setSizeTabContent(size.height)}
         >
-          <TabBar
-            borderTop
-            allowClose
-            borderBottom
-            activeTabId={activeTabId}
-            tabs={tabsResult}
-            onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
-            idTabBar={`bottomTabEditor_${id}`}
-            onRemoveTab={(tab) => removeTabResult(tab.idTab)}
-            contextMenuOptions={contextMenuOptions}
-            ascentColor={activeTheme.queryEditor.tab.ascentColor}
-            backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-            backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
-            color={activeTheme.queryEditor.tab.color}
-            borderColor={activeTheme.queryEditor.tab.borderColor}
-          />
+          <div className={styles.resultTabsContent}>
+            <TabBar
+              borderTop
+              allowClose
+              borderBottom
+              activeTabId={activeTabId}
+              tabs={tabsResult}
+              onActiveTab={(tab) => setActiveTabId(tab?.idTab)}
+              idTabBar={`bottomTabEditor_${id}`}
+              onRemoveTab={(tab) => removeTabResult(tab.idTab)}
+              contextMenuOptions={contextMenuOptions}
+              ascentColor={activeTheme.queryEditor.tab.ascentColor}
+              backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+              backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
+              color={activeTheme.queryEditor.tab.color}
+              borderColor={activeTheme.queryEditor.tab.borderColor}
+            />
 
-          <TabWindow activeTabId={activeTabId}>
-            {tabsResult.map((tabResult) => {
-              const data = querysResultData.get(tabResult.idTab);
+            <TabWindow activeTabId={activeTabId}>
+              {tabsResult.map((tabResult) => {
+                const data = querysResultData.get(tabResult.idTab);
 
-              if (!data) return null;
+                if (!data) return null;
 
-              return (
-                <TabContent
-                  key={tabResult.idTab}
-                  idTab={tabResult.idTab}
-                  backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-                >
-                  {data.type === 'SELECT' && (
-                    <TabContentSelect
-                      data={data}
-                      id_connection={id_connection}
-                      references={tableReferences}
-                      onSort={(column) => handleSortQueryResult(tabResult.idTab, column.attribute)}
-                      onScrollEnd={onScrollEnd}
-                      onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
-                    />
-                  )}
+                return (
+                  <TabContent
+                    key={tabResult.idTab}
+                    idTab={tabResult.idTab}
+                    backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                  >
+                    {data.type === 'SELECT' && (
+                      <TabContentSelect
+                        data={data}
+                        id_connection={id_connection}
+                        references={tableReferences}
+                        onSort={(column) =>
+                          handleSortQueryResult(tabResult.idTab, column.attribute)
+                        }
+                        onScrollEnd={onScrollEnd}
+                        onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
+                      />
+                    )}
 
-                  {data.type === 'DELETE' && <TabContentDelete data={data} />}
+                    {data.type === 'DELETE' && <TabContentDelete data={data} />}
 
-                  {data.type === 'ALTER' && <TabContentAlter data={data} />}
+                    {data.type === 'ALTER' && <TabContentAlter data={data} />}
 
-                  {data.type === 'ERROR' && <TabcontentError data={data} />}
+                    {data.type === 'ERROR' && <TabcontentError data={data} />}
 
-                  {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
-                    <TabContentGeneric data={data} />
-                  )}
-                </TabContent>
-              );
-            })}
-          </TabWindow>
+                    {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
+                      <TabContentGeneric data={data} />
+                    )}
+                  </TabContent>
+                );
+              })}
+            </TabWindow>
+          </div>
         </ResizableContainer>
       )}
     </div>
