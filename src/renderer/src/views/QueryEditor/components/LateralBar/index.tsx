@@ -8,12 +8,13 @@ interface ILateralBarProps {
   runCurrentSQL(openNewTab?: boolean): void;
   runSelectionsSQL(): void;
   runAllSQL(): void;
+  showServerOutput(): void;
 }
 
 export const LateralBar = (props: ILateralBarProps) => {
   const { activeTheme } = useThemeContext();
 
-  const { runAllSQL, runSelectionsSQL, runCurrentSQL } = props;
+  const { runAllSQL, runSelectionsSQL, runCurrentSQL, showServerOutput } = props;
 
   return (
     <Bar
@@ -55,6 +56,7 @@ export const LateralBar = (props: ILateralBarProps) => {
         text
         smallIcon
         title="Mostrar saída do servidor"
+        onClick={showServerOutput}
         color={activeTheme.queryEditor.bar.color}
       >
         <IconFileWrited size={16} />
