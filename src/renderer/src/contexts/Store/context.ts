@@ -138,6 +138,17 @@ export interface IOptionsRunSql {
   orderBy?: IOrderBy[];
 }
 
+export interface IServerOutputMessage {
+  id: string;
+  connectionId: string;
+  date: string;
+  severity?: string;
+  message: string;
+  detail?: string;
+  hint?: string;
+  where?: string;
+}
+
 export interface IStoreContext {
   connections: IConnection[];
   addConnection(data: IConnectionCreate): Promise<void>;
@@ -206,6 +217,8 @@ export interface IStoreContext {
     idConnection: string,
     filters: { schema: string; functionName: string },
   ): Promise<{ definition: string }[]>;
+
+  getServerOutput(idConnection: string): Promise<IServerOutputMessage[]>;
 
   runSql(
     idConnection: string,

@@ -240,6 +240,10 @@ const StoreContextProvider = ({ children }) => {
     });
   };
 
+  const getServerOutput = async (idConnection: string) => {
+    return await call('@get:server_output', idConnection);
+  };
+
   const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
     return await call('@post:run_sql', idConnection, sql, options);
   };
@@ -285,6 +289,7 @@ const StoreContextProvider = ({ children }) => {
         getTableIndexes,
         getTableTriggers,
         getFunctionDefinition,
+        getServerOutput,
         runSql,
 
         // scripts
