@@ -15,6 +15,7 @@ import {
   getTableTriggers,
   getFunctionDefinition,
   runSql,
+  getServerOutput,
 } from './core';
 
 // dialect
@@ -33,5 +34,6 @@ addListener('@get:table_indexes', getTableIndexes);
 addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
+addListener('@get:server_output', getServerOutput);
 
 export { closeAllConnections } from './core';

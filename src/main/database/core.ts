@@ -2,19 +2,59 @@ import knex, { Knex } from 'knex';
 import pg from 'pg';
 import clientsQuery from './querys';
 import { getConnectionsSaved } from '../storage/store';
+import { emitEvent } from '../utils/emitEvent';
 
 // Override 'pg' default parser to return dates as strings
 pg.types.setTypeParser(1114, (val) => val); // timestamp without time zone
 pg.types.setTypeParser(1184, (val) => val); // timestamp with time zone
 
 const activeConnections: IConnection[] = [];
+const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
+const MAX_SERVER_OUTPUT_MESSAGES = 500;
+
+interface IServerOutputMessage {
+  id: string;
+  connectionId: string;
+  date: string;
+  severity?: string;
+  message: string;
+  detail?: string;
+  hint?: string;
+  where?: string;
+}
+
+const addServerOutput = (connectionId: string, notice: any) => {
+  if (!connectionId) return;
+
+  const message: IServerOutputMessage = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    connectionId,
+    date: new Date().toISOString(),
+    severity: notice.severity,
+    message: notice.message,
+    detail: notice.detail,
+    hint: notice.hint,
+    where: notice.where,
+  };
+
+  const messages = serverOutputByConnection.get(connectionId) || [];
+  const nextMessages = [...messages, message].slice(-MAX_SERVER_OUTPUT_MESSAGES);
+
+  serverOutputByConnection.set(connectionId, nextMessages);
+
+  emitEvent('@event:server_output', message);
+};
+
+export const getServerOutput = async (connectionId: string) => {
+  return serverOutputByConnection.get(connectionId) || [];
+};
 
 export const closeAllConnections = async () => {
   await Promise.all(activeConnections.map((connection) => connection?.instance?.destroy?.()));
 };
 
 const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
-  const { description, dialect, database, host, port, username: user, password } = config;
+  const { id, description, dialect, database, host, port, username: user, password } = config;
 
   let instance: null | Knex<any, unknown[]>;
 
@@ -29,6 +69,10 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
         reapIntervalMillis: 1000,
         createRetryIntervalMillis: 100,
         propagateCreateError: false,
+        afterCreate: (connection, done) => {
+          connection.on?.('notice', (notice) => addServerOutput(id, notice));
+          done(null, connection);
+        },
       };
 
   instance = knex({
@@ -133,6 +177,8 @@ const getConnection = async (connectionId: string) => {
 export const closeConnection = async (connectionId: string) => {
   const index = activeConnections.findIndex((connection) => connection.id === connectionId);
   const connection = activeConnections[index];
+
+  serverOutputByConnection.delete(connectionId);
 
   if (!connection) return;
 
