@@ -14,7 +14,7 @@ export const closeAllConnections = async () => {
 };
 
 const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
-  const { dialect, database, host, port, username: user, password } = config;
+  const { description, dialect, database, host, port, username: user, password } = config;
 
   let instance: null | Knex<any, unknown[]>;
 
@@ -42,6 +42,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
       password,
       database,
       dateStrings: true,
+      application_name: `Woodbox (${description})`,
     },
   });
 
