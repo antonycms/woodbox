@@ -49,6 +49,7 @@ import { ModalServerOutput } from './components/ModalServerOutput';
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
     runSql,
+    cancelRunSql,
     getServerOutput,
     connections,
     connectionsInfo,
@@ -68,9 +69,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>(null);
+  const canceledQueryIdsRef = React.useRef<Set<string>>(new Set());
   const loadingColumnsKeysRef = React.useRef(new Set<string>());
   const loadingReferencesKeysRef = React.useRef(new Set<string>());
   const [activeTabId, setActiveTabId] = React.useState<string>(null);
+  const [cancelingQueryIds, setCancelingQueryIds] = React.useState<Set<string>>(new Set());
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const [queryVariableValuesByConnection, setQueryVariableValuesByConnection] = useStorage<
     Record<string, Record<string, string>>
@@ -91,9 +94,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
     React.useState<IExecuteQueryParams>();
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
-  const [serverOutputMessages, setServerOutputMessages] = React.useState<
-    IServerOutputMessage[]
-  >([]);
+  const [serverOutputMessages, setServerOutputMessages] = React.useState<IServerOutputMessage[]>(
+    [],
+  );
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -125,6 +128,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       page,
       title = `Result ${tabsResult.length + 1}`,
       variableValues,
+      queryExecutionId,
     } = data;
 
     const idTab = generateHash();
@@ -144,6 +148,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       affected_rows,
       tables_info: getTablesFromQuerySql(query),
       variableValues,
+      queryExecutionId,
     };
 
     setTabsResult((prevState) => [...prevState, tab]);
@@ -196,9 +201,26 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     return selectionsValue;
   };
 
+  const wasQueryCanceled = (queryExecutionId: string) => {
+    const canceled = canceledQueryIdsRef.current.has(queryExecutionId);
+
+    if (canceled) canceledQueryIdsRef.current.delete(queryExecutionId);
+
+    return canceled;
+  };
+
+  const removeCancelingQueryId = (queryExecutionId: string) => {
+    setCancelingQueryIds((prevState) => {
+      const newState = new Set(prevState);
+      newState.delete(queryExecutionId);
+      return newState;
+    });
+  };
+
   const executeQuery = async (params: IExecuteQueryParams) => {
     const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
     const preparedQuery = prepareQueryVariables(query, variableValues);
+    const queryExecutionId = generateHash();
 
     const updateTabResultData =
       !forceNewTab && !openNewTab && activeTabId
@@ -210,13 +232,30 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
             date_run: new Date().toISOString(),
           });
 
-    updateTabResultData({ type: 'SELECT', loading: true, date_run: new Date().toISOString() });
+    updateTabResultData({
+      type: 'SELECT',
+      loading: true,
+      queryExecutionId,
+      date_run: new Date().toISOString(),
+    });
 
     try {
       if (markErrors) refEditor.current.setMarkers([]);
 
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, preparedQuery);
+        await runSql(id_connection, preparedQuery, { queryExecutionId });
+
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query,
+          variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
 
       updateTabResultData({
         page: 1,
@@ -229,13 +268,33 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         auto_paginated,
         execution_time_ms,
         loading: false,
+        queryExecutionId: undefined,
       });
     } catch (error) {
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query,
+          variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
+
       const message = markErrors
         ? error?.message?.split?.(' - ')?.[1] || error?.message
         : `${error?.message} (position: ${error.position})`;
 
-      updateTabResultData({ type: 'ERROR', query, variableValues, message, loading: false });
+      updateTabResultData({
+        type: 'ERROR',
+        query,
+        variableValues,
+        message,
+        loading: false,
+        queryExecutionId: undefined,
+      });
 
       if (!markErrors) return;
 
@@ -348,18 +407,63 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     executeQuery(params);
   };
 
+  const cancelResultQuery = async (idTab: string) => {
+    const tab = querysResultData.get(idTab);
+
+    if (!tab?.loading || !tab.queryExecutionId) return;
+
+    canceledQueryIdsRef.current.add(tab.queryExecutionId);
+    setCancelingQueryIds((prevState) => new Set(prevState).add(tab.queryExecutionId));
+
+    let canceled = false;
+
+    try {
+      canceled = await cancelRunSql(id_connection, tab.queryExecutionId);
+
+      if (canceled) {
+        makeUpdateResultTab(idTab)({
+          type: 'ERROR',
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+      }
+    } finally {
+      if (!canceled) canceledQueryIdsRef.current.delete(tab.queryExecutionId);
+      removeCancelingQueryId(tab.queryExecutionId);
+    }
+  };
+
   const refreshResultSqlTab = async (idTab: string) => {
     const tab = querysResultData.get(idTab);
     const updateTabResultData = makeUpdateResultTab(idTab);
     const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
+    const queryExecutionId = generateHash();
 
-    updateTabResultData({ loading: true, date_run: new Date().toISOString() });
+    updateTabResultData({
+      loading: true,
+      queryExecutionId,
+      date_run: new Date().toISOString(),
+    });
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
         await runSql(id_connection, preparedQuery, {
           orderBy: tab.orderBy,
+          queryExecutionId,
         });
+
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          message: 'Query cancelada pelo usuário.',
+          query: tab.query,
+          variableValues: tab.variableValues,
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
 
       updateTabResultData({
         page: 1,
@@ -373,8 +477,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         execution_time_ms,
         loading: false,
         orderBy: tab.orderBy,
+        queryExecutionId: undefined,
       });
     } catch (error) {
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          message: 'Query cancelada pelo usuário.',
+          query: tab.query,
+          variableValues: tab.variableValues,
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
+
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({
         type: 'ERROR',
@@ -382,6 +499,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         query: tab.query,
         variableValues: tab.variableValues,
         loading: false,
+        queryExecutionId: undefined,
       });
     }
   };
@@ -421,15 +539,33 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const query = lastTabResult.query;
     const preparedQuery = prepareQueryVariables(query, lastTabResult.variableValues);
     const newPage = (lastTabResult.page || 1) + 1;
+    const queryExecutionId = generateHash();
 
-    updateTabResultData({ loading: true });
+    updateTabResultData({
+      loading: true,
+      queryExecutionId,
+      date_run: new Date().toISOString(),
+    });
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
         await runSql(id_connection, preparedQuery, {
           page: newPage,
           orderBy: lastTabResult.orderBy,
+          queryExecutionId,
         });
+
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query,
+          variableValues: lastTabResult.variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
 
       updateTabResultData({
         page: newPage,
@@ -442,8 +578,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         auto_paginated,
         loading: false,
         execution_time_ms,
+        queryExecutionId: undefined,
       });
     } catch (error) {
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query,
+          variableValues: lastTabResult.variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
+
       const message = `${error?.message} (position: ${error.position})`;
       updateTabResultData({
         type: 'ERROR',
@@ -451,6 +600,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         variableValues: lastTabResult.variableValues,
         message,
         loading: false,
+        queryExecutionId: undefined,
       });
     }
   };
@@ -462,15 +612,34 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const orderBy = getNextSort(tab.orderBy, columnName);
     const updateTabResultData = makeUpdateResultTab(idTab);
     const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
+    const queryExecutionId = generateHash();
 
-    updateTabResultData({ loading: true, orderBy });
+    updateTabResultData({
+      loading: true,
+      orderBy,
+      queryExecutionId,
+      date_run: new Date().toISOString(),
+    });
 
     try {
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
         await runSql(id_connection, preparedQuery, {
           page: 1,
           orderBy,
+          queryExecutionId,
         });
+
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query: tab.query,
+          variableValues: tab.variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
 
       updateTabResultData({
         page: 1,
@@ -484,10 +653,23 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         execution_time_ms,
         loading: false,
         orderBy,
+        queryExecutionId: undefined,
       });
     } catch (error) {
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData({
+          type: 'ERROR',
+          query: tab.query,
+          variableValues: tab.variableValues,
+          message: 'Query cancelada pelo usuário.',
+          loading: false,
+          queryExecutionId: undefined,
+        });
+        return;
+      }
+
       const message = `${error?.message} (position: ${error.position})`;
-      updateTabResultData({ type: 'ERROR', message, loading: false });
+      updateTabResultData({ type: 'ERROR', message, loading: false, queryExecutionId: undefined });
     }
   };
 
@@ -838,6 +1020,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         }
                         onScrollEnd={onScrollEnd}
                         onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
+                        onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
+                        cancelingQuery={
+                          !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
+                        }
                       />
                     )}
 

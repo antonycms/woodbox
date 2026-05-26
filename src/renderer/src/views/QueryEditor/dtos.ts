@@ -6,6 +6,7 @@ export interface IQueryResult {
   rows?: any[];
   columns?: string[];
   loading?: boolean;
+  queryExecutionId?: string;
   message?: string;
   query: string;
   affected_rows?: number;

@@ -11,7 +11,7 @@ import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
+import { CancelIcon, ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { generateHash } from '@renderer/utils/string';
@@ -37,10 +37,21 @@ interface ITabContentSelectProps {
   onScrollEnd(): void;
   onSort(column: IColumn<any>): void;
   onRefresh(): void;
+  onCancelQuery(): void;
+  cancelingQuery?: boolean;
 }
 
 export const TabContentSelect = (props: ITabContentSelectProps) => {
-  const { id_connection, data, onScrollEnd, onSort, onRefresh, references } = props;
+  const {
+    id_connection,
+    data,
+    onScrollEnd,
+    onSort,
+    onRefresh,
+    onCancelQuery,
+    cancelingQuery,
+    references,
+  } = props;
 
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
@@ -65,8 +76,25 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [editedFieldsRows, setEditedFieldsRows] = React.useState(
     new Map<number, Record<string, any>>(),
   );
+  const [now, setNow] = React.useState(Date.now());
 
   const editableTable = data.tables_info?.length !== 1 ? undefined : data.tables_info[0];
+
+  const executionTimeMs = React.useMemo(() => {
+    if (data.loading && data.date_run) {
+      const startedAt = new Date(data.date_run).getTime();
+
+      if (!Number.isNaN(startedAt)) return Math.max(0, now - startedAt);
+    }
+
+    return data.execution_time_ms;
+  }, [data.loading, data.date_run, data.execution_time_ms, now]);
+
+  const formatExecutionTime = (timeMs?: number) => {
+    if (typeof timeMs !== 'number' || Number.isNaN(timeMs)) return '-';
+
+    return timeMs < 1000 ? `${timeMs}ms` : `${(timeMs / 1000).toFixed(2)}s`;
+  };
 
   const closeValuePreview = () => {
     setShowValuePreview(false);
@@ -381,6 +409,16 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setEditedFieldsRows(new Map());
   }, [data.rows, data.columns, data.query]);
 
+  React.useEffect(() => {
+    if (!data.loading) return;
+
+    setNow(Date.now());
+
+    const interval = setInterval(() => setNow(Date.now()), 100);
+
+    return () => clearInterval(interval);
+  }, [data.loading, data.date_run, data.queryExecutionId]);
+
   return (
     <>
       <div className={styles.content}>
@@ -517,11 +555,25 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           <PanelFile size={16} />
         </Button>
 
+        {!!data.loading && (
+          <Button
+            text
+            smallIcon
+            title="Cancelar query"
+            onClick={onCancelQuery}
+            loading={cancelingQuery}
+            color={activeTheme.queryEditor.bar.color}
+          >
+            <CancelIcon size={16} />
+          </Button>
+        )}
+
         <Button
           text
           smallIcon
           title="Atualizar dados"
           onClick={onRefresh}
+          disabled={data.loading}
           color={activeTheme.queryEditor.bar.color}
         >
           <IconRefresh size={18} />
@@ -530,13 +582,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Spacer />
 
         <Text
-          title="Tempo de execução da query"
+          title={data.loading ? 'Tempo de execução atual da query' : 'Tempo de execução da query'}
           userSelect={false}
           color={activeTheme.queryEditor.bar.color}
         >
-          {data.execution_time_ms < 1000
-            ? `${data.execution_time_ms}ms`
-            : `${(data.execution_time_ms / 1000).toFixed(2)}s`}
+          {data.loading
+            ? `Executando há ${formatExecutionTime(executionTimeMs)}`
+            : formatExecutionTime(executionTimeMs)}
         </Text>
 
         <Text
