@@ -279,6 +279,14 @@ const Data = ({
     [restrictions],
   );
 
+  const defaultColumnNames = React.useMemo(
+    () =>
+      new Set(
+        columns.filter((column) => column.column_default).map((column) => column.column_name),
+      ),
+    [columns],
+  );
+
   const itemsWithPendingStyles = React.useMemo(
     () =>
       items.map((item, index) => {
@@ -345,6 +353,8 @@ const Data = ({
         };
 
         const duplicatedRow = columns.reduce<Record<string, any>>((acc, column) => {
+          if (primaryKeyColumns.includes(column.column_name)) return acc;
+
           acc[column.column_name] = sourceRow[column.column_name];
           return acc;
         }, {});
@@ -356,7 +366,7 @@ const Data = ({
     });
 
     setContextMenuTable(undefined);
-  }, [columns, editedFieldsRows, newRows, selectedRows, showToast]);
+  }, [columns, editedFieldsRows, newRows, primaryKeyColumns, selectedRows, showToast]);
 
   const loadData = React.useCallback(async () => {
     const newPage = page + 1;
@@ -719,6 +729,12 @@ const Data = ({
               setNewRows((prevState) => {
                 const newState = new Map(prevState);
                 const prevRowEdited = { ...(newState.get(rowKey) || {}) };
+
+                if (normalizedValue === null && defaultColumnNames.has(attribute)) {
+                  delete prevRowEdited[attribute];
+                  newState.set(rowKey, prevRowEdited);
+                  return newState;
+                }
 
                 newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
 
