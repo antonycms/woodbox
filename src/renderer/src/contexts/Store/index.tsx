@@ -248,6 +248,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@post:run_sql', idConnection, sql, options);
   };
 
+  const cancelRunSql = async (idConnection: string, queryExecutionId: string) => {
+    return await call<boolean>('@post:cancel_run_sql', idConnection, queryExecutionId);
+  };
+
   React.useEffect(() => {
     loadConnectionTypes();
     loadConnections();
@@ -291,6 +295,7 @@ const StoreContextProvider = ({ children }) => {
         getFunctionDefinition,
         getServerOutput,
         runSql,
+        cancelRunSql,
 
         // scripts
         scripts,

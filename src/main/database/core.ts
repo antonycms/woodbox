@@ -9,6 +9,10 @@ pg.types.setTypeParser(1114, (val) => val); // timestamp without time zone
 pg.types.setTypeParser(1184, (val) => val); // timestamp with time zone
 
 const activeConnections: IConnection[] = [];
+const activeRunSqlQueries = new Map<
+  string,
+  { connectionId: string; instance: Knex; dbConnection: any }
+>();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 500;
 
@@ -47,6 +51,16 @@ const addServerOutput = (connectionId: string, notice: any) => {
 
 export const getServerOutput = async (connectionId: string) => {
   return serverOutputByConnection.get(connectionId) || [];
+};
+
+export const cancelRunSql = async (connectionId: string, queryExecutionId: string) => {
+  const activeQuery = activeRunSqlQueries.get(queryExecutionId);
+
+  if (!activeQuery || activeQuery.connectionId !== connectionId) return false;
+
+  await (activeQuery.instance.client as any).cancelQuery(activeQuery.dbConnection);
+
+  return true;
 };
 
 export const closeAllConnections = async () => {
@@ -358,7 +372,7 @@ export const getTableData = async (
 export const runSql = async (
   connectionId: string,
   sql: string,
-  options?: { page?: number; limit?: number; orderBy?: IOrderBy[] },
+  options?: { page?: number; limit?: number; orderBy?: IOrderBy[]; queryExecutionId?: string },
 ) => {
   const connection = await getConnection(connectionId);
   const { instance } = connection;
@@ -394,26 +408,41 @@ export const runSql = async (
     }
   }
 
-  const t0 = Date.now();
-  const raw = await instance.raw(sql_final);
-  const execution_time_ms = Date.now() - t0;
+  const dbConnection = await (instance.client as any).acquireConnection();
 
-  const rawArray = Array.isArray(raw) ? raw : [raw];
+  try {
+    if (options?.queryExecutionId) {
+      activeRunSqlQueries.set(options.queryExecutionId, {
+        connectionId,
+        instance,
+        dbConnection,
+      });
+    }
 
-  const serializedData = rawArray.map((rawResult) => {
-    const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
+    const t0 = Date.now();
+    const raw = await instance.raw(sql_final).connection(dbConnection);
+    const execution_time_ms = Date.now() - t0;
 
-    return {
-      type,
-      affected_rows,
-      auto_paginated,
-      execution_time_ms,
-      rows: JSON.parse(JSON.stringify(rows)),
-      columns: columns?.map?.((field) => field.name) || [],
-    };
-  });
+    const rawArray = Array.isArray(raw) ? raw : [raw];
 
-  return serializedData;
+    const serializedData = rawArray.map((rawResult) => {
+      const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
+
+      return {
+        type,
+        affected_rows,
+        auto_paginated,
+        execution_time_ms,
+        rows: JSON.parse(JSON.stringify(rows)),
+        columns: columns?.map?.((field) => field.name) || [],
+      };
+    });
+
+    return serializedData;
+  } finally {
+    if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
+    await (instance.client as any).releaseConnection(dbConnection);
+  }
 };
 
 interface IOrderBy {

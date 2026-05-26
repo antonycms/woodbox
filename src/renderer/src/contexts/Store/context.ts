@@ -136,6 +136,7 @@ export interface IOptionsRunSql {
   limit?: number;
   page?: number;
   orderBy?: IOrderBy[];
+  queryExecutionId?: string;
 }
 
 export interface IServerOutputMessage {
@@ -234,6 +235,7 @@ export interface IStoreContext {
       execution_time_ms?: number;
     }[]
   >;
+  cancelRunSql(idConnection: string, queryExecutionId: string): Promise<boolean>;
 }
 
 export interface IConnectionsGroupPerProject extends IProject {

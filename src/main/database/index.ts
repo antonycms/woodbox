@@ -15,6 +15,7 @@ import {
   getTableTriggers,
   getFunctionDefinition,
   runSql,
+  cancelRunSql,
   getServerOutput,
 } from './core';
 
@@ -34,6 +35,7 @@ addListener('@get:table_indexes', getTableIndexes);
 addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
+addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
 
 export { closeAllConnections } from './core';
