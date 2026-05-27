@@ -131,19 +131,140 @@ export const getTablesFromQuerySql = (query: string) => {
   return tables;
 };
 
+type SqlQuerySeparator = {
+  index: number;
+  end: number;
+};
+
+const getLineBreakEnd = (content: string, index: number) => {
+  if (content[index] === '\r' && content[index + 1] === '\n') return index + 2;
+  if (content[index] === '\n') return index + 1;
+};
+
+const getBlankLineSeparatorEnd = (content: string, index: number) => {
+  const firstLineBreakEnd = getLineBreakEnd(content, index);
+
+  if (firstLineBreakEnd === undefined) return;
+
+  return getLineBreakEnd(content, firstLineBreakEnd);
+};
+
+const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
+  const separators: SqlQuerySeparator[] = [];
+  let index = 0;
+
+  while (index < content.length) {
+    const char = content[index];
+    const nextChar = content[index + 1];
+
+    if (char === "'") {
+      index++;
+
+      while (index < content.length) {
+        if (content[index] === "'" && content[index + 1] === "'") {
+          index += 2;
+          continue;
+        }
+
+        if (content[index] === "'") {
+          index++;
+          break;
+        }
+
+        index++;
+      }
+
+      continue;
+    }
+
+    if (char === '"') {
+      index++;
+
+      while (index < content.length) {
+        if (content[index] === '"' && content[index + 1] === '"') {
+          index += 2;
+          continue;
+        }
+
+        if (content[index] === '"') {
+          index++;
+          break;
+        }
+
+        index++;
+      }
+
+      continue;
+    }
+
+    if (char === '-' && nextChar === '-') {
+      index += 2;
+
+      while (index < content.length && content[index] !== '\n' && content[index] !== '\r') {
+        index++;
+      }
+
+      continue;
+    }
+
+    if (char === '/' && nextChar === '*') {
+      index += 2;
+
+      while (index < content.length) {
+        if (content[index] === '*' && content[index + 1] === '/') {
+          index += 2;
+          break;
+        }
+
+        index++;
+      }
+
+      continue;
+    }
+
+    if (char === '$') {
+      const dollarQuoteMatch = content.slice(index).match(/^\$[a-zA-Z_][a-zA-Z0-9_]*\$|^\$\$/);
+      const delimiter = dollarQuoteMatch?.[0];
+
+      if (delimiter) {
+        const endIndex = content.indexOf(delimiter, index + delimiter.length);
+        index = endIndex >= 0 ? endIndex + delimiter.length : content.length;
+        continue;
+      }
+    }
+
+    if (char === ';') {
+      separators.push({ index, end: index + 1 });
+      index++;
+      continue;
+    }
+
+    const blankLineSeparatorEnd = getBlankLineSeparatorEnd(content, index);
+
+    if (blankLineSeparatorEnd !== undefined) {
+      separators.push({ index, end: blankLineSeparatorEnd });
+      index = blankLineSeparatorEnd;
+      continue;
+    }
+
+    index++;
+  }
+
+  return separators;
+};
+
 export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: number) => {
   if (!content || typeof content !== 'string') return content;
 
-  const regex = /(;|\r?\n\r?\n)/g;
+  const separators = getSqlQuerySeparators(content);
 
   if (cursorOffset === undefined) {
     let start = 0;
     let end = 0;
-    let result: RegExpExecArray;
 
-    while ((result = regex.exec(content))) {
+    for (const separator of separators) {
       start = end;
-      end = result.index;
+      end = separator.index;
     }
 
     let chunk = content.substring(end, content.length).trim();
@@ -160,14 +281,12 @@ export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: nu
 
   let queryStart = 0;
   let queryEnd = content.length;
-  let result: RegExpExecArray;
 
-  while ((result = regex.exec(content))) {
-    const sepEnd = result.index + result[0].length;
-    if (sepEnd < cursorOffset) {
-      queryStart = sepEnd;
+  for (const separator of separators) {
+    if (separator.end < cursorOffset) {
+      queryStart = separator.end;
     } else {
-      queryEnd = result.index;
+      queryEnd = separator.index;
       break;
     }
   }
