@@ -1004,17 +1004,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
                 if (!data) return null;
 
+                const isSelectResult = data.type === 'SELECT' || !!data.columns?.length;
+                const isReadOnlyResult = data.type !== 'SELECT';
+
                 return (
                   <TabContent
                     key={tabResult.idTab}
                     idTab={tabResult.idTab}
                     backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
                   >
-                    {data.type === 'SELECT' && (
+                    {isSelectResult && (
                       <TabContentSelect
                         data={data}
                         id_connection={id_connection}
                         references={tableReferences}
+                        readOnly={isReadOnlyResult}
                         onSort={(column) =>
                           handleSortQueryResult(tabResult.idTab, column.attribute)
                         }
@@ -1027,15 +1031,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       />
                     )}
 
-                    {data.type === 'DELETE' && <TabContentDelete data={data} />}
+                    {!isSelectResult && data.type === 'DELETE' && <TabContentDelete data={data} />}
 
-                    {data.type === 'ALTER' && <TabContentAlter data={data} />}
+                    {!isSelectResult && data.type === 'ALTER' && <TabContentAlter data={data} />}
 
-                    {data.type === 'ERROR' && <TabcontentError data={data} />}
+                    {!isSelectResult && data.type === 'ERROR' && <TabcontentError data={data} />}
 
-                    {!['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
-                      <TabContentGeneric data={data} />
-                    )}
+                    {!isSelectResult &&
+                      !['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
+                        <TabContentGeneric data={data} />
+                      )}
                   </TabContent>
                 );
               })}
