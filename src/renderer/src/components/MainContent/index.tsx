@@ -9,7 +9,24 @@ import { IContextMenuOption } from '@renderer/components/ContextMenu';
 import styles from './styles.module.css';
 
 export const MainContent = () => {
-  const { tabs, removeTab, moveTab, activeTabId, setActiveTabId } = useAppTabContext();
+  const [groupEditorRequest, setGroupEditorRequest] = React.useState<{
+    groupId: string;
+    position: { x: number; y: number };
+  }>();
+  const {
+    tabs,
+    tabGroups,
+    removeTab,
+    moveTab,
+    activeTabId,
+    setActiveTabId,
+    createTabGroup,
+    addTabToGroup,
+    removeTabFromGroup,
+    updateTabGroup,
+    ungroupTabGroup,
+    closeTabGroup,
+  } = useAppTabContext();
   const { connections } = useStoreContext();
   const {
     activeTheme: { mainTab: theme },
@@ -24,6 +41,29 @@ export const MainContent = () => {
       {
         text: 'Copiar',
         onClick: (info) => copyToClipboard(info.tab.title),
+      },
+      {
+        text: 'Adicionar aba ao grupo',
+        show: (info) => !info?.tab.groupId,
+        children: [
+          {
+            text: 'Novo grupo',
+            onClick: (info) => {
+              const groupId = createTabGroup(info.tab.idTab);
+
+              setGroupEditorRequest({ groupId, position: info.position });
+            },
+          },
+          ...tabGroups.map((group) => ({
+            text: group.title,
+            onClick: (info) => addTabToGroup(info.tab.idTab, group.id),
+          })),
+        ],
+      },
+      {
+        text: 'Remover aba do grupo',
+        show: (info) => !!info?.tab.groupId,
+        onClick: (info) => removeTabFromGroup(info.tab.idTab),
       },
       {
         text: 'Fechar aba',
@@ -59,7 +99,7 @@ export const MainContent = () => {
         },
       },
     ],
-    [tabs],
+    [addTabToGroup, createTabGroup, removeTab, removeTabFromGroup, setActiveTabId, tabGroups, tabs],
   );
 
   if (!tabs.length) return <Welcolme />;
@@ -80,23 +120,35 @@ export const MainContent = () => {
         idTabBar="app_tabs"
         onRemoveTab={(tab) => removeTab(tab.idTab)}
         onMoveTab={moveTab}
+        groups={tabGroups}
+        onAddTabToGroup={addTabToGroup}
+        onRemoveTabFromGroup={removeTabFromGroup}
+        onUpdateTabGroup={updateTabGroup}
+        onUngroupTabGroup={ungroupTabGroup}
+        onCloseTabGroup={closeTabGroup}
+        groupEditorRequest={groupEditorRequest}
         height="42px"
         contextMenuOptions={contextMenuOptions}
-        tabs={tabs.map(({ id: idTab, title, subtitle, unsaved, data }) => ({
+        tabs={tabs.map(({ id: idTab, groupId, title, subtitle, unsaved, data }) => ({
           idTab,
+          groupId,
           unsaved,
           title,
           subtitle: subtitle || connectionNameById.get(data?.id_connection),
         }))}
       />
 
-      <TabWindow activeTabId={activeTabId}>
-        {tabs.map(({ id, component: TabComponent }) => (
-          <TabContent key={id} idTab={id}>
-            <TabComponent />
-          </TabContent>
-        ))}
-      </TabWindow>
+      {!activeTabId ? (
+        <Welcolme />
+      ) : (
+        <TabWindow activeTabId={activeTabId}>
+          {tabs.map(({ id, component: TabComponent }) => (
+            <TabContent key={id} idTab={id}>
+              <TabComponent />
+            </TabContent>
+          ))}
+        </TabWindow>
+      )}
     </div>
   );
 };

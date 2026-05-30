@@ -7,6 +7,37 @@
   animation: blowUp 0.05s forwards;
 }
 
+.option {
+  position: relative;
+}
+
+.optionContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.submenuArrow {
+  opacity: 0.72;
+}
+
+.submenu {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  min-width: 160px;
+  background-color: var(--backgroundColor);
+  border: 1px solid var(--borderColor);
+  border-radius: 4px;
+}
+
+.option:hover > .submenu {
+  display: block;
+}
+
 @keyframes blowUp {
   0% {
     transform: scale(0);

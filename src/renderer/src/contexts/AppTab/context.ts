@@ -2,13 +2,32 @@ import { createContext } from 'react';
 
 export interface ITabContext {
   readonly tabs: IAppTab[];
+  readonly tabGroups: IAppTabGroup[];
   activeTabId: string | undefined;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>;
   addTab(tab: INewAppTab): void;
   removeTab(tabId: string | string[]): void;
-  moveTab(fromId: string, toId: string): void;
+  moveTab(fromId: string, toId: string, placement?: IAppTabMovePlacement): void;
+  createTabGroup(tabId: string): string;
+  addTabToGroup(tabId: string, groupId: string, targetTabId?: string): void;
+  removeTabFromGroup(tabId: string, targetTabId?: string): void;
+  updateTabGroup(
+    groupId: string,
+    data: Partial<Pick<IAppTabGroup, 'title' | 'color' | 'collapsed'>>,
+  ): void;
+  ungroupTabGroup(groupId: string): void;
+  closeTabGroup(groupId: string): void;
   getTab(tabId: string): IAppTab | undefined;
   updateTab(id: string, data: Partial<Pick<IAppTab, 'title' | 'subtitle' | 'unsaved'>>): void;
+}
+
+export type IAppTabMovePlacement = 'before' | 'after';
+
+export interface IAppTabGroup {
+  id: string;
+  title: string;
+  color: string;
+  collapsed?: boolean;
 }
 
 export type IAppTabData =
@@ -27,6 +46,7 @@ export type IAppTabData =
 export interface INewAppTab {
   id?: string;
   replaceId?: string;
+  groupId?: string;
   title?: string;
   subtitle?: string;
   unsaved?: boolean;
@@ -36,6 +56,7 @@ export interface INewAppTab {
 
 export interface IAppTab {
   id: string;
+  groupId?: string;
   title: string;
   subtitle?: string;
   unsaved?: boolean;
@@ -44,7 +65,10 @@ export interface IAppTab {
 }
 
 export interface IAppTabsSession {
-  tabs?: Array<Pick<IAppTab, 'id' | 'title' | 'subtitle' | 'unsaved'> & { data?: IAppTabData }>;
+  tabs?: Array<
+    Pick<IAppTab, 'id' | 'groupId' | 'title' | 'subtitle' | 'unsaved'> & { data?: IAppTabData }
+  >;
+  tabGroups?: IAppTabGroup[];
   activeTabId?: string;
 }
 

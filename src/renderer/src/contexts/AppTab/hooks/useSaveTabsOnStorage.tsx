@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { APP_TABS_SESSION_STORAGE_KEY, IAppTab, IAppTabsSession } from '../context';
+import { APP_TABS_SESSION_STORAGE_KEY, IAppTab, IAppTabGroup, IAppTabsSession } from '../context';
 
 export const useSaveTabsOnStorage = (
-  activeTabId: string,
+  activeTabId: string | undefined,
   tabs: IAppTab[],
+  tabGroups: IAppTabGroup[],
   hasRestoredTabs?: boolean,
 ) => {
   useEffect(() => {
@@ -14,18 +15,25 @@ export const useSaveTabsOnStorage = (
     for (const tab of tabs) {
       if (!tab.data) continue;
 
-      const { id, title, subtitle, unsaved, data } = tab;
+      const { id, groupId, title, subtitle, unsaved, data } = tab;
 
-      serializableTabs.push({ id, title, subtitle, unsaved, data });
+      serializableTabs.push({ id, groupId, title, subtitle, unsaved, data });
     }
 
     const nextActiveTabId = serializableTabs.some((tab) => tab.id === activeTabId)
       ? activeTabId
       : serializableTabs[0]?.id;
+    const serializableTabGroups = tabGroups.filter((group) =>
+      serializableTabs.some((tab) => tab.groupId === group.id),
+    );
 
     window.localStorage.setItem(
       APP_TABS_SESSION_STORAGE_KEY,
-      JSON.stringify({ tabs: serializableTabs, activeTabId: nextActiveTabId }),
+      JSON.stringify({
+        tabs: serializableTabs,
+        tabGroups: serializableTabGroups,
+        activeTabId: nextActiveTabId,
+      }),
     );
-  }, [tabs, activeTabId]);
+  }, [tabs, tabGroups, activeTabId, hasRestoredTabs]);
 };

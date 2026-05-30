@@ -1,12 +1,56 @@
 import React from 'react';
 import { generateHash } from '@renderer/utils/string';
-import AppTabContext, { type IAppTab, type INewAppTab } from './context';
+import AppTabContext, {
+  type IAppTab,
+  type IAppTabGroup,
+  type IAppTabMovePlacement,
+  type INewAppTab,
+} from './context';
 import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
 import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 export type * from './context';
 
+const TAB_GROUP_COLORS = [
+  '#8ab4f8',
+  '#f28b82',
+  '#fdd663',
+  '#81c995',
+  '#c58af9',
+  '#78d9ec',
+  '#f6aea9',
+  '#fbbc04',
+];
+
+const moveTabInList = (
+  tabs: IAppTab[],
+  fromId: string,
+  toId: string,
+  placement: IAppTabMovePlacement = 'before',
+) => {
+  const fromIndex = tabs.findIndex((tab) => tab.id === fromId);
+  const toIndex = tabs.findIndex((tab) => tab.id === toId);
+
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return tabs;
+
+  const next = [...tabs];
+  const [movedTab] = next.splice(fromIndex, 1);
+  const nextToIndex = next.findIndex((tab) => tab.id === toId);
+  const insertIndex = placement === 'after' ? nextToIndex + 1 : nextToIndex;
+
+  next.splice(insertIndex, 0, movedTab);
+
+  return next;
+};
+
+const cleanupEmptyGroups = (groups: IAppTabGroup[], tabs: IAppTab[]) => {
+  const groupIdsWithTabs = new Set(tabs.map((tab) => tab.groupId).filter(Boolean));
+
+  return groups.filter((group) => groupIdsWithTabs.has(group.id));
+};
+
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
+  const [tabGroups, setTabGroups] = React.useState<IAppTabGroup[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
 
   const addTab = React.useCallback(
@@ -14,6 +58,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       const {
         id = generateHash(),
         replaceId,
+        groupId,
         unsaved = false,
         title = 'Sem titulo',
         subtitle,
@@ -23,6 +68,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
       const tab: IAppTab = {
         id,
+        groupId,
         title,
         subtitle,
         unsaved,
@@ -65,6 +111,12 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const removeTab = React.useCallback(
     (tabId: string | string[]) => {
       const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
+      const remainingTabs = tabs.filter((t) => !tabsIdToRemove.has(t.id));
+      const isVisible = (tab: IAppTab) => {
+        const group = tabGroups.find((item) => item.id === tab.groupId);
+
+        return !group?.collapsed;
+      };
 
       if (tabsIdToRemove.has(activeTabId)) {
         const activeIndex = tabs.findIndex((t) => t.id === activeTabId);
@@ -72,7 +124,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         let nextId: string | undefined;
 
         for (let i = activeIndex - 1; i >= 0; i--) {
-          if (!tabsIdToRemove.has(tabs[i].id)) {
+          if (!tabsIdToRemove.has(tabs[i].id) && isVisible(tabs[i])) {
             nextId = tabs[i].id;
             break;
           }
@@ -80,10 +132,22 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (!nextId) {
           for (let i = activeIndex + 1; i < tabs.length; i++) {
-            if (!tabsIdToRemove.has(tabs[i].id)) {
+            if (!tabsIdToRemove.has(tabs[i].id) && isVisible(tabs[i])) {
               nextId = tabs[i].id;
               break;
             }
+          }
+        }
+
+        if (!nextId && remainingTabs[0]) {
+          nextId = remainingTabs[0].id;
+
+          if (remainingTabs[0].groupId) {
+            setTabGroups((prev) =>
+              prev.map((group) =>
+                group.id === remainingTabs[0].groupId ? { ...group, collapsed: false } : group,
+              ),
+            );
           }
         }
 
@@ -91,24 +155,140 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       setTabs((prev) => prev.filter((t) => !tabsIdToRemove.has(t.id)));
+      setTabGroups((prev) => cleanupEmptyGroups(prev, remainingTabs));
     },
-    [tabs, activeTabId],
+    [tabs, tabGroups, activeTabId],
   );
 
-  const moveTab = React.useCallback((fromId: string, toId: string) => {
+  const moveTab = React.useCallback(
+    (fromId: string, toId: string, placement: IAppTabMovePlacement = 'before') => {
+      setTabs((prev) => moveTabInList(prev, fromId, toId, placement));
+    },
+    [],
+  );
+
+  const createTabGroup = React.useCallback(
+    (tabId: string) => {
+      const group: IAppTabGroup = {
+        id: generateHash(),
+        title: 'Grupo',
+        color: TAB_GROUP_COLORS[tabGroups.length % TAB_GROUP_COLORS.length],
+      };
+
+      setTabGroups((prev) => [...prev, group]);
+      setTabs((prev) =>
+        prev.map((tab) => (tab.id === tabId ? { ...tab, groupId: group.id } : tab)),
+      );
+
+      return group.id;
+    },
+    [tabGroups.length],
+  );
+
+  const addTabToGroup = React.useCallback(
+    (tabId: string, groupId: string, targetTabId?: string) => {
+      if (tabId === activeTabId) {
+        setTabGroups((prev) =>
+          prev.map((group) => (group.id === groupId ? { ...group, collapsed: false } : group)),
+        );
+      }
+
+      setTabs((prev) => {
+        const next = prev.map((tab) => (tab.id === tabId ? { ...tab, groupId } : tab));
+        const targetId =
+          targetTabId ||
+          [...next].reverse().find((tab) => tab.id !== tabId && tab.groupId === groupId)?.id;
+
+        if (!targetId) return next;
+
+        return moveTabInList(next, tabId, targetId, targetTabId ? 'before' : 'after');
+      });
+    },
+    [activeTabId],
+  );
+
+  const removeTabFromGroup = React.useCallback((tabId: string, targetTabId?: string) => {
     setTabs((prev) => {
-      const fromIndex = prev.findIndex((tab) => tab.id === fromId);
-      const toIndex = prev.findIndex((tab) => tab.id === toId);
+      const sourceTab = prev.find((tab) => tab.id === tabId);
+      const sourceGroupId = sourceTab?.groupId;
 
-      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return prev;
+      if (!sourceGroupId) return prev;
 
-      const next = [...prev];
-      const [movedTab] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, movedTab);
+      const next = prev.map((tab) => (tab.id === tabId ? { ...tab, groupId: undefined } : tab));
 
-      return next;
+      if (targetTabId) return moveTabInList(next, tabId, targetTabId);
+
+      const lastGroupTab = [...next].reverse().find((tab) => tab.groupId === sourceGroupId);
+
+      if (!lastGroupTab) return next;
+
+      return moveTabInList(next, tabId, lastGroupTab.id, 'after');
     });
   }, []);
+
+  const updateTabGroup = React.useCallback(
+    (groupId: string, data: Partial<Pick<IAppTabGroup, 'title' | 'color' | 'collapsed'>>) => {
+      const nextGroups = tabGroups.map((group) =>
+        group.id === groupId ? { ...group, ...data } : group,
+      );
+
+      if (data.collapsed && activeTabId) {
+        const activeIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+        const activeTab = tabs[activeIndex];
+
+        if (activeTab?.groupId === groupId) {
+          const isVisible = (tab: IAppTab) => {
+            const group = nextGroups.find((item) => item.id === tab.groupId);
+
+            return !group?.collapsed;
+          };
+
+          let nextActiveTabId: string | undefined;
+
+          for (let i = activeIndex - 1; i >= 0; i--) {
+            if (isVisible(tabs[i])) {
+              nextActiveTabId = tabs[i].id;
+              break;
+            }
+          }
+
+          if (!nextActiveTabId) {
+            for (let i = activeIndex + 1; i < tabs.length; i++) {
+              if (isVisible(tabs[i])) {
+                nextActiveTabId = tabs[i].id;
+                break;
+              }
+            }
+          }
+
+          if (nextActiveTabId) {
+            setActiveTabId(nextActiveTabId);
+          } else {
+            setActiveTabId(undefined);
+          }
+        }
+      }
+
+      setTabGroups(nextGroups);
+    },
+    [activeTabId, tabGroups, tabs],
+  );
+
+  const ungroupTabGroup = React.useCallback((groupId: string) => {
+    setTabs((prev) =>
+      prev.map((tab) => (tab.groupId === groupId ? { ...tab, groupId: undefined } : tab)),
+    );
+    setTabGroups((prev) => prev.filter((group) => group.id !== groupId));
+  }, []);
+
+  const closeTabGroup = React.useCallback(
+    (groupId: string) => {
+      const tabIds = tabs.filter((tab) => tab.groupId === groupId).map((tab) => tab.id);
+
+      removeTab(tabIds);
+    },
+    [removeTab, tabs],
+  );
 
   const getTab = (tabId: string) => {
     return tabs.find((tab) => tab.id === tabId);
@@ -121,9 +301,13 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
 
-  const hasRestoredTabs = useRestoreTabsFromStorage(setActiveTabId, setTabs);
+  const hasRestoredTabs = useRestoreTabsFromStorage(setActiveTabId, setTabs, setTabGroups);
 
-  useSaveTabsOnStorage(activeTabId, tabs, hasRestoredTabs);
+  useSaveTabsOnStorage(activeTabId, tabs, tabGroups, hasRestoredTabs);
+
+  React.useEffect(() => {
+    setTabGroups((prev) => cleanupEmptyGroups(prev, tabs));
+  }, [tabs]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -142,9 +326,16 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     <AppTabContext.Provider
       value={{
         tabs,
+        tabGroups,
         addTab,
         removeTab,
         moveTab,
+        createTabGroup,
+        addTabToGroup,
+        removeTabFromGroup,
+        updateTabGroup,
+        ungroupTabGroup,
+        closeTabGroup,
         activeTabId,
         setActiveTabId,
         getTab,

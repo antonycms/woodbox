@@ -1,5 +1,5 @@
 import React from 'react';
-import { IAppTab } from '@renderer/contexts/AppTab';
+import { IAppTab, IAppTabGroup } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
@@ -8,18 +8,22 @@ import FunctionInfo from '@renderer/views/FunctionInfo';
 import { APP_TABS_SESSION_STORAGE_KEY, IAppTabsSession } from '../context';
 
 export const useRestoreTabsFromStorage = (
-  setActiveTabId: React.Dispatch<React.SetStateAction<string>>,
+  setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>,
   setTabs: React.Dispatch<React.SetStateAction<IAppTab[]>>,
+  setTabGroups: React.Dispatch<React.SetStateAction<IAppTabGroup[]>>,
 ) => {
   const { loadConnectionInfo } = useStoreContext();
   const { showToast } = useToast();
 
-  const hasRestoredTabsRef = React.useRef(false);
+  const [hasRestoredTabs, setHasRestoredTabs] = React.useState(false);
 
   React.useEffect(() => {
     const rawSession = window.localStorage.getItem(APP_TABS_SESSION_STORAGE_KEY);
 
-    if (!rawSession) return;
+    if (!rawSession) {
+      setHasRestoredTabs(true);
+      return;
+    }
 
     try {
       const session = JSON.parse(rawSession) as IAppTabsSession;
@@ -77,6 +81,20 @@ export const useRestoreTabsFromStorage = (
         }
       }
 
+      const groupIdsWithTabs = new Set(restoredTabs.map((tab) => tab.groupId).filter(Boolean));
+      const restoredGroups = (session.tabGroups || []).filter((group) =>
+        groupIdsWithTabs.has(group.id),
+      );
+      const restoredGroupIds = new Set(restoredGroups.map((group) => group.id));
+      const restoredTabsWithValidGroups = restoredTabs.map((tab) =>
+        tab.groupId && !restoredGroupIds.has(tab.groupId) ? { ...tab, groupId: undefined } : tab,
+      );
+      const visibleTabs = restoredTabsWithValidGroups.filter((tab) => {
+        const group = restoredGroups.find((item) => item.id === tab.groupId);
+
+        return !group?.collapsed;
+      });
+
       Promise.allSettled([...connectionIds].map((id) => loadConnectionInfo(id))).then((results) => {
         results.forEach((result) => {
           if (result.status === 'rejected') {
@@ -89,19 +107,20 @@ export const useRestoreTabsFromStorage = (
         });
       });
 
-      setTabs(restoredTabs);
+      setTabs(restoredTabsWithValidGroups);
+      setTabGroups(restoredGroups);
 
       setActiveTabId(
-        restoredTabs.some((tab) => tab.id === session.activeTabId)
+        visibleTabs.some((tab) => tab.id === session.activeTabId)
           ? session.activeTabId
-          : restoredTabs[0]?.id,
+          : visibleTabs[0]?.id,
       );
     } catch (error) {
       console.error(error);
     } finally {
-      hasRestoredTabsRef.current = true;
+      setHasRestoredTabs(true);
     }
   }, []);
 
-  return hasRestoredTabsRef.current;
+  return hasRestoredTabs;
 };

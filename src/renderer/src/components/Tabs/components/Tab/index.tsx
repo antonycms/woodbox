@@ -8,6 +8,7 @@ import IconMdiClose from '~icons/mdi/close';
 const Tab = (props: ITabProps) => {
   const {
     tabId,
+    groupId,
     active,
     title,
     subtitle,
@@ -26,21 +27,29 @@ const Tab = (props: ITabProps) => {
     color,
     ascentColor,
     backgroundColor,
+    groupColor,
     onContextMenu,
     icon: Icon,
   } = props;
 
-  const stylesVar = toCssProperties({ color, ascentColor, backgroundColor });
+  const stylesVar = toCssProperties({
+    color,
+    ascentColor,
+    backgroundColor,
+    tabGroupColor: groupColor,
+  });
 
   return (
     <div
       className={classes(
         styles.tab,
         active && styles.active,
+        groupId && styles.grouped,
         vertical && styles.vertical,
         dragTarget && styles.tabIsDragging,
       )}
       data-tab-id={tabId}
+      data-tab-group-id={groupId}
       style={{ ...stylesVar, height } as React.CSSProperties}
       onClick={onClick}
       onContextMenu={onContextMenu}
@@ -92,6 +101,7 @@ export default Tab;
 
 export interface ITabProps {
   tabId?: string;
+  groupId?: string;
   unsaved?: boolean;
   title: string;
   subtitle?: string;
@@ -112,6 +122,7 @@ export interface ITabProps {
   color: string;
   ascentColor: string;
   backgroundColor: string;
+  groupColor?: string;
   onContextMenu?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
 }
 

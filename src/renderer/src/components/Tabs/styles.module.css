@@ -93,6 +93,10 @@
   cursor: pointer;
 }
 
+.tab.grouped {
+  background-color: color-mix(in srgb, var(--tabGroupColor) 16%, transparent);
+}
+
 .tabBar.reverse .tab {
   border-right: unset;
   border-left: var(--borderTab);
@@ -232,4 +236,100 @@
 .ignoreTabDrag {
   pointer-events: none;
   cursor: unset !important;
+}
+
+.tabGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  position: relative;
+  padding: 0 10px;
+  border: 0;
+  border-right: var(--borderTab);
+  background-color: color-mix(in srgb, var(--tabGroupColor) 24%, transparent);
+  color: var(--color-white);
+  user-select: none;
+  cursor: pointer;
+}
+
+.tabGroupHeader:hover,
+.activeTabGroupHeader {
+  background-color: color-mix(in srgb, var(--tabGroupColor) 34%, transparent);
+}
+
+.tabGroupDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--tabGroupColor);
+}
+
+.tabGroupTitle {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.tabGroupEditor {
+  position: fixed;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 236px;
+  padding: 10px;
+  border: 1px solid var(--colorBorder);
+  border-radius: 8px;
+  background-color: var(--backgroundColorBar);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+}
+
+.tabGroupNameInput {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--colorBorder);
+  border-radius: 6px;
+  outline: 0;
+  background-color: var(--backgroundColor);
+  color: var(--color-white);
+}
+
+.tabGroupNameInput:focus {
+  border-color: var(--tabGroupColor, var(--colorBorder));
+}
+
+.tabGroupColors {
+  display: flex;
+  gap: 8px;
+}
+
+.tabGroupColorButton {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: var(--tabGroupColor);
+  cursor: pointer;
+}
+
+.selectedTabGroupColor {
+  border-color: var(--color-white);
+}
+
+.tabGroupAction {
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--color-white);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tabGroupAction:hover {
+  background-color: rgba(255, 255, 255, 0.12);
 }

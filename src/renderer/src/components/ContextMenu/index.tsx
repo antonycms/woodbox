@@ -7,6 +7,8 @@ import styles from './styles.module.css';
 export interface IContextMenuOption<ActiveContextInfo = any> {
   text: string;
   onClick?(activeContextInfo?: ActiveContextInfo): void;
+  children?: IContextMenuOption<ActiveContextInfo>[];
+  show?(activeContextInfo?: ActiveContextInfo): boolean;
 }
 
 export interface IContextMenuPosition {
@@ -44,25 +46,48 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
 
   if (isInvalidPosition) return null;
 
+  const renderOption = (option: IContextMenuOption<ActiveContextInfo>, index: number) => {
+    const children = option.children?.filter((childOption) =>
+      childOption.show ? childOption.show(activeContextInfo) : true,
+    );
+    const hasChildren = !!children?.length;
+
+    if (option.show && !option.show(activeContextInfo)) return null;
+    if (option.children?.length && !hasChildren) return null;
+
+    return (
+      <div className={styles.option} key={index}>
+        <Button
+          text
+          justifyContent="start"
+          color={theme.color}
+          onClick={() => {
+            if (hasChildren) return;
+
+            option.onClick?.(activeContextInfo);
+          }}
+        >
+          <span className={styles.optionContent}>
+            <span>{option.text}</span>
+            {hasChildren && <span className={styles.submenuArrow}>›</span>}
+          </span>
+        </Button>
+
+        {hasChildren && (
+          <div className={styles.submenu}>
+            {children.map((childOption, childIndex) => renderOption(childOption, childIndex))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className={styles.container}
       style={{ ...toCssProperties(theme), top: positionY, left: positionX }}
     >
-      {options?.map?.(
-        (option, index) =>
-          !!option && (
-            <Button
-              text
-              justifyContent="start"
-              key={index}
-              color={theme.color}
-              onClick={() => option.onClick?.(activeContextInfo)}
-            >
-              {option.text}
-            </Button>
-          ),
-      )}
+      {options?.map?.((option, index) => !!option && renderOption(option, index))}
     </div>
   );
 }
