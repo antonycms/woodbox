@@ -2,6 +2,7 @@ import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
 import { useTabContext } from '../TabProvider';
+import TabContentProvider from '../TabContentProvider';
 
 const TabContent = (props: ITabWindowProps) => {
   const { children, idTab, backgroundColor, hasPadding } = props;
@@ -12,7 +13,9 @@ const TabContent = (props: ITabWindowProps) => {
       className={classes(styles.tabContent, activeTabId === idTab && styles.active)}
       style={{ backgroundColor, padding: hasPadding ? '10px' : null }}
     >
-      {children}
+      <TabContentProvider activeTabId={activeTabId} tabId={idTab}>
+        {children}
+      </TabContentProvider>
     </div>
   );
 };
