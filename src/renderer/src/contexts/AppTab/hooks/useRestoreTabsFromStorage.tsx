@@ -81,15 +81,21 @@ export const useRestoreTabsFromStorage = (
         }
       }
 
-      const groupIdsWithTabs = new Set(restoredTabs.map((tab) => tab.groupId).filter(Boolean));
-      const restoredGroups = (session.tabGroups || []).filter((group) =>
-        groupIdsWithTabs.has(group.id),
+      const groupIdsWithTabs = [
+        ...new Set(
+          restoredTabs.map((tab) => tab.groupId).filter((groupId): groupId is string => !!groupId),
+        ),
+      ];
+      const storedGroupsById = new Map((session.tabGroups || []).map((group) => [group.id, group]));
+      const restoredGroups = groupIdsWithTabs.map(
+        (groupId) =>
+          storedGroupsById.get(groupId) || {
+            id: groupId,
+            title: 'Grupo',
+            color: '#8ab4f8',
+          },
       );
-      const restoredGroupIds = new Set(restoredGroups.map((group) => group.id));
-      const restoredTabsWithValidGroups = restoredTabs.map((tab) =>
-        tab.groupId && !restoredGroupIds.has(tab.groupId) ? { ...tab, groupId: undefined } : tab,
-      );
-      const visibleTabs = restoredTabsWithValidGroups.filter((tab) => {
+      const visibleTabs = restoredTabs.filter((tab) => {
         const group = restoredGroups.find((item) => item.id === tab.groupId);
 
         return !group?.collapsed;
@@ -107,7 +113,7 @@ export const useRestoreTabsFromStorage = (
         });
       });
 
-      setTabs(restoredTabsWithValidGroups);
+      setTabs(restoredTabs);
       setTabGroups(restoredGroups);
 
       setActiveTabId(

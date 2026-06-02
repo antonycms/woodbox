@@ -306,8 +306,10 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   useSaveTabsOnStorage(activeTabId, tabs, tabGroups, hasRestoredTabs);
 
   React.useEffect(() => {
+    if (!hasRestoredTabs) return;
+
     setTabGroups((prev) => cleanupEmptyGroups(prev, tabs));
-  }, [tabs]);
+  }, [tabs, hasRestoredTabs]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
