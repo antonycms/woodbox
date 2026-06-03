@@ -41,7 +41,7 @@ const TabsBar = (props: ITabsBarProps) => {
     width = '100%',
   } = props;
 
-  const ref = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const handledGroupEditorRequestRef = React.useRef<IGroupEditorRequest>(null);
   const [idTabDraging, setIdTabDraging] = React.useState<string>(null);
   const [idTabDragTarget, setIdTabDragTarget] = React.useState<string>(null);
@@ -204,7 +204,7 @@ const TabsBar = (props: ITabsBarProps) => {
   React.useEffect(() => {
     if (!activeGroupContext) return;
 
-    const nextGroup = groups.find((group) => group.id === activeGroupContext.group.id);
+    const nextGroup = groupsById.get(activeGroupContext.group.id);
 
     if (!nextGroup) {
       setActiveGroupContext(null);
@@ -214,26 +214,52 @@ const TabsBar = (props: ITabsBarProps) => {
     if (nextGroup !== activeGroupContext.group) {
       setActiveGroupContext((prev) => (prev ? { ...prev, group: nextGroup } : prev));
     }
-  }, [activeGroupContext, groups]);
+  }, [activeGroupContext, groupsById]);
 
   React.useEffect(() => {
     if (!groupEditorRequest) return;
     if (handledGroupEditorRequestRef.current === groupEditorRequest) return;
 
-    const group = groups.find((item) => item.id === groupEditorRequest.groupId);
+    const group = groupsById.get(groupEditorRequest.groupId);
 
     if (!group) return;
 
     handledGroupEditorRequestRef.current = groupEditorRequest;
     setActiveTabContextMenu(null);
     setActiveGroupContext({ group, position: groupEditorRequest.position });
-  }, [groupEditorRequest, groups]);
+  }, [groupEditorRequest, groupsById]);
+
+  const scrollActiveTabIntoView = () => {
+    const container = scrollContainerRef.current;
+
+    if (vertical || !activeTabId || !container) return;
+
+    const activeElement = container.querySelector<HTMLElement>(`[data-tab-id="${activeTabId}"]`);
+
+    if (!activeElement) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeElement.getBoundingClientRect();
+
+    const targetScrollLeft =
+      container.scrollLeft +
+      activeRect.left -
+      containerRect.left -
+      (container.clientWidth - activeElement.offsetWidth) / 2;
+
+    container.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: 'smooth',
+    });
+  };
 
   React.useEffect(() => {
-    const element = ref.current;
+    const element = scrollContainerRef.current;
+
+    if (!element) return;
 
     function enableHorizontalWheelScroll(e: WheelEvent) {
-      if (!element || e.deltaX) return;
+      if (e.deltaX) return;
 
       if (e.deltaY > 0) element.scrollLeft += 50;
       else element.scrollLeft -= 50;
@@ -249,12 +275,18 @@ const TabsBar = (props: ITabsBarProps) => {
   React.useLayoutEffect(() => {
     if (!tabs.length) return;
 
-    const visibleTabs = tabs.filter((tab) => {
-      const group = tab.groupId ? groupsById.get(tab.groupId) : undefined;
+    const visibleTabs: ITab[] = [];
+    let activeTab: ITab = null;
 
-      return !group?.collapsed;
-    });
-    const activeTab = visibleTabs.find((t) => t.idTab === activeTabId);
+    for (const tab of tabs) {
+      const isVisibleTab = tab.groupId ? !groupsById.get(tab.groupId)?.collapsed : true;
+      const isActiveTab = isVisibleTab && tab.idTab === activeTabId;
+
+      if (isVisibleTab) visibleTabs.push(tab);
+      if (isActiveTab) activeTab = tab;
+    }
+
+    if (activeTab) scrollActiveTabIntoView();
 
     if (!visibleTabs.length) {
       if (activeTabId) onActiveTab(undefined);
@@ -267,9 +299,8 @@ const TabsBar = (props: ITabsBarProps) => {
   }, [tabs, activeTabId, groupsById]);
 
   return (
-    <div className={styles.outsideBar} style={styleOutsideContainer}>
+    <div ref={scrollContainerRef} className={styles.outsideBar} style={styleOutsideContainer}>
       <div
-        ref={ref}
         onDrop={draggable ? onDrop : undefined}
         onDragOver={(e) => e.preventDefault()}
         style={styleTabBar}
