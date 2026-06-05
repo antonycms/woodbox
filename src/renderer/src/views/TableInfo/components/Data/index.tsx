@@ -40,6 +40,8 @@ import {
 } from '../Properties/tabs/Columns/ddl';
 import { generateHash } from '@renderer/utils/string';
 
+import IconMdiClose from '~icons/mdi/close';
+
 interface IDataProps extends ITableInfoProps {
   onOpenTable?: (
     idConnection: string,
@@ -778,7 +780,7 @@ const Data = ({
             className={styles.previewResizable}
             onResize={(size) => size.width && setPreviewWidth(size.width)}
           >
-            <div className={styles.preview}>
+            <div className={styles.preview} style={{ backgroundColor: colors.backgroundColor }}>
               <div className={styles.previewHeader}>
                 <TabBar
                   borderBottom
@@ -794,6 +796,15 @@ const Data = ({
                     { idTab: 'value', title: 'Valor' },
                     selectedReference && { idTab: 'reference', title: 'Referência' },
                   ].filter(Boolean)}
+                />
+
+                <Button
+                  title="Fechar visualização"
+                  backgroundColor={tabTheme.backgroundColor}
+                  color={tabTheme.color}
+                  onClick={closeValuePreview}
+                  width="auto"
+                  icon={() => <IconMdiClose width={16} />}
                 />
               </div>
 
