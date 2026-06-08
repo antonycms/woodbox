@@ -14,7 +14,7 @@ const activeRunSqlQueries = new Map<
   { connectionId: string; instance: Knex; dbConnection: any }
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
-const MAX_SERVER_OUTPUT_MESSAGES = 500;
+const MAX_SERVER_OUTPUT_MESSAGES = 1000;
 
 interface IServerOutputMessage {
   id: string;
