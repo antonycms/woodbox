@@ -7,29 +7,53 @@ import { Text } from '@renderer/components/Text';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IServerOutputMessage } from '@renderer/contexts/Store/context';
 import { toDateTime } from '@renderer/utils/date';
+import { useStoreContext } from '@renderer/contexts/Store';
 import styles from './styles.module.css';
 
 interface IModalServerOutputProps {
   show?: boolean;
-  messages: IServerOutputMessage[];
+  id_connection: string;
   onClose(): void;
 }
 
 export const ModalServerOutput = React.memo(
-  ({ show, messages, onClose }: IModalServerOutputProps) => {
+  ({ show, id_connection, onClose }: IModalServerOutputProps) => {
     const {
       activeTheme: { modal: colors },
     } = useThemeContext();
 
+    const { getServerOutput } = useStoreContext();
+
+    const [messages, setMessages] = React.useState<IServerOutputMessage[]>([]);
     const listRef = React.useRef<HTMLDivElement>(null);
+
+    const loadServerOutput = async () => {
+      const messages = await getServerOutput(id_connection);
+      setMessages(messages);
+    };
 
     React.useEffect(() => {
       if (!show) return;
-
-      listRef.current?.scrollTo({
-        top: listRef.current.scrollHeight,
-      });
+      listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
     }, [show, messages.length]);
+
+    React.useEffect(() => {
+      loadServerOutput();
+
+      const removeListener = window.electron.ipcRenderer.on(
+        '@event:server_output',
+        (_event, message: IServerOutputMessage) => {
+          if (message.connectionId !== id_connection) return;
+
+          setMessages((prevState) => {
+            if (prevState.some(({ id }) => id === message.id)) return prevState;
+            return [...prevState, message].slice(-1000);
+          });
+        },
+      );
+
+      return removeListener;
+    }, [id_connection]);
 
     return (
       <Modal

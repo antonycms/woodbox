@@ -14,12 +14,7 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
-import {
-  IColumnInfo,
-  IColumnReferenceInfo,
-  IServerOutputMessage,
-  useStoreContext,
-} from '@renderer/contexts/Store';
+import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
@@ -50,7 +45,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const {
     runSql,
     cancelRunSql,
-    getServerOutput,
     connections,
     connectionsInfo,
     getTableColumns,
@@ -94,9 +88,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
     React.useState<IExecuteQueryParams>();
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
-  const [serverOutputMessages, setServerOutputMessages] = React.useState<IServerOutputMessage[]>(
-    [],
-  );
 
   const makeUpdateResultTab = (idTab: string) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
@@ -373,15 +364,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     [id_connection, queryVariableValuesByConnection],
   );
 
-  const loadServerOutput = React.useCallback(async () => {
-    const messages = await getServerOutput(id_connection);
-    setServerOutputMessages(messages);
-  }, [getServerOutput, id_connection]);
-
   const showServerOutput = React.useCallback(() => {
     setShowServerOutputModal(true);
-    loadServerOutput();
-  }, [loadServerOutput]);
+  }, []);
 
   const executePendingQuery = (variableValues: Record<string, string>) => {
     if (!pendingQueryExecution) return;
@@ -888,27 +873,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   }, [refEditor.current?.element]);
 
   React.useEffect(() => {
-    loadServerOutput();
-  }, [loadServerOutput]);
-
-  React.useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      '@event:server_output',
-      (_event, message: IServerOutputMessage) => {
-        if (message.connectionId !== id_connection) return;
-
-        setServerOutputMessages((prevState) => {
-          if (prevState.some(({ id }) => id === message.id)) return prevState;
-
-          return [...prevState, message].slice(-500);
-        });
-      },
-    );
-
-    return removeListener;
-  }, [id_connection]);
-
-  React.useEffect(() => {
     loadTableColumns();
   }, [id_connection, currentQueryTablesInfo, tableColumns]);
 
@@ -953,8 +917,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       />
 
       <ModalServerOutput
+        id_connection={id_connection}
         show={showServerOutputModal}
-        messages={serverOutputMessages}
         onClose={() => setShowServerOutputModal(false)}
       />
 
