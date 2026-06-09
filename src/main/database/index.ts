@@ -17,6 +17,7 @@ import {
   runSql,
   cancelRunSql,
   getServerOutput,
+  clearServerOutput,
 } from './core';
 
 // dialect
@@ -37,5 +38,6 @@ addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
 addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
+addListener('@delete:server_output', clearServerOutput);
 
 export { closeAllConnections } from './core';

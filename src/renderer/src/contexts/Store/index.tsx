@@ -244,6 +244,10 @@ const StoreContextProvider = ({ children }) => {
     return await call('@get:server_output', idConnection);
   };
 
+  const clearServerOutput = async (idConnection: string) => {
+    await call('@delete:server_output', idConnection);
+  };
+
   const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
     return await call('@post:run_sql', idConnection, sql, options);
   };
@@ -294,6 +298,7 @@ const StoreContextProvider = ({ children }) => {
         getTableTriggers,
         getFunctionDefinition,
         getServerOutput,
+        clearServerOutput,
         runSql,
         cancelRunSql,
 

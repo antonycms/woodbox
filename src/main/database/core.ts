@@ -53,6 +53,10 @@ export const getServerOutput = async (connectionId: string) => {
   return serverOutputByConnection.get(connectionId) || [];
 };
 
+export const clearServerOutput = async (connectionId: string) => {
+  serverOutputByConnection.delete(connectionId);
+};
+
 export const cancelRunSql = async (connectionId: string, queryExecutionId: string) => {
   const activeQuery = activeRunSqlQueries.get(queryExecutionId);
 

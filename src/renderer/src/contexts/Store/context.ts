@@ -220,6 +220,7 @@ export interface IStoreContext {
   ): Promise<{ definition: string }[]>;
 
   getServerOutput(idConnection: string): Promise<IServerOutputMessage[]>;
+  clearServerOutput(idConnection: string): Promise<void>;
 
   runSql(
     idConnection: string,

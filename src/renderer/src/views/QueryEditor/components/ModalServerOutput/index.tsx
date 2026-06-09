@@ -22,7 +22,7 @@ export const ModalServerOutput = React.memo(
       activeTheme: { modal: colors },
     } = useThemeContext();
 
-    const { getServerOutput } = useStoreContext();
+    const { getServerOutput, clearServerOutput } = useStoreContext();
 
     const [messages, setMessages] = React.useState<IServerOutputMessage[]>([]);
     const listRef = React.useRef<HTMLDivElement>(null);
@@ -30,6 +30,11 @@ export const ModalServerOutput = React.memo(
     const loadServerOutput = async () => {
       const messages = await getServerOutput(id_connection);
       setMessages(messages);
+    };
+
+    const handleClearServerOutput = async () => {
+      await clearServerOutput(id_connection);
+      setMessages([]);
     };
 
     React.useEffect(() => {
@@ -86,6 +91,18 @@ export const ModalServerOutput = React.memo(
 
         <Row>
           <Spacer />
+
+          <Button
+            xs={6}
+            sm={4}
+            md={3}
+            disabled={!messages.length}
+            onClick={handleClearServerOutput}
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+          >
+            Limpar
+          </Button>
 
           <Button
             xs={6}
