@@ -1,12 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
-import {
-  useStoreContext,
-  type IFunctionDb,
-  type IScript,
-  type ITable,
-} from '@renderer/contexts/Store';
+import { useStoreContext, type IFunctionDb, type IScript } from '@renderer/contexts/Store';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
@@ -76,25 +71,49 @@ export const CentralSearchModal = React.memo(() => {
   );
 
   const openTableTab = React.useCallback(
-    (idConnection: string, table: ITable) => {
-      const { table_schema: schema, table_name } = table;
-      const tabId = getTableTabId(idConnection, schema, table_name);
+    (idConnection: string, schema: string | undefined, table: string, initialWhere?: string) => {
+      if (initialWhere) {
+        addTab({
+          title: `${getQualifiedName(schema, table)} [${initialWhere}]`,
+          data: {
+            type: 'table-info',
+            id_connection: idConnection,
+            schema,
+            table,
+            initialWhere,
+            filterLocked: true,
+            initialTab: 'tabData',
+          },
+          component: () => (
+            <TableInfo
+              id_connection={idConnection}
+              schema={schema}
+              table={table}
+              initialWhere={initialWhere}
+              filterLocked
+              initialTab="tabData"
+            />
+          ),
+        });
+
+        return;
+      }
+
+      const tabId = getTableTabId(idConnection, schema, table);
       const tab = getTab(tabId);
 
       if (tab) return setActiveTabId(tabId);
 
       addTab({
         id: tabId,
-        title: getQualifiedName(schema, table_name),
+        title: getQualifiedName(schema, table),
         data: {
           type: 'table-info',
           id_connection: idConnection,
           schema,
-          table: table_name,
+          table,
         },
-        component: () => (
-          <TableInfo id_connection={idConnection} schema={schema} table={table_name} />
-        ),
+        component: () => <TableInfo id_connection={idConnection} schema={schema} table={table} />,
       });
     },
     [addTab, getTab, setActiveTabId],
@@ -167,7 +186,14 @@ export const CentralSearchModal = React.memo(() => {
             icon: 'table',
             isOpen: true,
             isActive: activeTabId === tab.id,
-            onOpen: () => setActiveTabId(tab.id),
+            onOpen: (initialWhere) => {
+              if (initialWhere) {
+                openTableTab(id_connection, schema, table, initialWhere);
+                return;
+              }
+
+              setActiveTabId(tab.id);
+            },
           });
         }
 
@@ -191,7 +217,7 @@ export const CentralSearchModal = React.memo(() => {
       })
       .filter(Boolean)
       .sort(sortByTypeThenTitle);
-  }, [activeTabId, getConnectionDescription, scripts, setActiveTabId, tabs]);
+  }, [activeTabId, getConnectionDescription, openTableTab, scripts, setActiveTabId, tabs]);
 
   const openTabIds = React.useMemo(() => {
     return new Set(openTabItems.map((item) => item.tabId));
@@ -235,7 +261,8 @@ export const CentralSearchModal = React.memo(() => {
               searchableTitle: title,
               connectionDescription: getConnectionDescription(idConnection),
               icon: 'table',
-              onOpen: () => openTableTab(idConnection, table),
+              onOpen: (initialWhere) =>
+                openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
             });
           });
       })
@@ -281,8 +308,10 @@ export const CentralSearchModal = React.memo(() => {
     scripts,
   ]);
 
+  const parsedSearch = React.useMemo(() => parseSearchText(searchText), [searchText]);
+
   const filteredSections = React.useMemo(() => {
-    const filter = normalizeSearch(searchText);
+    const filter = normalizeSearch(parsedSearch.filter);
     const matchItem = (item: ICentralSearchItem) => !filter || item.search.includes(filter);
     const filterAndSortItems = (items: ICentralSearchItem[]) =>
       sortBySearchRelevance(items.filter(matchItem), filter);
@@ -305,7 +334,7 @@ export const CentralSearchModal = React.memo(() => {
         items: filterAndSortItems(closedItemsByType.function),
       },
     ].filter((section) => section.items.length);
-  }, [closedItemsByType, openTabItems, searchText]);
+  }, [closedItemsByType, openTabItems, parsedSearch.filter]);
 
   const visibleItems = React.useMemo(
     () => filteredSections.flatMap((section) => section.items),
@@ -335,10 +364,10 @@ export const CentralSearchModal = React.memo(() => {
 
   const runItem = React.useCallback(
     (item: ICentralSearchItem) => {
-      item.onOpen();
+      item.onOpen(parsedSearch.argument);
       closeModal();
     },
-    [closeModal],
+    [closeModal, parsedSearch.argument],
   );
 
   React.useEffect(() => {
@@ -515,6 +544,15 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
+function parseSearchText(value: string): IParsedSearch {
+  const match = value.trim().match(/^(\S+)(?:\s+([\s\S]+))?$/);
+
+  return {
+    filter: match?.[1] || '',
+    argument: match?.[2]?.trim(),
+  };
+}
+
 function makeSearchItem(item: Omit<ICentralSearchItem, 'search'>): ICentralSearchItem {
   return {
     ...item,
@@ -573,6 +611,11 @@ function getRowOffset(rows: ICentralSearchRow[], indexTarget: number) {
 
 type ICentralSearchItemType = 'script' | 'table' | 'function';
 
+interface IParsedSearch {
+  filter: string;
+  argument?: string;
+}
+
 type ICentralSearchRow =
   | { type: 'section'; title: string }
   | { type: 'item'; item: ICentralSearchItem; itemIndex: number };
@@ -588,5 +631,5 @@ interface ICentralSearchItem {
   icon: AvalailableTreeViewIcon;
   isOpen?: boolean;
   isActive?: boolean;
-  onOpen(): void;
+  onOpen(argument?: string): void;
 }
