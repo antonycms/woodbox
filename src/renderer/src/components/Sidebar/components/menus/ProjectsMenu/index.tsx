@@ -208,6 +208,7 @@ const ProjectsMenu = () => {
         type: 'query-editor',
         id_connection: script.id_connection,
         id_script: script.id,
+        name: script.name,
       },
       component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
