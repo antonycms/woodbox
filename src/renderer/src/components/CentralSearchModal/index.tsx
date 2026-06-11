@@ -6,26 +6,17 @@ import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import IconItemTreeView from '@renderer/components/TreeView/IconItemTreeView';
-import type { AvalailableTreeViewIcon } from '@renderer/components/TreeView/IconItemTreeView';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
-
-const containerElement = document.getElementById('modal-root');
-const SECTION_ROW_HEIGHT = 33;
-const ITEM_ROW_HEIGHT = 52;
-const ITEM_TYPE_ORDER: Record<ICentralSearchItemType, number> = {
-  script: 0,
-  table: 1,
-  function: 2,
-};
+import * as constants from './constants';
 
 export const CentralSearchModal = React.memo(() => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
-  const inputRef = React.useRef<HTMLInputElement>(null);
   const resultsRef = React.useRef<HTMLDivElement>(null);
 
   const { tabs, addTab, getTab, activeTabId, setActiveTabId } = useAppTabContext();
@@ -36,22 +27,19 @@ export const CentralSearchModal = React.memo(() => {
     },
   } = useThemeContext();
 
-  const connectionById = React.useMemo(() => {
-    return new Map(connections.map((connection) => [connection.id, connection]));
-  }, [connections]);
-
-  const openConnectionIds = React.useMemo(() => {
-    return new Set(Array.from(connectionsInfo.keys()));
-  }, [connectionsInfo]);
+  const parsedSearch = constants.parseSearchText(searchText);
 
   const getConnectionDescription = React.useCallback(
-    (idConnection: string) => connectionById.get(idConnection)?.description || idConnection,
-    [connectionById],
+    (idConnection: string) => {
+      const connectionById = new Map(connections.map((connection) => [connection.id, connection]));
+      return connectionById.get(idConnection)?.description;
+    },
+    [connections],
   );
 
   const openScriptTab = React.useCallback(
     (script: IScript) => {
-      const tabId = getScriptTabId(script.id);
+      const tabId = constants.getScriptTabId(script.id);
       const tab = getTab(tabId);
 
       if (tab) return setActiveTabId(tabId);
@@ -75,7 +63,7 @@ export const CentralSearchModal = React.memo(() => {
     (idConnection: string, schema: string | undefined, table: string, initialWhere?: string) => {
       if (initialWhere) {
         addTab({
-          title: `${getQualifiedName(schema, table)} [${initialWhere}]`,
+          title: `${constants.getQualifiedName(schema, table)} [${initialWhere}]`,
           data: {
             type: 'table-info',
             id_connection: idConnection,
@@ -100,14 +88,14 @@ export const CentralSearchModal = React.memo(() => {
         return;
       }
 
-      const tabId = getTableTabId(idConnection, schema, table);
+      const tabId = constants.getTableTabId(idConnection, schema, table);
       const tab = getTab(tabId);
 
       if (tab) return setActiveTabId(tabId);
 
       addTab({
         id: tabId,
-        title: getQualifiedName(schema, table),
+        title: constants.getQualifiedName(schema, table),
         data: {
           type: 'table-info',
           id_connection: idConnection,
@@ -123,14 +111,14 @@ export const CentralSearchModal = React.memo(() => {
   const openFunctionTab = React.useCallback(
     (idConnection: string, fn: IFunctionDb) => {
       const { function_schema: schema, function_name } = fn;
-      const tabId = getFunctionTabId(idConnection, schema, function_name);
+      const tabId = constants.getFunctionTabId(idConnection, schema, function_name);
       const tab = getTab(tabId);
 
       if (tab) return setActiveTabId(tabId);
 
       addTab({
         id: tabId,
-        title: getQualifiedName(schema, function_name),
+        title: constants.getQualifiedName(schema, function_name),
         data: {
           type: 'function-info',
           id_connection: idConnection,
@@ -149,17 +137,21 @@ export const CentralSearchModal = React.memo(() => {
     [addTab, getTab, setActiveTabId],
   );
 
-  const openTabItems = React.useMemo<ICentralSearchItem[]>(() => {
-    return tabs
-      .map((tab) => {
-        const data = tab.data;
+  const { openTabItems, openTabIds } = React.useMemo(() => {
+    const items: ICentralSearchItem[] = [];
 
-        if (data?.type === 'query-editor') {
-          const script = scripts.find((item) => item.id === data.id_script);
-          const title = script?.name || tab.title;
-          const idConnection = data.id_connection;
+    for (const tab of tabs) {
+      const data = tab.data;
 
-          return makeSearchItem({
+      if (!data?.type) {
+        continue;
+      } //
+      else if (data.type === 'query-editor') {
+        const title = data.name;
+        const idConnection = data.id_connection;
+
+        items.push(
+          constants.makeSearchItem({
             id: `open:${tab.id}`,
             tabId: tab.id,
             type: 'script',
@@ -170,14 +162,15 @@ export const CentralSearchModal = React.memo(() => {
             isOpen: true,
             isActive: activeTabId === tab.id,
             onOpen: () => setActiveTabId(tab.id),
-          });
-        }
+          }),
+        );
+      } //
+      else if (data.type === 'table-info') {
+        const { id_connection, schema, table } = data;
+        const title = constants.getQualifiedName(schema, table);
 
-        if (data?.type === 'table-info') {
-          const { id_connection, schema, table } = data;
-          const title = getQualifiedName(schema, table);
-
-          return makeSearchItem({
+        items.push(
+          constants.makeSearchItem({
             id: `open:${tab.id}`,
             tabId: tab.id,
             type: 'table',
@@ -195,14 +188,15 @@ export const CentralSearchModal = React.memo(() => {
 
               setActiveTabId(tab.id);
             },
-          });
-        }
+          }),
+        );
+      } //
+      else if (data.type === 'function-info') {
+        const { id_connection, schema, function_name } = data;
+        const title = constants.getQualifiedName(schema, function_name);
 
-        if (data?.type === 'function-info') {
-          const { id_connection, schema, function_name } = data;
-          const title = getQualifiedName(schema, function_name);
-
-          return makeSearchItem({
+        items.push(
+          constants.makeSearchItem({
             id: `open:${tab.id}`,
             tabId: tab.id,
             type: 'function',
@@ -213,27 +207,40 @@ export const CentralSearchModal = React.memo(() => {
             isOpen: true,
             isActive: activeTabId === tab.id,
             onOpen: () => setActiveTabId(tab.id),
-          });
-        }
-      })
-      .filter(Boolean)
-      .sort(sortByTypeThenTitle);
-  }, [activeTabId, getConnectionDescription, openTableTab, scripts, setActiveTabId, tabs]);
+          }),
+        );
+      }
+    }
 
-  const openTabIds = React.useMemo(() => {
-    return new Set(openTabItems.map((item) => item.tabId));
-  }, [openTabItems]);
+    items.sort(constants.sortByTypeThenTitle);
+
+    const itemsList = new Set(items.map((item) => item.tabId));
+
+    return {
+      openTabItems: items,
+      openTabIds: itemsList,
+    };
+  }, [activeTabId, getConnectionDescription, openTableTab, setActiveTabId, tabs]);
 
   const closedItemsByType = React.useMemo<
     Record<ICentralSearchItemType, ICentralSearchItem[]>
   >(() => {
-    const closedScripts = scripts
-      .filter((script) => openConnectionIds.has(script.id_connection))
-      .filter((script) => !openTabIds.has(getScriptTabId(script.id)))
-      .map((script) =>
-        makeSearchItem({
+    const openConnectionIds = new Set(Array.from(connectionsInfo.keys()));
+
+    const closedScripts: ICentralSearchItem[] = [];
+    const closedTables: ICentralSearchItem[] = [];
+    const closedFunctions: ICentralSearchItem[] = [];
+
+    for (const script of scripts) {
+      const connected = openConnectionIds.has(script.id_connection);
+      const opened = openTabIds.has(constants.getScriptTabId(script.id));
+
+      if (!connected || opened) continue;
+
+      closedScripts.push(
+        constants.makeSearchItem({
           id: `script:${script.id}`,
-          tabId: getScriptTabId(script.id),
+          tabId: constants.getScriptTabId(script.id),
           type: 'script',
           title: script.name,
           searchableTitle: script.name,
@@ -241,57 +248,67 @@ export const CentralSearchModal = React.memo(() => {
           icon: 'fileSql',
           onOpen: () => openScriptTab(script),
         }),
-      )
-      .sort(sortByTitle);
+      );
+    }
 
-    const closedTables = Array.from(connectionsInfo.entries())
-      .flatMap(([idConnection, info]) => {
-        return (info.tables || [])
-          .filter(
-            (table) =>
-              !openTabIds.has(getTableTabId(idConnection, table.table_schema, table.table_name)),
-          )
-          .map((table, index) => {
-            const title = getQualifiedName(table.table_schema, table.table_name);
+    for (const [idConnection, info] of connectionsInfo) {
+      for (let index = 0; index < info?.tables?.length || 0; index++) {
+        const table = info.tables[index];
 
-            return makeSearchItem({
-              id: `table:${idConnection}:${title}:${index}`,
-              tabId: getTableTabId(idConnection, table.table_schema, table.table_name),
-              type: 'table',
-              title,
-              searchableTitle: title,
-              connectionDescription: getConnectionDescription(idConnection),
-              icon: 'table',
-              onOpen: (initialWhere) =>
-                openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
-            });
-          });
-      })
-      .sort(sortByTitle);
+        const opened = openTabIds.has(
+          constants.getTableTabId(idConnection, table.table_schema, table.table_name),
+        );
 
-    const closedFunctions = Array.from(connectionsInfo.entries())
-      .flatMap(([idConnection, info]) => {
-        return (info.functions || [])
-          .filter(
-            (fn) =>
-              !openTabIds.has(getFunctionTabId(idConnection, fn.function_schema, fn.function_name)),
-          )
-          .map((fn, index) => {
-            const title = getQualifiedName(fn.function_schema, fn.function_name);
+        if (opened) continue;
 
-            return makeSearchItem({
-              id: `function:${idConnection}:${title}:${index}`,
-              tabId: getFunctionTabId(idConnection, fn.function_schema, fn.function_name),
-              type: 'function',
-              title,
-              searchableTitle: title,
-              connectionDescription: getConnectionDescription(idConnection),
-              icon: 'function',
-              onOpen: () => openFunctionTab(idConnection, fn),
-            });
-          });
-      })
-      .sort(sortByTitle);
+        const title = constants.getQualifiedName(table.table_schema, table.table_name);
+
+        closedTables.push(
+          constants.makeSearchItem({
+            id: `table:${idConnection}:${title}:${index}`,
+            tabId: constants.getTableTabId(idConnection, table.table_schema, table.table_name),
+            type: 'table',
+            title,
+            searchableTitle: title,
+            connectionDescription: getConnectionDescription(idConnection),
+            icon: 'table',
+            onOpen: (initialWhere) =>
+              openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
+          }),
+        );
+      }
+    }
+
+    for (const [idConnection, info] of connectionsInfo) {
+      for (let index = 0; index < info?.functions?.length || 0; index++) {
+        const fn = info.functions[index];
+
+        const opened = openTabIds.has(
+          constants.getFunctionTabId(idConnection, fn.function_schema, fn.function_name),
+        );
+
+        if (opened) continue;
+
+        const title = constants.getQualifiedName(fn.function_schema, fn.function_name);
+
+        closedFunctions.push(
+          constants.makeSearchItem({
+            id: `function:${idConnection}:${title}:${index}`,
+            tabId: constants.getFunctionTabId(idConnection, fn.function_schema, fn.function_name),
+            type: 'function',
+            title,
+            searchableTitle: title,
+            connectionDescription: getConnectionDescription(idConnection),
+            icon: 'function',
+            onOpen: () => openFunctionTab(idConnection, fn),
+          }),
+        );
+      }
+    }
+
+    closedScripts.sort(constants.sortByTitle);
+    closedTables.sort(constants.sortByTitle);
+    closedFunctions.sort(constants.sortByTitle);
 
     return {
       script: closedScripts,
@@ -301,7 +318,6 @@ export const CentralSearchModal = React.memo(() => {
   }, [
     connectionsInfo,
     getConnectionDescription,
-    openConnectionIds,
     openFunctionTab,
     openScriptTab,
     openTabIds,
@@ -309,15 +325,15 @@ export const CentralSearchModal = React.memo(() => {
     scripts,
   ]);
 
-  const parsedSearch = React.useMemo(() => parseSearchText(searchText), [searchText]);
+  const { visibleItems, visibleRows } = React.useMemo(() => {
+    const filter = constants.normalizeSearch(parsedSearch.filter);
 
-  const filteredSections = React.useMemo(() => {
-    const filter = normalizeSearch(parsedSearch.filter);
     const matchItem = (item: ICentralSearchItem) => !filter || item.search.includes(filter);
-    const filterAndSortItems = (items: ICentralSearchItem[]) =>
-      sortBySearchRelevance(items.filter(matchItem), filter);
 
-    return [
+    const filterAndSortItems = (items: ICentralSearchItem[]) =>
+      constants.sortBySearchRelevance(items.filter(matchItem), filter);
+
+    const filteredSections = [
       {
         title: 'Abas abertas',
         items: filterAndSortItems(openTabItems),
@@ -335,27 +351,27 @@ export const CentralSearchModal = React.memo(() => {
         items: filterAndSortItems(closedItemsByType.function),
       },
     ].filter((section) => section.items.length);
-  }, [closedItemsByType, openTabItems, parsedSearch.filter]);
 
-  const visibleItems = React.useMemo(
-    () => filteredSections.flatMap((section) => section.items),
-    [filteredSections],
-  );
+    const rows: ICentralSearchRow[] = [];
 
-  const visibleRows = React.useMemo<ICentralSearchRow[]>(() => {
     let itemIndex = 0;
 
-    return filteredSections.flatMap((section) => {
-      const rows: ICentralSearchRow[] = [{ type: 'section', title: section.title }];
+    for (const section of filteredSections) {
+      rows.push({ type: 'section', title: section.title });
 
-      section.items.forEach((item) => {
+      for (const item of section.items) {
         rows.push({ type: 'item', item, itemIndex });
         itemIndex += 1;
-      });
+      }
+    }
 
-      return rows;
-    });
-  }, [filteredSections]);
+    const items: ICentralSearchItem[] = filteredSections.flatMap((section) => section.items);
+
+    return {
+      visibleItems: items,
+      visibleRows: rows,
+    };
+  }, [closedItemsByType, openTabItems, parsedSearch.filter]);
 
   const closeModal = React.useCallback(() => {
     setIsOpen(false);
@@ -395,13 +411,6 @@ export const CentralSearchModal = React.memo(() => {
   }, [closeModal, isOpen]);
 
   React.useEffect(() => {
-    if (!isOpen) return;
-
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
-    return () => window.clearTimeout(timer);
-  }, [isOpen]);
-
-  React.useEffect(() => {
     setHighlightedIndex(0);
   }, [searchText, isOpen]);
 
@@ -420,8 +429,8 @@ export const CentralSearchModal = React.memo(() => {
 
     if (rowIndex < 0 || !resultsRef.current) return;
 
-    const rowTop = getRowOffset(visibleRows, rowIndex);
-    const rowBottom = rowTop + getRowSize(visibleRows[rowIndex]);
+    const rowTop = constants.getRowOffset(visibleRows, rowIndex);
+    const rowBottom = rowTop + constants.getRowSize(visibleRows[rowIndex]);
     const viewTop = resultsRef.current.scrollTop;
     const viewBottom = viewTop + resultsRef.current.clientHeight;
 
@@ -436,14 +445,14 @@ export const CentralSearchModal = React.memo(() => {
     return toCssProperties({ backgroundColor, color, fieldBackgroundColor, fieldColor });
   }, [backgroundColor, color, fieldBackgroundColor, fieldColor]);
 
-  if (!isOpen || !containerElement) return null;
+  if (!isOpen || !constants.containerElement) return null;
 
   return ReactDOM.createPortal(
     <div className={styles.overlay} onMouseDown={closeModal} style={style}>
       <div className={styles.container} onMouseDown={(event) => event.stopPropagation()}>
         <div className={styles.searchHeader}>
           <input
-            ref={inputRef}
+            autoFocus
             className={styles.searchInput}
             value={searchText}
             placeholder="Buscar abas, scripts, tabelas e funções"
@@ -470,11 +479,11 @@ export const CentralSearchModal = React.memo(() => {
         </div>
 
         <div className={styles.results}>
-          {filteredSections.length ? (
+          {visibleRows.length ? (
             <VirtualizeList
               height="100%"
               itemCount={visibleRows.length}
-              itemSize={(index) => getRowSize(visibleRows[index])}
+              itemSize={(index) => constants.getRowSize(visibleRows[index])}
               refScrollElement={resultsRef}
             >
               {({ index }) => {
@@ -515,122 +524,8 @@ export const CentralSearchModal = React.memo(() => {
         </div>
       </div>
     </div>,
-    containerElement,
+    constants.containerElement,
   );
 });
 
 CentralSearchModal.displayName = 'CentralSearchModal';
-
-function getScriptTabId(idScript: string) {
-  return `script_${idScript}`;
-}
-
-function getTableTabId(idConnection: string, schema: string | undefined, table: string) {
-  return `${idConnection}_${schema}_${table}`;
-}
-
-function getFunctionTabId(idConnection: string, schema: string | undefined, functionName: string) {
-  return `fn_${idConnection}_${schema}_${functionName}`;
-}
-
-function getQualifiedName(schema: string | undefined, name: string) {
-  return schema ? `${schema}.${name}` : name;
-}
-
-function normalizeSearch(value: string) {
-  return (value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-function parseSearchText(value: string): IParsedSearch {
-  const match = value.trim().match(/^(\S+)(?:\s+([\s\S]+))?$/);
-
-  return {
-    filter: match?.[1] || '',
-    argument: match?.[2]?.trim(),
-  };
-}
-
-function makeSearchItem(item: Omit<ICentralSearchItem, 'search'>): ICentralSearchItem {
-  return {
-    ...item,
-    search: normalizeSearch(`${item.searchableTitle} ${item.connectionDescription}`),
-  };
-}
-
-function sortByTitle(a: ICentralSearchItem, b: ICentralSearchItem) {
-  return a.title.localeCompare(b.title);
-}
-
-function sortByTypeThenTitle(a: ICentralSearchItem, b: ICentralSearchItem) {
-  return ITEM_TYPE_ORDER[a.type] - ITEM_TYPE_ORDER[b.type] || sortByTitle(a, b);
-}
-
-function sortBySearchRelevance(items: ICentralSearchItem[], filter: string) {
-  if (!filter) return items;
-
-  return [...items].sort((a, b) => {
-    const rankA = getSearchRank(a, filter);
-    const rankB = getSearchRank(b, filter);
-
-    return rankA - rankB || sortByTitle(a, b);
-  });
-}
-
-function getSearchRank(item: ICentralSearchItem, filter: string) {
-  const title = normalizeSearch(item.searchableTitle);
-  const objectName = title.split('.').pop() || title;
-  const connection = normalizeSearch(item.connectionDescription);
-
-  if (objectName === filter) return 0;
-  if (objectName.startsWith(filter)) return 1;
-  if (title === filter) return 2;
-  if (title.startsWith(filter)) return 3;
-  if (objectName.includes(filter)) return 4;
-  if (title.includes(filter)) return 5;
-  if (connection.startsWith(filter)) return 6;
-
-  return 7;
-}
-
-function getRowSize(row: ICentralSearchRow) {
-  return row.type === 'section' ? SECTION_ROW_HEIGHT : ITEM_ROW_HEIGHT;
-}
-
-function getRowOffset(rows: ICentralSearchRow[], indexTarget: number) {
-  let offset = 0;
-
-  for (let index = 0; index < indexTarget; index++) {
-    offset += getRowSize(rows[index]);
-  }
-
-  return offset;
-}
-
-type ICentralSearchItemType = 'script' | 'table' | 'function';
-
-interface IParsedSearch {
-  filter: string;
-  argument?: string;
-}
-
-type ICentralSearchRow =
-  | { type: 'section'; title: string }
-  | { type: 'item'; item: ICentralSearchItem; itemIndex: number };
-
-interface ICentralSearchItem {
-  id: string;
-  tabId: string;
-  type: ICentralSearchItemType;
-  title: string;
-  searchableTitle: string;
-  search: string;
-  connectionDescription: string;
-  icon: AvalailableTreeViewIcon;
-  isOpen?: boolean;
-  isActive?: boolean;
-  onOpen(argument?: string): void;
-}
