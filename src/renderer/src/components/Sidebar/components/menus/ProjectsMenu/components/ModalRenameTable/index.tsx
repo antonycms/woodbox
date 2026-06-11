@@ -63,7 +63,9 @@ export const ModalRenameTable = React.memo(
               schema,
               table: name,
             },
-            component: () => <TableInfo id_connection={idConnection} schema={schema} table={name} />,
+            component: () => (
+              <TableInfo id_connection={idConnection} schema={schema} table={name} />
+            ),
           });
         }
 
