@@ -53,6 +53,12 @@ const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => ind
 
 const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
 
+const parseClipboardGrid = (text: string) => {
+  const normalizedText = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
+
+  return normalizedText.split('\n').map((line) => line.split('\t'));
+};
+
 function Table<Row = any>(props: ITableProps<Row>) {
   const {
     columns = [],
@@ -805,6 +811,51 @@ function Table<Row = any>(props: ITableProps<Row>) {
       return isSameState ? prevState : defaultColumnsSize;
     });
   }, [columns, defaultColumnSize]);
+
+  React.useEffect(() => {
+    const container = refScrollContainer.current;
+
+    const handlePaste = (event: ClipboardEvent) => {
+      if (cellEditingKeyRef.current) return;
+
+      const cells = analysisModeRef.current
+        ? analysisSelectedCellsRef.current
+        : selectedCellsRef.current;
+
+      if (!cells.size) return;
+
+      const grid = parseClipboardGrid(event.clipboardData?.getData('text/plain') ?? '');
+      const isMatrix = grid.length > 1 || grid[0].length > 1;
+      const coordinates = [...cells].map((key) => key.split(':').map(Number));
+      const firstRow = Math.min(...coordinates.map(([row]) => row));
+      const firstColumn = Math.min(...coordinates.map(([, column]) => column));
+
+      const edits = coordinates.flatMap(([rowIndex, colIndex]) => {
+        const row = serializedRowsRef.current[rowIndex];
+        const column = columnsRef.current[colIndex];
+        const value = isMatrix ? grid[rowIndex - firstRow]?.[colIndex - firstColumn] : grid[0][0];
+
+        if (!row || !column?.editable || value === undefined) return [];
+        if (column.type === 'autocomplete' && !column.dataAutocomplete?.includes(value)) return [];
+        if (row.__is_new_row ? !onEditNewRow : !onEditRow) return [];
+
+        return [{ rowIndex, attribute: String(column.attribute), value }];
+      });
+
+      if (!edits.length) return;
+
+      event.preventDefault();
+      edits.forEach(({ rowIndex, attribute, value }) => {
+        onSaveCell(rowIndex, attribute, value, true);
+      });
+    };
+
+    container?.addEventListener('paste', handlePaste);
+
+    return () => {
+      container?.removeEventListener('paste', handlePaste);
+    };
+  }, [onEditNewRow, onEditRow, onSaveCell]);
 
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
