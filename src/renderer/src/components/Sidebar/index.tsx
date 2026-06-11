@@ -2,7 +2,7 @@ import React from 'react';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { IconDatabase, IconSettings } from '@renderer/styles/icons';
+import { IconDatabase } from '@renderer/styles/icons';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import SettingsMenu from './components/menus/SettingsMenu';
