@@ -1,0 +1,26 @@
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #e73c3c66;
+  border-left: 4px solid #e73c3c;
+  border-radius: 6px;
+  background: #e73c3c14;
+}
+
+.errorMessage {
+  padding: 10px;
+  border-radius: 4px;
+  background: #00000024;
+}
+
+.errorMessage p {
+  margin: 0;
+}
+
+.errorMessage p {
+  cursor: text;
+  user-select: text;
+}

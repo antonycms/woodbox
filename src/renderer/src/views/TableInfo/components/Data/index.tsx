@@ -32,13 +32,14 @@ import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
+import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
 import {
   generateDeleteDdl,
   generateInsertDdl,
   generateUpdateDdl,
 } from '../Properties/tabs/Columns/ddl';
-import { generateHash } from '@renderer/utils/string';
+import ModalDataError from './components/ModalDataError';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -84,6 +85,7 @@ const Data = ({
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
@@ -112,6 +114,10 @@ const Data = ({
   const [referenceCache, setReferenceCache] = React.useState(
     new Map<string, Record<string, any>>(),
   );
+
+  const handleDataError = React.useCallback((error: unknown) => {
+    setDataErrorMessage(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
+  }, []);
 
   const previewValue = React.useMemo(() => {
     const value = selectedCell?.value;
@@ -376,46 +382,68 @@ const Data = ({
     if (loading || newPage === lastPageSearch.current) return;
 
     setLoading(true);
-    const { data } = await getTableData(id_connection, {
-      schema,
-      table,
-      page: newPage,
-      where: appliedWhere || undefined,
-      orderBy: sort,
-    });
-    setLoading(false);
 
-    setLastFetchDate(new Date());
+    try {
+      const { data } = await getTableData(id_connection, {
+        schema,
+        table,
+        page: newPage,
+        where: appliedWhere || undefined,
+        orderBy: sort,
+      });
 
-    lastPageSearch.current = newPage;
+      setLastFetchDate(new Date());
 
-    if (!data.length) return;
+      lastPageSearch.current = newPage;
 
-    setPage(newPage);
-    setItems((prevState) => [...prevState, ...serializeRows(data)]);
-  }, [id_connection, loading, schema, table, page, appliedWhere, sort, serializeRows]);
+      if (!data.length) return;
+
+      setPage(newPage);
+      setItems((prevState) => [...prevState, ...serializeRows(data)]);
+    } catch (error: unknown) {
+      handleDataError(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    id_connection,
+    loading,
+    schema,
+    table,
+    page,
+    appliedWhere,
+    sort,
+    serializeRows,
+    handleDataError,
+  ]);
 
   const handleRefresh = React.useCallback(async () => {
     if (loading) return;
 
     setLoading(true);
-    const { data } = await getTableData(id_connection, {
-      schema,
-      table,
-      page: 1,
-      where: appliedWhere || undefined,
-      orderBy: sort,
-    });
-    setLoading(false);
 
-    lastPageSearch.current = 1;
-    setPage(1);
-    setLastFetchDate(new Date());
-    setNewRows(new Map());
-    setEditedFieldsRows(new Map());
-    setDroppedRows(new Map());
-    setItems(serializeRows(data));
-  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows]);
+    try {
+      const { data } = await getTableData(id_connection, {
+        schema,
+        table,
+        page: 1,
+        where: appliedWhere || undefined,
+        orderBy: sort,
+      });
+
+      lastPageSearch.current = 1;
+      setPage(1);
+      setLastFetchDate(new Date());
+      setNewRows(new Map());
+      setEditedFieldsRows(new Map());
+      setDroppedRows(new Map());
+      setItems(serializeRows(data));
+    } catch (error: unknown) {
+      handleDataError(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows, handleDataError]);
 
   const applyPendingRows = React.useCallback(
     async (whereColumns: string[]) => {
@@ -575,7 +603,6 @@ const Data = ({
       if (loading || !column.sortable) return;
 
       const nextSort = getNextSort(sort, column.attribute);
-      setSort(nextSort);
       setLoading(true);
 
       try {
@@ -587,6 +614,7 @@ const Data = ({
           orderBy: nextSort,
         });
 
+        setSort(nextSort);
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
         setDroppedRows(new Map());
@@ -594,11 +622,13 @@ const Data = ({
         setPage(1);
         lastPageSearch.current = 1;
         setLastFetchDate(new Date());
+      } catch (error: unknown) {
+        handleDataError(error);
       } finally {
         setLoading(false);
       }
     },
-    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows],
+    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows, handleDataError],
   );
 
   const handleFilterKeyDown = React.useCallback(
@@ -606,8 +636,8 @@ const Data = ({
       if (e.key !== 'Enter' || loading) return;
 
       const newWhere = whereInput || undefined;
-      setAppliedWhere(whereInput);
       setLoading(true);
+
       try {
         const { data } = await getTableData(id_connection, {
           schema,
@@ -616,6 +646,8 @@ const Data = ({
           where: newWhere,
           orderBy: sort,
         });
+
+        setAppliedWhere(whereInput);
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
         setDroppedRows(new Map());
@@ -623,11 +655,13 @@ const Data = ({
         setPage(1);
         lastPageSearch.current = 1;
         setLastFetchDate(new Date());
+      } catch (error: unknown) {
+        handleDataError(error);
       } finally {
         setLoading(false);
       }
     },
-    [id_connection, whereInput, loading, schema, table, sort, serializeRows],
+    [id_connection, whereInput, loading, schema, table, sort, serializeRows, handleDataError],
   );
 
   const handleKeyDown = React.useCallback(
@@ -915,6 +949,8 @@ const Data = ({
       </Bar>
 
       <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+
+      <ModalDataError message={dataErrorMessage} onClose={() => setDataErrorMessage(undefined)} />
 
       <Modal
         title="Tabela sem primary key"
