@@ -6,6 +6,11 @@ import Icons from 'unplugin-icons/vite';
 
 export default defineConfig({
   main: {
+    resolve: {
+      alias: {
+        '@main': resolve('src/main'),
+      },
+    },
     plugins: [externalizeDepsPlugin()],
   },
   preload: {

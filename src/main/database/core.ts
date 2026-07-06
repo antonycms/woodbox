@@ -1,7 +1,7 @@
 import knex, { Knex } from 'knex';
 import { getDialectAdapter, getDialectIds } from './dialects';
-import { getConnectionsSaved } from '../storage/store';
-import { emitEvent } from '../utils/emitEvent';
+import { getConnectionsSaved } from '@main/storage/store';
+import { emitEvent } from '@main/utils/emitEvent';
 
 const activeConnections: IConnection[] = [];
 const activeRunSqlQueries = new Map<

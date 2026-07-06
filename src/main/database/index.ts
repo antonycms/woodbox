@@ -1,4 +1,4 @@
-import addListener from '../utils/addListener';
+import addListener from '@main/utils/addListener';
 import {
   getDialects,
   testConnection,

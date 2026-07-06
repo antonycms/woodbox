@@ -1,5 +1,5 @@
 import * as store from './store';
-import addListener from '../utils/addListener';
+import addListener from '@main/utils/addListener';
 
 // project
 addListener('@get:projects', store.getProjects);

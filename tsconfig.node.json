@@ -3,6 +3,10 @@
   "include": ["electron.vite.config.*", "./src/main/**/*", "./src/preload/**/*"],
   "compilerOptions": {
     "esModuleInterop": true,
-    "composite": true
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@main/*": ["src/main/*"]
+    }
   }
 }

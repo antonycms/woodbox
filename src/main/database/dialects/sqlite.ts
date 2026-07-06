@@ -1,4 +1,4 @@
-import queries from '../querys/sqlite';
+import queries from '@main/database/querys/sqlite';
 import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
 
 const quoteIdentifier = (value: string) => `"${String(value).replace(/"/g, '""')}"`;

@@ -4,8 +4,8 @@ import * as path from 'path';
 import { app, shell, BrowserWindow, globalShortcut, Menu } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
-import { closeAllConnections } from './database';
-import { getWindowState, saveWindowState } from './storage/store';
+import { closeAllConnections } from '@main/database';
+import { getWindowState, saveWindowState } from '@main/storage/store';
 
 function createWindow() {
   const savedState = getWindowState();

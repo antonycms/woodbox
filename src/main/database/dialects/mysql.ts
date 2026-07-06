@@ -1,4 +1,4 @@
-import queries from '../querys/mysql';
+import queries from '@main/database/querys/mysql';
 import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
 
 const quoteIdentifier = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;

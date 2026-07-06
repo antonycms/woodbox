@@ -1,5 +1,5 @@
 import { dialog } from 'electron';
-import addListener from '../utils/addListener';
+import addListener from '@main/utils/addListener';
 
 const selectSqliteFile = async () => {
   const result = await dialog.showOpenDialog({

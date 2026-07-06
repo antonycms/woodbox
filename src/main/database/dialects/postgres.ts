@@ -1,5 +1,5 @@
 import pg from 'pg';
-import queries from '../querys/postgres';
+import queries from '@main/database/querys/postgres';
 import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
 
 pg.types.setTypeParser(1114, (val) => val);

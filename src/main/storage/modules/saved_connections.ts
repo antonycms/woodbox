@@ -4,7 +4,7 @@ import {
   makeFnEditItemInStoredArray,
   makeFnGetItemInStoredArray,
   makeFnRemoveStoredItemFromArray,
-} from '../utils';
+} from '@main/storage/utils';
 
 export const initialValue = {
   type: 'array',
