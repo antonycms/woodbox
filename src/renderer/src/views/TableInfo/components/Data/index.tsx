@@ -40,6 +40,7 @@ import {
   generateUpdateDdl,
 } from '../Properties/tabs/Columns/ddl';
 import ModalDataError from './components/ModalDataError';
+import ReferenceSelection from './components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 
 import IconMdiClose from '~icons/mdi/close';
@@ -54,6 +55,8 @@ interface IDataProps extends ITableInfoProps {
   ) => void;
   onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
 }
+
+type PreviewTab = 'value' | 'reference' | 'selection';
 
 const normalizeCellValue = (value: any) => (value === '' ? null : value);
 
@@ -116,7 +119,7 @@ const Data = ({
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
-  const [activePreviewTab, setActivePreviewTab] = React.useState<'value' | 'reference'>('value');
+  const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
   const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
   const [referenceError, setReferenceError] = React.useState<string>();
   const [referenceCache, setReferenceCache] = React.useState(
@@ -302,6 +305,82 @@ const Data = ({
         columns.filter((column) => column.column_default).map((column) => column.column_name),
       ),
     [columns],
+  );
+
+  const handleEditNewRow = React.useCallback(
+    (rowKey: React.Key, attribute: string, value: any) => {
+      const normalizedValue = normalizeCellValue(value);
+
+      setNewRows((prevState) => {
+        const newState = new Map(prevState);
+        const prevRowEdited = { ...(newState.get(rowKey) || {}) };
+
+        if (normalizedValue === null && defaultColumnNames.has(attribute)) {
+          delete prevRowEdited[attribute];
+          newState.set(rowKey, prevRowEdited);
+          return newState;
+        }
+
+        newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
+
+        return newState;
+      });
+    },
+    [defaultColumnNames],
+  );
+
+  const handleEditRow = React.useCallback(
+    (index: number, attribute: string, value: any, rowKey?: React.Key) => {
+      const normalizedValue = normalizeCellValue(value);
+      const key = rowKey ?? index;
+      const row = items[index];
+
+      setEditedFieldsRows((prevState) => {
+        const newState = new Map(prevState);
+        const prevRowEdited = { ...(newState.get(key) || {}) };
+        const originalValue = row?.[attribute];
+
+        if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
+          delete prevRowEdited[attribute];
+
+          if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
+          else newState.delete(key);
+
+          return newState;
+        }
+
+        newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
+
+        return newState;
+      });
+    },
+    [items],
+  );
+
+  const handleApplySelectedCellValue = React.useCallback(
+    (value: any) => {
+      if (!selectedCell) return;
+
+      const row = selectedCell.row as any;
+      const attribute = String(selectedCell.column.attribute);
+      const normalizedValue = normalizeCellValue(value);
+
+      if (row.__is_new_row) {
+        handleEditNewRow(row.__key_row, attribute, normalizedValue);
+      } else {
+        handleEditRow(
+          row.__row_index ?? selectedCell.rowIndex,
+          attribute,
+          normalizedValue,
+          row.__key_row,
+        );
+      }
+
+      setSelectedCell((prevState) =>
+        prevState ? { ...prevState, value: normalizedValue } : prevState,
+      );
+    },
+    [handleEditNewRow, handleEditRow, selectedCell],
   );
 
   const itemsWithPendingStyles = React.useMemo(
@@ -724,6 +803,12 @@ const Data = ({
   }, [loadReferenceRow]);
 
   React.useEffect(() => {
+    if (!selectedReference && activePreviewTab !== 'value') {
+      setActivePreviewTab('value');
+    }
+  }, [activePreviewTab, selectedReference]);
+
+  React.useEffect(() => {
     onRegisterRefresh?.(handleRefresh);
   }, [onRegisterRefresh, handleRefresh]);
 
@@ -776,48 +861,8 @@ const Data = ({
             editedRows={editedFieldsRows}
             newRows={newRows}
             onCellLinkClick={handleFkCellClick}
-            onEditNewRow={(rowKey, attribute, value) => {
-              const normalizedValue = normalizeCellValue(value);
-
-              setNewRows((prevState) => {
-                const newState = new Map(prevState);
-                const prevRowEdited = { ...(newState.get(rowKey) || {}) };
-
-                if (normalizedValue === null && defaultColumnNames.has(attribute)) {
-                  delete prevRowEdited[attribute];
-                  newState.set(rowKey, prevRowEdited);
-                  return newState;
-                }
-
-                newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
-
-                return newState;
-              });
-            }}
-            onEditRow={(index, attribute, value, rowKey) => {
-              const normalizedValue = normalizeCellValue(value);
-              const key = rowKey ?? index;
-              const row = items[index];
-
-              setEditedFieldsRows((prevState) => {
-                const newState = new Map(prevState);
-                const prevRowEdited = { ...(newState.get(key) || {}) };
-                const originalValue = row?.[attribute];
-
-                if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
-                  delete prevRowEdited[attribute];
-
-                  if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
-                  else newState.delete(key);
-
-                  return newState;
-                }
-
-                newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
-
-                return newState;
-              });
-            }}
+            onEditNewRow={handleEditNewRow}
+            onEditRow={handleEditRow}
           />
         </div>
 
@@ -837,7 +882,7 @@ const Data = ({
                   borderBottom
                   idTabBar={previewTabBarId}
                   activeTabId={activePreviewTab}
-                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as 'value' | 'reference')}
+                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as PreviewTab)}
                   ascentColor={tabTheme.ascentColor}
                   backgroundColor={tabTheme.backgroundColor}
                   backgroundColorBar={tabTheme.bar.backgroundColor}
@@ -846,6 +891,7 @@ const Data = ({
                   tabs={[
                     { idTab: 'value', title: 'Valor' },
                     selectedReference && { idTab: 'reference', title: 'Referência' },
+                    selectedReference && { idTab: 'selection', title: 'Seleção' },
                   ].filter(Boolean)}
                 />
 
@@ -887,6 +933,18 @@ const Data = ({
                         value={referencePreviewValue}
                       />
                     )}
+                  </TabContent>
+                )}
+
+                {!!selectedReference && (
+                  <TabContent idTab="selection">
+                    <ReferenceSelection
+                      active={activePreviewTab === 'selection'}
+                      idConnection={id_connection}
+                      reference={selectedReference}
+                      onDataError={handleDataError}
+                      onSelectValue={handleApplySelectedCellValue}
+                    />
                   </TabContent>
                 )}
               </TabWindow>

@@ -1,0 +1,40 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.filterBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-bottom: 1px solid #191622;
+  flex-shrink: 0;
+}
+
+.filterInput {
+  width: 100%;
+  border: 0;
+  background-color: transparent;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+}
+
+.filterInput::placeholder {
+  opacity: 0.5;
+}
+
+.tableWrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.emptyState {
+  padding: 12px;
+}
