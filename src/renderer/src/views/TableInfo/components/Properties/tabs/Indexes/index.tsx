@@ -6,6 +6,7 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@renderer/contexts/Store';
+import { useStoreContext } from '@renderer/contexts/Store';
 import { type IPendingIndexCreate, useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
@@ -17,6 +18,8 @@ import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
+import { getRendererDialect } from '@renderer/database/dialects';
+import styles from '../Columns/styles.module.css';
 
 const getIndexSelectionKey = (index: IIndexInfo) =>
   (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
@@ -35,6 +38,14 @@ const Indexes = ({
     },
   } = useThemeContext();
   const { showToast } = useToast();
+  const { connections } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const {
     columns,
     pendingColumns,
@@ -55,11 +66,13 @@ const Indexes = ({
   } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
+  const [indexFilterText, setIndexFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showNewIndexModal, setShowNewIndexModal] = React.useState(false);
 
+  const indexFilterTextSerialized = indexFilterText.trim().toLowerCase();
   const droppedIndexNames = React.useMemo(
     () => new Set(pendingDroppedIndexes.map((index) => index.index_name)),
     [pendingDroppedIndexes],
@@ -95,7 +108,27 @@ const Indexes = ({
     ],
     [indexes, droppedIndexNames, pendingIndexes],
   );
-  const sortedIndexes = React.useMemo(() => sortRows(allIndexes, sort), [allIndexes, sort]);
+  const filteredAndSortedIndexes = React.useMemo(() => {
+    if (!indexFilterTextSerialized) return sortRows(allIndexes, sort);
+
+    const texts = indexFilterTextSerialized.split(',').map((text) => text.trim());
+    const indexesFiltered = allIndexes.filter((index) =>
+      [
+        index.index_name,
+        Array.isArray(index.column_names) ? index.column_names.join(', ') : index.column_names,
+        index.is_unique,
+        index.is_primary,
+        index.index_method,
+        index.is_valid,
+        index.expression,
+        index.predicate,
+      ].some((value) =>
+        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+      ),
+    );
+
+    return sortRows(indexesFiltered, sort);
+  }, [allIndexes, indexFilterTextSerialized, sort]);
 
   const handleOpenNewIndexModal = React.useCallback(() => {
     setShowNewIndexModal(true);
@@ -234,6 +267,10 @@ const Indexes = ({
   }, []);
 
   React.useEffect(() => {
+    setSelectedIndexes([]);
+  }, [indexFilterTextSerialized]);
+
+  React.useEffect(() => {
     setSelectedIndexes((currentSelectedIndexes) => {
       if (!currentSelectedIndexes.length) return currentSelectedIndexes;
 
@@ -261,7 +298,12 @@ const Indexes = ({
         onClose={() => setContextMenuPosition(null)}
       />
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
 
       <ModalNewIndex
         show={showNewIndexModal}
@@ -271,12 +313,29 @@ const Indexes = ({
         onAdd={handleAddPendingIndex}
       />
 
+      <div
+        className={styles.filterBar}
+        style={{
+          backgroundColor: theme.bar.backgroundColor,
+          borderColor: theme.bar.borderColor,
+        }}
+      >
+        <input
+          className={styles.filterInput}
+          placeholder="Filtrar índices por nome, coluna ou método (separe por virgula)"
+          value={indexFilterText}
+          onChange={(event) => setIndexFilterText(event.target.value)}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
+
       <Table
         rowKeyExtractor={getIndexSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedIndexes}
         loading={loading.indexes}
-        rows={sortedIndexes}
+        rows={filteredAndSortedIndexes}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         columns={[
@@ -388,9 +447,9 @@ const Indexes = ({
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {sortedIndexes?.length > 1
-            ? `${sortedIndexes?.length} Itens`
-            : `${sortedIndexes?.length || 0} Item`}
+          {filteredAndSortedIndexes?.length > 1
+            ? `${filteredAndSortedIndexes?.length} Itens`
+            : `${filteredAndSortedIndexes?.length || 0} Item`}
         </Text>
 
         {mode !== 'create' && (

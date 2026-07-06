@@ -6,6 +6,7 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import type { ITriggerInfo } from '@renderer/contexts/Store';
+import { useStoreContext } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { IconRefresh } from '@renderer/styles/icons';
@@ -16,6 +17,8 @@ import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateTriggersDdl } from '../Columns/ddl';
+import { getRendererDialect } from '@renderer/database/dialects';
+import styles from '../Columns/styles.module.css';
 
 const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -24,12 +27,23 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     },
   } = useThemeContext();
   const { triggers, loadTableTriggers, lastFetchDate, loading } = useTableInfoContext();
+  const { connections } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const handleFunctionCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedTriggers, setSelectedTriggers] = React.useState<ITriggerInfo[]>([]);
+  const [triggerFilterText, setTriggerFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+
+  const triggerFilterTextSerialized = triggerFilterText.trim().toLowerCase();
 
   const contextMenuOptions = React.useMemo(() => {
     return [
@@ -54,7 +68,29 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     loadTableTriggers(id_connection, { schema, table });
   }, []);
 
-  const sortedTriggers = React.useMemo(() => sortRows(triggers, sort), [triggers, sort]);
+  React.useEffect(() => {
+    setSelectedTriggers([]);
+  }, [triggerFilterTextSerialized]);
+
+  const filteredAndSortedTriggers = React.useMemo(() => {
+    if (!triggerFilterTextSerialized) return sortRows(triggers, sort);
+
+    const texts = triggerFilterTextSerialized.split(',').map((text) => text.trim());
+    const triggersFiltered = triggers.filter((trigger) =>
+      [
+        trigger.trigger_name,
+        trigger.timing,
+        trigger.event,
+        trigger.orientation,
+        trigger.function_name,
+        trigger.status,
+      ].some((value) =>
+        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+      ),
+    );
+
+    return sortRows(triggersFiltered, sort);
+  }, [triggerFilterTextSerialized, triggers, sort]);
 
   return (
     <>
@@ -64,14 +100,36 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         onClose={() => setContextMenuPosition(null)}
       />
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
+
+      <div
+        className={styles.filterBar}
+        style={{
+          backgroundColor: theme.bar.backgroundColor,
+          borderColor: theme.bar.borderColor,
+        }}
+      >
+        <input
+          className={styles.filterInput}
+          placeholder="Filtrar triggers por nome, evento ou função (separe por virgula)"
+          value={triggerFilterText}
+          onChange={(event) => setTriggerFilterText(event.target.value)}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
 
       <Table
         rowKeyExtractor={(item) => item.trigger_name}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedTriggers}
         loading={loading.triggers}
-        rows={sortedTriggers}
+        rows={filteredAndSortedTriggers}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         onCellLinkClick={(_attr, value) => {
@@ -137,7 +195,9 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {triggers?.length > 1 ? `${triggers?.length} Itens` : `${triggers?.length || 0} Item`}
+          {filteredAndSortedTriggers?.length > 1
+            ? `${filteredAndSortedTriggers?.length} Itens`
+            : `${filteredAndSortedTriggers?.length || 0} Item`}
         </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>

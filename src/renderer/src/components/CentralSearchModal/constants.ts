@@ -55,14 +55,18 @@ export function parseSearchText(value: string): IParsedSearch {
 }
 
 export function makeSearchItem(item: Omit<ICentralSearchItem, 'search'>): ICentralSearchItem {
+  const title = item.title || item.searchableTitle || '';
+
   return {
     ...item,
-    search: normalizeSearch(`${item.searchableTitle} ${item.connectionDescription}`),
+    title,
+    searchableTitle: item.searchableTitle || title,
+    search: normalizeSearch(`${item.searchableTitle || title} ${item.connectionDescription}`),
   };
 }
 
 export function sortByTitle(a: ICentralSearchItem, b: ICentralSearchItem) {
-  return a.title.localeCompare(b.title);
+  return (a.title || '').localeCompare(b.title || '');
 }
 
 export function sortByTypeThenTitle(a: ICentralSearchItem, b: ICentralSearchItem) {

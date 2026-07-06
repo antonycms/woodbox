@@ -11,6 +11,7 @@ import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import styles from '../Columns/styles.module.css';
 
 interface IReferencesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -24,9 +25,11 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
   } = useThemeContext();
   const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } =
     useTableInfoContext();
+  const [referenceFilterText, setReferenceFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.usedAsReference);
+  const referenceFilterTextSerialized = referenceFilterText.trim().toLowerCase();
 
   React.useEffect(() => {
     loadTableUsedAsReference(id_connection, { schema, table });
@@ -41,7 +44,18 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     [usedAsReference],
   );
 
-  const sortedRows = React.useMemo(() => sortRows(rowsSerialized, sort), [rowsSerialized, sort]);
+  const filteredAndSortedRows = React.useMemo(() => {
+    if (!referenceFilterTextSerialized) return sortRows(rowsSerialized, sort);
+
+    const texts = referenceFilterTextSerialized.split(',').map((text) => text.trim());
+    const rowsFiltered = rowsSerialized.filter((row) =>
+      [row.constraint_name, row.source_table, row.column_name, row.reference_column_name].some(
+        (value) => texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+      ),
+    );
+
+    return sortRows(rowsFiltered, sort);
+  }, [referenceFilterTextSerialized, rowsSerialized, sort]);
 
   const handleCellLinkClick = (attribute: string, value: string) => {
     if (attribute !== 'source_table' || !onOpenTable) return;
@@ -51,12 +65,29 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
 
   return (
     <>
+      <div
+        className={styles.filterBar}
+        style={{
+          backgroundColor: theme.bar.backgroundColor,
+          borderColor: theme.bar.borderColor,
+        }}
+      >
+        <input
+          className={styles.filterInput}
+          placeholder="Filtrar referências por nome, tabela ou coluna (separe por virgula)"
+          value={referenceFilterText}
+          onChange={(event) => setReferenceFilterText(event.target.value)}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
+
       <Table
         rowKeyExtractor={(item) =>
           `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`
         }
         loading={loading.usedAsReference}
-        rows={sortedRows}
+        rows={filteredAndSortedRows}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         onCellLinkClick={handleCellLinkClick}
@@ -103,9 +134,9 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {rowsSerialized?.length > 1
-            ? `${rowsSerialized?.length} Itens`
-            : `${rowsSerialized?.length || 0} Item`}
+          {filteredAndSortedRows?.length > 1
+            ? `${filteredAndSortedRows?.length} Itens`
+            : `${filteredAndSortedRows?.length || 0} Item`}
         </Text>
 
         <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>

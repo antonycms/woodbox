@@ -255,6 +255,8 @@ export const CentralSearchModal = React.memo(() => {
       for (let index = 0; index < info?.tables?.length || 0; index++) {
         const table = info.tables[index];
 
+        if (!table?.table_name) continue;
+
         const opened = openTabIds.has(
           constants.getTableTabId(idConnection, table.table_schema, table.table_name),
         );
@@ -282,6 +284,8 @@ export const CentralSearchModal = React.memo(() => {
     for (const [idConnection, info] of connectionsInfo) {
       for (let index = 0; index < info?.functions?.length || 0; index++) {
         const fn = info.functions[index];
+
+        if (!fn?.function_name) continue;
 
         const opened = openTabIds.has(
           constants.getFunctionTabId(idConnection, fn.function_schema, fn.function_name),

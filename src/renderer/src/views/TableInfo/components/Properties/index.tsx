@@ -96,8 +96,8 @@ const Properties = (props: IPropertiesProps) => {
     if (!isCreateMode) {
       allowedTabs.push(
         { idTab: '4', title: 'Referências' },
-        { idTab: '7', title: 'Diagrama' },
         { idTab: '6', title: 'Triggers' },
+        { idTab: '7', title: 'Diagrama' },
         { idTab: '5', title: 'Definição' },
       );
     }
