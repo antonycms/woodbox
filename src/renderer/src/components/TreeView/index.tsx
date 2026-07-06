@@ -56,6 +56,10 @@ const TreeView = (props: ITreeViewProps) => {
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const isNavigationKey = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(e.key);
+
+    if (isNavigationKey) e.preventDefault();
+
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       handleSwitchItem(getItemFromElement(e.target as HTMLDivElement));
     } //
