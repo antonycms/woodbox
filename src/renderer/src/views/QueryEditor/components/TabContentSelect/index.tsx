@@ -5,6 +5,7 @@ import { ContextMenu } from '@renderer/components/ContextMenu';
 import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import ResizableContainer from '@renderer/components/ResizableContainer';
+import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
@@ -43,6 +44,8 @@ interface ITabContentSelectProps {
   cancelingQuery?: boolean;
 }
 
+type PreviewTab = 'value' | 'reference' | 'selection';
+
 export const TabContentSelect = (props: ITabContentSelectProps) => {
   const {
     id_connection,
@@ -74,7 +77,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`select_preview_${generateHash()}`);
-  const [activePreviewTab, setActivePreviewTab] = React.useState<'value' | 'reference'>('value');
+  const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
   const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
   const [referenceError, setReferenceError] = React.useState<string>();
   const [referenceCache, setReferenceCache] = React.useState(
@@ -150,6 +153,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     ? tabFkMap.get(String(selectedCell.column.attribute))
     : undefined;
 
+  const canSelectReferenceValue = !!selectedReference && selectedCell?.column.editable === true;
+
   const selectedReferenceCacheKey = React.useMemo(() => {
     if (!selectedReference) return undefined;
     if (selectedCell?.value === null || selectedCell?.value === undefined) return undefined;
@@ -209,6 +214,23 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       });
     },
     [data.rows],
+  );
+
+  const handleApplySelectedCellValue = React.useCallback(
+    (value: any) => {
+      if (!selectedCell?.column.editable) return;
+
+      const row = selectedCell.row as any;
+      const attribute = String(selectedCell.column.attribute);
+      const normalizedValue = value === '' ? null : value;
+
+      handleEditRow(row.__row_index ?? selectedCell.rowIndex, attribute, normalizedValue);
+
+      setSelectedCell((prevState) =>
+        prevState ? { ...prevState, value: normalizedValue } : prevState,
+      );
+    },
+    [handleEditRow, selectedCell],
   );
 
   const getPrimaryKeyColumns = React.useCallback(async () => {
@@ -377,6 +399,17 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     id_connection,
   ]);
 
+  React.useEffect(() => {
+    if (!selectedReference && activePreviewTab !== 'value') {
+      setActivePreviewTab('value');
+      return;
+    }
+
+    if (activePreviewTab === 'selection' && !canSelectReferenceValue) {
+      setActivePreviewTab(selectedReference ? 'reference' : 'value');
+    }
+  }, [activePreviewTab, canSelectReferenceValue, selectedReference]);
+
   const onContextMenuTable = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData,
@@ -476,7 +509,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   borderBottom
                   idTabBar={previewTabBarId}
                   activeTabId={activePreviewTab}
-                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as 'value' | 'reference')}
+                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as PreviewTab)}
                   ascentColor={activeTheme.queryEditor.tab.ascentColor}
                   backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
                   backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
@@ -485,6 +518,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   tabs={[
                     { idTab: 'value', title: 'Valor' },
                     selectedReference && { idTab: 'reference', title: 'Referência' },
+                    canSelectReferenceValue && { idTab: 'selection', title: 'Seleção' },
                   ].filter(Boolean)}
                 />
 
@@ -526,6 +560,26 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                         value={referencePreviewValue}
                       />
                     )}
+                  </TabContent>
+                )}
+
+                {canSelectReferenceValue && (
+                  <TabContent idTab="selection">
+                    <ReferenceSelection
+                      active={activePreviewTab === 'selection'}
+                      idConnection={id_connection}
+                      reference={selectedReference}
+                      onDataError={(error) => {
+                        showToast({
+                          type: 'error',
+                          title: 'Erro ao carregar seleção.',
+                          description:
+                            error instanceof Error ? error.message : 'Erro desconhecido.',
+                          delay: 8000,
+                        });
+                      }}
+                      onSelectValue={handleApplySelectedCellValue}
+                    />
                   </TabContent>
                 )}
               </TabWindow>
