@@ -89,6 +89,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [editedFieldsRows, setEditedFieldsRows] = React.useState(
     new Map<number, Record<string, any>>(),
   );
+  const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(Date.now());
 
   const editableTable = readOnly
@@ -154,6 +155,22 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     : undefined;
 
   const canSelectReferenceValue = !!selectedReference && selectedCell?.column.editable === true;
+
+  const rowsWithPendingStyles = React.useMemo(
+    () =>
+      data.rows.map((row, index) => {
+        if (!editedFieldsRows.has(index)) return row;
+
+        return {
+          ...row,
+          __style: {
+            ...(row as any).__style,
+            backgroundColor: '#d2992233',
+          },
+        };
+      }),
+    [data.rows, editedFieldsRows],
+  );
 
   const selectedReferenceCacheKey = React.useMemo(() => {
     if (!selectedReference) return undefined;
@@ -343,6 +360,41 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     showToast,
   ]);
 
+  const handleCancelSelectedRowsEditions = React.useCallback(() => {
+    if (!selectedRows.length) return;
+
+    setEditedFieldsRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+  }, [selectedRows]);
+
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        handleSave();
+        return;
+      }
+
+      const target = event.target as HTMLElement;
+      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
+
+      if (isEditableTarget || target?.isContentEditable) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleCancelSelectedRowsEditions();
+      }
+    },
+    [handleCancelSelectedRowsEditions, handleSave],
+  );
+
   const loadReferenceRow = async () => {
     setReferenceError(undefined);
 
@@ -455,6 +507,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   React.useEffect(() => {
     setEditedFieldsRows(new Map());
+    setSelectedRows([]);
   }, [data.rows, data.columns, data.query]);
 
   React.useEffect(() => {
@@ -468,17 +521,18 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   }, [data.loading, data.date_run, data.queryExecutionId]);
 
   return (
-    <>
+    <div className={styles.container} onKeyDown={handleKeyDown}>
       <div className={styles.content}>
         <div className={styles.tableWrapper}>
           <Table
             loading={!!data.loading}
-            rows={data.rows}
+            rows={rowsWithPendingStyles}
             editedRows={editedFieldsRows}
             sort={readOnly ? undefined : data.orderBy}
             onSort={readOnly ? undefined : onSort}
             onScrollEnd={readOnly ? undefined : onScrollEnd}
             onContextMenu={onContextMenuTable}
+            onSelectRow={setSelectedRows}
             onSelectCellData={setSelectedCell}
             onCellLinkClick={onCellLinkClick}
             onEditRow={handleEditRow}
@@ -699,6 +753,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           },
         ]}
       />
-    </>
+    </div>
   );
 };
