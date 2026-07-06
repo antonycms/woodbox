@@ -1,17 +1,12 @@
 import knex, { Knex } from 'knex';
-import pg from 'pg';
-import clientsQuery from './querys';
+import { getDialectAdapter, getDialectIds } from './dialects';
 import { getConnectionsSaved } from '../storage/store';
 import { emitEvent } from '../utils/emitEvent';
-
-// Override 'pg' default parser to return dates as strings
-pg.types.setTypeParser(1114, (val) => val); // timestamp without time zone
-pg.types.setTypeParser(1184, (val) => val); // timestamp with time zone
 
 const activeConnections: IConnection[] = [];
 const activeRunSqlQueries = new Map<
   string,
-  { connectionId: string; instance: Knex; dbConnection: any }
+  { connectionId: string; instance: Knex; dbConnection: any; dialect: Dialect }
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
@@ -62,9 +57,14 @@ export const cancelRunSql = async (connectionId: string, queryExecutionId: strin
 
   if (!activeQuery || activeQuery.connectionId !== connectionId) return false;
 
-  await (activeQuery.instance.client as any).cancelQuery(activeQuery.dbConnection);
+  const adapter = getDialectAdapter(activeQuery.dialect);
 
-  return true;
+  if (!adapter.cancelQuery) return false;
+
+  return adapter.cancelQuery({
+    instance: activeQuery.instance,
+    dbConnection: activeQuery.dbConnection,
+  });
 };
 
 export const closeAllConnections = async () => {
@@ -72,7 +72,8 @@ export const closeAllConnections = async () => {
 };
 
 const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
-  const { id, description, dialect, database, host, port, username: user, password } = config;
+  const { id, dialect } = config;
+  const adapter = getDialectAdapter(dialect);
 
   let instance: null | Knex<any, unknown[]>;
 
@@ -96,16 +97,8 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   instance = knex({
     pool,
     debug: process.env.NODE_ENV === 'development',
-    client: dialect,
-    connection: {
-      host,
-      port,
-      user,
-      password,
-      database,
-      dateStrings: true,
-      application_name: `Woodbox (${description})`,
-    },
+    client: adapter.client,
+    connection: adapter.getConnectionConfig(config),
   });
 
   const errorsHandled = {
@@ -151,11 +144,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   return instance;
 };
 
-export const getDialects = () => {
-  const dialects: Dialect[] = ['postgres'];
-
-  return dialects;
-};
+export const getDialects = () => getDialectIds();
 
 export const testConnection = async (config: IConnectionConfig) => {
   const instance = await makeConnectionInstance(config, true);
@@ -214,21 +203,22 @@ export const closeConnection = async (connectionId: string) => {
  */
 export const getConnectionInfo = async (connectionId: string) => {
   const connection = await getConnection(connectionId);
-  const query = clientsQuery[connection.dialect];
+  const adapter = getDialectAdapter(connection.dialect);
+  const query = adapter.queries;
 
-  const { instance, dialect } = connection;
+  const { instance } = connection;
 
-  const promises = [instance.raw(query.getTables())];
+  const [tablesRaw, schemasRaw, functionsRaw] = await Promise.all([
+    instance.raw(query.getTables()),
+    query.getAllSchemas ? instance.raw(query.getAllSchemas()) : undefined,
+    query.getFunctions ? instance.raw(query.getFunctions()) : undefined,
+  ]);
 
-  if (dialect === 'postgres') {
-    promises.push(instance.raw(query.getAllSchemas()));
-    promises.push(instance.raw(query.getFunctions()));
-  }
-
-  // eslint-disable-next-line prefer-const
-  let [tables, schemas, functions] = (await Promise.all(promises)).map((raw) => raw?.rows || []);
-
-  schemas = schemas?.map?.((row) => row?.schema_name);
+  const tables = adapter.getRows(tablesRaw);
+  const schemas = schemasRaw
+    ? adapter.getRows(schemasRaw).map((row) => row?.schema_name)
+    : undefined;
+  const functions = functionsRaw ? adapter.getRows(functionsRaw) : [];
 
   return { tables, schemas, functions };
 };
@@ -237,88 +227,96 @@ export const getTableColumns = async (connectionId: string, { table, schema }) =
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableColumns({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getColumnTypes = async (connectionId: string) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getColumnTypes());
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableReferences = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableReferences({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableUsedAsReference = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableUsedAsReference({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableRestrictions = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableRestrictions({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableDefinition = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableDefinition({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableIndexes = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableIndexes({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getTableTriggers = async (connectionId: string, { table, schema }) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
   const raw = await instance.raw(query.getTableTriggers({ table, schema }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 export const getFunctionDefinition = async (
@@ -328,11 +326,14 @@ export const getFunctionDefinition = async (
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
+
+  if (!query.getFunctionDefinition) return [];
 
   const raw = await instance.raw(query.getFunctionDefinition({ schema, functionName }));
 
-  return raw?.rows || [];
+  return adapter.getRows(raw);
 };
 
 /**
@@ -359,18 +360,17 @@ export const getTableData = async (
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
-  const query = clientsQuery[dialect];
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
 
-  const [count, data] = (
-    await Promise.all([
-      instance.raw(query.getTotalRowsCountInTable({ table, schema, where })),
-      instance.raw(
-        query.selectWithOffset({ table, schema, actualPage: page, limit, where, orderBy }),
-      ),
-    ])
-  ).map((raw) => raw?.rows || []);
+  const [countRaw, dataRaw] = await Promise.all([
+    instance.raw(query.getTotalRowsCountInTable({ table, schema, where })),
+    instance.raw(
+      query.selectWithOffset({ table, schema, actualPage: page, limit, where, orderBy }),
+    ),
+  ]);
 
-  return { count, data };
+  return { count: adapter.getRows(countRaw), data: adapter.getRows(dataRaw) };
 };
 
 export const runSql = async (
@@ -379,7 +379,8 @@ export const runSql = async (
   options?: { page?: number; limit?: number; orderBy?: IOrderBy[]; queryExecutionId?: string },
 ) => {
   const connection = await getConnection(connectionId);
-  const { instance } = connection;
+  const { instance, dialect } = connection;
+  const adapter = getDialectAdapter(dialect);
 
   let sql_final = sql.trim();
 
@@ -401,7 +402,7 @@ export const runSql = async (
 
     if (!hasLimit && !hasOffset && Number(limit) > 0 && Number(page) >= 0) {
       auto_paginated = true;
-      const orderByQuery = serializeOrderBy(options?.orderBy);
+      const orderByQuery = serializeOrderBy(options?.orderBy, adapter.quoteIdentifier);
 
       sql_final = `
         SELECT *
@@ -420,29 +421,24 @@ export const runSql = async (
         connectionId,
         instance,
         dbConnection,
+        dialect,
       });
     }
 
     const t0 = Date.now();
-    const raw = await instance.raw(sql_final).connection(dbConnection);
+    const statements =
+      !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
+    const results: any[] = [];
+
+    for (const statement of statements) {
+      results.push(await instance.raw(statement).connection(dbConnection));
+    }
+
     const execution_time_ms = Date.now() - t0;
 
-    const rawArray = Array.isArray(raw) ? raw : [raw];
-
-    const serializedData = rawArray.map((rawResult) => {
-      const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
-
-      return {
-        type,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        rows: JSON.parse(JSON.stringify(rows)),
-        columns: columns?.map?.((field) => field.name) || [],
-      };
-    });
-
-    return serializedData;
+    return results.flatMap((raw) =>
+      adapter.serializeRunSqlResult(raw, { auto_paginated, execution_time_ms }),
+    );
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
     await (instance.client as any).releaseConnection(dbConnection);
@@ -454,14 +450,16 @@ interface IOrderBy {
   sortType: 'DESC' | 'ASC';
 }
 
-const serializeOrderBy = (orderBy?: IOrderBy[]) => {
+const serializeOrderBy = (
+  orderBy: IOrderBy[] | undefined,
+  quoteIdentifier: (value: string) => string,
+) => {
   if (!orderBy?.length) return '';
 
   const columns = orderBy.map(({ columnName, sortType }) => {
-    const safeColumnName = columnName.replace(/"/g, '""');
     const safeSortType = sortType === 'DESC' ? 'DESC' : 'ASC';
 
-    return `"${safeColumnName}" ${safeSortType}`;
+    return `${quoteIdentifier(columnName)} ${safeSortType}`;
   });
 
   return `ORDER BY ${columns.join(', ')}`;

@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 
 declare global {
-  export type Dialect = 'postgres';
+  export type Dialect = 'postgres' | 'mysql' | 'sqlite';
   export type ConnectionEnvironment = 'development' | 'production';
 
   export interface IConnectionConfig {
