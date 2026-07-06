@@ -345,8 +345,7 @@ const isAutoIncrementColumnRestriction = (
   if (restriction.column_names?.length !== 1) return false;
 
   return columns.some(
-    (column) =>
-      column.is_auto_increment && column.column_name === restriction.column_names?.[0],
+    (column) => column.is_auto_increment && column.column_name === restriction.column_names?.[0],
   );
 };
 

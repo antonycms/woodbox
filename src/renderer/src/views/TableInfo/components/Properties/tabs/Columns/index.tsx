@@ -64,7 +64,14 @@ const booleanLabelOptions = ['Sim', 'Não'];
 
 const serializeBooleanLabel = (value: unknown) => (value ? 'Sim' : 'Não');
 
-const mysqlAutoIncrementTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
+const mysqlAutoIncrementTypes = new Set([
+  'tinyint',
+  'smallint',
+  'mediumint',
+  'int',
+  'integer',
+  'bigint',
+]);
 
 const isMysqlAutoIncrementType = (dataType: string) => {
   const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];

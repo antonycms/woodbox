@@ -124,7 +124,11 @@ const getRows = (raw: any) => {
 
 const isSelectStatement = (statement?: string) => {
   const normalized = statement?.trim().replace(/\s+/g, ' ').toLowerCase() || '';
-  return normalized.startsWith('select') || normalized.startsWith('with') || normalized.startsWith('pragma');
+  return (
+    normalized.startsWith('select') ||
+    normalized.startsWith('with') ||
+    normalized.startsWith('pragma')
+  );
 };
 
 const sqlite: DatabaseDialectAdapter = {

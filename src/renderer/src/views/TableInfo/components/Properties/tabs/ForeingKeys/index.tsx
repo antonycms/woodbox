@@ -146,7 +146,13 @@ const ForeingKeys = ({
         reference.remove_rule,
         reference.update_rule,
       ].some((value) =>
-        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+        texts.some(
+          (text) =>
+            text &&
+            String(value ?? '')
+              .toLowerCase()
+              .includes(text),
+        ),
       ),
     );
 

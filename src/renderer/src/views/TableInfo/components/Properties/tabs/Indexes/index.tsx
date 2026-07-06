@@ -123,7 +123,13 @@ const Indexes = ({
         index.expression,
         index.predicate,
       ].some((value) =>
-        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+        texts.some(
+          (text) =>
+            text &&
+            String(value ?? '')
+              .toLowerCase()
+              .includes(text),
+        ),
       ),
     );
 

@@ -40,7 +40,6 @@ const TableInfo = (props: ITableInfoProps) => {
     [connections, props.id_connection],
   );
 
-
   const handleCreateApplied = React.useCallback(
     (createdTable: string) => {
       const tabId = `${props.id_connection}_${props.schema}_${createdTable}`;

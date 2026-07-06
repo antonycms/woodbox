@@ -9,7 +9,16 @@ import type {
 const quoteIdent = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
 const mysqlIntegerTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
-const mysqlPrefixIndexTypes = new Set(['tinytext', 'text', 'mediumtext', 'longtext', 'tinyblob', 'blob', 'mediumblob', 'longblob']);
+const mysqlPrefixIndexTypes = new Set([
+  'tinytext',
+  'text',
+  'mediumtext',
+  'longtext',
+  'tinyblob',
+  'blob',
+  'mediumblob',
+  'longblob',
+]);
 const mysqlStringTypesDefaultLength = new Map([
   ['varchar', 255],
   ['char', 255],
@@ -70,10 +79,7 @@ const isAutoIncrementRestriction = (column: DdlColumnInfo, restriction: DdlRestr
   );
 };
 
-const getAutoIncrementRestriction = (
-  column: DdlColumnInfo,
-  restrictions: DdlRestrictionInfo[],
-) => {
+const getAutoIncrementRestriction = (column: DdlColumnInfo, restrictions: DdlRestrictionInfo[]) => {
   return restrictions.find((restriction) => isAutoIncrementRestriction(column, restriction));
 };
 
@@ -115,7 +121,9 @@ const getMysqlChangeColumnDdl = (
     currentType !== originalType ||
     column.is_nullable !== originalColumn.is_nullable ||
     currentDefault !== originalDefault ||
-    (!options.includeAutoIncrement && !column.is_auto_increment && originalColumn.is_auto_increment);
+    (!options.includeAutoIncrement &&
+      !column.is_auto_increment &&
+      originalColumn.is_auto_increment);
 
   if (shouldModifyColumn) {
     statements.push(
@@ -164,9 +172,10 @@ const mysqlDdl: RendererDialectDdl = {
       (column) => `  ${this.getColumnDefinitionDdl(column, helpers)}`,
     );
     const restrictionLines = restrictions.map(
-      (restriction) => `  CONSTRAINT ${helpers.quoteIdent(
-        restriction.constraint_name,
-      )} ${this.getRestrictionDefinitionDdl(restriction, helpers)}`,
+      (restriction) =>
+        `  CONSTRAINT ${helpers.quoteIdent(
+          restriction.constraint_name,
+        )} ${this.getRestrictionDefinitionDdl(restriction, helpers)}`,
     );
 
     return `CREATE TABLE ${tableName} (\n${[...columnLines, ...restrictionLines].join(',\n')}\n);`;
@@ -278,7 +287,9 @@ const mysqlDdl: RendererDialectDdl = {
 
   getCreateIndexDdl(_schema, table, index, helpers) {
     const tableName = helpers.getTableName(undefined, table);
-    const columnsByName = new Map((index.columns || []).map((column) => [column.column_name, column]));
+    const columnsByName = new Map(
+      (index.columns || []).map((column) => [column.column_name, column]),
+    );
     const method = index.index_method ? ` USING ${index.index_method}` : '';
     const columns = (index.column_names || [])
       .map((columnName) => {
@@ -290,7 +301,9 @@ const mysqlDdl: RendererDialectDdl = {
       })
       .join(', ');
 
-    return `CREATE INDEX ${helpers.quoteIdent(index.index_name)}${method} ON ${tableName} (${columns});`;
+    return `CREATE INDEX ${helpers.quoteIdent(
+      index.index_name,
+    )}${method} ON ${tableName} (${columns});`;
   },
 
   getCreateReferenceDdl(tableName, reference, helpers) {

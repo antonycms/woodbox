@@ -3,7 +3,6 @@ import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
 
 const quoteIdentifier = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
-
 const splitStatements = (sql: string) => {
   const statements: string[] = [];
   let current = '';

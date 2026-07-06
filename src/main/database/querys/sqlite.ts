@@ -83,7 +83,9 @@ const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
   SELECT
     'pk_' || ${quoteLiteral(table)} AS constraint_name,
     'primary_key' AS constraint_type,
-    'PRIMARY KEY (' || group_concat(${sqlQuoteIdent('column_name')}, ', ') || ')' AS constraint_definition,
+    'PRIMARY KEY (' || group_concat(${sqlQuoteIdent(
+      'column_name',
+    )}, ', ') || ')' AS constraint_definition,
     NULL AS expression,
     group_concat(column_name, ',') AS column_names,
     NULL AS comment

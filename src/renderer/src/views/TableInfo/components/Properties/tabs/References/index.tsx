@@ -50,7 +50,14 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     const texts = referenceFilterTextSerialized.split(',').map((text) => text.trim());
     const rowsFiltered = rowsSerialized.filter((row) =>
       [row.constraint_name, row.source_table, row.column_name, row.reference_column_name].some(
-        (value) => texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+        (value) =>
+          texts.some(
+            (text) =>
+              text &&
+              String(value ?? '')
+                .toLowerCase()
+                .includes(text),
+          ),
       ),
     );
 

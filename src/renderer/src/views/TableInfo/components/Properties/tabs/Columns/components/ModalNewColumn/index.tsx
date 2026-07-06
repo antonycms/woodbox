@@ -37,7 +37,14 @@ const getGeneratedForeignKeyName = (table: string, column: string, referenceTabl
   return `${table}_${column}_${referenceTable}_fk`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
-const mysqlAutoIncrementTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
+const mysqlAutoIncrementTypes = new Set([
+  'tinyint',
+  'smallint',
+  'mediumint',
+  'int',
+  'integer',
+  'bigint',
+]);
 
 const isAutoIncrementType = (dataType: string) => {
   const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
@@ -171,7 +178,9 @@ const ModalNewColumn = ({
         column_name: columnName,
         data_type: dataType,
         is_nullable: data.is_auto_increment ? false : !data.required,
-        column_default: data.is_auto_increment ? undefined : data.column_default.trim() || undefined,
+        column_default: data.is_auto_increment
+          ? undefined
+          : data.column_default.trim() || undefined,
         is_auto_increment: data.is_auto_increment,
         description: data.description.trim() || undefined,
       };
@@ -299,9 +308,7 @@ const ModalNewColumn = ({
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             disabled={state.is_auto_increment}
-            title={
-              state.is_auto_increment ? 'Auto increment não permite valor padrão.' : undefined
-            }
+            title={state.is_auto_increment ? 'Auto increment não permite valor padrão.' : undefined}
             {...register('column_default')}
           />
 

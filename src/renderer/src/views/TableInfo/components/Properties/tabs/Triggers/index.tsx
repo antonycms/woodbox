@@ -85,7 +85,13 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         trigger.function_name,
         trigger.status,
       ].some((value) =>
-        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+        texts.some(
+          (text) =>
+            text &&
+            String(value ?? '')
+              .toLowerCase()
+              .includes(text),
+        ),
       ),
     );
 
