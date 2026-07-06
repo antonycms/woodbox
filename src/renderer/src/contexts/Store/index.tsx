@@ -11,11 +11,22 @@ import StoreContext, {
   type IParamsGetTableData,
   type IConnectionCreate,
   type IProjectCreate,
+  type IStoreContext,
+  type IDataTable,
+  type IColumnInfo,
+  type IColumnReferenceInfo,
+  type IColumnRestrictionsInfo,
+  type IIndexInfo,
+  type ITriggerInfo,
+  type IServerOutputMessage,
 } from './context';
 
 export type * from './context';
 
-const StoreContextProvider = ({ children }) => {
+type TableFilters = { table: string; schema: string };
+type RunSqlResult = Awaited<ReturnType<IStoreContext['runSql']>>;
+
+const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const [projects, setProjects] = React.useState<IProject[]>([]);
   const [connectionTypes, setConnectionTypes] = React.useState<string[]>([]);
   const [connections, setConnections] = React.useState<IConnection[]>([]);
@@ -42,36 +53,36 @@ const StoreContextProvider = ({ children }) => {
   }, [connections, projects]);
 
   const loadConnectionTypes = async () => {
-    const storedConnections = await call('@get:dialects');
+    const storedConnections = await call<string[]>('@get:dialects');
 
     setConnectionTypes(storedConnections || []);
   };
 
   const loadConnections = async () => {
-    const storedConnections = await call('@get:config_connections_saved');
+    const storedConnections = await call<IConnection[]>('@get:config_connections_saved');
 
     setConnections(storedConnections || []);
   };
 
   const loadProjects = async () => {
-    const storedProjects = await call('@get:projects');
+    const storedProjects = await call<IProject[]>('@get:projects');
 
     setProjects(storedProjects || []);
   };
 
   const loadScripts = async () => {
-    const meta: IScript[] = await call('@get:scripts_meta');
+    const meta = await call<IScript[]>('@get:scripts_meta');
     setScripts(meta || []);
   };
 
   const getScriptContent = async (id: string) => {
-    return (await call('@get:script_content', id)) ?? '';
+    return (await call<string>('@get:script_content', id)) ?? '';
   };
 
   const addScript = async (data: Omit<IScript, 'id'>) => {
     const script: IScript = { ...data, id: generateHash() };
 
-    await call('@add:scripts', script);
+    await call<void>('@add:scripts', script);
 
     setScripts((prev) => [...prev, script]);
 
@@ -79,7 +90,7 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const editScript = async (id: string, data: Partial<IScript>) => {
-    await call('@patch:scripts', id, data);
+    await call<void>('@patch:scripts', id, data);
 
     const metaChanges = Object.fromEntries(
       Object.entries(data).filter(([key]) => key !== 'content'),
@@ -91,14 +102,14 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const removeScript = async (id: string) => {
-    await call('@remove:scripts', id);
+    await call<void>('@remove:scripts', id);
     setScripts((prev) => prev.filter((s) => s.id !== id));
   };
 
   const addProject = async (data: IProjectCreate) => {
     const project = { ...data, id: generateHash() };
 
-    await call('@add:projects', project);
+    await call<void>('@add:projects', project);
 
     setProjects((prevState) => [...prevState, project]);
   };
@@ -106,7 +117,7 @@ const StoreContextProvider = ({ children }) => {
   const editProject = async (id: string, data: IProjectCreate) => {
     const project = { ...data, id };
 
-    await call('@edit:projects', id, project);
+    await call<void>('@edit:projects', id, project);
 
     setProjects((prevState) => {
       const newState = [...prevState];
@@ -119,7 +130,7 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const removeProject = async (id: string) => {
-    await call('@remove:projects', id);
+    await call<void>('@remove:projects', id);
 
     setProjects((prevState) => prevState.filter((project) => project.id !== id));
   };
@@ -127,7 +138,7 @@ const StoreContextProvider = ({ children }) => {
   const addConnection = async (data: IConnectionCreate) => {
     const connection = { ...data, id: generateHash() };
 
-    await call('@add:config_connections_saved', connection);
+    await call<void>('@add:config_connections_saved', connection);
 
     setConnections((prevState) => [...prevState, connection]);
   };
@@ -135,7 +146,7 @@ const StoreContextProvider = ({ children }) => {
   const editConnection = async (id: string, data: IConnectionCreate) => {
     const connection = { ...data, id };
 
-    await call('@edit:config_connections_saved', id, connection);
+    await call<void>('@edit:config_connections_saved', id, connection);
 
     setConnections((prevState) => {
       const newState = [...prevState];
@@ -151,17 +162,17 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const removeConnection = async (id: string) => {
-    await call('@remove:config_connections_saved', id);
+    await call<void>('@remove:config_connections_saved', id);
 
     setConnections((prevState) => prevState.filter((connection) => connection.id !== id));
   };
 
   const testConnection = async (data: IConnectionCreate) => {
-    return await call('@get:test_connection', data);
+    return await call<boolean>('@get:test_connection', data);
   };
 
   const loadConnectionInfo = async (id: string) => {
-    const connectionInfo = await call('@get:connection_info', id);
+    const connectionInfo = await call<IConnectionInfo | null>('@get:connection_info', id);
 
     setConnectionsInfo((prevState) => {
       const newState = new Map(prevState);
@@ -177,7 +188,7 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const closeConnection = async (id: string) => {
-    await call('@get:close_connection', id);
+    await call<void>('@get:close_connection', id);
 
     setConnectionsInfo((prevState) => {
       const newState = new Map(prevState);
@@ -188,49 +199,64 @@ const StoreContextProvider = ({ children }) => {
     });
   };
 
-  const getTableColumns = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_columns', idConnection, { table, schema });
+  const getTableColumns = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<IColumnInfo[]>('@get:table_columns', idConnection, { table, schema });
   };
 
   const getColumnTypes = async (idConnection: string) => {
-    return await call('@get:column_types', idConnection);
+    return await call<{ name: string }[]>('@get:column_types', idConnection);
   };
 
-  const getTableReferences = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_references', idConnection, { table, schema });
+  const getTableReferences = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<IColumnReferenceInfo[]>('@get:table_references', idConnection, {
+      table,
+      schema,
+    });
   };
 
-  const getTableUsedAsReference = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_used_as_reference', idConnection, { table, schema });
+  const getTableUsedAsReference = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<IColumnReferenceInfo[]>('@get:table_used_as_reference', idConnection, {
+      table,
+      schema,
+    });
   };
 
-  const getTableRestrictions = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_restrictions', idConnection, { table, schema });
+  const getTableRestrictions = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<IColumnRestrictionsInfo[]>('@get:table_restrictions', idConnection, {
+      table,
+      schema,
+    });
   };
 
-  const getTableDefinition = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_definition', idConnection, { table, schema });
+  const getTableDefinition = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<{ definition: string }[]>('@get:table_definition', idConnection, {
+      table,
+      schema,
+    });
   };
 
   const getFunctionDefinition = async (
     idConnection: string,
     { schema, functionName }: { schema: string; functionName: string },
   ) => {
-    return await call('@get:function_definition', idConnection, { schema, functionName });
+    return await call<{ definition: string }[]>('@get:function_definition', idConnection, {
+      schema,
+      functionName,
+    });
   };
 
-  const getTableIndexes = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_indexes', idConnection, { table, schema });
+  const getTableIndexes = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<IIndexInfo[]>('@get:table_indexes', idConnection, { table, schema });
   };
 
-  const getTableTriggers = async (idConnection: string, { table, schema }) => {
-    return await call('@get:table_triggers', idConnection, { table, schema });
+  const getTableTriggers = async (idConnection: string, { table, schema }: TableFilters) => {
+    return await call<ITriggerInfo[]>('@get:table_triggers', idConnection, { table, schema });
   };
 
   const getTableData = async (idConnection: string, params: IParamsGetTableData) => {
     const { table, schema, page = 1, limit = 200, where, orderBy } = params;
 
-    return await call('@get:table_data', idConnection, {
+    return await call<IDataTable>('@get:table_data', idConnection, {
       table,
       schema,
       page,
@@ -241,15 +267,15 @@ const StoreContextProvider = ({ children }) => {
   };
 
   const getServerOutput = async (idConnection: string) => {
-    return await call('@get:server_output', idConnection);
+    return await call<IServerOutputMessage[]>('@get:server_output', idConnection);
   };
 
   const clearServerOutput = async (idConnection: string) => {
-    await call('@delete:server_output', idConnection);
+    await call<void>('@delete:server_output', idConnection);
   };
 
   const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
-    return await call('@post:run_sql', idConnection, sql, options);
+    return await call<RunSqlResult>('@post:run_sql', idConnection, sql, options);
   };
 
   const cancelRunSql = async (idConnection: string, queryExecutionId: string) => {

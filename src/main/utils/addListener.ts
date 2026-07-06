@@ -1,9 +1,12 @@
 import { ipcMain } from 'electron';
 
-export default async function addListener(event: string, callbackFunction: CallbackFunction) {
+export default async function addListener<Params extends unknown[], Data>(
+  event: string,
+  callbackFunction: CallbackFunction<Params, Data>,
+) {
   ipcMain.handle(event, async (_, ...params) => {
     try {
-      const data = await callbackFunction(...params);
+      const data = await callbackFunction(...(params as Params));
       return { data, error: null };
     } catch (error) {
       console.error(error);
@@ -13,4 +16,4 @@ export default async function addListener(event: string, callbackFunction: Callb
   });
 }
 
-type CallbackFunction = (...params) => any | Promise<any>;
+type CallbackFunction<Params extends unknown[], Data> = (...params: Params) => Data | Promise<Data>;
