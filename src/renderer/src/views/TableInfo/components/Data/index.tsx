@@ -40,7 +40,7 @@ import {
   generateUpdateDdl,
 } from '../Properties/tabs/Columns/ddl';
 import ModalDataError from './components/ModalDataError';
-import ReferenceSelection from './components/ReferenceSelection';
+import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 
 import IconMdiClose from '~icons/mdi/close';
