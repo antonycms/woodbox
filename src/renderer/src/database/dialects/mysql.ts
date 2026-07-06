@@ -279,6 +279,7 @@ const mysqlDdl: RendererDialectDdl = {
   getCreateIndexDdl(_schema, table, index, helpers) {
     const tableName = helpers.getTableName(undefined, table);
     const columnsByName = new Map((index.columns || []).map((column) => [column.column_name, column]));
+    const method = index.index_method ? ` USING ${index.index_method}` : '';
     const columns = (index.column_names || [])
       .map((columnName) => {
         const column = columnsByName.get(columnName);
@@ -289,7 +290,7 @@ const mysqlDdl: RendererDialectDdl = {
       })
       .join(', ');
 
-    return `CREATE INDEX ${helpers.quoteIdent(index.index_name)} ON ${tableName} (${columns});`;
+    return `CREATE INDEX ${helpers.quoteIdent(index.index_name)}${method} ON ${tableName} (${columns});`;
   },
 
   getCreateReferenceDdl(tableName, reference, helpers) {
@@ -329,6 +330,7 @@ const mysql: RendererDialect = {
   supportsAutoIncrement: true,
   quoteIdent,
   getQualifiedName: (_schema, name) => quoteIdent(name),
+  indexMethods: ['BTREE', 'HASH'],
   commonColumnTypes: [
     'varchar',
     'text',

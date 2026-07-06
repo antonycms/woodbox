@@ -214,6 +214,7 @@ const postgres: RendererDialect = {
   quoteIdent,
   getQualifiedName: (schema, name) =>
     schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
+  indexMethods: ['btree', 'hash', 'gist', 'gin', 'spgist', 'brin'],
   commonColumnTypes: [
     'varchar',
     'text',

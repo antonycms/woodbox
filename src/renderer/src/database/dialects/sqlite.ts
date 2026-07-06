@@ -139,6 +139,7 @@ const sqlite: RendererDialect = {
   supportsAutoIncrement: false,
   quoteIdent,
   getQualifiedName: (_schema, name) => quoteIdent(name),
+  indexMethods: [],
   commonColumnTypes: ['text', 'integer', 'real', 'numeric', 'blob'],
   ddl: sqliteDdl,
 };

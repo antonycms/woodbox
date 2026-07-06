@@ -183,5 +183,6 @@ export interface RendererDialect {
   quoteIdent(value: string): string;
   getQualifiedName(schema: string | undefined, name: string): string;
   commonColumnTypes: string[];
+  indexMethods?: string[];
   ddl: RendererDialectDdl;
 }

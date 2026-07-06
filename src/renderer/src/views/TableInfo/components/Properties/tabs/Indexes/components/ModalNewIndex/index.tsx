@@ -11,8 +11,6 @@ import { useForm } from '@renderer/hooks/useForm';
 import { generateHash } from '@renderer/utils/string';
 import styles from './styles.module.css';
 
-const indexMethods = ['btree', 'hash', 'gist', 'gin', 'spgist', 'brin'];
-
 const getGeneratedIndexName = (table: string, columns: string[]) => {
   const columnPart = columns.join('_') || 'columns';
   return `${table}_${columnPart}_idx`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
@@ -23,11 +21,18 @@ const defaultForm: IFormData = {
   index_method: 'btree',
 };
 
-const ModalNewIndex = ({ show, table, columns, onClose, onAdd }: IModalNewIndexProps) => {
+const ModalNewIndex = ({
+  show,
+  table,
+  columns,
+  indexMethods = [],
+  onClose,
+  onAdd,
+}: IModalNewIndexProps) => {
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
-  const { register, handleSubmit, reset } = useForm<IFormData>(defaultForm);
+  const { register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
 
   const close = React.useCallback(() => {
     reset();
@@ -37,7 +42,7 @@ const ModalNewIndex = ({ show, table, columns, onClose, onAdd }: IModalNewIndexP
   const onSubmit = React.useCallback(
     handleSubmit((data) => {
       const columnNames = data.column_names.filter(Boolean);
-      const indexMethod = data.index_method || 'btree';
+      const indexMethod = data.index_method || indexMethods[0] || '';
 
       if (!columnNames.length) return;
 
@@ -55,8 +60,17 @@ const ModalNewIndex = ({ show, table, columns, onClose, onAdd }: IModalNewIndexP
       const shouldClose = onAdd?.(index);
       if (shouldClose !== false) close();
     }),
-    [handleSubmit, onAdd, close, table],
+    [handleSubmit, onAdd, close, table, indexMethods],
   );
+
+  React.useEffect(() => {
+    if (!show) return;
+
+    setState((prevState) => ({
+      ...prevState,
+      index_method: indexMethods[0] || '',
+    }));
+  }, [show, indexMethods, setState]);
 
   return (
     <Modal title="Novo índice" width="440px" show={show} closeOutside onClose={close}>
@@ -72,15 +86,17 @@ const ModalNewIndex = ({ show, table, columns, onClose, onAdd }: IModalNewIndexP
             {...register('column_names')}
           />
 
-          <Autocomplete
-            md={12}
-            required
-            label="Método"
-            data={indexMethods}
-            color={colors.fieldColor}
-            backgroundColor={colors.fieldBackgroundColor}
-            {...register('index_method')}
-          />
+          {!!indexMethods.length && (
+            <Autocomplete
+              md={12}
+              required
+              label="Método"
+              data={indexMethods}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              {...register('index_method')}
+            />
+          )}
         </Row>
 
         <Row>
@@ -120,6 +136,7 @@ interface IModalNewIndexProps {
   show?: boolean;
   table: string;
   columns: string[];
+  indexMethods?: string[];
   onClose?(): void;
   onAdd?(index: IPendingIndexCreate): boolean | void;
 }

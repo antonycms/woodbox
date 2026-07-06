@@ -309,6 +309,7 @@ const Indexes = ({
         show={showNewIndexModal}
         table={table}
         columns={availableColumnNames}
+        indexMethods={dialect.indexMethods || []}
         onClose={() => setShowNewIndexModal(false)}
         onAdd={handleAddPendingIndex}
       />
