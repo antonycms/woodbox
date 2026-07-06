@@ -16,6 +16,7 @@ interface ITableColumnProps {
   onResize?: OnResizeCallback;
   title?: string;
   onClick?(): void;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
   onEditCell?(
@@ -90,6 +91,7 @@ const TableColumn = ({
   resizable,
   onResize,
   onClick,
+  onContextMenu,
   onDoubleClick,
   minWidth,
   onBlurCell,
@@ -185,6 +187,7 @@ const TableColumn = ({
         height={rowHeight}
         minWidth={minWidth}
         onResize={onResize}
+        onContextMenu={onContextMenu}
         onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
         onClick={() => {
           if (isHeaderColumn) return onClick?.();
@@ -291,6 +294,7 @@ const TableColumn = ({
       title={title}
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+      onContextMenu={onContextMenu}
       onClick={() => {
         if (isHeaderColumn) return onClick?.();
         onSelectCell?.(indexRow, columnIndex);

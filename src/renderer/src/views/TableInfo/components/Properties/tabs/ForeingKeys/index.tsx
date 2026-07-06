@@ -399,7 +399,9 @@ const ForeingKeys = ({
         loading={loading.references}
         rows={filteredAndSortedReferences}
         sort={sort}
-        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
+        onSort={(column, sortType) =>
+          setSort((current) => getNextSort(current, column.attribute, sortType))
+        }
         onCellLinkClick={handleCellLinkClick}
         columns={[
           {

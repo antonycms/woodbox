@@ -137,7 +137,9 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         loading={loading.triggers}
         rows={filteredAndSortedTriggers}
         sort={sort}
-        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
+        onSort={(column, sortType) =>
+          setSort((current) => getNextSort(current, column.attribute, sortType))
+        }
         onCellLinkClick={(_attr, value) => {
           const words = value.split('.');
 

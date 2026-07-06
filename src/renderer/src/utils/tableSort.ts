@@ -1,7 +1,25 @@
-import type { ITableSort } from '@renderer/components/Table/dtos';
+import type { ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 
-export const getNextSort = (currentSort: ITableSort[] = [], columnName: string): ITableSort[] => {
+export const getNextSort = (
+  currentSort: ITableSort[] = [],
+  columnName: string,
+  sortType?: ISortDirection | null,
+): ITableSort[] => {
   const sortIndex = currentSort.findIndex((item) => item.columnName === columnName);
+
+  if (sortType === null) {
+    return currentSort.filter((item) => item.columnName !== columnName);
+  }
+
+  if (sortType) {
+    if (sortIndex === -1) {
+      return [...currentSort, { columnName, sortType }];
+    }
+
+    const nextSort = [...currentSort];
+    nextSort[sortIndex] = { ...nextSort[sortIndex], sortType };
+    return nextSort;
+  }
 
   if (sortIndex === -1) {
     return [...currentSort, { columnName, sortType: 'ASC' }];

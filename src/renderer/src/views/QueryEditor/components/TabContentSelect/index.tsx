@@ -30,7 +30,7 @@ import {
   IColumnRestrictionsInfo,
   useStoreContext,
 } from '@renderer/contexts/Store';
-import { IColumn } from '@renderer/components/Table/dtos';
+import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useToast } from '@renderer/contexts/Toast';
 import {
   generateInsertDdl,
@@ -48,7 +48,7 @@ interface ITabContentSelectProps {
   references: Map<string, IColumnReferenceInfo[]>;
   readOnly?: boolean;
   onScrollEnd(): void;
-  onSort(column: IColumn<any>): void;
+  onSort(column: IColumn<any>, sortType?: ISortDirection | null): void;
   onRefresh(): void;
   onCancelQuery(): void;
   cancelingQuery?: boolean;

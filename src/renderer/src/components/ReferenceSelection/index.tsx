@@ -3,7 +3,7 @@ import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { generateHash } from '@renderer/utils/string';
 import styles from './styles.module.css';
@@ -120,10 +120,10 @@ const ReferenceSelection = ({
   }, [loadPage, page]);
 
   const handleSort = React.useCallback(
-    async (column: IColumn) => {
+    async (column: IColumn, sortType?: ISortDirection | null) => {
       if (loading || !column.sortable) return;
 
-      const nextSort = getNextSort(sort, column.attribute);
+      const nextSort = getNextSort(sort, column.attribute, sortType);
       setSort(nextSort);
       setItems([]);
       setPage(0);

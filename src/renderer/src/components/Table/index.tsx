@@ -8,7 +8,7 @@ import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import type { IColumn, ITableSort } from './dtos';
+import type { IColumn, ISortDirection, ITableSort } from './dtos';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -42,7 +42,7 @@ interface ITableProps<Row = any> {
   rows: Row[];
   columns: IColumn<Row>[];
   sort?: ITableSort[];
-  onSort?(column: IColumn<Row>): void;
+  onSort?(column: IColumn<Row>, sortType?: ISortDirection | null): void;
   loading?: boolean;
   onSelectRow?(selectedRows: Row[]): void;
   onSelectCellData?(data: ITableSelectedCellData<Row>): void;

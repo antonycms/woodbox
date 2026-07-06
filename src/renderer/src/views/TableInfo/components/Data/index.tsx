@@ -28,7 +28,7 @@ import { Row } from '@renderer/components/Grid';
 import { ITableInfoProps } from '../../dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
-import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
@@ -718,10 +718,10 @@ const Data = ({
   }, [selectedRows, showToast]);
 
   const handleSort = React.useCallback(
-    async (column: IColumn) => {
+    async (column: IColumn, sortType?: ISortDirection | null) => {
       if (loading || !column.sortable) return;
 
-      const nextSort = getNextSort(sort, column.attribute);
+      const nextSort = getNextSort(sort, column.attribute, sortType);
       setLoading(true);
 
       try {

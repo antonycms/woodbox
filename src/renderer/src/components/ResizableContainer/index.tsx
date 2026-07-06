@@ -14,6 +14,7 @@ export interface IResizableDivProps {
   children?: React.ReactNode;
   onResize?: OnResizeCallback;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
   className?: string;
   style?: React.CSSProperties;
@@ -32,6 +33,7 @@ const ResizableContainer = ({
   onResize,
   children,
   onClick,
+  onContextMenu,
   onDoubleClick,
   title,
   className,
@@ -113,6 +115,7 @@ const ResizableContainer = ({
       className={classes(styles.container, className, direction === 'vertical' && styles.vertical)}
       style={style}
       onClick={onClick}
+      onContextMenu={onContextMenu}
     >
       {direction === 'vertical' && (
         <div

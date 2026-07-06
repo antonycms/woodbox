@@ -24,6 +24,7 @@ import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNaviga
 import { ModalQueryVariables } from './components/ModalQueryVariables';
 import { ModalConfirmProductionQuery } from './components/ModalConfirmProductionQuery';
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
+import type { ISortDirection } from '@renderer/components/Table/dtos';
 import type {
   IDataMakeTabResult,
   IDataUpdateabResult,
@@ -592,11 +593,15 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
-  const handleSortQueryResult = async (idTab: string, columnName: string) => {
+  const handleSortQueryResult = async (
+    idTab: string,
+    columnName: string,
+    sortType?: ISortDirection | null,
+  ) => {
     const tab = querysResultData.get(idTab);
     if (!tab || tab.loading) return;
 
-    const orderBy = getNextSort(tab.orderBy, columnName);
+    const orderBy = getNextSort(tab.orderBy, columnName, sortType);
     const updateTabResultData = makeUpdateResultTab(idTab);
     const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
     const queryExecutionId = generateHash();
@@ -987,8 +992,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         id_connection={id_connection}
                         references={tableReferences}
                         readOnly={isReadOnlyResult}
-                        onSort={(column) =>
-                          handleSortQueryResult(tabResult.idTab, column.attribute)
+                        onSort={(column, sortType) =>
+                          handleSortQueryResult(tabResult.idTab, column.attribute, sortType)
                         }
                         onScrollEnd={onScrollEnd}
                         onRefresh={() => refreshResultSqlTab(tabResult.idTab)}

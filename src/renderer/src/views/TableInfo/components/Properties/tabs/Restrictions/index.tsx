@@ -375,7 +375,9 @@ const Restrictios = ({
       <Table
         rows={filteredAndSortedRestrictions}
         sort={sort}
-        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
+        onSort={(column, sortType) =>
+          setSort((current) => getNextSort(current, column.attribute, sortType))
+        }
         loading={loading.restrictions}
         rowKeyExtractor={getRestrictionSelectionKey}
         onContextMenu={onContextMenuTable}

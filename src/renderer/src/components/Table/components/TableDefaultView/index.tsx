@@ -1,5 +1,6 @@
 import React from 'react';
-import type { IColumn } from '../../dtos';
+import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
+import type { IColumn, ISortDirection } from '../../dtos';
 import styles from '../../styles.module.css';
 import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
@@ -22,7 +23,7 @@ interface ITableDefaultViewProps<Row = any> {
   lastRowIndex: number;
   getSortLabel(column: IColumn<Row>): string;
   onResizeColumn(index: number, size: number): void;
-  onSort?(column: IColumn<Row>): void;
+  onSort?(column: IColumn<Row>, sortType?: ISortDirection | null): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
   onEditCell?(
@@ -60,7 +61,35 @@ const TableDefaultView = <Row,>({
   onSelectCell,
   onCellLinkClick,
 }: ITableDefaultViewProps<Row>) => {
+  const [sortContextMenu, setSortContextMenu] = React.useState<{
+    column: IColumn<Row>;
+    position: IContextMenuPosition;
+  }>();
+
   const rowsToRender = rows.slice(firstRowIndex, lastRowIndex);
+
+  const handleSortContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>, column: IColumn<Row>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      setSortContextMenu({
+        column,
+        position: { x: event.clientX, y: event.clientY },
+      });
+    },
+    [],
+  );
+
+  const handleSortMenuClick = React.useCallback(
+    (sortType: ISortDirection | null) => {
+      if (!sortContextMenu) return;
+
+      onSort?.(sortContextMenu.column, sortType);
+      setSortContextMenu(undefined);
+    },
+    [onSort, sortContextMenu],
+  );
 
   return (
     <div className={styles.table_container}>
@@ -78,6 +107,11 @@ const TableDefaultView = <Row,>({
               width={columnsSize[columnIndex]}
               onResize={(e) => onResizeColumn(columnIndex, e.width)}
               onClick={column.sortable && onSort ? () => onSort(column) : undefined}
+              onContextMenu={
+                column.sortable && onSort
+                  ? (event) => handleSortContextMenu(event, column)
+                  : undefined
+              }
               style={{ cursor: column.sortable && onSort ? 'pointer' : undefined }}
               minWidth={minColumnsSize[columnIndex]}
               value={getSortLabel(column)}
@@ -131,6 +165,25 @@ const TableDefaultView = <Row,>({
           </TableRow>
         );
       })}
+
+      <ContextMenu
+        position={sortContextMenu?.position}
+        onClose={() => setSortContextMenu(undefined)}
+        options={[
+          {
+            text: 'Ordenar crescente',
+            onClick: () => handleSortMenuClick('ASC'),
+          },
+          {
+            text: 'Ordenar decrescente',
+            onClick: () => handleSortMenuClick('DESC'),
+          },
+          {
+            text: 'Sem ordenação',
+            onClick: () => handleSortMenuClick(null),
+          },
+        ]}
+      />
     </div>
   );
 };

@@ -344,7 +344,9 @@ const Indexes = ({
         loading={loading.indexes}
         rows={filteredAndSortedIndexes}
         sort={sort}
-        onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
+        onSort={(column, sortType) =>
+          setSort((current) => getNextSort(current, column.attribute, sortType))
+        }
         columns={[
           {
             title: 'Clique para ordenar por essa coluna',
