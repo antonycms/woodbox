@@ -29,6 +29,7 @@ export interface SerializedRunSqlResult {
 export interface SerializeRunSqlContext {
   auto_paginated: boolean;
   execution_time_ms: number;
+  statement?: string;
 }
 
 export interface DatabaseDialectAdapter {
@@ -36,6 +37,7 @@ export interface DatabaseDialectAdapter {
   client: string;
   queries: DatabaseDialectQueries;
   getConnectionConfig(config: IConnectionConfig): object;
+  getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
   getRows(raw: any): any[];
   serializeRunSqlResult(raw: any, context: SerializeRunSqlContext): SerializedRunSqlResult[];
   splitStatements?(sql: string): string[];

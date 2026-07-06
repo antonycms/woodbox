@@ -99,6 +99,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
     debug: process.env.NODE_ENV === 'development',
     client: adapter.client,
     connection: adapter.getConnectionConfig(config),
+    ...adapter.getKnexConfig?.(config),
   });
 
   const errorsHandled = {
@@ -428,16 +429,16 @@ export const runSql = async (
     const t0 = Date.now();
     const statements =
       !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
-    const results: any[] = [];
+    const results: { raw: any; statement: string }[] = [];
 
     for (const statement of statements) {
-      results.push(await instance.raw(statement).connection(dbConnection));
+      results.push({ raw: await instance.raw(statement).connection(dbConnection), statement });
     }
 
     const execution_time_ms = Date.now() - t0;
 
-    return results.flatMap((raw) =>
-      adapter.serializeRunSqlResult(raw, { auto_paginated, execution_time_ms }),
+    return results.flatMap(({ raw, statement }) =>
+      adapter.serializeRunSqlResult(raw, { auto_paginated, execution_time_ms, statement }),
     );
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
