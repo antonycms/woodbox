@@ -130,8 +130,22 @@ const Data = ({
     setDataErrorMessage(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
   }, []);
 
+  const selectedCellValue = React.useMemo(() => {
+    if (!selectedCell) return undefined;
+
+    const row = selectedCell.row as any;
+    const attribute = String(selectedCell.column.attribute);
+    const editedRow = editedFieldsRows.get(row.__key_row);
+    const newRow = newRows.get(row.__key_row);
+
+    if (newRow && attribute in newRow) return newRow[attribute];
+    if (editedRow && attribute in editedRow) return editedRow[attribute];
+
+    return row[attribute];
+  }, [editedFieldsRows, newRows, selectedCell]);
+
   const previewValue = React.useMemo(() => {
-    const value = selectedCell?.value;
+    const value = selectedCellValue;
 
     if (value === undefined || value === null) return '';
 
@@ -144,7 +158,7 @@ const Data = ({
     }
 
     return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-  }, [selectedCell]);
+  }, [selectedCellValue]);
 
   const serializeRows = React.useCallback(
     (rows: any[]) =>
@@ -166,15 +180,15 @@ const Data = ({
 
   const selectedReferenceCacheKey = React.useMemo(() => {
     if (!selectedReference) return undefined;
-    if (selectedCell?.value === null || selectedCell?.value === undefined) return undefined;
+    if (selectedCellValue === null || selectedCellValue === undefined) return undefined;
 
     return [
       selectedReference.reference_table_schema,
       selectedReference.reference_table_name,
       selectedReference.reference_column_name,
-      String(selectedCell.value),
+      String(selectedCellValue),
     ].join('.');
-  }, [selectedReference, selectedCell?.value]);
+  }, [selectedReference, selectedCellValue]);
 
   const referenceRow = selectedReferenceCacheKey
     ? referenceCache.get(selectedReferenceCacheKey)
@@ -237,7 +251,7 @@ const Data = ({
     });
 
     try {
-      const escapedValue = String(selectedCell?.value).replace(/'/g, "''");
+      const escapedValue = String(selectedCellValue).replace(/'/g, "''");
 
       const result = await getTableData(id_connection, {
         schema: selectedReference.reference_table_schema,
@@ -268,7 +282,7 @@ const Data = ({
     referenceCache,
     referenceLoadingKeys,
     referenceError,
-    selectedCell?.value,
+    selectedCellValue,
     getTableData,
     id_connection,
     dialect,
@@ -381,6 +395,15 @@ const Data = ({
       );
     },
     [handleEditNewRow, handleEditRow, selectedCell],
+  );
+
+  const handleApplySelectedPreviewValue = React.useCallback(
+    (value: string) => {
+      if (!selectedCell?.column.editable) return;
+
+      handleApplySelectedCellValue(value);
+    },
+    [handleApplySelectedCellValue, selectedCell],
   );
 
   const itemsWithPendingStyles = React.useMemo(
@@ -910,9 +933,10 @@ const Data = ({
                   <Editor
                     dialect={dialect.editorDialect}
                     language="json"
-                    readonly
+                    readonly={!selectedCell?.column.editable}
                     hidePreview
                     value={previewValue}
+                    onChange={handleApplySelectedPreviewValue}
                   />
                 </TabContent>
 

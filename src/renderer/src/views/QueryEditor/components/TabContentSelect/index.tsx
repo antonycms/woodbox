@@ -12,7 +12,14 @@ import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { CancelIcon, ExportIcon, IconRefresh, PanelFile, SaveIcon } from '@renderer/styles/icons';
+import {
+  AddIcon,
+  CancelIcon,
+  ExportIcon,
+  IconRefresh,
+  PanelFile,
+  SaveIcon,
+} from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { generateHash } from '@renderer/utils/string';
@@ -25,7 +32,10 @@ import {
 } from '@renderer/contexts/Store';
 import { IColumn } from '@renderer/components/Table/dtos';
 import { useToast } from '@renderer/contexts/Toast';
-import { generateUpdateDdl } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
+import {
+  generateInsertDdl,
+  generateUpdateDdl,
+} from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
@@ -89,6 +99,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [editedFieldsRows, setEditedFieldsRows] = React.useState(
     new Map<number, Record<string, any>>(),
   );
+  const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(Date.now());
 
@@ -122,8 +133,22 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setReferenceLoadingKeys(new Set());
   };
 
+  const selectedCellValue = React.useMemo(() => {
+    if (!selectedCell) return undefined;
+
+    const row = selectedCell.row as any;
+    const attribute = String(selectedCell.column.attribute);
+    const editedRow = editedFieldsRows.get(row.__key_row);
+    const newRow = newRows.get(row.__key_row);
+
+    if (newRow && attribute in newRow) return newRow[attribute];
+    if (editedRow && attribute in editedRow) return editedRow[attribute];
+
+    return row[attribute];
+  }, [editedFieldsRows, newRows, selectedCell]);
+
   const previewValue = React.useMemo(() => {
-    const value = selectedCell?.value;
+    const value = selectedCellValue;
 
     if (value === undefined || value === null) return '';
 
@@ -136,7 +161,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     }
 
     return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-  }, [selectedCell]);
+  }, [selectedCellValue]);
 
   const tabFkMap = React.useMemo(() => {
     const map = new Map<string, IColumnReferenceInfo>();
@@ -174,15 +199,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const selectedReferenceCacheKey = React.useMemo(() => {
     if (!selectedReference) return undefined;
-    if (selectedCell?.value === null || selectedCell?.value === undefined) return undefined;
+    if (selectedCellValue === null || selectedCellValue === undefined) return undefined;
 
     return [
       selectedReference.reference_table_schema,
       selectedReference.reference_table_name,
       selectedReference.reference_column_name,
-      String(selectedCell.value),
+      String(selectedCellValue),
     ].join('.');
-  }, [selectedReference, selectedCell?.value]);
+  }, [selectedReference, selectedCellValue]);
 
   const referenceRow = selectedReferenceCacheKey
     ? referenceCache.get(selectedReferenceCacheKey)
@@ -233,6 +258,22 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [data.rows],
   );
 
+  const handleEditNewRow = React.useCallback(
+    (rowKey: React.Key, attribute: string, value: any) => {
+      const normalizedValue = value === '' ? null : value;
+
+      setNewRows((prevState) => {
+        const nextState = new Map(prevState);
+        const prevRowEdited = { ...(nextState.get(rowKey) || {}) };
+
+        nextState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
+
+        return nextState;
+      });
+    },
+    [],
+  );
+
   const handleApplySelectedCellValue = React.useCallback(
     (value: any) => {
       if (!selectedCell?.column.editable) return;
@@ -241,13 +282,26 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       const attribute = String(selectedCell.column.attribute);
       const normalizedValue = value === '' ? null : value;
 
-      handleEditRow(row.__row_index ?? selectedCell.rowIndex, attribute, normalizedValue);
+      if (row.__is_new_row) {
+        handleEditNewRow(row.__key_row, attribute, normalizedValue);
+      } else {
+        handleEditRow(row.__row_index ?? selectedCell.rowIndex, attribute, normalizedValue);
+      }
 
       setSelectedCell((prevState) =>
         prevState ? { ...prevState, value: normalizedValue } : prevState,
       );
     },
-    [handleEditRow, selectedCell],
+    [handleEditNewRow, handleEditRow, selectedCell],
+  );
+
+  const handleApplySelectedPreviewValue = React.useCallback(
+    (value: string) => {
+      if (!selectedCell?.column.editable) return;
+
+      handleApplySelectedCellValue(value);
+    },
+    [handleApplySelectedCellValue, selectedCell],
   );
 
   const getPrimaryKeyColumns = React.useCallback(async () => {
@@ -276,7 +330,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   }, [id_connection, editableTable, getTableRestrictions, restrictionsCache]);
 
   const handleSave = React.useCallback(async () => {
-    if (!editedFieldsRows.size || saving) return;
+    const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
+
+    if ((!rowsToInsert.length && !editedFieldsRows.size) || saving) return;
 
     if (!editableTable?.name) {
       showToast({
@@ -291,49 +347,63 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setSaving(true);
 
     try {
-      const primaryKeyColumns = await getPrimaryKeyColumns();
+      let updateSql = '';
 
-      if (!primaryKeyColumns.length) {
-        const fullName = [editableTable.schema, editableTable.name].filter(Boolean).join('.');
+      if (editedFieldsRows.size) {
+        const primaryKeyColumns = await getPrimaryKeyColumns();
 
-        showToast({
-          type: 'error',
-          title: 'Não foi possível salvar.',
-          description: `A tabela "${fullName}" não possui primary key.`,
-        });
+        if (!primaryKeyColumns.length) {
+          const fullName = [editableTable.schema, editableTable.name].filter(Boolean).join('.');
 
-        return;
+          showToast({
+            type: 'error',
+            title: 'Não foi possível salvar.',
+            description: `A tabela "${fullName}" não possui primary key.`,
+          });
+
+          return;
+        }
+
+        const missingPk = primaryKeyColumns.find((pkColumn) => !data.columns?.includes(pkColumn));
+
+        if (missingPk) {
+          showToast({
+            type: 'error',
+            title: 'Não foi possível salvar.',
+            description: `A linha alterada não possui informação da PK "${missingPk}" no resultado da query.`,
+          });
+
+          return;
+        }
+
+        const rowsToUpdate = [...editedFieldsRows.entries()].map(([index, changes]) => ({
+          originalRow: data.rows[index],
+          changes,
+        }));
+
+        updateSql = generateUpdateDdl(
+          dialect,
+          editableTable.schema,
+          editableTable.name,
+          rowsToUpdate,
+          primaryKeyColumns,
+        );
       }
 
-      const missingPk = primaryKeyColumns.find((pkColumn) => !data.columns?.includes(pkColumn));
-
-      if (missingPk) {
-        showToast({
-          type: 'error',
-          title: 'Não foi possível salvar.',
-          description: `A linha alterada não possui informação da PK "${missingPk}" no resultado da query.`,
-        });
-
-        return;
-      }
-
-      const rowsToUpdate = [...editedFieldsRows.entries()].map(([index, changes]) => ({
-        originalRow: data.rows[index],
-        changes,
-      }));
-
-      const sql = generateUpdateDdl(
+      const insertSql = generateInsertDdl(
         dialect,
         editableTable.schema,
         editableTable.name,
-        rowsToUpdate,
-        primaryKeyColumns,
+        rowsToInsert,
+        data.columns,
       );
+      const sql = [insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
 
       if (!sql) return;
 
       await runSql(id_connection, sql);
 
+      setNewRows(new Map());
       setEditedFieldsRows(new Map());
       showToast({ type: 'success', title: 'Dados salvos com sucesso!' });
       onRefresh();
@@ -354,6 +424,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     editableTable,
     getPrimaryKeyColumns,
     id_connection,
+    newRows,
     onRefresh,
     runSql,
     saving,
@@ -362,6 +433,16 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const handleCancelSelectedRowsEditions = React.useCallback(() => {
     if (!selectedRows.length) return;
+
+    setNewRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        if (row.__is_new_row) nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
 
     setEditedFieldsRows((prevState) => {
       const nextState = new Map(prevState);
@@ -373,6 +454,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       return nextState;
     });
   }, [selectedRows]);
+
+  const handleAddRow = React.useCallback(() => {
+    setNewRows((prevState) => new Map(prevState).set(`new_${generateHash()}`, {}));
+  }, []);
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -411,7 +496,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     });
 
     try {
-      const escapedValue = String(selectedCell?.value).replace(/'/g, "''");
+      const escapedValue = String(selectedCellValue).replace(/'/g, "''");
 
       const result = await getTableData(id_connection, {
         schema: selectedReference.reference_table_schema,
@@ -446,7 +531,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     referenceCache,
     referenceLoadingKeys,
     referenceError,
-    selectedCell?.value,
+    selectedCellValue,
     getTableData,
     id_connection,
   ]);
@@ -507,6 +592,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   React.useEffect(() => {
     setEditedFieldsRows(new Map());
+    setNewRows(new Map());
     setSelectedRows([]);
   }, [data.rows, data.columns, data.query]);
 
@@ -535,6 +621,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onSelectRow={setSelectedRows}
             onSelectCellData={setSelectedCell}
             onCellLinkClick={onCellLinkClick}
+            newRows={newRows}
+            onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
             columns={(data.columns || []).map((column) => ({
               title: readOnly ? undefined : 'Clique para ordenar por essa coluna',
@@ -591,9 +679,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   <Editor
                     dialect={dialect.editorDialect}
                     language="json"
-                    readonly
+                    readonly={!selectedCell?.column.editable}
                     hidePreview
                     value={previewValue}
+                    onChange={handleApplySelectedPreviewValue}
                   />
                 </TabContent>
 
@@ -656,6 +745,19 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             loading={saving}
           >
             <SaveIcon size={16} />
+          </Button>
+        )}
+
+        {!!editableTable && (
+          <Button
+            text
+            smallIcon
+            title="Adicionar linha"
+            onClick={handleAddRow}
+            disabled={data.loading}
+            color={activeTheme.queryEditor.bar.color}
+          >
+            <AddIcon size={14} />
           </Button>
         )}
 

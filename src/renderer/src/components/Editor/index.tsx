@@ -227,8 +227,12 @@ const Editor = ({
   }, [editor, props.onUmounted]);
 
   React.useEffect(() => {
-    if (props.value !== undefined) setValue(props.value);
+    if (props.value !== undefined && props.value !== getValue()) setValue(props.value);
   }, [editor, props.value]);
+
+  React.useEffect(() => {
+    editor?.updateOptions({ readOnly: props.readonly });
+  }, [editor, props.readonly]);
 
   React.useEffect(() => {
     setScroll(props.scroll);
