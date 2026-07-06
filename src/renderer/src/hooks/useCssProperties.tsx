@@ -1,6 +1,6 @@
 import { toCssProperties } from '@renderer/styles/theme';
-import { useMemo } from 'react';
+import { useMemo, type DependencyList } from 'react';
 
-export const useCssProperties = (callback: () => object, arrDependencies: any[]) => {
+export const useCssProperties = (callback: () => object, arrDependencies: DependencyList) => {
   return useMemo(() => toCssProperties(callback()), arrDependencies);
 };

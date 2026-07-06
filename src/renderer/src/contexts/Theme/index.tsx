@@ -56,7 +56,7 @@ export const useThemeContext = () => {
 
 export const useCssPropertiesWithActiveTheme = (
   callback: (activeTheme: ITheme<string>) => object,
-  arrDependencies?: any[],
+  arrDependencies?: React.DependencyList,
 ) => {
   const { activeTheme } = useThemeContext();
 

@@ -1,10 +1,10 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 type Maybe<T> = T | undefined | null;
+type LatestFunction = (...args: unknown[]) => unknown;
 
 // https://reactjs.org/docs/hooks-faq.html#what-can-i-do-if-my-effect-dependencies-change-too-often
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useLatestFunc<T extends Maybe<(...args: any[]) => any>>(fn: T): T {
+export function useLatestFunc<T extends Maybe<LatestFunction>>(fn: T): T {
   const ref = useRef(fn);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function useLatestFunc<T extends Maybe<(...args: any[]) => any>>(fn: T): 
 
   const callbackFn = useCallback((...args: Parameters<NonNullable<T>>) => {
     return ref.current?.(...args);
-  }, []);
+  }, []) as NonNullable<T>;
 
-  return fn ? callbackFn : (fn as any);
+  return (fn ? callbackFn : fn) as T;
 }
