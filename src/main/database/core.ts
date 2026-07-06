@@ -161,7 +161,7 @@ const getConnection = async (connectionId: string) => {
     return connectionAlreadyStarted;
   }
 
-  const config: IConnectionConfig = await getConnectionsSaved(connectionId);
+  const config = await getConnectionsSaved(connectionId);
 
   if (!config) {
     throw new Error(`Connection config is not found. (${connectionId})`);

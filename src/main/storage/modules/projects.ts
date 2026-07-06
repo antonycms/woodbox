@@ -11,11 +11,11 @@ export const initialValue = {
   default: [] as IProject[],
 } as const;
 
-export const getModule = (store: Store<any>) => {
-  const get = makeFnGetItemInStoredArray(store, 'projects');
-  const add = makeFnAddItemInStoredArray(store, 'projects');
-  const remove = makeFnRemoveStoredItemFromArray(store, 'projects');
-  const edit = makeFnEditItemInStoredArray(store, 'projects');
+export const getModule = (store: Store<Record<string, unknown>>) => {
+  const get = makeFnGetItemInStoredArray<IProject>(store, 'projects');
+  const add = makeFnAddItemInStoredArray<IProject>(store, 'projects');
+  const remove = makeFnRemoveStoredItemFromArray<IProject>(store, 'projects');
+  const edit = makeFnEditItemInStoredArray<IProject>(store, 'projects');
 
   return { get, add, remove, edit };
 };

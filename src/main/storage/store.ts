@@ -8,7 +8,7 @@ import { initialValue as scripts_meta, getModule as getModuleScripts } from './m
 
 type WindowState = { width: number; height: number; x: number; y: number; isMaximized: boolean };
 
-const store = new Store({
+const store = new Store<Record<string, unknown>>({
   schema: {
     projects,
     saved_connections,

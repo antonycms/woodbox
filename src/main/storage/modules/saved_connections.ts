@@ -11,11 +11,11 @@ export const initialValue = {
   default: [] as IConnectionConfig[],
 } as const;
 
-export const getModule = (store: Store<any>) => {
-  const get = makeFnGetItemInStoredArray(store, 'saved_connections');
-  const add = makeFnAddItemInStoredArray(store, 'saved_connections');
-  const remove = makeFnRemoveStoredItemFromArray(store, 'saved_connections');
-  const edit = makeFnEditItemInStoredArray(store, 'saved_connections');
+export const getModule = (store: Store<Record<string, unknown>>) => {
+  const get = makeFnGetItemInStoredArray<IConnectionConfig>(store, 'saved_connections');
+  const add = makeFnAddItemInStoredArray<IConnectionConfig>(store, 'saved_connections');
+  const remove = makeFnRemoveStoredItemFromArray<IConnectionConfig>(store, 'saved_connections');
+  const edit = makeFnEditItemInStoredArray<IConnectionConfig>(store, 'saved_connections');
 
   return { get, add, remove, edit };
 };

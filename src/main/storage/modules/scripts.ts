@@ -9,7 +9,7 @@ export const initialValue = {
   default: [] as IScriptMeta[],
 } as const;
 
-export const getModule = (store: Store<any>) => {
+export const getModule = (store: Store<Record<string, unknown>>) => {
   const getMeta = (): IScriptMeta[] => {
     return (store.get('scripts_meta') as IScriptMeta[]) || [];
   };
@@ -36,7 +36,7 @@ export const getModule = (store: Store<any>) => {
       items.filter((s) => s.id !== id),
     );
 
-    store.delete(contentKey(id) as any);
+    store.delete(contentKey(id));
   };
 
   const patch = (id: string, data: Partial<IScript>) => {
