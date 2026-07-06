@@ -9,10 +9,11 @@ import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
+import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalDeleteTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalDeleteTableProps) => {
-    const { runSql, loadConnectionInfo } = useStoreContext();
+    const { runSql, loadConnectionInfo, connections } = useStoreContext();
     const { removeTab } = useAppTabContext();
     const { showToast } = useToast();
     const {
@@ -20,6 +21,13 @@ export const ModalDeleteTable = React.memo(
     } = useThemeContext();
 
     const [loading, setLoading] = React.useState(false);
+    const dialect = React.useMemo(
+      () =>
+        getRendererDialect(
+          connections.find((connection) => connection.id === idConnection)?.dialect,
+        ),
+      [connections, idConnection],
+    );
     const tableName = [schema, table].filter(Boolean).join('.');
 
     const handleConfirm = async () => {
@@ -28,7 +36,7 @@ export const ModalDeleteTable = React.memo(
       try {
         setLoading(true);
 
-        await runSql(idConnection, `DROP TABLE ${getQualifiedTableName(schema, table)};`);
+        await runSql(idConnection, `DROP TABLE ${dialect.getQualifiedName(schema, table)};`);
 
         removeTab(`${idConnection}_${schema}_${table}`);
         await loadConnectionInfo(idConnection);
@@ -100,9 +108,3 @@ export interface IModalDeleteTableProps {
   table?: string;
   onClose?: () => void;
 }
-
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
-
-const getQualifiedTableName = (schema: string | undefined, table: string) => {
-  return [schema, table].filter(Boolean).map(quoteIdent).join('.');
-};

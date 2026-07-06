@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { Dialect } from '@renderer/database/dialects';
 
 export interface IScript {
   id: string;
@@ -39,7 +40,7 @@ export type ConnectionEnvironment = 'development' | 'production';
 export interface IConnectionCreate {
   id_project: string;
   description: string;
-  dialect: string;
+  dialect: Dialect;
   environment?: ConnectionEnvironment;
   database: string;
   host: string;
@@ -56,7 +57,11 @@ export interface IColumnInfo {
   column_name: string;
   data_type: string;
   is_nullable: boolean;
+  is_nullable_label?: string;
   column_default?: string;
+  extra?: string;
+  is_auto_increment?: boolean;
+  is_auto_increment_label?: string;
   description?: string;
   udt_name?: string;
   character_maximum_length?: number;

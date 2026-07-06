@@ -40,6 +40,7 @@ import { TabcontentError } from './components/TabContentError';
 import { TabContentGeneric } from './components/TabContentGeneric';
 import { TabContentSelect } from './components/TabContentSelect';
 import { ModalServerOutput } from './components/ModalServerOutput';
+import { getRendererDialect } from '@renderer/database/dialects';
 
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
@@ -59,6 +60,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     () => connections.find((connection) => connection.id === id_connection),
     [connections, id_connection],
   );
+  const dialect = getRendererDialect(currentConnection?.dialect);
   const isProductionConnection = currentConnection?.environment === 'production';
 
   const id = React.useMemo(() => generateHash(), []);
@@ -769,7 +771,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     if (!connectionInfo) return;
 
-    const { schemas, tables } = connectionInfo;
+    const schemas = connectionInfo.schemas || [];
+    const tables = connectionInfo.tables || [];
 
     const schemasSerialized = schemas.map((schema) => ({ name: schema }));
     const tablesAvailable = tables.map((table) => ({
@@ -900,7 +903,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
         <Editor
           ref={refEditor}
-          dialect="postgres"
+          dialect={dialect.editorDialect}
           onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
           autocomplete={autocomplete}
@@ -923,6 +926,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       />
 
       <ModalConfirmProductionQuery
+        dialect={dialect.editorDialect}
         show={!!pendingProductionQueryExecution}
         sql={
           pendingProductionQueryExecution

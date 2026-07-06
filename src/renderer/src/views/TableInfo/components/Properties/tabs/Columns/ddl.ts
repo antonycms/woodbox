@@ -1,3 +1,5 @@
+import type { RendererDialect } from '@renderer/database/dialects';
+import type { RendererDialectDdlHelpers } from '@renderer/database/dialects/types';
 import type {
   IColumnInfo,
   IColumnReferenceInfo,
@@ -16,8 +18,6 @@ import type {
   IPendingRestrictionCreate,
   IPendingRestrictionDrop,
 } from '@renderer/contexts/TableInfoContext';
-
-export const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
 export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
@@ -44,13 +44,48 @@ const getInsertColumns = (row: Record<string, any>, columnOrder?: string[]) => {
 
 const getInsertGroupKey = (columns: string[]) => columns.join('\0');
 
-const getTableName = (schema: string | undefined, table: string) => {
-  if (!schema) return quoteIdent(table);
-
-  return `${quoteIdent(schema)}.${quoteIdent(table)}`;
+const getTableName = (dialect: RendererDialect, schema: string | undefined, table: string) => {
+  return dialect.getQualifiedName(schema, table);
 };
 
+const normalizeOptionalString = (value?: string) => {
+  const trimmedValue = value?.trim();
+
+  return trimmedValue || undefined;
+};
+
+const getColumnType = (column: IColumnInfo) => {
+  if (column.character_maximum_length) {
+    return `${column.data_type}(${column.character_maximum_length})`;
+  }
+
+  if (column.numeric_precision) {
+    return column.numeric_scale !== undefined && column.numeric_scale !== null
+      ? `${column.data_type}(${column.numeric_precision},${column.numeric_scale})`
+      : `${column.data_type}(${column.numeric_precision})`;
+  }
+
+  if (column.datetime_precision !== undefined && column.datetime_precision !== null) {
+    return `${column.data_type}(${column.datetime_precision})`;
+  }
+
+  if (column.data_type === 'USER-DEFINED' && column.udt_name) {
+    return column.udt_name;
+  }
+
+  return column.data_type;
+};
+
+const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => ({
+  quoteIdent: dialect.quoteIdent,
+  quoteLiteral,
+  getColumnType,
+  getTableName: (schema, table) => getTableName(dialect, schema, table),
+  normalizeOptionalString,
+});
+
 export const generateInsertDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   rows: Record<string, any>[],
@@ -58,7 +93,8 @@ export const generateInsertDdl = (
 ) => {
   if (!rows.length) return '';
 
-  const tableName = getTableName(schema, table);
+  const quoteIdent = dialect.quoteIdent;
+  const tableName = getTableName(dialect, schema, table);
   const groups = new Map<string, { columns: string[]; rows: Record<string, any>[] }>();
 
   rows.forEach((row) => {
@@ -92,13 +128,16 @@ export const generateInsertDdl = (
 
 const serializeUpdateValue = serializeInsertValue;
 
-const serializeWhereValue = (column: string, value: any) => {
+const serializeWhereValue = (dialect: RendererDialect, column: string, value: any) => {
+  const quoteIdent = dialect.quoteIdent;
+
   if (value === null || value === undefined) return `${quoteIdent(column)} IS NULL`;
 
   return `${quoteIdent(column)} = ${serializeUpdateValue(value)}`;
 };
 
 export const generateUpdateDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   rows: Array<{
@@ -107,7 +146,8 @@ export const generateUpdateDdl = (
   }>,
   whereColumns: string[],
 ) => {
-  const tableName = getTableName(schema, table);
+  const quoteIdent = dialect.quoteIdent;
+  const tableName = getTableName(dialect, schema, table);
 
   return rows
     .map(({ originalRow, changes }) => {
@@ -116,7 +156,7 @@ export const generateUpdateDdl = (
         .join(',\n');
 
       const whereSql = whereColumns
-        .map((column) => serializeWhereValue(column, originalRow[column]))
+        .map((column) => serializeWhereValue(dialect, column, originalRow[column]))
         .join('\n  AND ');
 
       if (!setSql || !whereSql) return null;
@@ -129,17 +169,18 @@ export const generateUpdateDdl = (
 };
 
 export const generateDeleteDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   rows: Record<string, any>[],
   whereColumns: string[],
 ) => {
-  const tableName = getTableName(schema, table);
+  const tableName = getTableName(dialect, schema, table);
 
   return rows
     .map((row) => {
       const whereSql = whereColumns
-        .map((column) => serializeWhereValue(column, row[column]))
+        .map((column) => serializeWhereValue(dialect, column, row[column]))
         .join('\n  AND ');
 
       if (!whereSql) return null;
@@ -148,28 +189,6 @@ export const generateDeleteDdl = (
     })
     .filter((sql): sql is string => !!sql)
     .join('\n\n');
-};
-
-const getColumnType = (column: IColumnInfo) => {
-  if (column.character_maximum_length) {
-    return `${column.data_type}(${column.character_maximum_length})`;
-  }
-
-  if (column.numeric_precision) {
-    return column.numeric_scale !== undefined && column.numeric_scale !== null
-      ? `${column.data_type}(${column.numeric_precision},${column.numeric_scale})`
-      : `${column.data_type}(${column.numeric_precision})`;
-  }
-
-  if (column.datetime_precision !== undefined && column.datetime_precision !== null) {
-    return `${column.data_type}(${column.datetime_precision})`;
-  }
-
-  if (column.data_type === 'USER-DEFINED' && column.udt_name) {
-    return column.udt_name;
-  }
-
-  return column.data_type;
 };
 
 const groupByConstraintName = (references: IColumnReferenceInfo[] = []) => {
@@ -192,19 +211,14 @@ const hasAllColumnsSelected = (constraintColumns: string[], selectedColumns: Set
   );
 };
 
-const getConstraintComment = (tableName: string, constraintName: string, comment?: string) => {
-  if (!comment) return '';
-
-  return `\n\nCOMMENT ON CONSTRAINT ${quoteIdent(constraintName)} ON ${tableName} IS ${quoteLiteral(
-    comment,
-  )};`;
-};
-
 const getReferencesDdlBySelectedColumns = (
+  dialect: RendererDialect,
   tableName: string,
   selectedColumnNames: Set<string>,
   references: IColumnReferenceInfo[] = [],
 ) => {
+  const helpers = getDdlHelpers(dialect);
+
   return Object.values(groupByConstraintName(references))
     .map((group) => {
       const constraintColumns = getConstraintColumns(group);
@@ -213,18 +227,25 @@ const getReferencesDdlBySelectedColumns = (
       if (!hasAllColumnsSelected(constraintColumns, selectedColumnNames)) return null;
       if (!reference.constraint_definition) return null;
 
-      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(reference.constraint_name)} ${
-        reference.constraint_definition
-      };${getConstraintComment(tableName, reference.constraint_name, reference.comment)}`;
+      return dialect.ddl.getCreateConstraintFromDefinitionDdl(
+        tableName,
+        reference.constraint_name,
+        reference.constraint_definition,
+        reference.comment,
+        helpers,
+      );
     })
     .filter((ddl): ddl is string => !!ddl);
 };
 
 const getRestrictionsDdlBySelectedColumns = (
+  dialect: RendererDialect,
   tableName: string,
   selectedColumnNames: Set<string>,
   restrictions: IColumnRestrictionsInfo[] = [],
 ) => {
+  const helpers = getDdlHelpers(dialect);
+
   return restrictions
     .map((restriction) => {
       const constraintColumns = restriction.column_names || [];
@@ -232,23 +253,25 @@ const getRestrictionsDdlBySelectedColumns = (
       if (!hasAllColumnsSelected(constraintColumns, selectedColumnNames)) return null;
       if (!restriction.constraint_definition) return null;
 
-      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-        restriction.constraint_name,
-      )} ${restriction.constraint_definition};${getConstraintComment(
+      return dialect.ddl.getCreateConstraintFromDefinitionDdl(
         tableName,
         restriction.constraint_name,
+        restriction.constraint_definition,
         restriction.comment,
-      )}`;
+        helpers,
+      );
     })
     .filter((ddl): ddl is string => !!ddl);
 };
 
 export const generateReferencesDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   references: IColumnReferenceInfo[],
 ) => {
-  const tableName = getTableName(schema, table);
+  const tableName = getTableName(dialect, schema, table);
+  const helpers = getDdlHelpers(dialect);
   const constraints = new Map<string, IColumnReferenceInfo>();
 
   references.forEach((reference) => {
@@ -261,32 +284,38 @@ export const generateReferencesDdl = (
     .map((reference) => {
       if (!reference.constraint_definition) return null;
 
-      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(reference.constraint_name)} ${
-        reference.constraint_definition
-      };${getConstraintComment(tableName, reference.constraint_name, reference.comment)}`;
+      return dialect.ddl.getCreateConstraintFromDefinitionDdl(
+        tableName,
+        reference.constraint_name,
+        reference.constraint_definition,
+        reference.comment,
+        helpers,
+      );
     })
     .filter((ddl): ddl is string => !!ddl)
     .join('\n\n');
 };
 
 export const generateRestrictionsDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   restrictions: IColumnRestrictionsInfo[],
 ) => {
-  const tableName = getTableName(schema, table);
+  const tableName = getTableName(dialect, schema, table);
+  const helpers = getDdlHelpers(dialect);
 
   return restrictions
     .map((restriction) => {
       if (!restriction.constraint_definition) return null;
 
-      return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-        restriction.constraint_name,
-      )} ${restriction.constraint_definition};${getConstraintComment(
+      return dialect.ddl.getCreateConstraintFromDefinitionDdl(
         tableName,
         restriction.constraint_name,
+        restriction.constraint_definition,
         restriction.comment,
-      )}`;
+        helpers,
+      );
     })
     .filter((ddl): ddl is string => !!ddl)
     .join('\n\n');
@@ -308,7 +337,30 @@ export const generateIndexesDdl = (indexes: IIndexInfo[]) => {
     .join('\n\n');
 };
 
+const isAutoIncrementColumnRestriction = (
+  columns: IColumnInfo[],
+  restriction: IColumnRestrictionsInfo,
+) => {
+  if (!['primary_key', 'unique_key'].includes(restriction.constraint_type || '')) return false;
+  if (restriction.column_names?.length !== 1) return false;
+
+  return columns.some(
+    (column) =>
+      column.is_auto_increment && column.column_name === restriction.column_names?.[0],
+  );
+};
+
+const getRestrictionsWithoutAutoIncrementColumnConstraint = <T extends IColumnRestrictionsInfo>(
+  columns: IColumnInfo[],
+  restrictions: T[] = [],
+) => {
+  return restrictions.filter(
+    (restriction) => !isAutoIncrementColumnRestriction(columns, restriction),
+  );
+};
+
 export const generateAddColumnsDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   columns: IColumnInfo[],
@@ -319,37 +371,38 @@ export const generateAddColumnsDdl = (
 ) => {
   if (!columns?.length) return '';
 
-  const tableName = getTableName(schema, table);
+  const helpers = getDdlHelpers(dialect);
+  const tableName = getTableName(dialect, schema, table);
   const selectedColumnNames = new Set(columns.map((column) => column.column_name));
-
-  const columnsDdl = columns.map((column) => {
-    const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
-    const notNull = column.is_nullable ? '' : ' NOT NULL';
-    const addColumn = `ALTER TABLE ${tableName}\n  ADD COLUMN ${quoteIdent(
-      column.column_name,
-    )} ${getColumnType(column)}${defaultValue}${notNull};`;
-
-    if (!column.description) return addColumn;
-
-    return `${addColumn}\n\nCOMMENT ON COLUMN ${tableName}.${quoteIdent(
-      column.column_name,
-    )} IS ${quoteLiteral(column.description)};`;
-  });
+  const restrictions = options?.restrictions || [];
+  const restrictionsToCreate = getRestrictionsWithoutAutoIncrementColumnConstraint(
+    columns,
+    restrictions,
+  );
 
   return [
-    ...columnsDdl,
-    ...getRestrictionsDdlBySelectedColumns(tableName, selectedColumnNames, options?.restrictions),
-    ...getReferencesDdlBySelectedColumns(tableName, selectedColumnNames, options?.references),
-  ].join('\n\n');
-};
-
-const getConstraintName = (table: string, columns: string | string[], suffix: string) => {
-  const columnNames = Array.isArray(columns) ? columns.join('_') : columns;
-
-  return `${table}_${columnNames}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+    ...columns.flatMap((column) =>
+      dialect.ddl.getAddColumnDdl(tableName, column, helpers, restrictions),
+    ),
+    ...getRestrictionsDdlBySelectedColumns(
+      dialect,
+      tableName,
+      selectedColumnNames,
+      restrictionsToCreate,
+    ),
+    ...getReferencesDdlBySelectedColumns(
+      dialect,
+      tableName,
+      selectedColumnNames,
+      options?.references,
+    ),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 };
 
 const getDropConstraintsDdl = (
+  dialect: RendererDialect,
   tableName: string,
   droppedColumnNames: Set<string>,
   options: {
@@ -357,187 +410,146 @@ const getDropConstraintsDdl = (
     references?: IColumnReferenceInfo[];
   },
 ) => {
-  const constraintsToDrop = new Set<string>();
+  const helpers = getDdlHelpers(dialect);
+  const constraintsToDrop = new Map<string, IColumnRestrictionsInfo | IColumnReferenceInfo>();
 
   options.restrictions?.forEach((restriction) => {
     const hasDroppedColumn = restriction.column_names?.some((columnName) =>
       droppedColumnNames.has(columnName),
     );
 
-    if (hasDroppedColumn) constraintsToDrop.add(restriction.constraint_name);
+    if (hasDroppedColumn) constraintsToDrop.set(restriction.constraint_name, restriction);
   });
 
   options.references?.forEach((reference) => {
     if (droppedColumnNames.has(reference.column_name)) {
-      constraintsToDrop.add(reference.constraint_name);
+      constraintsToDrop.set(reference.constraint_name, reference);
     }
   });
 
-  return [...constraintsToDrop].map(
-    (constraintName) =>
-      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
-  );
+  return [...constraintsToDrop.values()]
+    .map((constraint) => dialect.ddl.getDropConstraintDdl(tableName, constraint, helpers))
+    .filter(Boolean);
+};
+
+const getDropAutoIncrementDdl = (
+  dialect: RendererDialect,
+  tableName: string,
+  columns: IColumnInfo[] = [],
+) => {
+  const helpers = getDdlHelpers(dialect);
+
+  if (!dialect.ddl.getDropAutoIncrementDdl) return [];
+
+  return columns
+    .filter((column) => column.is_auto_increment)
+    .map((column) => dialect.ddl.getDropAutoIncrementDdl?.(tableName, column, helpers))
+    .filter((ddl): ddl is string => !!ddl);
 };
 
 const getDropPendingRestrictionsDdl = (
+  dialect: RendererDialect,
   tableName: string,
   restrictions: IPendingRestrictionDrop[] = [],
 ) => {
-  const constraintNames = [
-    ...new Set(restrictions.map((restriction) => restriction.constraint_name)),
-  ];
+  const helpers = getDdlHelpers(dialect);
+  const constraints = new Map<string, IPendingRestrictionDrop>();
 
-  return constraintNames.map(
-    (constraintName) =>
-      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
-  );
+  restrictions.forEach((restriction) => constraints.set(restriction.constraint_name, restriction));
+
+  return [...constraints.values()]
+    .map((constraint) => dialect.ddl.getDropConstraintDdl(tableName, constraint, helpers))
+    .filter(Boolean);
 };
 
 const getDropPendingReferencesDdl = (
+  dialect: RendererDialect,
   tableName: string,
   references: IPendingReferenceDrop[] = [],
 ) => {
-  const constraintNames = [...new Set(references.map((reference) => reference.constraint_name))];
+  const helpers = getDdlHelpers(dialect);
+  const constraints = new Map<string, IPendingReferenceDrop>();
 
-  return constraintNames.map(
-    (constraintName) =>
-      `ALTER TABLE ${tableName}\n  DROP CONSTRAINT ${quoteIdent(constraintName)};`,
-  );
+  references.forEach((reference) => constraints.set(reference.constraint_name, reference));
+
+  return [...constraints.values()]
+    .map((constraint) => dialect.ddl.getDropConstraintDdl(tableName, constraint, helpers))
+    .filter(Boolean);
 };
 
 const getDropPendingIndexesDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
+  table: string,
   indexes: IPendingIndexDrop[] = [],
 ) => {
+  const helpers = getDdlHelpers(dialect);
   const indexNames = [...new Set(indexes.map((index) => index.index_name))];
 
-  return indexNames.map((indexName) => `DROP INDEX ${getTableName(schema, indexName)};`);
-};
-
-const getRestrictionDefinition = (restriction: IPendingRestrictionCreate) => {
-  if (restriction.constraint_type === 'primary_key') {
-    return `PRIMARY KEY (${(restriction.column_names || []).map(quoteIdent).join(', ')})`;
-  }
-
-  if (restriction.constraint_type === 'unique_key') {
-    return `UNIQUE (${(restriction.column_names || []).map(quoteIdent).join(', ')})`;
-  }
-
-  const expression = String(restriction.expression || '').trim();
-  if (/^check\s*\(/i.test(expression)) return expression;
-
-  return `CHECK (${expression})`;
+  return indexNames
+    .map((indexName) => dialect.ddl.getDropIndexDdl(schema, table, indexName, helpers))
+    .filter(Boolean);
 };
 
 const getCreateRestrictionsDdl = (
+  dialect: RendererDialect,
   tableName: string,
   restrictions: IPendingRestrictionCreate[] = [],
 ) => {
-  return restrictions.map(
-    (restriction) =>
-      `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-        restriction.constraint_name,
-      )} ${getRestrictionDefinition(restriction)};`,
+  const helpers = getDdlHelpers(dialect);
+
+  return restrictions.map((restriction) =>
+    dialect.ddl.getCreateRestrictionDdl(tableName, restriction, helpers),
   );
 };
 
 const getCreateIndexesDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   indexes: IPendingIndexCreate[] = [],
+  availableColumns: IColumnInfo[] = [],
 ) => {
-  const tableName = getTableName(schema, table);
+  const helpers = getDdlHelpers(dialect);
+  const columnsByName = new Map(availableColumns.map((column) => [column.column_name, column]));
 
-  return indexes.map((index) => {
-    const columns = (index.column_names || []).map(quoteIdent).join(', ');
-    const method = index.index_method || 'btree';
-
-    return `CREATE INDEX ${quoteIdent(
-      index.index_name,
-    )} ON ${tableName} USING ${method} (${columns});`;
-  });
+  return indexes.map((index) =>
+    dialect.ddl.getCreateIndexDdl(
+      schema,
+      table,
+      {
+        ...index,
+        columns: (index.column_names || [])
+          .map((columnName) => columnsByName.get(columnName))
+          .filter((column): column is IColumnInfo => !!column),
+      },
+      helpers,
+    ),
+  );
 };
 
-const getCreateReferencesDdl = (tableName: string, references: IPendingReferenceCreate[] = []) => {
-  return references.map((reference) => {
-    const referenceTableName = getTableName(
-      reference.reference_table_schema,
-      reference.reference_table_name,
-    );
+const getCreateReferencesDdl = (
+  dialect: RendererDialect,
+  tableName: string,
+  references: IPendingReferenceCreate[] = [],
+) => {
+  const helpers = getDdlHelpers(dialect);
 
-    return `ALTER TABLE ${tableName}\n  ADD CONSTRAINT ${quoteIdent(
-      reference.constraint_name,
-    )} FOREIGN KEY (${quoteIdent(
-      reference.column_name,
-    )}) REFERENCES ${referenceTableName} (${quoteIdent(reference.reference_column_name)});`;
-  });
+  return references.map((reference) =>
+    dialect.ddl.getCreateReferenceDdl(tableName, reference, helpers),
+  );
 };
 
-const normalizeOptionalString = (value?: string) => {
-  const trimmedValue = value?.trim();
-
-  return trimmedValue || undefined;
-};
-
-const getChangeColumnDdl = (tableName: string, column: IPendingColumnChange) => {
-  const originalColumn = column.__originalColumn;
-  const originalColumnName = originalColumn.column_name;
-  const currentColumnName = column.column_name;
-  const targetColumnName = currentColumnName || originalColumnName;
-  const statements: string[] = [];
-
-  if (currentColumnName && currentColumnName !== originalColumnName) {
-    statements.push(
-      `ALTER TABLE ${tableName}\n  RENAME COLUMN ${quoteIdent(originalColumnName)} TO ${quoteIdent(
-        currentColumnName,
-      )};`,
-    );
-  }
-
-  if (column.data_type && column.data_type !== originalColumn.data_type) {
-    statements.push(
-      `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(
-        targetColumnName,
-      )} TYPE ${getColumnType(column)};`,
-    );
-  }
-
-  if (column.is_nullable !== originalColumn.is_nullable) {
-    statements.push(
-      `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(targetColumnName)} ${
-        column.is_nullable ? 'DROP NOT NULL' : 'SET NOT NULL'
-      };`,
-    );
-  }
-
-  const originalDefault = normalizeOptionalString(originalColumn.column_default);
-  const currentDefault = normalizeOptionalString(column.column_default);
-
-  if (currentDefault !== originalDefault) {
-    statements.push(
-      currentDefault
-        ? `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(
-            targetColumnName,
-          )} SET DEFAULT ${currentDefault};`
-        : `ALTER TABLE ${tableName}\n  ALTER COLUMN ${quoteIdent(targetColumnName)} DROP DEFAULT;`,
-    );
-  }
-
-  const originalDescription = normalizeOptionalString(originalColumn.description);
-  const currentDescription = normalizeOptionalString(column.description);
-
-  if (currentDescription !== originalDescription) {
-    statements.push(
-      `COMMENT ON COLUMN ${tableName}.${quoteIdent(targetColumnName)} IS ${
-        currentDescription ? quoteLiteral(currentDescription) : 'NULL'
-      };`,
-    );
-  }
-
-  return statements;
+const getChangeColumnDdl = (
+  dialect: RendererDialect,
+  tableName: string,
+  column: IPendingColumnChange,
+) => {
+  return dialect.ddl.getChangeColumnDdl(tableName, column, getDdlHelpers(dialect));
 };
 
 export const generateCreateTableDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   changes: {
@@ -552,39 +564,31 @@ export const generateCreateTableDdl = (
   const indexes = changes.indexes || [];
   const restrictions = changes.restrictions || [];
   const references = changes.references || [];
-  const tableName = getTableName(schema, table);
+  const helpers = getDdlHelpers(dialect);
+  const tableName = getTableName(dialect, schema, table);
 
-  const columnLines = columns.map((column) => {
-    const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
-    const notNull = column.is_nullable ? '' : ' NOT NULL';
-
-    return `  ${quoteIdent(column.column_name)} ${getColumnType(column)}${defaultValue}${notNull}`;
-  });
-
-  const commentOnColumnStatements = columns
-    .filter((column) => !!column.description)
-    .map(
-      (column) =>
-        `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
-          column.description,
-        )};`,
-    );
+  const createTable = dialect.ddl.getCreateTableDdl(tableName, columns, restrictions, helpers);
+  const tableComment = dialect.ddl.getTableCommentDdl(tableName, changes.tableComment, helpers);
+  const columnComments = columns
+    .map((column) =>
+      dialect.ddl.getColumnCommentDdl(tableName, column.column_name, column.description, helpers),
+    )
+    .filter(Boolean);
 
   return [
-    `CREATE TABLE ${tableName} (\n${columnLines.join(',\n')}\n);`,
-    changes.tableComment?.trim()
-      ? `COMMENT ON TABLE ${tableName} IS ${quoteLiteral(changes.tableComment.trim())};`
-      : '',
-    ...commentOnColumnStatements,
-    ...getCreateRestrictionsDdl(tableName, restrictions),
-    ...getCreateIndexesDdl(schema, table, indexes),
-    ...getCreateReferencesDdl(tableName, references),
+    createTable,
+    tableComment,
+    ...columnComments,
+    ...dialect.ddl.getPostCreateTableRestrictionsDdl(tableName, restrictions, helpers),
+    ...getCreateIndexesDdl(dialect, schema, table, indexes, columns),
+    ...getCreateReferencesDdl(dialect, tableName, references),
   ]
     .filter(Boolean)
     .join('\n\n');
 };
 
 export const generatePendingTableChangesDdl = (
+  dialect: RendererDialect,
   schema: string | undefined,
   table: string,
   changes: {
@@ -599,6 +603,7 @@ export const generatePendingTableChangesDdl = (
     droppedReferences?: IPendingReferenceDrop[];
     existingRestrictions?: IColumnRestrictionsInfo[];
     existingReferences?: IColumnReferenceInfo[];
+    existingColumns?: IColumnInfo[];
   },
 ) => {
   const columns = changes.columns || [];
@@ -625,52 +630,55 @@ export const generatePendingTableChangesDdl = (
     return '';
   }
 
-  const tableName = getTableName(schema, table);
+  const helpers = getDdlHelpers(dialect);
+  const tableName = getTableName(dialect, schema, table);
   const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
-  const dropColumnStatements = droppedColumns.map(
-    (column) => `ALTER TABLE ${tableName}\n  DROP COLUMN ${quoteIdent(column.column_name)};`,
+  const changedColumnsByOriginalName = new Map(
+    changedColumns.map((column) => [column.__originalColumn.column_name, column]),
+  );
+  const availableColumns = [
+    ...(changes.existingColumns || [])
+      .filter((column) => !droppedColumnNames.has(column.column_name))
+      .map((column) => changedColumnsByOriginalName.get(column.column_name) || column),
+    ...columns,
+  ];
+  const dropColumnStatements = droppedColumns.map((column) =>
+    dialect.ddl.getDropColumnDdl(tableName, column.column_name, helpers),
   );
   const changeColumnStatements = changedColumns.flatMap((column) =>
-    getChangeColumnDdl(tableName, column),
+    getChangeColumnDdl(dialect, tableName, column),
+  );
+  const postCreateRestrictionChangeColumnStatements = changedColumns.flatMap((column) =>
+    dialect.ddl.getPostCreateRestrictionChangeColumnDdl(tableName, column, helpers),
+  );
+  const createColumnStatements = columns.flatMap((column) =>
+    dialect.ddl.getAddColumnDdl(tableName, column, helpers, restrictions),
+  );
+  const restrictionsToCreate = getRestrictionsWithoutAutoIncrementColumnConstraint(
+    columns,
+    restrictions,
+  );
+  const postCreateRestrictionAddColumnStatements = columns.flatMap((column) =>
+    dialect.ddl.getPostCreateRestrictionAddColumnDdl(tableName, column, helpers),
   );
 
-  const createColumnStatements = columns.flatMap((column) => {
-    const defaultValue = column.column_default ? ` DEFAULT ${column.column_default}` : '';
-    const notNull = column.is_nullable ? '' : ' NOT NULL';
-
-    const statements: string[] = [];
-
-    statements.push(
-      `ALTER TABLE ${tableName}\n  ADD COLUMN ${quoteIdent(column.column_name)} ${getColumnType(
-        column,
-      )}${defaultValue}${notNull};`,
-    );
-
-    if (column.description) {
-      statements.push(
-        `COMMENT ON COLUMN ${tableName}.${quoteIdent(column.column_name)} IS ${quoteLiteral(
-          column.description,
-        )};`,
-      );
-    }
-
-    return statements;
-  });
-
   return [
-    ...getDropConstraintsDdl(tableName, droppedColumnNames, {
+    ...getDropAutoIncrementDdl(dialect, tableName, droppedColumns),
+    ...getDropConstraintsDdl(dialect, tableName, droppedColumnNames, {
       restrictions: changes.existingRestrictions,
       references: changes.existingReferences,
     }),
-    ...getDropPendingRestrictionsDdl(tableName, droppedRestrictions),
-    ...getDropPendingReferencesDdl(tableName, droppedReferences),
-    ...getDropPendingIndexesDdl(schema, droppedIndexes),
+    ...getDropPendingRestrictionsDdl(dialect, tableName, droppedRestrictions),
+    ...getDropPendingReferencesDdl(dialect, tableName, droppedReferences),
+    ...getDropPendingIndexesDdl(dialect, schema, table, droppedIndexes),
     ...dropColumnStatements,
     ...changeColumnStatements,
     ...createColumnStatements,
-    ...getCreateRestrictionsDdl(tableName, restrictions),
-    ...getCreateIndexesDdl(schema, table, indexes),
-    ...getCreateReferencesDdl(tableName, references),
+    ...getCreateRestrictionsDdl(dialect, tableName, restrictionsToCreate),
+    ...postCreateRestrictionAddColumnStatements,
+    ...postCreateRestrictionChangeColumnStatements,
+    ...getCreateIndexesDdl(dialect, schema, table, indexes, availableColumns),
+    ...getCreateReferencesDdl(dialect, tableName, references),
   ]
     .filter(Boolean)
     .join('\n\n');

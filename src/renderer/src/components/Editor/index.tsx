@@ -7,6 +7,7 @@ import styles from './styles.module.css';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
+import type { Dialect } from '@renderer/database/dialects';
 
 const Editor = ({
   ref,
@@ -291,7 +292,7 @@ export default Editor;
 export interface IEditorProps {
   ref?: React.Ref<IEditorRef>;
   language?: 'sql' | 'json';
-  dialect: 'postgres';
+  dialect?: Dialect;
   value?: string;
   initialValue?: string;
   scroll?: IScroll;

@@ -7,6 +7,7 @@ import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import type { IColumnRestrictionsInfo } from '@renderer/contexts/Store';
+import { useStoreContext } from '@renderer/contexts/Store';
 import {
   type IPendingRestrictionCreate,
   useTableInfoContext,
@@ -20,6 +21,8 @@ import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
+import { getRendererDialect } from '@renderer/database/dialects';
+import styles from '../Columns/styles.module.css';
 
 const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
   (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||
@@ -39,6 +42,14 @@ const Restrictios = ({
     },
   } = useThemeContext();
   const { showToast } = useToast();
+  const { connections } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const {
     columns,
     pendingColumns,
@@ -60,12 +71,14 @@ const Restrictios = ({
   const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
     [],
   );
+  const [restrictionFilterText, setRestrictionFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showNewRestrictionModal, setShowNewRestrictionModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.restrictions);
+  const restrictionFilterTextSerialized = restrictionFilterText.trim().toLowerCase();
   const droppedConstraintNames = React.useMemo(
     () => new Set(pendingDroppedRestrictions.map((restriction) => restriction.constraint_name)),
     [pendingDroppedRestrictions],
@@ -101,10 +114,26 @@ const Restrictios = ({
     ],
     [restrictions, droppedConstraintNames, pendingRestrictions],
   );
-  const sortedRestrictions = React.useMemo(
-    () => sortRows(allRestrictions, sort),
-    [allRestrictions, sort],
-  );
+  const filteredAndSortedRestrictions = React.useMemo(() => {
+    if (!restrictionFilterTextSerialized) return sortRows(allRestrictions, sort);
+
+    const texts = restrictionFilterTextSerialized.split(',').map((text) => text.trim());
+    const restrictionsFiltered = allRestrictions.filter((restriction) =>
+      [
+        restriction.constraint_name,
+        restriction.constraint_type,
+        Array.isArray(restriction.column_names)
+          ? restriction.column_names.join(', ')
+          : restriction.column_names,
+        restriction.expression,
+        restriction.comment,
+      ].some((value) =>
+        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+      ),
+    );
+
+    return sortRows(restrictionsFiltered, sort);
+  }, [allRestrictions, restrictionFilterTextSerialized, sort]);
   const hasPrimaryKey = React.useMemo(
     () =>
       restrictions.some(
@@ -206,7 +235,7 @@ const Restrictios = ({
       {
         text: 'Gerar DDL',
         onClick: () => {
-          setDdlSql(generateRestrictionsDdl(schema, table, selectedRestrictions));
+          setDdlSql(generateRestrictionsDdl(dialect, schema, table, selectedRestrictions));
           setShowDdlModal(true);
         },
       },
@@ -215,6 +244,7 @@ const Restrictios = ({
     schema,
     table,
     selectedRestrictions,
+    dialect,
     handleOpenNewRestrictionModal,
     handleRemoveSelectedRestrictions,
   ]);
@@ -264,6 +294,10 @@ const Restrictios = ({
   }, []);
 
   React.useEffect(() => {
+    setSelectedRestrictions([]);
+  }, [restrictionFilterTextSerialized]);
+
+  React.useEffect(() => {
     setSelectedRestrictions((currentSelectedRestrictions) => {
       if (!currentSelectedRestrictions.length) return currentSelectedRestrictions;
 
@@ -298,19 +332,42 @@ const Restrictios = ({
         onClose={() => setContextMenuPosition(null)}
       />
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
 
       <ModalNewRestriction
         show={showNewRestrictionModal}
         table={table}
         columns={availableColumnNames}
         hasPrimaryKey={hasPrimaryKey}
+        dialect={dialect}
         onClose={() => setShowNewRestrictionModal(false)}
         onAdd={handleAddPendingRestriction}
       />
 
+      <div
+        className={styles.filterBar}
+        style={{
+          backgroundColor: theme.bar.backgroundColor,
+          borderColor: theme.bar.borderColor,
+        }}
+      >
+        <input
+          className={styles.filterInput}
+          placeholder="Filtrar restrições por nome, tipo ou coluna (separe por virgula)"
+          value={restrictionFilterText}
+          onChange={(event) => setRestrictionFilterText(event.target.value)}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
+
       <Table
-        rows={sortedRestrictions}
+        rows={filteredAndSortedRestrictions}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         loading={loading.restrictions}
@@ -408,9 +465,9 @@ const Restrictios = ({
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {sortedRestrictions?.length > 1
-            ? `${sortedRestrictions?.length} Itens`
-            : `${sortedRestrictions?.length || 0} Item`}
+          {filteredAndSortedRestrictions?.length > 1
+            ? `${filteredAndSortedRestrictions?.length} Itens`
+            : `${filteredAndSortedRestrictions?.length || 0} Item`}
         </Text>
 
         {mode !== 'create' && (

@@ -10,6 +10,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IPendingRestrictionCreate } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
 import { generateHash } from '@renderer/utils/string';
+import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 type RestrictionType = 'primary_key' | 'unique_key' | 'check';
@@ -45,6 +46,7 @@ const ModalNewRestriction = ({
   hasPrimaryKey,
   onClose,
   onAdd,
+  dialect = getRendererDialect(),
 }: IModalNewRestrictionProps) => {
   const {
     activeTheme: { modal: colors },
@@ -126,7 +128,7 @@ const ModalNewRestriction = ({
           <div style={{ height: 160, marginBottom: 12 }}>
             <Editor
               hidePreview
-              dialect="postgres"
+              dialect={dialect.editorDialect}
               language="sql"
               value={state.expression}
               onChange={(value) => setState((prevState) => ({ ...prevState, expression: value }))}
@@ -179,6 +181,7 @@ interface IModalNewRestrictionProps {
   table: string;
   columns: string[];
   hasPrimaryKey?: boolean;
+  dialect?: RendererDialect;
   onClose?(): void;
   onAdd?(restriction: IPendingRestrictionCreate): boolean | void;
 }

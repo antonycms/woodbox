@@ -23,6 +23,7 @@ import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
+import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
@@ -59,6 +60,24 @@ const parseNullableValue = (value: unknown) => {
   return null;
 };
 
+const booleanLabelOptions = ['Sim', 'Não'];
+
+const serializeBooleanLabel = (value: unknown) => (value ? 'Sim' : 'Não');
+
+const mysqlAutoIncrementTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
+
+const isMysqlAutoIncrementType = (dataType: string) => {
+  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
+
+  return mysqlAutoIncrementTypes.has(normalizedDataType);
+};
+
+const serializeColumnBooleanLabels = (column: IColumnInfo): IColumnInfo => ({
+  ...column,
+  is_nullable_label: serializeBooleanLabel(column.is_nullable),
+  is_auto_increment_label: serializeBooleanLabel(column.is_auto_increment),
+});
+
 const getOriginalColumnName = (column: IColumnInfo) =>
   (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
 
@@ -75,7 +94,14 @@ const Columns = ({
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { connectionsInfo } = useStoreContext();
+  const { connections, connectionsInfo } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const { showToast } = useToast();
   const {
     columns,
@@ -128,9 +154,12 @@ const Columns = ({
   const allColumns = React.useMemo(
     () => [
       ...columns.map((column) => {
+        const currentColumn = changedColumnsByOriginalName.get(column.column_name) || column;
+        const columnWithBooleanLabels = serializeColumnBooleanLabels(currentColumn);
+
         if (droppedColumnNames.has(column.column_name)) {
           return {
-            ...column,
+            ...columnWithBooleanLabels,
             __pendingAction: 'drop',
             __style: {
               backgroundColor: '#ff676733',
@@ -139,9 +168,9 @@ const Columns = ({
           };
         }
 
-        return changedColumnsByOriginalName.get(column.column_name) || column;
+        return columnWithBooleanLabels;
       }),
-      ...pendingColumns,
+      ...pendingColumns.map(serializeColumnBooleanLabels),
     ],
     [changedColumnsByOriginalName, columns, droppedColumnNames, pendingColumns],
   );
@@ -245,6 +274,7 @@ const Columns = ({
       if (!column) return;
 
       let nextValue: unknown = value;
+      let extraColumnChanges: Partial<IColumnInfo> = {};
 
       if (attribute === 'column_name') {
         nextValue = String(value ?? '').trim();
@@ -279,7 +309,7 @@ const Columns = ({
           showToast({ type: 'warn', title: 'Informe o tipo da coluna.' });
           return;
         }
-      } else if (attribute === 'is_nullable') {
+      } else if (attribute === 'is_nullable_label') {
         const parsedNullableValue = parseNullableValue(value);
 
         if (parsedNullableValue === null) {
@@ -291,14 +321,49 @@ const Columns = ({
           return;
         }
 
+        attribute = 'is_nullable';
         nextValue = parsedNullableValue;
+      } else if (attribute === 'is_auto_increment_label') {
+        const parsedAutoIncrementValue = parseNullableValue(value);
+
+        if (parsedAutoIncrementValue === null) {
+          showToast({
+            type: 'warn',
+            title: 'Valor inválido para auto increment.',
+            description: 'Use sim/não, yes/no, true/false ou 1/0.',
+          });
+          return;
+        }
+
+        if (parsedAutoIncrementValue && !isMysqlAutoIncrementType(column.data_type)) {
+          showToast({
+            type: 'warn',
+            title: 'Auto increment inválido para esse tipo.',
+            description: 'No MySQL, use tinyint, smallint, mediumint, int, integer ou bigint.',
+          });
+          return;
+        }
+
+        attribute = 'is_auto_increment';
+        nextValue = parsedAutoIncrementValue;
+
+        if (parsedAutoIncrementValue) {
+          extraColumnChanges = {
+            column_default: undefined,
+            is_nullable: false,
+            is_nullable_label: 'Não',
+          };
+        }
       } else if (['column_default', 'description'].includes(attribute)) {
         nextValue = normalizeOptionalString(value);
       } else {
         return;
       }
 
-      const columnChanges = { [attribute]: nextValue } as Partial<IColumnInfo>;
+      const columnChanges = {
+        [attribute]: nextValue,
+        ...extraColumnChanges,
+      } as Partial<IColumnInfo>;
       const pendingId = (column as IPendingColumnCreate).__pendingId;
 
       if (pendingId && (column as IPendingColumnCreate).__pendingAction === 'create') {
@@ -404,7 +469,10 @@ const Columns = ({
         text: 'Gerar DDL',
         onClick: () => {
           setDdlSql(
-            generateAddColumnsDdl(schema, table, selectedColumns, { references, restrictions }),
+            generateAddColumnsDdl(dialect, schema, table, selectedColumns, {
+              references,
+              restrictions,
+            }),
           );
 
           setShowDdlModal(true);
@@ -417,6 +485,7 @@ const Columns = ({
     selectedColumns,
     references,
     restrictions,
+    dialect,
     handleOpenNewColumnModal,
     handleRemoveSelectedColumns,
   ]);
@@ -499,7 +568,12 @@ const Columns = ({
         onClose={() => setContextMenuPosition(null)}
       />
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
 
       <ModalNewColumn
         show={showNewColumnModal}
@@ -508,6 +582,7 @@ const Columns = ({
         types={columnTypes}
         tables={connectionInfo?.tables || []}
         hasPrimaryKey={hasPrimaryKey}
+        supportsAutoIncrement={dialect.supportsAutoIncrement}
         onClose={() => setShowNewColumnModal(false)}
         onAdd={handleAddPendingColumn}
       />
@@ -558,10 +633,25 @@ const Columns = ({
           {
             title: 'Clique para ordenar por essa coluna',
             label: 'Nulável',
-            attribute: 'is_nullable',
+            attribute: 'is_nullable_label',
             editable: true,
             sortable: true,
+            type: 'autocomplete',
+            dataAutocomplete: booleanLabelOptions,
           },
+          ...(dialect.supportsAutoIncrement
+            ? [
+                {
+                  title: 'Clique para ordenar por essa coluna',
+                  label: 'Auto inc.',
+                  attribute: 'is_auto_increment_label' as const,
+                  editable: true,
+                  sortable: true,
+                  type: 'autocomplete' as const,
+                  dataAutocomplete: booleanLabelOptions,
+                },
+              ]
+            : []),
           {
             title: 'Clique para ordenar por essa coluna',
             label: 'Padrão',

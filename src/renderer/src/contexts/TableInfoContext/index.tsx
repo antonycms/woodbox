@@ -6,6 +6,7 @@ import {
   generateCreateTableDdl,
   generatePendingTableChangesDdl,
 } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
+import { getRendererDialect } from '@renderer/database/dialects';
 import {
   type IColumnInfo,
   type IColumnReferenceInfo,
@@ -43,6 +44,7 @@ const COLUMN_COMPARE_ATTRIBUTES: Array<keyof IColumnInfo> = [
   'data_type',
   'is_nullable',
   'column_default',
+  'is_auto_increment',
   'description',
 ];
 
@@ -71,8 +73,15 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     getColumnTypes,
     loadConnectionInfo,
     runSql,
+    connections,
   } = useStoreContext();
   const { showToast } = useToast();
+
+  const getConnectionDialect = React.useCallback(
+    (idConnection: string) =>
+      getRendererDialect(connections.find((connection) => connection.id === idConnection)?.dialect),
+    [connections],
+  );
 
   const [columns, setColumns] = React.useState<IColumnInfo[]>([]);
   const [pendingColumns, setPendingColumns] = React.useState<IPendingColumnCreate[]>([]);
@@ -155,31 +164,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     }
   }, []);
 
-  const loadColumnTypes = React.useCallback(async (idConnection: string) => {
-    const items = await getColumnTypes(idConnection);
-    const commonTypes = [
-      'varchar',
-      'text',
-      'integer',
-      'bigint',
-      'serial',
-      'bigserial',
-      'uuid',
-      'boolean',
-      'numeric',
-      'decimal',
-      'date',
-      'timestamp',
-      'timestamptz',
-      'json',
-      'jsonb',
-    ];
-    const loadedTypes = (items || []).map((item) => item.name).filter(Boolean);
+  const loadColumnTypes = React.useCallback(
+    async (idConnection: string) => {
+      const items = await getColumnTypes(idConnection);
+      const commonTypes = getConnectionDialect(idConnection).commonColumnTypes;
+      const loadedTypes = (items || []).map((item) => item.name).filter(Boolean);
 
-    setColumnTypes(
-      [...new Set([...commonTypes, ...loadedTypes])].sort((a, b) => a.localeCompare(b)),
-    );
-  }, []);
+      setColumnTypes(
+        [...new Set([...commonTypes, ...loadedTypes])].sort((a, b) => a.localeCompare(b)),
+      );
+    },
+    [getColumnTypes, getConnectionDialect],
+  );
 
   const addPendingColumn = React.useCallback((column: IPendingColumnCreate) => {
     setPendingColumns((prevState) => [
@@ -579,16 +575,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         }
       }
 
+      const dialect = getConnectionDialect(idConnection);
+
       const sql =
         options?.mode === 'create'
-          ? generateCreateTableDdl(filters.schema, filters.table, {
+          ? generateCreateTableDdl(dialect, filters.schema, filters.table, {
               columns: pendingColumns,
               indexes: pendingIndexes,
               restrictions: pendingRestrictions,
               references: pendingReferences,
               tableComment: options.tableComment,
             })
-          : generatePendingTableChangesDdl(filters.schema, filters.table, {
+          : generatePendingTableChangesDdl(dialect, filters.schema, filters.table, {
               columns: pendingColumns,
               droppedColumns: pendingDroppedColumns,
               changedColumns: pendingChangedColumns,
@@ -600,6 +598,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
               droppedReferences: pendingDroppedReferences,
               existingRestrictions: restrictions,
               existingReferences: references,
+              existingColumns: columns,
             });
 
       if (!sql.trim()) return;
@@ -621,6 +620,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       references,
       restrictions,
       showToast,
+      getConnectionDialect,
     ],
   );
 
@@ -668,6 +668,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       loadConnectionInfo,
       runSql,
       showToast,
+      getConnectionDialect,
     ],
   );
 
@@ -734,6 +735,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         sql={pendingDdlSql}
         applying={applyingPendingDdl}
         onClose={() => setShowPendingDdlModal(false)}
+        dialect={getConnectionDialect(pendingApplyInfoRef.current?.idConnection)}
         onApply={applyPendingChangesSql}
       />
     </TableInfoContext.Provider>

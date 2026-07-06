@@ -6,10 +6,11 @@ import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import type { Dialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 export const ModalConfirmProductionQuery = React.memo(
-  ({ show, sql, onCancel, onConfirm }: IModalConfirmProductionQueryProps) => {
+  ({ show, sql, dialect, onCancel, onConfirm }: IModalConfirmProductionQueryProps) => {
     const {
       activeTheme: { modal: colors },
     } = useThemeContext();
@@ -31,7 +32,7 @@ export const ModalConfirmProductionQuery = React.memo(
         </div>
 
         <div className={styles.editorContainer}>
-          <Editor readonly hidePreview dialect="postgres" language="sql" value={sql} />
+          <Editor readonly hidePreview dialect={dialect} language="sql" value={sql} />
         </div>
 
         <Row>
@@ -69,6 +70,7 @@ ModalConfirmProductionQuery.displayName = 'ModalConfirmProductionQuery';
 interface IModalConfirmProductionQueryProps {
   show?: boolean;
   sql: string;
+  dialect?: Dialect;
   onCancel?(): void;
   onConfirm?(): void;
 }

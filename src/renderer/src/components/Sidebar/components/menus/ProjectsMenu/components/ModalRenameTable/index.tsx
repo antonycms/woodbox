@@ -11,10 +11,11 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { useForm } from '@renderer/hooks/useForm';
 import TableInfo from '@renderer/views/TableInfo';
+import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalRenameTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalRenameTableProps) => {
-    const { runSql, loadConnectionInfo } = useStoreContext();
+    const { runSql, loadConnectionInfo, connections } = useStoreContext();
     const { addTab, getTab } = useAppTabContext();
     const { showToast } = useToast();
     const {
@@ -22,6 +23,13 @@ export const ModalRenameTable = React.memo(
     } = useThemeContext();
 
     const [loading, setLoading] = React.useState(false);
+    const dialect = React.useMemo(
+      () =>
+        getRendererDialect(
+          connections.find((connection) => connection.id === idConnection)?.dialect,
+        ),
+      [connections, idConnection],
+    );
     const { register, handleSubmit, setState, reset } = useForm<IDataRenameTable>({ name: '' });
 
     const close = React.useCallback(() => {
@@ -44,7 +52,9 @@ export const ModalRenameTable = React.memo(
 
         await runSql(
           idConnection,
-          `ALTER TABLE ${getQualifiedTableName(schema, table)} RENAME TO ${quoteIdent(name)};`,
+          `ALTER TABLE ${dialect.getQualifiedName(schema, table)} RENAME TO ${dialect.quoteIdent(
+            name,
+          )};`,
         );
 
         await loadConnectionInfo(idConnection);
@@ -156,9 +166,3 @@ export interface IModalRenameTableProps {
 interface IDataRenameTable {
   name: string;
 }
-
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
-
-const getQualifiedTableName = (schema: string | undefined, table: string) => {
-  return [schema, table].filter(Boolean).map(quoteIdent).join('.');
-};

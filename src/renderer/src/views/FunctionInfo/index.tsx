@@ -15,6 +15,7 @@ import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
+import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
@@ -31,8 +32,15 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
       tableInfo: { properties: propertiesTheme, tab: tabTheme },
     },
   } = useThemeContext();
-  const { getFunctionDefinition, runSql } = useStoreContext();
+  const { getFunctionDefinition, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const refEditor = React.useRef<IEditorRef>(null);
 
@@ -195,7 +203,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                   <div className={styles.editorContainer} onKeyDownCapture={handleKeyDown}>
                     <Editor
                       ref={refEditor}
-                      dialect="postgres"
+                      dialect={dialect.editorDialect}
                       language="sql"
                       onChange={setDefinition}
                       onCtrlClick={handleEditorCtrlClick}
@@ -251,6 +259,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         sql={pendingSql}
         applying={applying}
         onClose={() => setShowApplyModal(false)}
+        dialect={dialect}
         onApply={handleApply}
       />
     </div>

@@ -40,6 +40,7 @@ import {
   generateUpdateDdl,
 } from '../Properties/tabs/Columns/ddl';
 import ModalDataError from './components/ModalDataError';
+import { getRendererDialect } from '@renderer/database/dialects';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -80,8 +81,15 @@ const Data = ({
     loading: loadingTableInfo,
   } = useTableInfoContext();
 
-  const { getTableData, runSql } = useStoreContext();
+  const { getTableData, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -233,7 +241,7 @@ const Data = ({
         table: selectedReference.reference_table_name,
         page: 1,
         limit: 1,
-        where: `"${selectedReference.reference_column_name}" = '${escapedValue}'`,
+        where: `${dialect.quoteIdent(selectedReference.reference_column_name)} = '${escapedValue}'`,
       });
 
       setReferenceCache((prevState) => {
@@ -260,6 +268,7 @@ const Data = ({
     selectedCell?.value,
     getTableData,
     id_connection,
+    dialect,
   ]);
 
   const isLoading = loadingTableInfo.columns || loading;
@@ -465,14 +474,21 @@ const Data = ({
             row.originalRow && Object.keys(row.changes).length && !droppedRows.has(row.rowKey),
         );
 
-      const deleteSql = generateDeleteDdl(schema, table, [...droppedRows.values()], whereColumns);
+      const deleteSql = generateDeleteDdl(
+        dialect,
+        schema,
+        table,
+        [...droppedRows.values()],
+        whereColumns,
+      );
       const insertSql = generateInsertDdl(
+        dialect,
         schema,
         table,
         rowsToInsert,
         columns.map((column) => column.column_name),
       );
-      const updateSql = generateUpdateDdl(schema, table, rowsToUpdate, whereColumns);
+      const updateSql = generateUpdateDdl(dialect, schema, table, rowsToUpdate, whereColumns);
       const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
 
       if (!sql.trim()) return;
@@ -507,6 +523,7 @@ const Data = ({
       schema,
       table,
       columns,
+      dialect,
       runSql,
       id_connection,
       showToast,
@@ -845,7 +862,7 @@ const Data = ({
               <TabWindow activeTabId={activePreviewTab}>
                 <TabContent idTab="value">
                   <Editor
-                    dialect="postgres"
+                    dialect={dialect.editorDialect}
                     language="json"
                     readonly
                     hidePreview
@@ -863,7 +880,7 @@ const Data = ({
                       <Text color={theme.bar.color}>{referenceError}</Text>
                     ) : (
                       <Editor
-                        dialect="postgres"
+                        dialect={dialect.editorDialect}
                         language="json"
                         readonly
                         hidePreview
@@ -948,7 +965,12 @@ const Data = ({
         </Text>
       </Bar>
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
 
       <ModalDataError message={dataErrorMessage} onClose={() => setDataErrorMessage(undefined)} />
 
@@ -1027,6 +1049,7 @@ const Data = ({
             onClick: () => {
               setDdlSql(
                 generateInsertDdl(
+                  dialect,
                   schema,
                   table,
                   contextMenuTable?.data?.rows || [],
@@ -1041,6 +1064,7 @@ const Data = ({
             onClick: () => {
               setDdlSql(
                 generateInsertDdl(
+                  dialect,
                   schema,
                   table,
                   contextMenuTable?.data?.selectedCellRows || [],

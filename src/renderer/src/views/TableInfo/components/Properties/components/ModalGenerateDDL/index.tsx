@@ -7,9 +7,15 @@ import { Spacer } from '@renderer/components/Spacer';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { useToast } from '@renderer/contexts/Toast';
+import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
-const ModalGenerateDDL = ({ show, sql, onClose }: IModalGenerateDDLProps) => {
+const ModalGenerateDDL = ({
+  show,
+  sql,
+  dialect = getRendererDialect(),
+  onClose,
+}: IModalGenerateDDLProps) => {
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
@@ -31,7 +37,7 @@ const ModalGenerateDDL = ({ show, sql, onClose }: IModalGenerateDDLProps) => {
       onClose={onClose}
     >
       <div className={styles.editorContainer}>
-        <Editor readonly hidePreview dialect="postgres" language="sql" value={sql} />
+        <Editor readonly hidePreview dialect={dialect.editorDialect} language="sql" value={sql} />
       </div>
 
       <Row>
@@ -58,5 +64,6 @@ export default ModalGenerateDDL;
 interface IModalGenerateDDLProps {
   show?: boolean;
   sql: string;
+  dialect?: RendererDialect;
   onClose?(): void;
 }

@@ -4,6 +4,8 @@ import { generateHash } from '@renderer/utils/string';
 import TableInfoProvider from '@renderer/contexts/TableInfoContext';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useStoreContext } from '@renderer/contexts/Store';
+import { getRendererDialect } from '@renderer/database/dialects';
 
 import Data from './components/Data';
 import Properties from './components/Properties';
@@ -18,6 +20,7 @@ const TableInfo = (props: ITableInfoProps) => {
     activeTheme: { tableInfo: theme },
   } = useThemeContext();
   const { addTab, getTab, setActiveTabId } = useAppTabContext();
+  const { connections } = useStoreContext();
   const [id] = React.useState(generateHash());
   const [mode, setMode] = React.useState(props.mode || 'view');
   const [table, setTable] = React.useState(props.table);
@@ -29,6 +32,14 @@ const TableInfo = (props: ITableInfoProps) => {
   const isCreateMode = mode === 'create';
 
   const tabsProps = React.useMemo(() => ({ ...props, mode, table }), [mode, props, table]);
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === props.id_connection)?.dialect,
+      ),
+    [connections, props.id_connection],
+  );
+
 
   const handleCreateApplied = React.useCallback(
     (createdTable: string) => {
@@ -99,7 +110,7 @@ const TableInfo = (props: ITableInfoProps) => {
     ) => {
       const tabTitle = `${schema ? `${schema}.` : ''}${table} [${filterColumn}=${filterValue}]`;
       const escapedValue = filterValue.replace(/'/g, "''");
-      const initialWhere = `"${filterColumn}" = '${escapedValue}'`;
+      const initialWhere = `${dialect.quoteIdent(filterColumn)} = '${escapedValue}'`;
       addTab({
         title: tabTitle,
         data: {
@@ -123,7 +134,7 @@ const TableInfo = (props: ITableInfoProps) => {
         ),
       });
     },
-    [addTab],
+    [addTab, dialect],
   );
 
   const handleKeyDown = React.useCallback(

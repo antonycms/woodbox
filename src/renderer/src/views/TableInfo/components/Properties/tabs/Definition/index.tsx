@@ -10,6 +10,8 @@ import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
+import { useStoreContext } from '@renderer/contexts/Store';
+import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
@@ -19,6 +21,14 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
     },
   } = useThemeContext();
   const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoContext();
+  const { connections } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   React.useEffect(() => {
@@ -29,7 +39,7 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
     <>
       <div className={styles.editorContainer}>
         <Editor
-          dialect="postgres"
+          dialect={dialect.editorDialect}
           language="sql"
           readonly
           value={loading.definition ? '' : definition}

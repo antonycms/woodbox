@@ -37,6 +37,14 @@ const getGeneratedForeignKeyName = (table: string, column: string, referenceTabl
   return `${table}_${column}_${referenceTable}_fk`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
+const mysqlAutoIncrementTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
+
+const isAutoIncrementType = (dataType: string) => {
+  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
+
+  return mysqlAutoIncrementTypes.has(normalizedDataType);
+};
+
 const defaultForm: IFormData = {
   column_name: '',
   data_type: '',
@@ -45,6 +53,7 @@ const defaultForm: IFormData = {
   required: false,
   is_primary_key: false,
   is_unique: false,
+  is_auto_increment: false,
   is_foreign_key: false,
   reference_table: '',
   reference_column_name: '',
@@ -57,6 +66,7 @@ const ModalNewColumn = ({
   types,
   tables,
   hasPrimaryKey,
+  supportsAutoIncrement,
   onClose,
   onAdd,
 }: IModalNewColumnProps) => {
@@ -137,13 +147,32 @@ const ModalNewColumn = ({
         return;
       }
 
+      if (data.is_auto_increment && !isAutoIncrementType(dataType)) {
+        showToast({
+          type: 'warn',
+          title: 'Auto increment inválido para esse tipo.',
+          description: 'Use tinyint, smallint, mediumint, int, integer ou bigint.',
+        });
+        return;
+      }
+
+      if (data.is_auto_increment && !data.is_primary_key && !data.is_unique) {
+        showToast({
+          type: 'warn',
+          title: 'Auto increment precisa de índice.',
+          description: 'Marque Chave Primária ou Única.',
+        });
+        return;
+      }
+
       const column: IPendingColumnCreate = {
         __pendingId: generateHash(),
         __pendingAction: 'create',
         column_name: columnName,
         data_type: dataType,
-        is_nullable: !data.required,
-        column_default: data.column_default.trim() || undefined,
+        is_nullable: data.is_auto_increment ? false : !data.required,
+        column_default: data.is_auto_increment ? undefined : data.column_default.trim() || undefined,
+        is_auto_increment: data.is_auto_increment,
         description: data.description.trim() || undefined,
       };
 
@@ -269,6 +298,10 @@ const ModalNewColumn = ({
             label="Valor Padrão"
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
+            disabled={state.is_auto_increment}
+            title={
+              state.is_auto_increment ? 'Auto increment não permite valor padrão.' : undefined
+            }
             {...register('column_default')}
           />
 
@@ -305,6 +338,8 @@ const ModalNewColumn = ({
                   ...prevState,
                   is_primary_key: checked,
                   is_unique: checked ? false : prevState.is_unique,
+                  is_auto_increment:
+                    !checked && !prevState.is_unique ? false : prevState.is_auto_increment,
                 }));
               }}
             />
@@ -322,17 +357,44 @@ const ModalNewColumn = ({
                   ...prevState,
                   is_unique: checked,
                   is_primary_key: checked ? false : prevState.is_primary_key,
+                  is_auto_increment:
+                    !checked && !prevState.is_primary_key ? false : prevState.is_auto_increment,
                 }));
               }}
             />
             Única
           </label>
 
+          {supportsAutoIncrement && (
+            <label className={styles.checkbox} style={{ color: colors.color }}>
+              <input
+                type="checkbox"
+                name="is_auto_increment"
+                checked={state.is_auto_increment}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+
+                  setState((prevState) => ({
+                    ...prevState,
+                    is_auto_increment: checked,
+                    required: checked ? true : prevState.required,
+                    column_default: checked ? '' : prevState.column_default,
+                    is_primary_key: checked && !hasPrimaryKey ? true : prevState.is_primary_key,
+                    is_unique: checked && hasPrimaryKey ? true : prevState.is_unique,
+                    is_foreign_key: checked ? false : prevState.is_foreign_key,
+                  }));
+                }}
+              />
+              Auto increment
+            </label>
+          )}
+
           <label className={styles.checkbox} style={{ color: colors.color }}>
             <input
               type="checkbox"
               name="is_foreign_key"
               checked={state.is_foreign_key}
+              disabled={state.is_auto_increment}
               onChange={register('is_foreign_key').onChange}
             />
             Chave Estrangeira
@@ -418,6 +480,7 @@ interface IModalNewColumnProps {
   types: string[];
   tables: ITable[];
   hasPrimaryKey?: boolean;
+  supportsAutoIncrement?: boolean;
   onClose?(): void;
   onAdd?(
     column: IPendingColumnCreate,
@@ -436,6 +499,7 @@ interface IFormData {
   required: boolean;
   is_primary_key: boolean;
   is_unique: boolean;
+  is_auto_increment: boolean;
   is_foreign_key: boolean;
   reference_table: string;
   reference_column_name: string;

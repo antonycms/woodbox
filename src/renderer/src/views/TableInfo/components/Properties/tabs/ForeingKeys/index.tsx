@@ -21,6 +21,8 @@ import { getNextSort, sortRows } from '@renderer/utils/tableSort';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateReferencesDdl } from '../Columns/ddl';
 import ModalNewReference from './components/ModalNewReference';
+import { getRendererDialect } from '@renderer/database/dialects';
+import styles from '../Columns/styles.module.css';
 
 interface IForeingKeysProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -50,7 +52,14 @@ const ForeingKeys = ({
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
-  const { connectionsInfo } = useStoreContext();
+  const { connections, connectionsInfo } = useStoreContext();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
   const { showToast } = useToast();
   const {
     columns,
@@ -71,6 +80,7 @@ const ForeingKeys = ({
   } = useTableInfoContext();
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
+  const [referenceFilterText, setReferenceFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
@@ -78,6 +88,7 @@ const ForeingKeys = ({
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.references);
   const connectionInfo = connectionsInfo.get(id_connection);
+  const referenceFilterTextSerialized = referenceFilterText.trim().toLowerCase();
   const droppedConstraintNames = React.useMemo(
     () => new Set(pendingDroppedReferences.map((reference) => reference.constraint_name)),
     [pendingDroppedReferences],
@@ -121,10 +132,26 @@ const ForeingKeys = ({
     return [...existingReferences, ...createdReferences];
   }, [references, droppedConstraintNames, pendingReferences]);
 
-  const sortedReferences = React.useMemo(
-    () => sortRows(allReferences, sort),
-    [allReferences, sort],
-  );
+  const filteredAndSortedReferences = React.useMemo(() => {
+    if (!referenceFilterTextSerialized) return sortRows(allReferences, sort);
+
+    const texts = referenceFilterTextSerialized.split(',').map((text) => text.trim());
+    const referencesFiltered = allReferences.filter((reference) =>
+      [
+        reference.constraint_name,
+        reference.column_name,
+        reference.table_reference,
+        reference.reference_column_name,
+        reference.comment,
+        reference.remove_rule,
+        reference.update_rule,
+      ].some((value) =>
+        texts.some((text) => text && String(value ?? '').toLowerCase().includes(text)),
+      ),
+    );
+
+    return sortRows(referencesFiltered, sort);
+  }, [allReferences, referenceFilterTextSerialized, sort]);
 
   const handleOpenNewReferenceModal = React.useCallback(() => {
     setShowNewReferenceModal(true);
@@ -229,7 +256,7 @@ const ForeingKeys = ({
       {
         text: 'Gerar DDL',
         onClick: () => {
-          setDdlSql(generateReferencesDdl(schema, table, selectedReferences));
+          setDdlSql(generateReferencesDdl(dialect, schema, table, selectedReferences));
           setShowDdlModal(true);
         },
       },
@@ -238,6 +265,7 @@ const ForeingKeys = ({
     schema,
     table,
     selectedReferences,
+    dialect,
     handleOpenNewReferenceModal,
     handleRemoveSelectedReferences,
   ]);
@@ -289,6 +317,10 @@ const ForeingKeys = ({
   }, []);
 
   React.useEffect(() => {
+    setSelectedReferences([]);
+  }, [referenceFilterTextSerialized]);
+
+  React.useEffect(() => {
     setSelectedReferences((currentSelectedReferences) => {
       if (!currentSelectedReferences.length) return currentSelectedReferences;
 
@@ -320,7 +352,12 @@ const ForeingKeys = ({
         onClose={() => setContextMenuPosition(null)}
       />
 
-      <ModalGenerateDDL show={showDdlModal} sql={ddlSql} onClose={() => setShowDdlModal(false)} />
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
 
       <ModalNewReference
         show={showNewReferenceModal}
@@ -332,12 +369,29 @@ const ForeingKeys = ({
         onAdd={handleAddPendingReference}
       />
 
+      <div
+        className={styles.filterBar}
+        style={{
+          backgroundColor: theme.bar.backgroundColor,
+          borderColor: theme.bar.borderColor,
+        }}
+      >
+        <input
+          className={styles.filterInput}
+          placeholder="Filtrar chaves por nome, coluna ou tabela (separe por virgula)"
+          value={referenceFilterText}
+          onChange={(event) => setReferenceFilterText(event.target.value)}
+          style={{ color: theme.bar.color }}
+          spellCheck={false}
+        />
+      </div>
+
       <Table<IReferenceSerialized>
         rowKeyExtractor={getReferenceSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedReferences}
         loading={loading.references}
-        rows={sortedReferences}
+        rows={filteredAndSortedReferences}
         sort={sort}
         onSort={(column) => setSort((current) => getNextSort(current, column.attribute))}
         onCellLinkClick={handleCellLinkClick}
@@ -444,9 +498,9 @@ const ForeingKeys = ({
         <Spacer />
 
         <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {sortedReferences?.length > 1
-            ? `${sortedReferences?.length} Itens`
-            : `${sortedReferences?.length || 0} Item`}
+          {filteredAndSortedReferences?.length > 1
+            ? `${filteredAndSortedReferences?.length} Itens`
+            : `${filteredAndSortedReferences?.length || 0} Item`}
         </Text>
 
         {mode !== 'create' && (

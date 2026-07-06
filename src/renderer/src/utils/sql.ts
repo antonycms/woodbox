@@ -24,11 +24,17 @@ const removeSqlComments = (sql: string) => {
 };
 
 const removeSqlLiterals = (sql: string) => {
-  return sql.replace(/'([^']|'')*'/g, ' ').replace(/"([^"]|"")*"/g, ' ');
+  return sql
+    .replace(/'([^']|'')*'/g, ' ')
+    .replace(/"([^"]|"")*"/g, ' ')
+    .replace(/`([^`]|``)*`/g, ' ');
 };
 
 const getFirstSqlWord = (sql: string) => {
-  return sql.trim().match(/^[a-z_]+/i)?.[0]?.toLowerCase();
+  return sql
+    .trim()
+    .match(/^[a-z_]+/i)?.[0]
+    ?.toLowerCase();
 };
 
 export const hasUnsafeSqlMutation = (sql: string) => {
@@ -54,6 +60,18 @@ export const hasUnsafeSqlMutation = (sql: string) => {
   });
 };
 
+const normalizeSqlIdentifier = (value: string) => {
+  return value
+    ?.split('.')
+    .map((part) =>
+      part
+        .replace(/^[`"]|[`"]$/g, '')
+        .replace(/``/g, '`')
+        .replace(/""/g, '"'),
+    )
+    .join('.');
+};
+
 const reserverdWordsToIgnoreAlias = [
   'where',
   'full',
@@ -68,9 +86,9 @@ const reserverdWordsToIgnoreAlias = [
 ].join('|');
 
 export const getTablesFromQuerySql = (query: string) => {
-  // const regex = /(?:FROM|JOIN)\s+([\w.]+)\s*(?!where|inner|left|on|limit|order by|group by)(?:AS\s+(\w+)|(\w+))?/gim;
+  // const regex = /(?:FROM|JOIN)\s+([\w.`"]+)\s*(?!where|inner|left|on|limit|order by|group by)(?:AS\s+(\w+)|(\w+))?/gim;
   const regex = new RegExp(
-    `(?:FROM|JOIN)\\s+([\\w.]+)\\s*(?!${reserverdWordsToIgnoreAlias})(?:AS\\s+(\\w+)|(\\w+))?`,
+    `(?:FROM|JOIN)\\s+([\\w.\`"]+)\\s*(?!${reserverdWordsToIgnoreAlias})(?:AS\\s+(\\w+)|(\\w+))?`,
     'gim',
   );
 
@@ -79,7 +97,7 @@ export const getTablesFromQuerySql = (query: string) => {
   let match: RegExpExecArray;
 
   while ((match = regex.exec(query))) {
-    const sqlTablePart = match[1];
+    const sqlTablePart = normalizeSqlIdentifier(match[1]);
     const aliasPart = match[2] || match[3];
 
     let tableSchema: string;
@@ -100,9 +118,9 @@ export const getTablesFromQuerySql = (query: string) => {
     });
   }
 
-  const updateRegex = /UPDATE\s+([\w.]+)/gim;
+  const updateRegex = /UPDATE\s+([\w.`"]+)/gim;
   while ((match = updateRegex.exec(query))) {
-    const sqlTablePart = match[1];
+    const sqlTablePart = normalizeSqlIdentifier(match[1]);
     let tableSchema: string;
     let tableName: string;
     if (sqlTablePart.includes('.')) {
@@ -114,9 +132,9 @@ export const getTablesFromQuerySql = (query: string) => {
     tables.push({ name: tableName, schema: tableSchema });
   }
 
-  const insertRegex = /INSERT\s+INTO\s+([\w.]+)/gim;
+  const insertRegex = /INSERT\s+INTO\s+([\w.`"]+)/gim;
   while ((match = insertRegex.exec(query))) {
-    const sqlTablePart = match[1];
+    const sqlTablePart = normalizeSqlIdentifier(match[1]);
     let tableSchema: string;
     let tableName: string;
     if (sqlTablePart.includes('.')) {

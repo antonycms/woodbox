@@ -7,6 +7,7 @@ import { Spacer } from '@renderer/components/Spacer';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { copyToClipboard } from '@renderer/utils/methods';
+import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const ModalApplyPendingDDL = ({
@@ -15,6 +16,7 @@ const ModalApplyPendingDDL = ({
   applying,
   onClose,
   onApply,
+  dialect = getRendererDialect(),
 }: IModalApplyPendingDDLProps) => {
   const {
     activeTheme: { modal: colors },
@@ -43,7 +45,7 @@ const ModalApplyPendingDDL = ({
       <div className={styles.editorContainer}>
         <Editor
           hidePreview
-          dialect="postgres"
+          dialect={dialect.editorDialect}
           language="sql"
           value={editableSql}
           onChange={setEditableSql}
@@ -103,5 +105,6 @@ interface IModalApplyPendingDDLProps {
   sql: string;
   applying?: boolean;
   onClose?(): void;
+  dialect?: RendererDialect;
   onApply?(sql: string): void;
 }

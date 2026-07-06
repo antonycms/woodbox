@@ -11,6 +11,11 @@ import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import type { ConnectionEnvironment } from '@renderer/contexts/Store';
+import {
+  getRendererDialect,
+  getRendererDialectOptions,
+  type Dialect,
+} from '@renderer/database/dialects';
 
 const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironment }[] = [
   { label: 'Desenvolvimento', value: 'development' },
@@ -31,16 +36,36 @@ export const ModalNewConnection = React.memo(
     const formRef = React.useRef<HTMLFormElement>(null);
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
 
+    const defaultDialect = getRendererDialect(connectionTypes[0]);
+    const dialectOptions = getRendererDialectOptions(connectionTypes);
+
     const { register, handleSubmit, reset, setState, getValue } = useForm<IDataNewConnection>({
-      dialect: 'postgres',
+      dialect: defaultDialect.id,
       environment: 'development',
       description: '',
       host: '',
-      port: '',
+      port: defaultDialect.defaultPort || '',
       database: '',
       username: '',
       password: '',
     });
+
+    const registerDialect = register('dialect');
+
+    const handleDialectChange = React.useCallback(
+      (event: any) => {
+        const dialect = event.value as Dialect;
+        const spec = getRendererDialect(dialect);
+
+        registerDialect.onChange(event);
+        setState((prevState) => ({
+          ...prevState,
+          dialect,
+          port: spec.defaultPort || prevState.port,
+        }));
+      },
+      [registerDialect],
+    );
 
     const close = React.useCallback(() => {
       reset();
@@ -141,14 +166,18 @@ export const ModalNewConnection = React.memo(
 
             <Autocomplete
               required
-              data={connectionTypes}
+              clearable={false}
+              data={dialectOptions}
               label="Dialeto"
+              extractLabel={(item) => item.label}
+              extractValue={(item) => item.id}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
               xs={12}
               sm={6}
               md={4}
-              {...register('dialect')}
+              {...registerDialect}
+              onChange={handleDialectChange}
             />
             <Input
               required
@@ -260,7 +289,7 @@ interface IDataNewConnection {
   id_project?: string;
 
   description: string;
-  dialect: string;
+  dialect: Dialect;
   environment?: ConnectionEnvironment;
   host: string;
   port: string | number;

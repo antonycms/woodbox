@@ -34,6 +34,7 @@ import { ModalRenameTable } from './components/ModalRenameTable';
 import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
+import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
@@ -421,6 +422,7 @@ const ProjectsMenu = () => {
       data: { id_project: project.id },
       childs: project.connections.map((connection) => {
         const connectionInfo = connectionsInfo.get(connection.id);
+        const dialect = getRendererDialect(connection.dialect);
 
         const dataConnection = {
           id_project: project.id,
@@ -444,20 +446,21 @@ const ProjectsMenu = () => {
             };
           }) || [];
 
-        let functionsThreeView: IItemTreeView[] =
-          connectionInfo?.functions?.map((fn, index) => {
-            const { function_name, function_schema } = fn;
+        let functionsThreeView: IItemTreeView[] = dialect.supportsFunctions
+          ? connectionInfo?.functions?.map((fn, index) => {
+              const { function_name, function_schema } = fn;
 
-            return {
-              id: function_schema
-                ? `${connection.id}:${function_schema}_${function_name}:${index}`
-                : `${connection.id}:${function_name}:${index}`,
-              label: function_name,
-              icon: 'function',
-              type: 'function',
-              data: { ...fn, ...dataConnection },
-            };
-          }) || [];
+              return {
+                id: function_schema
+                  ? `${connection.id}:${function_schema}_${function_name}:${index}`
+                  : `${connection.id}:${function_name}:${index}`,
+                label: function_name,
+                icon: 'function',
+                type: 'function',
+                data: { ...fn, ...dataConnection },
+              };
+            }) || []
+          : [];
 
         const connectionScripts = scripts.filter((s) => s.id_connection === connection.id);
 
@@ -478,37 +481,40 @@ const ProjectsMenu = () => {
           );
         }
 
-        let schemasThreeView: IItemTreeView[] =
-          connectionInfo?.schemas?.map?.((schema) => {
-            const tablesSchema = tablesThreeView.filter(({ data }) => data.table_schema === schema);
-            const functionsSchema = functionsThreeView.filter(
-              ({ data }) => data.function_schema === schema,
-            );
+        let schemasThreeView: IItemTreeView[] = dialect.supportsSchemas
+          ? connectionInfo?.schemas?.map?.((schema) => {
+              const tablesSchema = tablesThreeView.filter(
+                ({ data }) => data.table_schema === schema,
+              );
+              const functionsSchema = functionsThreeView.filter(
+                ({ data }) => data.function_schema === schema,
+              );
 
-            return {
-              id: `${connection.id}:${schema}`,
-              label: schema,
-              data: { schema_name: schema, ...dataConnection },
-              icon: 'folder' as const,
-              type: 'schema' as const,
-              childs: [
-                {
-                  id: `tables_${connection.id}:${schema}`,
-                  label: 'Tabelas',
-                  icon: 'multi',
-                  childs: tablesSchema,
-                  type: 'tables' as const,
-                  data: { schema_name: schema, ...dataConnection },
-                },
-                {
-                  id: `fns_${connection.id}:${schema}`,
-                  label: 'Funções',
-                  childs: functionsSchema,
-                  icon: 'functions',
-                },
-              ],
-            };
-          }) || [];
+              return {
+                id: `${connection.id}:${schema}`,
+                label: schema,
+                data: { schema_name: schema, ...dataConnection },
+                icon: 'folder' as const,
+                type: 'schema' as const,
+                childs: [
+                  {
+                    id: `tables_${connection.id}:${schema}`,
+                    label: 'Tabelas',
+                    icon: 'multi',
+                    childs: tablesSchema,
+                    type: 'tables' as const,
+                    data: { schema_name: schema, ...dataConnection },
+                  },
+                  {
+                    id: `fns_${connection.id}:${schema}`,
+                    label: 'Funções',
+                    childs: functionsSchema,
+                    icon: 'functions',
+                  },
+                ],
+              };
+            }) || []
+          : [];
 
         if (filterTextSerialized) {
           schemasThreeView = schemasThreeView.filter((schema) =>
@@ -528,7 +534,7 @@ const ProjectsMenu = () => {
           type: 'connection' as const,
           data: { id_connection: connection.id, description_connection: connection.description },
           childs: [
-            {
+            dialect.supportsSchemas && {
               id: `schemas_${connection.id}`,
               type: 'schemas',
               label: 'Esquemas',
@@ -536,7 +542,7 @@ const ProjectsMenu = () => {
               icon: 'schema',
               data: dataConnection,
             },
-            !schemasThreeView && {
+            !dialect.supportsSchemas && {
               id: `tables_${connection.id}`,
               type: 'tables',
               label: 'Tabelas',
@@ -551,7 +557,7 @@ const ProjectsMenu = () => {
               icon: 'fileSql',
               data: dataConnection,
             },
-          ],
+          ].filter(Boolean),
         } as IItemTreeView;
       }),
     };

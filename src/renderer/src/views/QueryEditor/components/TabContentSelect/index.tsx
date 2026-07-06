@@ -26,6 +26,7 @@ import { IColumn } from '@renderer/components/Table/dtos';
 import { useToast } from '@renderer/contexts/Toast';
 import { generateUpdateDdl } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
+import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 import IconMdiClose from '~icons/mdi/close';
@@ -57,8 +58,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
-  const { getTableData, getTableRestrictions, runSql } = useStoreContext();
+  const { getTableData, getTableRestrictions, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
 
   const [saving, setSaving] = React.useState(false);
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
@@ -276,6 +284,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       }));
 
       const sql = generateUpdateDdl(
+        dialect,
         editableTable.schema,
         editableTable.name,
         rowsToUpdate,
@@ -492,7 +501,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
               <TabWindow activeTabId={activePreviewTab}>
                 <TabContent idTab="value">
                   <Editor
-                    dialect="postgres"
+                    dialect={dialect.editorDialect}
                     language="json"
                     readonly
                     hidePreview
@@ -510,7 +519,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                       <Text color={activeTheme.queryEditor.bar.color}>{referenceError}</Text>
                     ) : (
                       <Editor
-                        dialect="postgres"
+                        dialect={dialect.editorDialect}
                         language="json"
                         readonly
                         hidePreview
