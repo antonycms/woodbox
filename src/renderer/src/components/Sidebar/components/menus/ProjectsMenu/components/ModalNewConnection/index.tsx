@@ -11,6 +11,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import type { ConnectionEnvironment } from '@renderer/contexts/Store';
+import call from '@renderer/utils/call';
 import {
   getRendererDialect,
   getRendererDialectOptions,
@@ -39,16 +40,20 @@ export const ModalNewConnection = React.memo(
     const defaultDialect = getRendererDialect(connectionTypes[0]);
     const dialectOptions = getRendererDialectOptions(connectionTypes);
 
-    const { register, handleSubmit, reset, setState, getValue } = useForm<IDataNewConnection>({
-      dialect: defaultDialect.id,
-      environment: 'development',
-      description: '',
-      host: '',
-      port: defaultDialect.defaultPort || '',
-      database: '',
-      username: '',
-      password: '',
-    });
+    const { state, register, handleSubmit, reset, setState, getValue } =
+      useForm<IDataNewConnection>({
+        dialect: defaultDialect.id,
+        environment: 'development',
+        description: '',
+        host: '',
+        port: defaultDialect.defaultPort || '',
+        database: '',
+        username: '',
+        password: '',
+      });
+
+    const selectedDialect = getRendererDialect(state.dialect);
+    const isFileConnection = selectedDialect.connectionMode === 'file';
 
     const registerDialect = register('dialect');
 
@@ -61,11 +66,22 @@ export const ModalNewConnection = React.memo(
         setState((prevState) => ({
           ...prevState,
           dialect,
-          port: spec.defaultPort || prevState.port,
+          host: spec.connectionMode === 'file' ? '' : prevState.host,
+          port: spec.connectionMode === 'file' ? '' : spec.defaultPort || prevState.port,
         }));
       },
       [registerDialect],
     );
+
+    const selectSqliteFile = React.useCallback(async () => {
+      if (!isFileConnection) return;
+
+      const filePath = await call<string | null>('@dialog:select_sqlite_file');
+
+      if (!filePath) return;
+
+      setState((prevState) => ({ ...prevState, database: filePath }));
+    }, [isFileConnection]);
 
     const close = React.useCallback(() => {
       reset();
@@ -74,9 +90,11 @@ export const ModalNewConnection = React.memo(
 
     const onSubmit = React.useCallback(
       handleSubmit(async (data) => {
+        const dialect = getRendererDialect(data.dialect);
         const connection = {
           ...data,
-          port: Number(data.port),
+          host: dialect.connectionMode === 'file' ? '' : data.host,
+          port: dialect.connectionMode === 'file' ? 0 : Number(data.port),
           id_project: idProject || data.id_project,
         };
 
@@ -98,10 +116,12 @@ export const ModalNewConnection = React.memo(
       if (!checkDataForm) return;
 
       const formValue = getValue();
+      const dialect = getRendererDialect(formValue.dialect);
 
       const connection = {
         ...formValue,
-        port: Number(formValue.port),
+        host: dialect.connectionMode === 'file' ? '' : formValue.host,
+        port: dialect.connectionMode === 'file' ? 0 : Number(formValue.port),
         id_project: idProject || formValue.id_project,
       };
 
@@ -179,50 +199,70 @@ export const ModalNewConnection = React.memo(
               {...registerDialect}
               onChange={handleDialectChange}
             />
-            <Input
-              required
-              label="Host"
-              sm={8}
-              md={6}
-              color={colors.fieldColor}
-              backgroundColor={colors.fieldBackgroundColor}
-              {...register('host')}
-            />
-            <Input
-              required
-              label="Porta"
-              sm={4}
-              md={2}
-              type="number"
-              color={colors.fieldColor}
-              backgroundColor={colors.fieldBackgroundColor}
-              {...register('port')}
-            />
-            <Input
-              required
-              label="Base de dados"
-              md={12}
-              color={colors.fieldColor}
-              backgroundColor={colors.fieldBackgroundColor}
-              {...register('database')}
-            />
-            <Input
-              label="Usuário"
-              xs={12}
-              md={6}
-              backgroundColor={colors.fieldBackgroundColor}
-              color={colors.fieldColor}
-              {...register('username')}
-            />
-            <Input
-              label="Senha"
-              type="password"
-              xs={12}
-              md={6}
-              backgroundColor={colors.fieldBackgroundColor}
-              color={colors.fieldColor}
-              {...register('password')}
-            />
+            {!isFileConnection && (
+              <>
+                <Input
+                  required
+                  label="Host"
+                  sm={8}
+                  md={6}
+                  color={colors.fieldColor}
+                  backgroundColor={colors.fieldBackgroundColor}
+                  {...register('host')}
+                />
+                <Input
+                  required
+                  label="Porta"
+                  sm={4}
+                  md={2}
+                  type="number"
+                  color={colors.fieldColor}
+                  backgroundColor={colors.fieldBackgroundColor}
+                  {...register('port')}
+                />
+              </>
+            )}
+
+            {isFileConnection ? (
+              <Input
+                required
+                label="Arquivo"
+                md={8}
+                color={colors.fieldColor}
+                backgroundColor={colors.fieldBackgroundColor}
+                {...register('database')}
+                onClick={isFileConnection ? selectSqliteFile : undefined}
+              />
+            ) : (
+              <>
+                <Input
+                  required
+                  label="Base de dados"
+                  md={12}
+                  color={colors.fieldColor}
+                  backgroundColor={colors.fieldBackgroundColor}
+                  {...register('database')}
+                  onClick={isFileConnection ? selectSqliteFile : undefined}
+                />
+                <Input
+                  label="Usuário"
+                  xs={12}
+                  md={6}
+                  backgroundColor={colors.fieldBackgroundColor}
+                  color={colors.fieldColor}
+                  {...register('username')}
+                />
+                <Input
+                  label="Senha"
+                  type="password"
+                  xs={12}
+                  md={6}
+                  backgroundColor={colors.fieldBackgroundColor}
+                  color={colors.fieldColor}
+                  {...register('password')}
+                />
+              </>
+            )}
           </Row>
 
           <Divider size={4} />

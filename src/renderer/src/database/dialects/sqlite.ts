@@ -133,6 +133,7 @@ const sqlite: RendererDialect = {
   id: 'sqlite',
   label: 'SQLite',
   editorDialect: 'sqlite',
+  connectionMode: 'file',
   supportsSchemas: false,
   supportsFunctions: false,
   supportsAutoIncrement: false,

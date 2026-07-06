@@ -176,6 +176,7 @@ export interface RendererDialect {
   label: string;
   editorDialect: Dialect;
   defaultPort?: number;
+  connectionMode?: 'network' | 'file';
   supportsSchemas: boolean;
   supportsFunctions: boolean;
   supportsAutoIncrement: boolean;
