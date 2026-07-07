@@ -138,7 +138,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
         availableWords = [...columnsWords, ...defaultSugestions];
       } //
       else if (isFromOrJoin) {
-        if (schemas) {
+        if (schemas?.length) {
           const schemasWords = schemas.map(({ name }) =>
             makeItem('Esquema', languages.CompletionItemKind.Variable)(name),
           );
