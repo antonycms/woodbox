@@ -12,6 +12,8 @@ addListener('@get:config_connections_saved', store.getConnectionsSaved);
 addListener('@add:config_connections_saved', store.addConnectionSaved);
 addListener('@remove:config_connections_saved', store.removeConnectionSaved);
 addListener('@edit:config_connections_saved', store.editConnectionSaved);
+addListener('@post:preview_import_connections_from_source', store.previewImportConnectionsFromSource);
+addListener('@post:import_connections_from_source', store.importConnectionsFromSource);
 
 // scripts
 addListener('@get:scripts_meta', store.getScriptsMeta);
