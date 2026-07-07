@@ -13,11 +13,11 @@ import { ContextMenu } from '@renderer/components/ContextMenu';
 import {
   AddIcon,
   DuplicateIcon,
-  IconRefresh,
   PanelFile,
   RemoveIcon,
   SaveIcon,
 } from '@renderer/styles/icons';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import styles from './styles.module.css';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { Button } from '@renderer/components/Button';
@@ -1030,15 +1030,7 @@ const Data = ({
           <PanelFile size={16} />
         </Button>
 
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleRefresh}
-        >
-          <IconRefresh size={18} />
-        </Button>
+        <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={handleRefresh} />
 
         <Spacer />
 

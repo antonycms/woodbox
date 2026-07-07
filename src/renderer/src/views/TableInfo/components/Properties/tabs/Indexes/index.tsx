@@ -4,12 +4,13 @@ import { Spacer } from '@renderer/components/Spacer';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@renderer/contexts/Store';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { type IPendingIndexCreate, useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
@@ -442,15 +443,11 @@ const Indexes = ({
         </Button>
 
         {mode !== 'create' && (
-          <Button
-            title="Atualizar dados"
-            text
-            smallIcon
+          <RefreshButton
+            menuPlacement="top"
             color={theme.bar.color}
-            onClick={() => loadTableIndexes(id_connection, { schema, table })}
-          >
-            <IconRefresh size={18} />
-          </Button>
+            onRefresh={() => loadTableIndexes(id_connection, { schema, table })}
+          />
         )}
 
         <Spacer />

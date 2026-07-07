@@ -1,12 +1,11 @@
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
-import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -130,15 +129,11 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
+        <RefreshButton
+          menuPlacement="top"
           color={theme.bar.color}
-          onClick={() => loadTableUsedAsReference(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+          onRefresh={() => loadTableUsedAsReference(id_connection, { schema, table })}
+        />
 
         <Spacer />
 

@@ -16,12 +16,11 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Bar } from '@renderer/components/Bar';
-import { Button } from '@renderer/components/Button';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
@@ -372,9 +371,7 @@ const Diagram = ({
       </div>
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button title="Atualizar dados" text smallIcon color={theme.bar.color} onClick={loadData}>
-          <IconRefresh size={18} />
-        </Button>
+        <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={loadData} />
 
         <Spacer />
 

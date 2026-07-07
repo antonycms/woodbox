@@ -6,6 +6,7 @@ import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
@@ -16,7 +17,6 @@ import {
   AddIcon,
   CancelIcon,
   ExportIcon,
-  IconRefresh,
   PanelFile,
   SaveIcon,
 } from '@renderer/styles/icons';
@@ -796,16 +796,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         )}
 
         {!readOnly && (
-          <Button
-            text
-            smallIcon
-            title="Atualizar dados"
-            onClick={onRefresh}
-            disabled={data.loading}
+          <RefreshButton
+            menuPlacement="top"
             color={activeTheme.queryEditor.bar.color}
-          >
-            <IconRefresh size={18} />
-          </Button>
+            disabled={data.loading}
+            onRefresh={onRefresh}
+          />
         )}
 
         <Spacer />

@@ -2,14 +2,13 @@ import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
-import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import type { ITriggerInfo } from '@renderer/contexts/Store';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { IconRefresh } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -190,15 +189,11 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button
-          title="Atualizar dados"
-          text
-          smallIcon
+        <RefreshButton
+          menuPlacement="top"
           color={theme.bar.color}
-          onClick={() => loadTableTriggers(id_connection, { schema, table })}
-        >
-          <IconRefresh size={18} />
-        </Button>
+          onRefresh={() => loadTableTriggers(id_connection, { schema, table })}
+        />
 
         <Spacer />
 

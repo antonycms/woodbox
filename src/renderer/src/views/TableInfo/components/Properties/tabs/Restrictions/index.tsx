@@ -1,11 +1,12 @@
 import React from 'react';
 import Table from '@renderer/components/Table';
-import { AddIcon, CancelIcon, IconRefresh, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { Spacer } from '@renderer/components/Spacer';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
+import { RefreshButton } from '@renderer/components/RefreshButton';
 import type { IColumnRestrictionsInfo } from '@renderer/contexts/Store';
 import { useStoreContext } from '@renderer/contexts/Store';
 import {
@@ -459,15 +460,11 @@ const Restrictios = ({
         </Button>
 
         {mode !== 'create' && (
-          <Button
-            title="Atualizar dados"
-            text
-            smallIcon
+          <RefreshButton
+            menuPlacement="top"
             color={theme.bar.color}
-            onClick={() => loadTableRestrictions(id_connection, { schema, table })}
-          >
-            <IconRefresh size={18} />
-          </Button>
+            onRefresh={() => loadTableRestrictions(id_connection, { schema, table })}
+          />
         )}
 
         <Spacer />
