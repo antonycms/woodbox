@@ -119,7 +119,7 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
       if (isAlias) {
         const columnsWords = columns
           .filter(({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema)
-          .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable)(name));
+          .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable, 0)(name));
 
         availableWords = columnsWords;
       } //
