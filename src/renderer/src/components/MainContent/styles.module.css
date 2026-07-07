@@ -4,3 +4,45 @@
   flex: 1;
   overflow: auto;
 }
+
+.splitLayout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.splitPane {
+  display: flex;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.splitPane + .splitPane {
+  border-left: 2px solid var(--colorBorder);
+}
+
+.splitPane::after {
+  content: '';
+  display: none;
+  position: absolute;
+  top: 42px;
+  bottom: 0;
+  z-index: 10;
+  width: 50%;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--colorBorder) 45%, transparent);
+  outline: 1px solid var(--colorBorder);
+}
+
+.splitPane.dropLeft::after {
+  display: block;
+  left: 0;
+}
+
+.splitPane.dropRight::after {
+  display: block;
+  right: 0;
+}

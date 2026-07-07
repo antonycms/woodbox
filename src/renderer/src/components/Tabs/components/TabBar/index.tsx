@@ -8,6 +8,8 @@ import {
 import Tab from '../Tab';
 import styles from '../../styles.module.css';
 
+export const TAB_DRAG_DATA_TYPE = 'application/x-woodbox-tab-id';
+
 const TabsBar = (props: ITabsBarProps) => {
   const {
     tabs = [],
@@ -50,11 +52,11 @@ const TabsBar = (props: ITabsBarProps) => {
   const [activeGroupContext, setActiveGroupContext] = React.useState<IActiveGroupContextMenu>();
   const noHasContent = !tabs.length;
 
-  const tabDragEnd = (e?: React.DragEvent<HTMLDivElement>) => {
-    if (e && idTabDraging) setIdTabDraging(null);
+  const tabDragEnd = React.useCallback(() => {
+    setIdTabDraging(null);
     setIdTabDragTarget(null);
     setIdGroupDragTarget(null);
-  };
+  }, []);
 
   const tabDragEnter = (idTab: string) => {
     if (!idTabDraging) return;
@@ -72,8 +74,22 @@ const TabsBar = (props: ITabsBarProps) => {
 
   const tabDragStart = (e: React.DragEvent<HTMLDivElement>, idTab: string) => {
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData(TAB_DRAG_DATA_TYPE, idTab);
+    e.dataTransfer.setData('text/plain', idTab);
     setIdTabDraging(idTab);
   };
+
+  React.useEffect(() => {
+    if (!idTabDraging) return;
+
+    window.addEventListener('dragend', tabDragEnd);
+    window.addEventListener('drop', tabDragEnd);
+
+    return () => {
+      window.removeEventListener('dragend', tabDragEnd);
+      window.removeEventListener('drop', tabDragEnd);
+    };
+  }, [idTabDraging, tabDragEnd]);
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     const target = (e.target as HTMLElement).closest('[data-tab-id]') as HTMLElement;
@@ -82,7 +98,7 @@ const TabsBar = (props: ITabsBarProps) => {
     ) as HTMLElement;
     const targetTabId = target?.dataset.tabId;
     const targetGroupId = targetGroup?.dataset.tabGroupHeaderId;
-    const sourceTabId = idTabDraging;
+    const sourceTabId = idTabDraging || e.dataTransfer.getData(TAB_DRAG_DATA_TYPE);
     const sourceTab = tabs.find((tab) => tab.idTab === sourceTabId);
     const targetTab = tabs.find((tab) => tab.idTab === targetTabId);
 
@@ -299,7 +315,12 @@ const TabsBar = (props: ITabsBarProps) => {
   }, [tabs, activeTabId, groupsById]);
 
   return (
-    <div ref={scrollContainerRef} className={styles.outsideBar} style={styleOutsideContainer}>
+    <div
+      ref={scrollContainerRef}
+      className={styles.outsideBar}
+      data-tab-bar-id={idTabBar}
+      style={styleOutsideContainer}
+    >
       <div
         onDrop={draggable ? onDrop : undefined}
         onDragOver={(e) => e.preventDefault()}
