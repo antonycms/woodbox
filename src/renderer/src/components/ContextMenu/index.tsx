@@ -16,10 +16,13 @@ export interface IContextMenuPosition {
   y: number;
 }
 
+export type ContextMenuPlacement = 'bottom' | 'top';
+
 export interface IContextMenuProps<ActiveContextInfo = any> {
   activeContextInfo?: ActiveContextInfo;
   options: IContextMenuOption<ActiveContextInfo>[];
   position?: IContextMenuPosition;
+  placement?: ContextMenuPlacement;
   onClose?(): void;
 }
 
@@ -27,7 +30,7 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   const {
     activeTheme: { contextMenu: theme },
   } = useThemeContext();
-  const { position, onClose, options, activeContextInfo } = props;
+  const { position, placement = 'bottom', onClose, options, activeContextInfo } = props;
   const { x: positionX, y: positionY } = position || {};
 
   const isInvalidPosition = typeof positionX !== 'number' || typeof positionY !== 'number';
@@ -45,6 +48,11 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   }, [position]);
 
   if (isInvalidPosition) return null;
+
+  const positionStyle =
+    placement === 'top'
+      ? { bottom: window.innerHeight - positionY, left: positionX }
+      : { top: positionY, left: positionX };
 
   const renderOption = (option: IContextMenuOption<ActiveContextInfo>, index: number) => {
     const children = option.children?.filter((childOption) =>
@@ -85,7 +93,7 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   return (
     <div
       className={styles.container}
-      style={{ ...toCssProperties(theme), top: positionY, left: positionX }}
+      style={{ ...toCssProperties(theme), ...positionStyle }}
     >
       {options?.map?.((option, index) => !!option && renderOption(option, index))}
     </div>
