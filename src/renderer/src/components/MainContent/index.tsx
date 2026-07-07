@@ -284,7 +284,12 @@ export const MainContent = () => {
     <div className={styles.container}>
       <div
         className={styles.splitLayout}
-        style={{ '--colorBorder': theme.bar.borderColor } as React.CSSProperties}
+        style={
+          {
+            '--colorBorder': theme.bar.borderColor,
+            backgroundColor: theme.bar.backgroundColor,
+          } as React.CSSProperties
+        }
       >
         {splitPanes.map((pane) => {
           const paneTabs = tabs.filter((tab) => pane.tabIds.includes(tab.id));
