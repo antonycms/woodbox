@@ -88,6 +88,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
+  const [cellEditInitialValue, setCellEditInitialValue] = React.useState<string | number>();
   const [analysisMode, setAnalysisMode] = React.useState(false);
   const [analysisRows, setAnalysisRows] = React.useState<any[]>([]);
   const [analysisColumnsSize, setAnalysisColumnsSize] = React.useState<number[]>([]);
@@ -320,6 +321,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     ) => {
       if (!keepEditing) {
         setCellEditingKey(null);
+        setCellEditInitialValue(undefined);
         refScrollContainer.current?.focus();
       }
 
@@ -373,6 +375,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const onBlurCell = React.useCallback(() => {
     setCellEditingKey(null);
+    setCellEditInitialValue(undefined);
     refScrollContainer.current?.focus();
   }, []);
 
@@ -382,6 +385,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
     if (!column?.editable) return;
 
+    setCellEditInitialValue(undefined);
     setCellEditingKey(rowColumnKey);
   }, []);
 
@@ -665,6 +669,33 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
         if (!row || !column?.editable) return;
 
+        setCellEditInitialValue(undefined);
+        setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
+      }
+
+      const isTypingEditKey =
+        ev.key.length === 1 &&
+        !ev.ctrlKey &&
+        !ev.metaKey &&
+        !ev.altKey &&
+        !ev.isComposing &&
+        !cellEditingKeyRef.current;
+
+      if (isTypingEditKey) {
+        const anchor = analysisModeEnterRef.current
+          ? lastAnalysisSelectedCellRef.current
+          : lastSelectedCellRef.current;
+        if (!anchor) return;
+
+        const row = analysisModeEnterRef.current
+          ? analysisRowsRef.current.find((item) => item.__index_row === anchor.rowIndex)
+          : serializedRowsRef.current[anchor.rowIndex];
+        const column = columnsRef.current[anchor.colIndex];
+
+        if (!row || !column?.editable) return;
+
+        ev.preventDefault();
+        setCellEditInitialValue(ev.key);
         setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
 
@@ -950,6 +981,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           editedRows={editedRows}
           newRows={newRows}
           cellEditingKey={cellEditingKey}
+          cellEditInitialValue={cellEditInitialValue}
           selectedCells={analysisSelectedCells}
           onResizeColumn={onResizeAnalysisColumn}
           onDoubleClick={handleDoubleClickCell}
@@ -968,6 +1000,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           editedRows={editedRows}
           newRows={newRows}
           cellEditingKey={cellEditingKey}
+          cellEditInitialValue={cellEditInitialValue}
           selectedCells={selectedCells}
           selectedRows={selectedRows}
           columnsIndexToRender={columnsDetails.columnsIndexToRender}

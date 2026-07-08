@@ -17,6 +17,7 @@ interface ITableAnalysisViewProps<Row = any> {
   editedRows?: Map<React.Key, any>;
   newRows?: Map<React.Key, any>;
   cellEditingKey?: string;
+  cellEditInitialValue?: string | number;
   selectedCells?: Set<string>;
   onResizeColumn?(index: number, size: number): void;
   onDoubleClick?(rowColumnKey: string): void;
@@ -44,6 +45,7 @@ const TableAnalysisInput = ({
   value,
   rowIndex,
   attribute,
+  editInitialValue,
   onBlurCell,
   onEditCell,
 }: {
@@ -51,6 +53,7 @@ const TableAnalysisInput = ({
   value: any;
   rowIndex: number;
   attribute: string;
+  editInitialValue?: string | number;
   onBlurCell?(): void;
   onEditCell?(
     rowIndex: number,
@@ -59,7 +62,8 @@ const TableAnalysisInput = ({
     keepEditing?: boolean,
   ): void;
 }) => {
-  const editedValue = React.useRef<string | number>(serializeTableValue(value, column.type));
+  const inputInitialValue = editInitialValue ?? serializeTableValue(value, column.type);
+  const editedValue = React.useRef<string | number>(inputInitialValue);
 
   const handleSaveInputValue = React.useCallback(() => {
     onBlurCell?.();
@@ -134,6 +138,7 @@ const TableAnalysisView = ({
   editedRows,
   newRows,
   cellEditingKey,
+  cellEditInitialValue,
   selectedCells,
   onResizeColumn,
   onDoubleClick,
@@ -207,6 +212,7 @@ const TableAnalysisView = ({
                     value={value}
                     rowIndex={row.__index_row}
                     attribute={attribute}
+                    editInitialValue={cellEditInitialValue}
                     onBlurCell={onBlurCell}
                     onEditCell={onEditCell}
                   />

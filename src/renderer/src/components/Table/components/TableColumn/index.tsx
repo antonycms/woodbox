@@ -27,6 +27,7 @@ interface ITableColumnProps {
   ): void;
   style?: React.CSSProperties;
   isEditing?: boolean;
+  editInitialValue?: string | number;
   isEdited?: boolean;
   value?: number | string | boolean | null | (string | number)[];
   name?: string;
@@ -101,6 +102,7 @@ const TableColumn = ({
   name,
   style: styleExternal = {},
   isLink,
+  editInitialValue,
   type,
   dataAutocomplete,
   onFkCellClick,
@@ -139,7 +141,9 @@ const TableColumn = ({
 
   const editedValue = React.useRef<string | number | null>(null);
 
-  editedValue.current = [undefined, null].includes(serializedValue) ? '' : serializedValue;
+  const inputInitialValue = editInitialValue ?? serializedValue;
+
+  editedValue.current = [undefined, null].includes(inputInitialValue) ? '' : inputInitialValue;
 
   const style = React.useMemo(() => {
     return {
@@ -265,7 +269,7 @@ const TableColumn = ({
         style={style}
         autoFocus
         spellCheck={false}
-        defaultValue={serializedValue}
+        defaultValue={inputInitialValue}
         onBlur={handleSaveInputValue}
         onKeyDown={(e) => {
           if (e.key !== 'Enter' && e.key !== 'Escape') return;

@@ -16,6 +16,7 @@ interface ITableDefaultViewProps<Row = any> {
   editedRows?: Map<React.Key, any>;
   newRows?: Map<React.Key, any>;
   cellEditingKey?: string;
+  cellEditInitialValue?: string | number;
   selectedCells?: Set<string>;
   selectedRows: Map<React.Key, any>;
   columnsIndexToRender: number[];
@@ -48,6 +49,7 @@ const TableDefaultView = <Row,>({
   editedRows,
   newRows,
   cellEditingKey,
+  cellEditInitialValue,
   selectedCells,
   selectedRows,
   columnsIndexToRender,
@@ -149,6 +151,9 @@ const TableDefaultView = <Row,>({
                   style={row.__style}
                   isEdited={isEdited}
                   isEditing={rowColumnKey === cellEditingKey}
+                  editInitialValue={
+                    rowColumnKey === cellEditingKey ? cellEditInitialValue : undefined
+                  }
                   onDoubleClick={onDoubleClick}
                   onEditCell={onEditCell}
                   onBlurCell={onBlurCell}
