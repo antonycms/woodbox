@@ -408,6 +408,24 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [notifySelectedCell],
   );
 
+  const handleSelectColumn = React.useCallback(
+    (colIndex: number) => {
+      const rows = serializedRowsRef.current;
+      if (!rows.length) return;
+
+      lastSelectedCellRef.current = { rowIndex: 0, colIndex };
+      arrowCursorRef.current = { rowIndex: 0, colIndex };
+      notifySelectedCell(0, colIndex);
+
+      setSelectedCells(() => {
+        const next = new Set<string>();
+        rows.forEach((_, rowIndex) => next.add(cellKey(rowIndex, colIndex)));
+        return next;
+      });
+    },
+    [notifySelectedCell],
+  );
+
   const selectAnalysisRange = React.useCallback(
     (
       anchor: { rowIndex: number; colIndex: number },
@@ -922,6 +940,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectCell}
+          onSelectColumn={handleSelectColumn}
           onCellLinkClick={onCellLinkClick}
         />
       )}

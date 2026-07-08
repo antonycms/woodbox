@@ -33,6 +33,7 @@ interface ITableDefaultViewProps<Row = any> {
     keepEditing?: boolean,
   ): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
+  onSelectColumn?(colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
 
@@ -59,6 +60,7 @@ const TableDefaultView = <Row,>({
   onBlurCell,
   onEditCell,
   onSelectCell,
+  onSelectColumn,
   onCellLinkClick,
 }: ITableDefaultViewProps<Row>) => {
   const [sortContextMenu, setSortContextMenu] = React.useState<{
@@ -106,7 +108,7 @@ const TableDefaultView = <Row,>({
               rowHeight={rowHeight}
               width={columnsSize[columnIndex]}
               onResize={(e) => onResizeColumn(columnIndex, e.width)}
-              onClick={column.sortable && onSort ? () => onSort(column) : undefined}
+              onClick={() => onSelectColumn?.(columnIndex)}
               onContextMenu={
                 column.sortable && onSort
                   ? (event) => handleSortContextMenu(event, column)
