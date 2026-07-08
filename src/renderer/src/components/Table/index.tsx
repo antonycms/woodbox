@@ -316,19 +316,57 @@ function Table<Row = any>(props: ITableProps<Row>) {
       rowColumnKey: string,
       newValue: TableCellEditValue,
       keepEditing?: boolean,
+      replicateSelectedCells = true,
     ) => {
       if (!keepEditing) {
         setCellEditingKey(null);
         refScrollContainer.current?.focus();
       }
-      const row = serializedRowsRef.current[indexRow];
 
-      if (row?.__is_new_row) {
-        onEditNewRow?.(row.__key_row, rowColumnKey, newValue);
+      const saveCell = (rowIndex: number, attribute: string) => {
+        const row = serializedRowsRef.current[rowIndex];
+
+        if (row?.__is_new_row) {
+          onEditNewRow?.(row.__key_row, attribute, newValue);
+          return;
+        }
+
+        onEditRow?.(row?.__row_index ?? rowIndex, attribute, newValue, row?.__key_row);
+      };
+
+      const columnIndex = columnsRef.current.findIndex(
+        (column) => String(column.attribute) === rowColumnKey,
+      );
+      const selectedCells = analysisModeRef.current
+        ? analysisSelectedCellsRef.current
+        : selectedCellsRef.current;
+      const editedCellKey = columnIndex === -1 ? null : cellKey(indexRow, columnIndex);
+      const shouldReplicate =
+        replicateSelectedCells &&
+        selectedCells.size > 1 &&
+        editedCellKey !== null &&
+        selectedCells.has(editedCellKey);
+
+      if (!shouldReplicate) {
+        saveCell(indexRow, rowColumnKey);
         return;
       }
 
-      onEditRow?.(row?.__row_index ?? indexRow, rowColumnKey, newValue, row?.__key_row);
+      selectedCells.forEach((key) => {
+        const [rowIndex, colIndex] = key.split(':').map(Number);
+        const row = serializedRowsRef.current[rowIndex];
+        const column = columnsRef.current[colIndex];
+
+        if (!row || !column?.editable) return;
+        if (column.type === 'autocomplete') {
+          if (Array.isArray(newValue) || !column.dataAutocomplete?.includes(String(newValue))) {
+            return;
+          }
+        }
+        if (row.__is_new_row ? !onEditNewRow : !onEditRow) return;
+
+        saveCell(rowIndex, String(column.attribute));
+      });
     },
     [onEditNewRow, onEditRow],
   );
@@ -866,7 +904,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
       event.preventDefault();
       edits.forEach(({ rowIndex, attribute, value }) => {
-        onSaveCell(rowIndex, attribute, value, true);
+        onSaveCell(rowIndex, attribute, value, true, false);
       });
     };
 
