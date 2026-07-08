@@ -375,6 +375,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleSelectCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
+      refScrollContainer.current?.focus();
       notifySelectedCell(rowIndex, colIndex);
 
       if (!window.shiftPressed || !lastSelectedCellRef.current) {
@@ -463,6 +464,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleSelectAnalysisCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
+      refScrollContainer.current?.focus();
       notifySelectedCell(rowIndex, colIndex);
 
       if (!window.shiftPressed || !lastAnalysisSelectedCellRef.current) {
