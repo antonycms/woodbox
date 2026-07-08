@@ -1,6 +1,6 @@
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
-import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
+import useDebounce from '@renderer/hooks/useDebounce';
 import { calculateTextHtmlWidth, copyToClipboard } from '@renderer/utils/methods';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
@@ -11,6 +11,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ISortDirection, ITableSort } from './dtos';
 
 type TableCellEditValue = string | number | (string | number)[];
+type TableScrollState = { left: number; top: number };
 
 export interface ITableContextMenuData {
   cellsText: string;
@@ -101,7 +102,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
   const analysisArrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
-  const [scroll, setScroll] = useStateWithDebounce({ left: 0, top: 0 }, 20);
+  const [scroll, setScroll] = React.useState<TableScrollState>({ left: 0, top: 0 });
+  const setScrollDebounced = useDebounce<React.Dispatch<React.SetStateAction<TableScrollState>>>(
+    setScroll,
+    20,
+  );
+  const defaultScrollRef = React.useRef<TableScrollState>({ left: 0, top: 0 });
   const { height: heightBodyContainer, width: widthBodyContainer } = useResize({
     HTMLElement: refScrollContainer.current,
     ignoreZeroValue: true,
@@ -281,6 +287,28 @@ function Table<Row = any>(props: ITableProps<Row>) {
     }
   }, [onScrollEnd]);
 
+  const captureDefaultScroll = React.useCallback(() => {
+    const element = refScrollContainer.current;
+    const nextScroll = element
+      ? { left: element.scrollLeft, top: element.scrollTop }
+      : defaultScrollRef.current;
+
+    defaultScrollRef.current = nextScroll;
+    setScroll(nextScroll);
+
+    return nextScroll;
+  }, [setScroll]);
+
+  const restoreDefaultScroll = React.useCallback(() => {
+    const element = refScrollContainer.current;
+    if (!element) return;
+
+    const nextScroll = defaultScrollRef.current;
+    element.scrollLeft = nextScroll.left;
+    element.scrollTop = nextScroll.top;
+    setScroll(nextScroll);
+  }, [setScroll]);
+
   const onScroll = React.useCallback(
     (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
       const nextScroll = {
@@ -288,13 +316,14 @@ function Table<Row = any>(props: ITableProps<Row>) {
         top: event.currentTarget.scrollTop,
       };
 
-      setScroll(nextScroll);
+      defaultScrollRef.current = nextScroll;
+      setScrollDebounced(nextScroll);
 
       if (nextScroll.top !== scroll.top) {
         checkScrollEnd();
       }
     },
-    [checkScrollEnd, scroll.top],
+    [checkScrollEnd, scroll.top, setScrollDebounced],
   );
 
   const getSortLabel = React.useCallback(
@@ -660,6 +689,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           setAnalysisSelectedCells(new Set(selectedCellsRef.current));
           lastAnalysisSelectedCellRef.current = lastSelectedCellRef.current;
           analysisArrowCursorRef.current = lastSelectedCellRef.current;
+          captureDefaultScroll();
           setAnalysisMode(true);
         }
       }
@@ -750,7 +780,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [analysisMode]);
+  }, [analysisMode, captureDefaultScroll]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
@@ -959,6 +989,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
   }, [selectedRows]);
+
+  React.useLayoutEffect(() => {
+    if (analysisMode) return;
+
+    restoreDefaultScroll();
+  }, [analysisMode, restoreDefaultScroll]);
 
   React.useEffect(() => {
     resetAnalysisMode();
