@@ -6,6 +6,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { generateHash } from '@renderer/utils/string';
+import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import styles from './styles.module.css';
 
 interface IReferenceSelectionProps {
@@ -54,6 +55,11 @@ const ReferenceSelection = ({
       reference.reference_column_name,
     ].join('.');
   }, [reference]);
+
+  const columnNames = React.useMemo(
+    () => columns.map((column) => column.attribute),
+    [columns],
+  );
 
   const loadPage = React.useCallback(
     async (nextPage: number, nextWhere = appliedWhere, nextSort = sort, replace = false) => {
@@ -183,14 +189,17 @@ const ReferenceSelection = ({
   return (
     <div className={styles.container}>
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
-        <input
-          className={styles.filterInput}
+        <ColumnFilterInput
+          inputClassName={styles.filterInput}
           placeholder="Filtrar seleção (ex: nome like '%maria%')"
           value={whereInput}
-          onChange={(event) => setWhereInput(event.target.value)}
+          columnNames={columnNames}
+          onChange={setWhereInput}
           onKeyDown={handleFilterKeyDown}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
+          inputStyle={{ color: theme.bar.color }}
+          dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
+          dropdownBorderColor={theme.bar.borderColor}
+          dropdownColor={theme.bar.color}
         />
       </div>
 

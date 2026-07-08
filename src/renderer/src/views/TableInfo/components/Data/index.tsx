@@ -42,6 +42,7 @@ import {
 import ModalDataError from './components/ModalDataError';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
+import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -304,6 +305,11 @@ const Data = ({
         isLink: fkMap.has(column.column_name),
       })),
     [columns, fkMap],
+  );
+
+  const columnNames = React.useMemo(
+    () => columns.map((column) => column.column_name),
+    [columns],
   );
 
   const primaryKeyColumns = React.useMemo(
@@ -856,15 +862,18 @@ const Data = ({
   return (
     <div className={styles.container} onKeyDown={handleKeyDown}>
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
-        <input
-          className={styles.filterInput}
+        <ColumnFilterInput
+          inputClassName={styles.filterInput}
           placeholder="Filtrar resultados (ex: id = 1 and status = true)"
           value={whereInput}
-          onChange={(e) => !filterLocked && setWhereInput(e.target.value)}
+          columnNames={columnNames}
+          onChange={(value) => !filterLocked && setWhereInput(value)}
           onKeyDown={handleFilterKeyDown}
-          style={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
+          inputStyle={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
+          dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
+          dropdownBorderColor={theme.bar.borderColor}
+          dropdownColor={theme.bar.color}
           disabled={filterLocked}
-          spellCheck={false}
         />
       </div>
 
