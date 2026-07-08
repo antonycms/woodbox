@@ -7,6 +7,7 @@ declare global {
     api: unknown;
     shiftPressed?: boolean;
     ctrlPressed?: boolean;
+    metaPressed?: boolean;
     MonacoEnvironment?: Environment;
   }
 }

@@ -382,7 +382,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       }
       arrowCursorRef.current = { rowIndex, colIndex };
 
-      if (window.ctrlPressed) {
+      if (window.ctrlPressed || window.metaPressed) {
         setSelectedCells((prev) => {
           const next = new Set(prev);
           const key = cellKey(rowIndex, colIndex);
@@ -452,7 +452,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       }
       analysisArrowCursorRef.current = { rowIndex, colIndex };
 
-      if (window.ctrlPressed) {
+      if (window.ctrlPressed || window.metaPressed) {
         setAnalysisSelectedCells((prev) => {
           const next = new Set(prev);
           const key = cellKey(rowIndex, colIndex);
@@ -610,7 +610,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
 
-      const isCopy = window.ctrlPressed && ev.key?.toLowerCase() === 'c';
+      const isCopy = (window.ctrlPressed || window.metaPressed) && ev.key?.toLowerCase() === 'c';
 
       if (isCopy) {
         const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
