@@ -607,6 +607,16 @@ function Table<Row = any>(props: ITableProps<Row>) {
     });
   };
 
+  const resetAnalysisMode = React.useCallback(() => {
+    setAnalysisMode(false);
+    setAnalysisRows([]);
+    setAnalysisColumnsSize([]);
+    setAnalysisMinColumnsSize([]);
+    setAnalysisSelectedCells(new Set());
+    lastAnalysisSelectedCellRef.current = null;
+    analysisArrowCursorRef.current = null;
+  }, []);
+
   const cssVars = toCssProperties({
     ...theme,
     height: `${serializedRows.length * rowHeight}px`,
@@ -951,14 +961,27 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, [selectedRows]);
 
   React.useEffect(() => {
-    setAnalysisMode(false);
-    setAnalysisRows([]);
-    setAnalysisColumnsSize([]);
-    setAnalysisMinColumnsSize([]);
-    setAnalysisSelectedCells(new Set());
-    lastAnalysisSelectedCellRef.current = null;
-    analysisArrowCursorRef.current = null;
-  }, [rows, columnsSignature]);
+    resetAnalysisMode();
+  }, [columnsSignature, resetAnalysisMode]);
+
+  React.useEffect(() => {
+    if (!analysisModeRef.current || !analysisRowsRef.current.length) return;
+
+    const nextAnalysisRows = analysisRowsRef.current.flatMap((analysisRow) => {
+      const nextRow = serializedRowsRef.current.find(
+        (row) => row.__key_row === analysisRow.__key_row,
+      );
+
+      return nextRow ? [nextRow] : [];
+    });
+
+    if (nextAnalysisRows.length !== analysisRowsRef.current.length) {
+      resetAnalysisMode();
+      return;
+    }
+
+    setAnalysisRows(nextAnalysisRows);
+  }, [resetAnalysisMode, serializedRows]);
 
   return (
     <div
