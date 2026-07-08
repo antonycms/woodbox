@@ -19,6 +19,9 @@ import StoreContext, {
   type IIndexInfo,
   type ITriggerInfo,
   type IServerOutputMessage,
+  type IImportConnectionsParams,
+  type IImportConnectionsPreview,
+  type IImportConnectionsResult,
 } from './context';
 
 export type * from './context';
@@ -167,6 +170,24 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     setConnections((prevState) => prevState.filter((connection) => connection.id !== id));
   };
 
+  const previewImportConnectionsFromSource = async (params: IImportConnectionsParams) => {
+    return await call<IImportConnectionsPreview>(
+      '@post:preview_import_connections_from_source',
+      params,
+    );
+  };
+
+  const importConnectionsFromSource = async (params: IImportConnectionsParams) => {
+    const result = await call<IImportConnectionsResult>(
+      '@post:import_connections_from_source',
+      params,
+    );
+
+    await Promise.all([loadProjects(), loadConnections()]);
+
+    return result;
+  };
+
   const testConnection = async (data: IConnectionCreate) => {
     return await call<boolean>('@get:test_connection', data);
   };
@@ -300,6 +321,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
         // connection
         connections,
+        previewImportConnectionsFromSource,
+        importConnectionsFromSource,
         addConnection,
         removeConnection,
         editConnection,

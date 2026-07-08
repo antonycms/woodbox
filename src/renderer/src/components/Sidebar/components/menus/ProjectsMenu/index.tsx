@@ -5,7 +5,7 @@ import { Text } from '@renderer/components/Text';
 import { Button } from '@renderer/components/Button';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
+import { AddIcon, ExportIcon, FileSqlIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
   IContextMenuOption,
@@ -28,6 +28,7 @@ import { copyToClipboard, formatSizeFromBytes } from '@renderer/utils/methods';
 import { generateHash } from '@renderer/utils/string';
 import { ModalNewProject } from './components/ModalNewProject';
 import { ModalNewConnection } from './components/ModalNewConnection';
+import { ModalImportConnections } from './components/ModalImportConnections';
 import { ModalNewScript } from './components/ModalNewScript';
 import { ModalDeleteTable } from './components/ModalDeleteTable';
 import { ModalRenameTable } from './components/ModalRenameTable';
@@ -68,6 +69,7 @@ const ProjectsMenu = () => {
   const [idConnectionSelected, setIdConnectionSelected] = React.useState<string>();
 
   const [isNewProject, setIsNewProject] = React.useState(false);
+  const [showImportModal, setShowImportModal] = React.useState(false);
   const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
 
   const [isNewConnection, setIsNewConnection] = React.useState(false);
@@ -147,6 +149,10 @@ const ProjectsMenu = () => {
   const onCloseModalProject = React.useCallback(() => {
     setIsNewProject(false);
     setProjectEditing(null);
+  }, []);
+
+  const onCloseImportModal = React.useCallback(() => {
+    setShowImportModal(false);
   }, []);
 
   const onCloseModalConnection = React.useCallback(() => {
@@ -576,6 +582,8 @@ const ProjectsMenu = () => {
         idProject={projectEditing?.id}
       />
 
+      <ModalImportConnections show={showImportModal} onClose={onCloseImportModal} />
+
       <ModalNewConnection
         show={showModalNewConnection}
         onClose={onCloseModalConnection}
@@ -652,6 +660,15 @@ const ProjectsMenu = () => {
             }}
           />
         )}
+
+        <Button
+          smallIcon
+          text
+          title="Importar origem"
+          color={colors.color}
+          icon={() => <ExportIcon size={13} />}
+          onClick={() => setShowImportModal(true)}
+        />
 
         <Button
           smallIcon
