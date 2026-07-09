@@ -4,6 +4,7 @@ import { getConnectionsSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
 
 const activeConnections: IConnection[] = [];
+const pendingConnections = new Map<string, Promise<IConnection>>();
 const activeRunSqlQueries = new Map<
   string,
   { connectionId: string; instance: Knex; dbConnection: any; dialect: Dialect }
@@ -68,6 +69,7 @@ export const cancelRunSql = async (connectionId: string, queryExecutionId: strin
 };
 
 export const closeAllConnections = async () => {
+  await Promise.allSettled(pendingConnections.values());
   await Promise.all(activeConnections.map((connection) => connection?.instance?.destroy?.()));
 };
 
@@ -152,15 +154,7 @@ export const testConnection = async (config: IConnectionConfig) => {
   await instance.destroy();
 };
 
-const getConnection = async (connectionId: string) => {
-  const connectionAlreadyStarted = activeConnections.find(
-    (connection) => connection.id === connectionId,
-  );
-
-  if (connectionAlreadyStarted) {
-    return connectionAlreadyStarted;
-  }
-
+const makeConnection = async (connectionId: string) => {
   const config = await getConnectionsSaved(connectionId);
 
   if (!config) {
@@ -183,19 +177,59 @@ const getConnection = async (connectionId: string) => {
 };
 
 export const closeConnection = async (connectionId: string) => {
-  const index = activeConnections.findIndex((connection) => connection.id === connectionId);
-  const connection = activeConnections[index];
+  const pendingConnection = pendingConnections.get(connectionId);
+
+  if (pendingConnection) {
+    try {
+      await pendingConnection;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  const connections = activeConnections.filter((connection) => connection.id === connectionId);
 
   serverOutputByConnection.delete(connectionId);
 
-  if (!connection) return;
+  if (!connections.length) return;
+
+  await Promise.all(
+    connections.map(async (connection) => {
+      try {
+        await connection.instance.destroy();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        const index = activeConnections.indexOf(connection);
+
+        if (index >= 0) activeConnections.splice(index, 1);
+      }
+    }),
+  );
+};
+
+const getConnection = async (connectionId: string) => {
+  const connectionAlreadyStarted = activeConnections.find(
+    (connection) => connection.id === connectionId,
+  );
+
+  if (connectionAlreadyStarted) {
+    return connectionAlreadyStarted;
+  }
+
+  const pendingConnection = pendingConnections.get(connectionId);
+
+  if (pendingConnection) {
+    return await pendingConnection;
+  }
+
+  const connectionPromise = makeConnection(connectionId);
+  pendingConnections.set(connectionId, connectionPromise);
 
   try {
-    await connection.instance.destroy();
-  } catch (error) {
-    console.error(error);
+    return await connectionPromise;
   } finally {
-    activeConnections.splice(index, 1);
+    pendingConnections.delete(connectionId);
   }
 };
 
