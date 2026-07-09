@@ -198,12 +198,15 @@ const Editor = ({
     let currentEditor: monaco.editor.IStandaloneCodeEditor;
 
     // fix startup freeze
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      if (!containerRef.current) return;
+
       currentEditor = initEditor();
       setEditor(currentEditor);
     });
 
     return () => {
+      clearTimeout(timeoutId);
       currentEditor?.dispose?.();
     };
   }, []);

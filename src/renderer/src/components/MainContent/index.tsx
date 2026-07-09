@@ -333,13 +333,17 @@ export const MainContent = () => {
                 borderColor={theme.bar.borderColor}
                 activeTabId={paneActiveTabId}
                 onActiveTab={(tab) => {
-                  setActiveSplitPaneId(pane.id);
+                  const nextActiveTabId = tab?.idTab;
+
+                  setActiveSplitPaneId((prev) => (prev === pane.id ? prev : pane.id));
                   setSplitPanes((prev) =>
                     prev.map((item) =>
-                      item.id === pane.id ? { ...item, activeTabId: tab?.idTab } : item,
+                      item.id === pane.id && item.activeTabId !== nextActiveTabId
+                        ? { ...item, activeTabId: nextActiveTabId }
+                        : item,
                     ),
                   );
-                  setActiveTabId(tab?.idTab);
+                  setActiveTabId((prev) => (prev === nextActiveTabId ? prev : nextActiveTabId));
                 }}
                 idTabBar={`app_tabs_${pane.id}`}
                 onRemoveTab={(tab) => removeTab(tab.idTab)}

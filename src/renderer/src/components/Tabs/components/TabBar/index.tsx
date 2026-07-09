@@ -310,7 +310,9 @@ const TabsBar = (props: ITabsBarProps) => {
     }
 
     if (!activeTab) {
-      onActiveTab(visibleTabs[visibleTabs.length - 1]);
+      const nextActiveTab = visibleTabs[visibleTabs.length - 1];
+
+      if (nextActiveTab?.idTab !== activeTabId) onActiveTab(nextActiveTab);
     }
   }, [tabs, activeTabId, groupsById]);
 
