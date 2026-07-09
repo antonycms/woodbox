@@ -12,6 +12,12 @@ import type { IColumn, ISortDirection, ITableSort } from './dtos';
 
 type TableCellEditValue = string | number | (string | number)[];
 type TableScrollState = { left: number; top: number };
+type TableCellPosition = { rowIndex: number; colIndex: number };
+type TableDragSelectionState = {
+  mode: 'default' | 'analysis';
+  anchor: TableCellPosition;
+  hasMoved: boolean;
+};
 
 export interface ITableContextMenuData {
   cellsText: string;
@@ -100,6 +106,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const lastAnalysisSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(
     null,
   );
+  const dragSelectionRef = React.useRef<TableDragSelectionState | null>(null);
+  const ignoreNextClickRef = React.useRef(false);
   const analysisArrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const [scroll, setScroll] = React.useState<TableScrollState>({ left: 0, top: 0 });
@@ -444,8 +452,31 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [editedRows, newRows, onSelectCellData],
   );
 
+  const selectDefaultRange = React.useCallback(
+    (anchor: TableCellPosition, target: TableCellPosition) => {
+      const minRow = Math.min(anchor.rowIndex, target.rowIndex);
+      const maxRow = Math.max(anchor.rowIndex, target.rowIndex);
+      const minCol = Math.min(anchor.colIndex, target.colIndex);
+      const maxCol = Math.max(anchor.colIndex, target.colIndex);
+
+      setSelectedCells(() => {
+        const next = new Set<string>();
+        for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++)
+          for (let colIndex = minCol; colIndex <= maxCol; colIndex++)
+            next.add(cellKey(rowIndex, colIndex));
+        return next;
+      });
+    },
+    [],
+  );
+
   const handleSelectCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
+      if (ignoreNextClickRef.current) {
+        ignoreNextClickRef.current = false;
+        return;
+      }
+
       refScrollContainer.current?.focus();
       notifySelectedCell(rowIndex, colIndex);
 
@@ -463,21 +494,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
         });
       } else if (window.shiftPressed && lastSelectedCellRef.current) {
         const anchor = lastSelectedCellRef.current;
-        const minRow = Math.min(anchor.rowIndex, rowIndex);
-        const maxRow = Math.max(anchor.rowIndex, rowIndex);
-        const minCol = Math.min(anchor.colIndex, colIndex);
-        const maxCol = Math.max(anchor.colIndex, colIndex);
-        setSelectedCells(() => {
-          const next = new Set<string>();
-          for (let r = minRow; r <= maxRow; r++)
-            for (let c = minCol; c <= maxCol; c++) next.add(cellKey(r, c));
-          return next;
-        });
+        selectDefaultRange(anchor, { rowIndex, colIndex });
       } else {
         setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
       }
     },
-    [notifySelectedCell],
+    [notifySelectedCell, selectDefaultRange],
   );
 
   const handleSelectColumn = React.useCallback(
@@ -535,6 +557,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleSelectAnalysisCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
+      if (ignoreNextClickRef.current) {
+        ignoreNextClickRef.current = false;
+        return;
+      }
+
       refScrollContainer.current?.focus();
       notifySelectedCell(rowIndex, colIndex);
 
@@ -558,6 +585,105 @@ function Table<Row = any>(props: ITableProps<Row>) {
     },
     [notifySelectedCell, selectAnalysisRange],
   );
+
+  const handleStartCellDrag = React.useCallback(
+    (
+      rowIndex: number,
+      colIndex: number,
+      event: React.MouseEvent<HTMLElement, MouseEvent>,
+    ) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (cellEditingKeyRef.current) return;
+
+      event.preventDefault();
+
+      const anchor = { rowIndex, colIndex };
+      dragSelectionRef.current = { mode: 'default', anchor, hasMoved: false };
+      lastSelectedCellRef.current = anchor;
+      arrowCursorRef.current = anchor;
+      refScrollContainer.current?.focus();
+      notifySelectedCell(rowIndex, colIndex);
+      setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
+    },
+    [notifySelectedCell],
+  );
+
+  const handleMoveCellDrag = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      const dragSelection = dragSelectionRef.current;
+      if (!dragSelection || dragSelection.mode !== 'default') return;
+
+      const target = { rowIndex, colIndex };
+      if (
+        target.rowIndex === dragSelection.anchor.rowIndex &&
+        target.colIndex === dragSelection.anchor.colIndex
+      ) {
+        return;
+      }
+
+      dragSelection.hasMoved = true;
+      arrowCursorRef.current = target;
+      selectDefaultRange(dragSelection.anchor, target);
+      notifySelectedCell(rowIndex, colIndex);
+    },
+    [notifySelectedCell, selectDefaultRange],
+  );
+
+  const handleStartAnalysisCellDrag = React.useCallback(
+    (
+      rowIndex: number,
+      colIndex: number,
+      event: React.MouseEvent<HTMLElement, MouseEvent>,
+    ) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (cellEditingKeyRef.current) return;
+
+      event.preventDefault();
+
+      const anchor = { rowIndex, colIndex };
+      dragSelectionRef.current = { mode: 'analysis', anchor, hasMoved: false };
+      lastAnalysisSelectedCellRef.current = anchor;
+      analysisArrowCursorRef.current = anchor;
+      refScrollContainer.current?.focus();
+      notifySelectedCell(rowIndex, colIndex);
+      setAnalysisSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
+    },
+    [notifySelectedCell],
+  );
+
+  const handleMoveAnalysisCellDrag = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      const dragSelection = dragSelectionRef.current;
+      if (!dragSelection || dragSelection.mode !== 'analysis') return;
+
+      const target = { rowIndex, colIndex };
+      if (
+        target.rowIndex === dragSelection.anchor.rowIndex &&
+        target.colIndex === dragSelection.anchor.colIndex
+      ) {
+        return;
+      }
+
+      dragSelection.hasMoved = true;
+      analysisArrowCursorRef.current = target;
+      selectAnalysisRange(dragSelection.anchor, target);
+      notifySelectedCell(rowIndex, colIndex);
+    },
+    [notifySelectedCell, selectAnalysisRange],
+  );
+
+  const handleEndCellDrag = React.useCallback((event?: MouseEvent) => {
+    const targetElement = event?.target instanceof HTMLElement ? event.target : null;
+    const endedOverCell = !!targetElement?.closest(
+      `.${styles.table_column}, .${styles.analysis_value}`,
+    );
+
+    if (dragSelectionRef.current?.hasMoved && endedOverCell) {
+      ignoreNextClickRef.current = true;
+    }
+
+    dragSelectionRef.current = null;
+  }, []);
 
   const handleContextMenu = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (!onContextMenu) return;
@@ -655,6 +781,14 @@ function Table<Row = any>(props: ITableProps<Row>) {
     columnsSize: tableDetails.columnsSizeStr,
     analysisRows: analysisRows.length,
   });
+
+  React.useEffect(() => {
+    window.addEventListener('mouseup', handleEndCellDrag);
+
+    return () => {
+      window.removeEventListener('mouseup', handleEndCellDrag);
+    };
+  }, [handleEndCellDrag]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
@@ -874,16 +1008,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       arrowCursorRef.current = { rowIndex, colIndex };
 
       if (ev.shiftKey) {
-        const minRow = Math.min(anchor.rowIndex, rowIndex);
-        const maxRow = Math.max(anchor.rowIndex, rowIndex);
-        const minCol = Math.min(anchor.colIndex, colIndex);
-        const maxCol = Math.max(anchor.colIndex, colIndex);
-        setSelectedCells(() => {
-          const next = new Set<string>();
-          for (let r = minRow; r <= maxRow; r++)
-            for (let c = minCol; c <= maxCol; c++) next.add(cellKey(r, c));
-          return next;
-        });
+        selectDefaultRange(anchor, { rowIndex, colIndex });
       } else {
         lastSelectedCellRef.current = { rowIndex, colIndex };
         setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
@@ -917,7 +1042,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [notifySelectedCell, selectAnalysisRange]);
+  }, [notifySelectedCell, selectAnalysisRange, selectDefaultRange]);
 
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
@@ -1047,6 +1172,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectAnalysisCell}
+          onStartCellDrag={handleStartAnalysisCellDrag}
+          onMoveCellDrag={handleMoveAnalysisCellDrag}
           onCellLinkClick={onCellLinkClick}
         />
       ) : (
@@ -1072,6 +1199,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onEditCell={onSaveCell}
           onBlurCell={onBlurCell}
           onSelectCell={handleSelectCell}
+          onStartCellDrag={handleStartCellDrag}
+          onMoveCellDrag={handleMoveCellDrag}
           onSelectColumn={handleSelectColumn}
           onCellLinkClick={onCellLinkClick}
         />

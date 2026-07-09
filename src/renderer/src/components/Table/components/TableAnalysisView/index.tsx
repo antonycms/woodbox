@@ -29,6 +29,12 @@ interface ITableAnalysisViewProps<Row = any> {
     keepEditing?: boolean,
   ): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
+  onStartCellDrag?(
+    rowIndex: number,
+    colIndex: number,
+    event: React.MouseEvent<HTMLElement, MouseEvent>,
+  ): void;
+  onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
 
@@ -145,6 +151,8 @@ const TableAnalysisView = ({
   onBlurCell,
   onEditCell,
   onSelectCell,
+  onStartCellDrag,
+  onMoveCellDrag,
   onCellLinkClick,
 }: ITableAnalysisViewProps) => {
   const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
@@ -229,6 +237,10 @@ const TableAnalysisView = ({
                   key={rowColumnKey}
                   title={serializedValue}
                   onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+                  onMouseDown={(event) =>
+                    onStartCellDrag?.(row.__index_row, columnIndex, event)
+                  }
+                  onMouseEnter={() => onMoveCellDrag?.(row.__index_row, columnIndex)}
                   onClick={() => onSelectCell?.(row.__index_row, columnIndex)}
                 >
                   {isLinkClickable ? (

@@ -39,6 +39,12 @@ interface ITableColumnProps {
   onFkCellClick?(name: string, value: any): void;
   isSelectedCell?: boolean;
   onSelectCell?(rowIndex: number, colIndex: number): void;
+  onStartCellDrag?(
+    rowIndex: number,
+    colIndex: number,
+    event: React.MouseEvent<HTMLElement, MouseEvent>,
+  ): void;
+  onMoveCellDrag?(rowIndex: number, colIndex: number): void;
 }
 
 const getInheritedSelectionStyle = (
@@ -108,6 +114,8 @@ const TableColumn = ({
   onFkCellClick,
   isSelectedCell,
   onSelectCell,
+  onStartCellDrag,
+  onMoveCellDrag,
 }: ITableColumnProps) => {
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
@@ -299,6 +307,14 @@ const TableColumn = ({
       style={style}
       onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
       onContextMenu={onContextMenu}
+      onMouseDown={(event) => {
+        if (isHeaderColumn) return;
+        onStartCellDrag?.(indexRow, columnIndex, event);
+      }}
+      onMouseEnter={() => {
+        if (isHeaderColumn) return;
+        onMoveCellDrag?.(indexRow, columnIndex);
+      }}
       onClick={() => {
         if (isHeaderColumn) return onClick?.();
         onSelectCell?.(indexRow, columnIndex);

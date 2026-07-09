@@ -34,6 +34,12 @@ interface ITableDefaultViewProps<Row = any> {
     keepEditing?: boolean,
   ): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
+  onStartCellDrag?(
+    rowIndex: number,
+    colIndex: number,
+    event: React.MouseEvent<HTMLElement, MouseEvent>,
+  ): void;
+  onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onSelectColumn?(colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
 }
@@ -62,6 +68,8 @@ const TableDefaultView = <Row,>({
   onBlurCell,
   onEditCell,
   onSelectCell,
+  onStartCellDrag,
+  onMoveCellDrag,
   onSelectColumn,
   onCellLinkClick,
 }: ITableDefaultViewProps<Row>) => {
@@ -166,6 +174,8 @@ const TableDefaultView = <Row,>({
                   onFkCellClick={onCellLinkClick}
                   isSelectedCell={selectedCells?.has(cellKey(indexRow, columnIndex))}
                   onSelectCell={onSelectCell}
+                  onStartCellDrag={onStartCellDrag}
+                  onMoveCellDrag={onMoveCellDrag}
                 />
               );
             })}
