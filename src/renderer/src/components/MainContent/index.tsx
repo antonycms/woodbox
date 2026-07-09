@@ -60,6 +60,11 @@ export const MainContent = () => {
     return new Map(connections.map((connection) => [connection.id, connection.description]));
   }, [connections]);
 
+  const collapsedGroupIds = React.useMemo(
+    () => new Set(tabGroups.filter((group) => group.collapsed).map((group) => group.id)),
+    [tabGroups],
+  );
+
   React.useEffect(() => {
     const existingTabIds = new Set(tabs.map((tab) => tab.id));
 
@@ -293,10 +298,13 @@ export const MainContent = () => {
       >
         {splitPanes.map((pane) => {
           const paneTabs = tabs.filter((tab) => pane.tabIds.includes(tab.id));
+          const visiblePaneTabs = paneTabs.filter(
+            (tab) => !tab.groupId || !collapsedGroupIds.has(tab.groupId),
+          );
           const paneActiveTabId =
-            pane.activeTabId && paneTabs.some((tab) => tab.id === pane.activeTabId)
+            pane.activeTabId && visiblePaneTabs.some((tab) => tab.id === pane.activeTabId)
               ? pane.activeTabId
-              : paneTabs[paneTabs.length - 1]?.id;
+              : visiblePaneTabs[visiblePaneTabs.length - 1]?.id;
 
           if (!paneTabs.length) return null;
 
@@ -336,13 +344,18 @@ export const MainContent = () => {
                   const nextActiveTabId = tab?.idTab;
 
                   setActiveSplitPaneId((prev) => (prev === pane.id ? prev : pane.id));
-                  setSplitPanes((prev) =>
-                    prev.map((item) =>
-                      item.id === pane.id && item.activeTabId !== nextActiveTabId
-                        ? { ...item, activeTabId: nextActiveTabId }
-                        : item,
-                    ),
-                  );
+                  setSplitPanes((prev) => {
+                    let changed = false;
+
+                    const next = prev.map((item) => {
+                      if (item.id !== pane.id || item.activeTabId === nextActiveTabId) return item;
+
+                      changed = true;
+                      return { ...item, activeTabId: nextActiveTabId };
+                    });
+
+                    return changed ? next : prev;
+                  });
                   setActiveTabId((prev) => (prev === nextActiveTabId ? prev : nextActiveTabId));
                 }}
                 idTabBar={`app_tabs_${pane.id}`}
