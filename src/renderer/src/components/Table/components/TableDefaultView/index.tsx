@@ -106,6 +106,8 @@ const TableDefaultView = <Row,>({
   return (
     <div className={styles.table_container}>
       <TableRow isHeader>
+        <div className={styles.table_row_number}>#</div>
+
         {columnsIndexToRender.map((columnIndex) => {
           const column = columns[columnIndex];
 
@@ -140,6 +142,13 @@ const TableDefaultView = <Row,>({
 
         return (
           <TableRow key={keyRow} row={row} isSelected={selectedRows.get(keyRow)}>
+            <div
+              className={styles.table_row_number}
+              style={{ '--rowIndex': indexRow } as React.CSSProperties}
+            >
+              {Number(indexRow) + 1}
+            </div>
+
             {columnsIndexToRender.map((columnIndex) => {
               const column = columns[columnIndex];
               const rowColumnKey = `${keyRow}:${String(column.attribute)}`;

@@ -15,7 +15,7 @@
   display: grid;
   width: var(--width);
   grid-template-rows: var(--rowHeight) repeat(var(--totalRows), var(--rowHeight));
-  grid-template-columns: var(--columnsSize);
+  grid-template-columns: var(--rowNumberColumnWidth) var(--columnsSize);
   min-height: var(--height);
 }
 
@@ -30,7 +30,7 @@
   padding: 0 8px;
 
   grid-row-start: calc(var(--rowIndex) + 2);
-  grid-column-start: calc(var(--columnIndex) + 1);
+  grid-column-start: calc(var(--columnIndex) + 2);
   line-height: var(--rowHeight);
 
   border: 0;
@@ -74,13 +74,36 @@
   color: var(--colorRowOdd);
 }
 
+.table_row_number {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  grid-row-start: calc(var(--rowIndex) + 2);
+  grid-column-start: 1;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid var(--borderColor);
+  border-bottom: 1px solid var(--borderColor);
+  background-color: var(--backgroundColorHeader);
+  box-shadow: 1px 0 0 var(--borderColor);
+  color: color-mix(in srgb, var(--colorHeader) 58%, var(--backgroundColor));
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--rowHeight);
+  text-align: right;
+  user-select: none;
+}
+
 .table_row .table_column.edited,
 .analysis_value.edited {
   background-color: var(--backgroundColorColumnEdited) !important;
   color: var(--colorColumnEdited) !important;
 }
 
-.table_row.selected .table_column {
+.table_row.selected .table_column,
+.table_row.selected .table_row_number {
   background-color: var(--rowSelectedBackgroundColor, #72a1ff59) !important;
   color: white !important;
 }
@@ -92,6 +115,12 @@
   grid-row-start: 1;
   background-color: var(--backgroundColorHeader);
   color: var(--colorHeader);
+}
+
+.header.table_row .table_row_number {
+  top: 0;
+  z-index: 6;
+  grid-row-start: 1;
 }
 
 .table_column.cell_selected {
