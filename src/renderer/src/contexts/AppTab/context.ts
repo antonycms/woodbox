@@ -7,6 +7,7 @@ export interface ITabContext {
   setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>;
   addTab(tab: INewAppTab): void;
   removeTab(tabId: string | string[]): void;
+  reopenClosedTab(): void;
   moveTab(fromId: string, toId: string, placement?: IAppTabMovePlacement): void;
   createTabGroup(tabId: string): string;
   addTabToGroup(tabId: string, groupId: string, targetTabId?: string): void;

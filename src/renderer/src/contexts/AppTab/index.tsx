@@ -52,6 +52,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [tabGroups, setTabGroups] = React.useState<IAppTabGroup[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
+  const closedTabsRef = React.useRef<IAppTab[]>([]);
 
   const addTab = React.useCallback(
     (tabData: INewAppTab) => {
@@ -154,11 +155,52 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         setActiveTabId(nextId);
       }
 
+      closedTabsRef.current = [
+        ...closedTabsRef.current,
+        ...tabs.filter((t) => tabsIdToRemove.has(t.id)),
+      ];
       setTabs((prev) => prev.filter((t) => !tabsIdToRemove.has(t.id)));
       setTabGroups((prev) => cleanupEmptyGroups(prev, remainingTabs));
     },
     [tabs, tabGroups, activeTabId],
   );
+
+  const reopenClosedTab = React.useCallback(() => {
+    const openTabIds = new Set(tabs.map((tab) => tab.id));
+    const groupIds = new Set(tabGroups.map((group) => group.id));
+    const closedTabIndex = [...closedTabsRef.current]
+      .reverse()
+      .findIndex((tab) => !openTabIds.has(tab.id));
+
+    if (closedTabIndex < 0) return;
+
+    const tabIndex = closedTabsRef.current.length - 1 - closedTabIndex;
+    const tabToReopen = closedTabsRef.current[tabIndex];
+    const nextTab = groupIds.has(tabToReopen.groupId || '')
+      ? tabToReopen
+      : { ...tabToReopen, groupId: undefined };
+
+    closedTabsRef.current = closedTabsRef.current.filter((_, index) => index !== tabIndex);
+    if (nextTab.groupId) {
+      setTabGroups((prev) =>
+        prev.map((group) =>
+          group.id === nextTab.groupId ? { ...group, collapsed: false } : group,
+        ),
+      );
+    }
+    setTabs((currentTabs) => {
+      if (currentTabs.some((tab) => tab.id === nextTab.id)) return currentTabs;
+
+      const activeIndex = currentTabs.findIndex((tab) => tab.id === activeTabId);
+      const nextTabs = [...currentTabs];
+
+      if (activeIndex < 0) nextTabs.push(nextTab);
+      else nextTabs.splice(activeIndex + 1, 0, nextTab);
+
+      return nextTabs;
+    });
+    setActiveTabId(nextTab.id);
+  }, [activeTabId, tabGroups, tabs]);
 
   const moveTab = React.useCallback(
     (fromId: string, toId: string, placement: IAppTabMovePlacement = 'before') => {
@@ -317,12 +359,17 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         e.preventDefault();
         removeTab(activeTabId);
       }
+
+      if (e.ctrlKey && e.shiftKey && e.key?.toLowerCase?.() === 't') {
+        e.preventDefault();
+        reopenClosedTab();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
 
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTabId, removeTab]);
+  }, [activeTabId, removeTab, reopenClosedTab]);
 
   return (
     <AppTabContext.Provider
@@ -331,6 +378,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         tabGroups,
         addTab,
         removeTab,
+        reopenClosedTab,
         moveTab,
         createTabGroup,
         addTabToGroup,
