@@ -1156,7 +1156,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       style={cssVars}
       tabIndex={0}
     >
-      {!!loading && <MultiplesBarLoading />}
+      {!!loading && <MultiplesBarLoading zIndex={7} />}
 
       {analysisMode ? (
         <TableAnalysisView

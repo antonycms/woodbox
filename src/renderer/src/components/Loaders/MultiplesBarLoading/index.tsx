@@ -3,12 +3,13 @@ import styles from './styles.module.css';
 
 interface IMultiplesBarLoadingProps {
   background?: string;
+  zIndex?: number;
 }
 const MultiplesBarLoading = (props: IMultiplesBarLoadingProps) => {
-  const { background = 'rgba(0, 0, 0, 0.5)' } = props;
+  const { background = 'rgba(0, 0, 0, 0.5)', zIndex } = props;
 
   return (
-    <div style={{ background }} className={styles.container}>
+    <div style={{ background, zIndex }} className={styles.container}>
       <div className={styles.loader}>
         <div className={styles.bar1}></div>
         <div className={styles.bar2}></div>
