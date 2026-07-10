@@ -977,7 +977,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
                 if (!data) return null;
 
-                const isSelectResult = data.type === 'SELECT' || !!data.columns?.length;
+                const isErrorResult = data.type === 'ERROR';
+                const isSelectResult =
+                  !isErrorResult && (data.type === 'SELECT' || !!data.columns?.length);
                 const isReadOnlyResult = data.type !== 'SELECT';
 
                 return (
@@ -1008,7 +1010,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
                     {!isSelectResult && data.type === 'ALTER' && <TabContentAlter data={data} />}
 
-                    {!isSelectResult && data.type === 'ERROR' && <TabcontentError data={data} />}
+                    {isErrorResult && <TabcontentError data={data} />}
 
                     {!isSelectResult &&
                       !['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
