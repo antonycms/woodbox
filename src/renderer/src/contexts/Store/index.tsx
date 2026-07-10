@@ -287,6 +287,17 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     });
   };
 
+  const getTableRowsCount = async (
+    idConnection: string,
+    params: Omit<IParamsGetTableData, 'page' | 'limit' | 'orderBy'>,
+  ) => {
+    return await call<number>('@get:table_rows_count', idConnection, params);
+  };
+
+  const getQueryRowsCount = async (idConnection: string, sql: string) => {
+    return await call<number>('@get:query_rows_count', idConnection, sql);
+  };
+
   const getServerOutput = async (idConnection: string) => {
     return await call<IServerOutputMessage[]>('@get:server_output', idConnection);
   };
@@ -336,6 +347,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
         loadConnectionInfo,
         closeConnection,
         getTableData,
+        getTableRowsCount,
+        getQueryRowsCount,
 
         getTableColumns,
         getColumnTypes,

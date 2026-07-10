@@ -12,6 +12,7 @@ import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu } from '@renderer/components/ContextMenu';
 import {
   AddIcon,
+  CountIcon,
   DuplicateIcon,
   PanelFile,
   RemoveIcon,
@@ -85,7 +86,7 @@ const Data = ({
     loading: loadingTableInfo,
   } = useTableInfoContext();
 
-  const { getTableData, runSql, connections } = useStoreContext();
+  const { getTableData, getTableRowsCount, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
   const dialect = React.useMemo(
     () =>
@@ -97,6 +98,8 @@ const Data = ({
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
+  const [rowsCount, setRowsCount] = React.useState<number>();
   const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
@@ -130,6 +133,34 @@ const Data = ({
   const handleDataError = React.useCallback((error: unknown) => {
     setDataErrorMessage(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
   }, []);
+
+  const handleLoadRowsCount = React.useCallback(async () => {
+    if (loadingRowsCount) return;
+
+    setLoadingRowsCount(true);
+
+    try {
+      const total = await getTableRowsCount(id_connection, {
+        schema,
+        table,
+        where: appliedWhere || undefined,
+      });
+
+      setRowsCount(total);
+    } catch (error: unknown) {
+      handleDataError(error);
+    } finally {
+      setLoadingRowsCount(false);
+    }
+  }, [
+    id_connection,
+    schema,
+    table,
+    appliedWhere,
+    loadingRowsCount,
+    getTableRowsCount,
+    handleDataError,
+  ]);
 
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
@@ -538,6 +569,7 @@ const Data = ({
     if (loading) return;
 
     setLoading(true);
+    setRowsCount(undefined);
 
     try {
       const { data } = await getTableData(id_connection, {
@@ -773,6 +805,7 @@ const Data = ({
         });
 
         setAppliedWhere(whereInput);
+        setRowsCount(undefined);
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
         setDroppedRows(new Map());
@@ -1040,6 +1073,21 @@ const Data = ({
         </Button>
 
         <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={handleRefresh} />
+
+        <Button
+          title="Contar linhas totais"
+          text
+          smallIcon
+          className={styles.countButton}
+          color={theme.bar.color}
+          loading={loadingRowsCount}
+          onClick={handleLoadRowsCount}
+        >
+          <CountIcon size={16} />
+          {rowsCount !== undefined && (
+            <span className={styles.countValue}>{rowsCount.toLocaleString('pt-BR')}</span>
+          )}
+        </Button>
 
         <Spacer />
 

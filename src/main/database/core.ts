@@ -405,6 +405,43 @@ export const getTableData = async (
   return { data: adapter.getRows(dataRaw) };
 };
 
+export const getTableRowsCount = async (
+  connectionId: string,
+  { table, schema, where }: { table: string; schema?: string; where?: string },
+) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
+
+  const raw = await instance.raw(query.getTotalRowsCountInTable({ table, schema, where }));
+  const [row] = adapter.getRows(raw);
+
+  return Number(row?.total_rows ?? 0);
+};
+
+export const getQueryRowsCount = async (connectionId: string, sql: string) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+
+  const adapter = getDialectAdapter(dialect);
+  const sqlFinal = sql.trim().replace(/;+\s*$/, '');
+  const normalized = sqlFinal.replace(/\s+/g, ' ').toLowerCase();
+
+  if (!normalized.startsWith('select') && !normalized.startsWith('with')) {
+    throw new Error('A contagem só está disponível para consultas SELECT.');
+  }
+
+  const raw = await instance.raw(`
+    SELECT count(*) AS total_rows
+    FROM (${sqlFinal}) AS __count_query;
+  `);
+  const [row] = adapter.getRows(raw);
+
+  return Number(row?.total_rows ?? 0);
+};
+
 export const runSql = async (
   connectionId: string,
   sql: string,

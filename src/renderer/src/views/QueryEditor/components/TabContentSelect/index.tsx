@@ -16,6 +16,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import {
   AddIcon,
   CancelIcon,
+  CountIcon,
   ExportIcon,
   PanelFile,
   SaveIcon,
@@ -38,6 +39,7 @@ import {
 } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { prepareQueryVariables } from '../../utils/queryVariables';
 import styles from './styles.module.css';
 
 import IconMdiClose from '~icons/mdi/close';
@@ -71,7 +73,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
-  const { getTableData, getTableRestrictions, runSql, connections } = useStoreContext();
+  const { getTableData, getTableRestrictions, getQueryRowsCount, runSql, connections } =
+    useStoreContext();
   const { showToast } = useToast();
   const dialect = React.useMemo(
     () =>
@@ -102,6 +105,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const [now, setNow] = React.useState(Date.now());
+  const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
+  const [rowsCount, setRowsCount] = React.useState<number>();
 
   const editableTable = readOnly
     ? undefined
@@ -124,6 +129,36 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     return timeMs < 1000 ? `${timeMs}ms` : `${(timeMs / 1000).toFixed(2)}s`;
   };
+
+  const handleLoadRowsCount = React.useCallback(async () => {
+    if (loadingRowsCount || data.loading) return;
+
+    setLoadingRowsCount(true);
+
+    try {
+      const preparedQuery = prepareQueryVariables(data.query, data.variableValues);
+      const total = await getQueryRowsCount(id_connection, preparedQuery);
+
+      setRowsCount(total);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'Erro ao contar linhas.',
+        description: error instanceof Error ? error.message : 'Erro desconhecido.',
+        delay: 8000,
+      });
+    } finally {
+      setLoadingRowsCount(false);
+    }
+  }, [
+    id_connection,
+    data.query,
+    data.variableValues,
+    data.loading,
+    loadingRowsCount,
+    getQueryRowsCount,
+    showToast,
+  ]);
 
   const closeValuePreview = () => {
     setShowValuePreview(false);
@@ -597,6 +632,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   }, [data.rows, data.columns, data.query]);
 
   React.useEffect(() => {
+    setRowsCount(undefined);
+  }, [data.query, data.variableValues]);
+
+  React.useEffect(() => {
     if (!data.loading) return;
 
     setNow(Date.now());
@@ -803,6 +842,22 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onRefresh={onRefresh}
           />
         )}
+
+        <Button
+          text
+          smallIcon
+          title="Contar linhas totais"
+          className={styles.countButton}
+          onClick={handleLoadRowsCount}
+          loading={loadingRowsCount}
+          disabled={data.loading}
+          color={activeTheme.queryEditor.bar.color}
+        >
+          <CountIcon size={16} />
+          {rowsCount !== undefined && (
+            <span className={styles.countValue}>{rowsCount.toLocaleString('pt-BR')}</span>
+          )}
+        </Button>
 
         <Spacer />
 

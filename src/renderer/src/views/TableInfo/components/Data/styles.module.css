@@ -70,6 +70,16 @@
   padding: 12px;
 }
 
+.countButton {
+  gap: 6px;
+  padding: 2px 6px;
+}
+
+.countValue {
+  font-family: monospace;
+  font-size: 11px;
+}
+
 .bottomBarInfoContainer {
   flex: 1;
   display: flex;

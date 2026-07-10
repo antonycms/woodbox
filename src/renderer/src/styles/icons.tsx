@@ -5,6 +5,7 @@ import IconMdiPlaylistPlay from '~icons/mdi/playlist-play';
 import IconMdiBookOpenOutline from '~icons/mdi/book-open-outline';
 import IconMdiCloseCircleOutline from '~icons/mdi/close-circle-outline';
 import IconMdiRefresh from '~icons/mdi/refresh';
+import IconMdiCounter from '~icons/mdi/counter';
 import IconFaSolidPlus from '~icons/fa-solid/plus';
 import IconFaSolidCog from '~icons/fa-solid/cog';
 import IconFaSolidFolder from '~icons/fa-solid/folder';
@@ -34,6 +35,7 @@ function makeIconWithSize(
 
 export const AddIcon = makeIconWithSize(IconFaSolidPlus);
 export const CancelIcon = makeIconWithSize(IconMdiCloseCircleOutline);
+export const CountIcon = makeIconWithSize(IconMdiCounter);
 export const FileSqlIcon = makeIconWithSize(IconBiFiletypeSql);
 export const SaveIcon = makeIconWithSize(IconFeatherSave);
 export const RemoveIcon = makeIconWithSize(IconGgTrash);

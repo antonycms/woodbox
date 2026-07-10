@@ -238,6 +238,11 @@ export interface IStoreContext {
   testConnection(data: IConnectionCreate): Promise<boolean>;
   closeConnection(id: string): Promise<void>;
   getTableData(idConnection: string, params: IParamsGetTableData): Promise<IDataTable>;
+  getTableRowsCount(
+    idConnection: string,
+    params: Omit<IParamsGetTableData, 'page' | 'limit' | 'orderBy'>,
+  ): Promise<number>;
+  getQueryRowsCount(idConnection: string, sql: string): Promise<number>;
 
   getTableColumns(
     idConnection: string,
