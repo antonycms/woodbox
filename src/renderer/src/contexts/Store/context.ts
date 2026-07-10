@@ -173,7 +173,6 @@ export interface ITriggerInfo {
 }
 
 export interface IDataTable {
-  count: number;
   data: any[];
 }
 

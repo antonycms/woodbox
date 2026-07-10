@@ -398,14 +398,11 @@ export const getTableData = async (
   const adapter = getDialectAdapter(dialect);
   const query = adapter.queries;
 
-  const [countRaw, dataRaw] = await Promise.all([
-    instance.raw(query.getTotalRowsCountInTable({ table, schema, where })),
-    instance.raw(
-      query.selectWithOffset({ table, schema, actualPage: page, limit, where, orderBy }),
-    ),
-  ]);
+  const dataRaw = await instance.raw(
+    query.selectWithOffset({ table, schema, actualPage: page, limit, where, orderBy }),
+  );
 
-  return { count: adapter.getRows(countRaw), data: adapter.getRows(dataRaw) };
+  return { data: adapter.getRows(dataRaw) };
 };
 
 export const runSql = async (
