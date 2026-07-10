@@ -104,8 +104,19 @@
 
 .table_row.selected .table_column,
 .table_row.selected .table_row_number {
-  background-color: var(--rowSelectedBackgroundColor, #72a1ff59) !important;
   color: white !important;
+}
+
+.table_row.selected .table_column {
+  background-color: var(--rowSelectedBackgroundColor, #72a1ff59) !important;
+}
+
+.table_row.selected .table_row_number {
+  background-color: color-mix(
+    in srgb,
+    var(--rowSelectedBorderColor, #72a1ff) 42%,
+    var(--backgroundColorHeader)
+  ) !important;
 }
 
 .header.table_row .table_column {
