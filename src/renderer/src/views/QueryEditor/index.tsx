@@ -980,6 +980,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                 const isErrorResult = data.type === 'ERROR';
                 const isSelectResult =
                   !isErrorResult && (data.type === 'SELECT' || !!data.columns?.length);
+                const isDeleteResult = !isSelectResult && data.type === 'DELETE';
+                const isAlterResult = !isSelectResult && data.type === 'ALTER';
+                const isGenericResult =
+                  !isSelectResult && !['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type);
                 const isReadOnlyResult = data.type !== 'SELECT';
 
                 return (
@@ -1006,16 +1010,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                       />
                     )}
 
-                    {!isSelectResult && data.type === 'DELETE' && <TabContentDelete data={data} />}
-
-                    {!isSelectResult && data.type === 'ALTER' && <TabContentAlter data={data} />}
-
+                    {isDeleteResult && <TabContentDelete data={data} />}
+                    {isAlterResult && <TabContentAlter data={data} />}
                     {isErrorResult && <TabcontentError data={data} />}
-
-                    {!isSelectResult &&
-                      !['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type) && (
-                        <TabContentGeneric data={data} />
-                      )}
+                    {isGenericResult && <TabContentGeneric data={data} />}
                   </TabContent>
                 );
               })}
