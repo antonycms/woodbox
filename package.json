@@ -31,6 +31,7 @@
     "knex": "^3.1.0",
     "mysql2": "^3.22.5",
     "pg": "^8.14.1",
+    "react-freeze": "^1.0.4",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
