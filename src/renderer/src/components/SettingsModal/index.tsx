@@ -23,16 +23,20 @@ const menuItems: { id: SettingsMenu; label: string; description: string }[] = [
 
 export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps) => {
   const {
-    activeTheme: {
-      modal: colors,
-      __colors,
-    },
+    activeTheme: { modal: colors, __colors },
   } = useThemeContext();
 
   const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('import');
 
   return (
-    <Modal title="Configurações" width="920px" height="78vh" show={show} closeOutside onClose={onClose}>
+    <Modal
+      title="Configurações"
+      width="920px"
+      height="78vh"
+      show={show}
+      closeOutside
+      onClose={onClose}
+    >
       <div className={styles.layout}>
         <aside className={styles.menu}>
           {menuItems.map((item) => (
@@ -43,7 +47,8 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
               className={classes(styles.menuButton, activeMenu === item.id && styles.active)}
               style={{
                 color: activeMenu === item.id ? colors.saveButtonBackgroundColor : colors.color,
-                borderColor: activeMenu === item.id ? colors.saveButtonBackgroundColor : __colors.lightGray,
+                borderColor:
+                  activeMenu === item.id ? colors.saveButtonBackgroundColor : __colors.lightGray,
               }}
             >
               <strong>{item.label}</strong>

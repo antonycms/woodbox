@@ -17,6 +17,12 @@ import styles from './styles.module.css';
 const currentCustomThemeName = 'Personalizado atual';
 const defaultThemeName = 'default-theme';
 
+interface IAdvancedThemeField {
+  path: string;
+  label: string;
+  value: string;
+}
+
 const colorLabels = {
   purple: 'Roxo',
   green: 'Destaque',
@@ -31,6 +37,54 @@ const colorLabels = {
   darkLightDeep: 'Campo',
   backgroundContextMenu: 'Menu contextual',
   border: 'Borda',
+};
+
+const themeGroupLabels = {
+  welcome: 'Boas-vindas',
+  sideBar: 'Sidebar',
+  mainTab: 'Abas principais',
+  toast: 'Toasts',
+  contextMenu: 'Menu contextual',
+  editor: 'Editor SQL',
+  table: 'Tabela',
+  modal: 'Modal',
+  tableInfo: 'Informações da tabela',
+  queryEditor: 'Editor de query',
+};
+
+const themeAttributeLabels = {
+  color: 'Texto',
+  backgroundColor: 'Fundo',
+  fieldColor: 'Texto do campo',
+  fieldPlaceholderColor: 'Placeholder do campo',
+  fieldBackgroundColor: 'Fundo do campo',
+  fieldLabelColor: 'Label do campo',
+  borderColor: 'Borda',
+  ascentColor: 'Destaque',
+  saveButtonColor: 'Texto do botão salvar',
+  saveButtonBackgroundColor: 'Fundo do botão salvar',
+  cancelButtonColor: 'Texto do botão cancelar',
+  cancelButtonBackgroundColor: 'Fundo do botão cancelar',
+  testButtonColor: 'Texto do botão auxiliar',
+  testButtonBackgroundColor: 'Fundo do botão auxiliar',
+  lineNumberColor: 'Número da linha',
+  currentLineNumberColor: 'Número da linha ativa',
+  cursorColor: 'Cursor',
+  currentLineBackgroundColor: 'Linha ativa',
+  selectionColor: 'Seleção',
+  keywordColor: 'Palavra-chave',
+  identifierColor: 'Identificador',
+  numberColor: 'Número',
+  delimiterColor: 'Delimitador',
+  stringColor: 'Texto SQL',
+  colorHeader: 'Texto do cabeçalho',
+  backgroundColorHeader: 'Fundo do cabeçalho',
+  backgroundColorRowOdd: 'Fundo da linha ímpar',
+  colorRowOdd: 'Texto da linha ímpar',
+  backgroundColorRowEven: 'Fundo da linha par',
+  colorRowEven: 'Texto da linha par',
+  backgroundColorColumnEdited: 'Fundo da coluna editada',
+  colorColumnEdited: 'Texto da coluna editada',
 };
 
 const themeLabels = {
@@ -92,6 +146,75 @@ const cloneWithColor = (theme: ITheme<string>, colorName: string, colorValue: st
   return clonedTheme;
 };
 
+const cloneWithPathValue = (theme: ITheme<string>, path: string, value: string): ITheme => {
+  const clonedTheme = JSON.parse(JSON.stringify(theme));
+  const keys = path.split('.');
+  const lastKey = keys.pop();
+  let target = clonedTheme as Record<string, unknown>;
+
+  for (const key of keys) {
+    target = target[key] as Record<string, unknown>;
+  }
+
+  if (lastKey) {
+    target[lastKey] = value;
+  }
+
+  return clonedTheme;
+};
+
+const formatPathPart = (value: string) => {
+  return value
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (letter) => letter.toUpperCase())
+    .trim();
+};
+
+const getAdvancedThemeFields = (theme: ITheme<string>) => {
+  const groups = new Map<string, IAdvancedThemeField[]>();
+
+  const walk = (target: unknown, path: string[] = []) => {
+    if (!target || typeof target !== 'object') return;
+
+    const themePart = target as Record<string, unknown>;
+
+    for (const key in themePart) {
+      if (key === 'name' || key === '__colors') continue;
+
+      const value = themePart[key];
+      const nextPath = [...path, key];
+
+      if (value && typeof value === 'object') {
+        walk(value, nextPath);
+        continue;
+      }
+
+      if (typeof value !== 'string') continue;
+
+      const groupName = nextPath[0];
+      const groupFields = groups.get(groupName) || [];
+      const fieldName = nextPath[nextPath.length - 1];
+      const parentPath = nextPath.slice(1, -1).map(formatPathPart).join(' / ');
+      const label = themeAttributeLabels[fieldName] || formatPathPart(fieldName);
+
+      groupFields.push({
+        path: nextPath.join('.'),
+        label: parentPath ? `${parentPath} / ${label}` : label,
+        value,
+      });
+      groups.set(groupName, groupFields);
+    }
+  };
+
+  walk(theme);
+
+  return [...groups.entries()].map(([name, fields]) => ({
+    name,
+    label: themeGroupLabels[name] || formatPathPart(name),
+    fields,
+  }));
+};
+
 export const SettingsCustomizationPanel = React.memo(() => {
   const { activeTheme, availableThemes, addTheme, removeTheme, changeTheme } = useThemeContext();
   const { showToast } = useToast();
@@ -105,15 +228,17 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const [inputsVersion, setInputsVersion] = React.useState(0);
   const [showSaveNameInput, setShowSaveNameInput] = React.useState(false);
   const [themeToRemove, setThemeToRemove] = React.useState<string>();
+  const [advancedMode, setAdvancedMode] = React.useState(false);
 
-  const {
-    modal: colors,
-    __colors,
-  } = activeTheme;
+  const { modal: colors, __colors } = activeTheme;
 
   const colorEntries = React.useMemo(() => {
     return Object.entries(colorLabels).filter(([key]) => !!activeTheme.__colors?.[key]);
   }, [activeTheme.__colors]);
+
+  const advancedGroups = React.useMemo(() => {
+    return getAdvancedThemeFields(activeTheme);
+  }, [activeTheme]);
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
   const isBuiltinTheme = builtinThemeNames.includes(activeTheme.name);
@@ -136,26 +261,42 @@ export const SettingsCustomizationPanel = React.memo(() => {
     [changeTheme],
   );
 
-  const applyColorChange = useDebounce(
-    (colorName: string, colorValue: string) => {
-      const nextTheme = cloneWithColor(activeTheme, colorName, colorValue);
+  const applyColorChange = useDebounce((colorName: string, colorValue: string) => {
+    const nextTheme = cloneWithColor(activeTheme, colorName, colorValue);
 
-      addTheme(
-        {
-          ...nextTheme,
-          name: currentCustomThemeName,
-        },
-        { activate: true },
-      );
-    },
-    250,
-  );
+    addTheme(
+      {
+        ...nextTheme,
+        name: currentCustomThemeName,
+      },
+      { activate: true },
+    );
+  }, 250);
 
   const handleChangeColor = React.useCallback(
     (colorName: string, colorValue: string) => {
       applyColorChange(colorName, colorValue);
     },
     [applyColorChange],
+  );
+
+  const applyAdvancedColorChange = useDebounce((path: string, value: string) => {
+    const nextTheme = cloneWithPathValue(activeTheme, path, value);
+
+    addTheme(
+      {
+        ...nextTheme,
+        name: currentCustomThemeName,
+      },
+      { activate: true },
+    );
+  }, 250);
+
+  const handleChangeAdvancedColor = React.useCallback(
+    (path: string, value: string) => {
+      applyAdvancedColorChange(path, value);
+    },
+    [applyAdvancedColorChange],
   );
 
   const handleSaveAsTheme = React.useCallback(() => {
@@ -228,7 +369,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const confirmRemoveTheme = React.useCallback(() => {
     if (!themeToRemove) return;
 
-    const fallbackThemeName = themeToRemove === activeTheme.name ? defaultThemeName : activeTheme.name;
+    const fallbackThemeName =
+      themeToRemove === activeTheme.name ? defaultThemeName : activeTheme.name;
 
     removeTheme(themeToRemove, fallbackThemeName);
     baseThemeNameRef.current = fallbackThemeName;
@@ -355,29 +497,88 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={10} />
 
-        <div className={styles.colorsGrid}>
-          {colorEntries.map(([colorName, label]) => {
-            const value = activeTheme.__colors[colorName];
-            const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(value);
+        <div className={styles.modeHeader}>
+          <Text small color={colors.color}>
+            {advancedMode
+              ? 'Modo avançado: cores por área da interface.'
+              : 'Modo simples: paleta base.'}
+          </Text>
 
-            return (
-              <div key={colorName} className={styles.colorField}>
-                <Input
-                  key={`${inputsVersion}:${colorName}`}
-                  label={label}
-                  type={isNativeColor ? 'color' : 'text'}
-                  defaultValue={value}
-                  onChange={(event) => handleChangeColor(colorName, event.target.value)}
-                  color={colors.fieldColor}
-                  backgroundColor={colors.fieldBackgroundColor}
-                  placeholderColor={__colors.gray}
-                  xs={12}
-                />
-                <span style={{ color: __colors.gray }}>{colorName}</span>
-              </div>
-            );
-          })}
+          <Button
+            smallIcon
+            text
+            title={advancedMode ? 'Usar modo simples' : 'Usar modo avançado'}
+            onClick={() => setAdvancedMode((value) => !value)}
+            color={colors.testButtonBackgroundColor}
+          >
+            {advancedMode ? 'Simples' : 'Avançado'}
+          </Button>
         </div>
+
+        <Divider size={10} />
+
+        {!advancedMode && (
+          <div className={styles.colorsGrid}>
+            {colorEntries.map(([colorName, label]) => {
+              const value = activeTheme.__colors[colorName];
+              const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(value);
+
+              return (
+                <div key={colorName} className={styles.colorField}>
+                  <Input
+                    key={`${inputsVersion}:${colorName}`}
+                    label={label}
+                    type={isNativeColor ? 'color' : 'text'}
+                    defaultValue={value}
+                    onChange={(event) => handleChangeColor(colorName, event.target.value)}
+                    color={colors.fieldColor}
+                    backgroundColor={colors.fieldBackgroundColor}
+                    placeholderColor={__colors.gray}
+                    xs={12}
+                  />
+                  <span style={{ color: __colors.gray }}>{colorName}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {advancedMode && (
+          <div className={styles.advancedGroups}>
+            {advancedGroups.map((group) => (
+              <section key={group.name} className={styles.advancedGroup}>
+                <Text small bold color={colors.color} userSelect={false}>
+                  {group.label}
+                </Text>
+
+                <div className={styles.advancedGrid}>
+                  {group.fields.map((field) => {
+                    const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(field.value);
+
+                    return (
+                      <div key={field.path} className={styles.colorField}>
+                        <Input
+                          key={`${inputsVersion}:${field.path}`}
+                          label={field.label}
+                          type={isNativeColor ? 'color' : 'text'}
+                          defaultValue={field.value}
+                          onChange={(event) =>
+                            handleChangeAdvancedColor(field.path, event.target.value)
+                          }
+                          color={colors.fieldColor}
+                          backgroundColor={colors.fieldBackgroundColor}
+                          placeholderColor={__colors.gray}
+                          xs={12}
+                        />
+                        <span style={{ color: __colors.gray }}>{field.path}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
       </div>
 
       <div

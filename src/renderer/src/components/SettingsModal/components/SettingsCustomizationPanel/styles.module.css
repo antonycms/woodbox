@@ -47,9 +47,42 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
+.modeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
 .colorsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.advancedGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.advancedGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.025);
+}
+
+.advancedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
 }
 

@@ -36,7 +36,8 @@ export const SettingsImportPanel = React.memo(() => {
   const [loadingImport, setLoadingImport] = React.useState(false);
   const [preview, setPreview] = React.useState<IImportConnectionsPreview>();
   const [selectedItems, setSelectedItems] = React.useState<Set<string>>(new Set());
-  const [result, setResult] = React.useState<Awaited<ReturnType<typeof importConnectionsFromSource>>>();
+  const [result, setResult] =
+    React.useState<Awaited<ReturnType<typeof importConnectionsFromSource>>>();
 
   const selectedConnectionsCount = React.useMemo(() => selectedItems.size, [selectedItems]);
 
@@ -293,7 +294,8 @@ export const SettingsImportPanel = React.memo(() => {
               Projetos criados: {result.projectsCreated} | reutilizados: {result.projectsReused}
             </Text>
             <Text small color={colors.color}>
-              Conexões importadas: {result.connectionsImported} | ignoradas: {result.connectionsSkipped}
+              Conexões importadas: {result.connectionsImported} | ignoradas:{' '}
+              {result.connectionsSkipped}
             </Text>
             {!!result.unsupportedConnections.length && (
               <Text small color={__colors.orange}>

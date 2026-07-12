@@ -3,7 +3,13 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
-export const MenuBar = ({ onChange, value, items, footerItems, onFooterItemClick }: IMenuBarProps) => {
+export const MenuBar = ({
+  onChange,
+  value,
+  items,
+  footerItems,
+  onFooterItemClick,
+}: IMenuBarProps) => {
   const { activeTheme } = useThemeContext();
 
   const {
