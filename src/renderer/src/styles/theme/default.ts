@@ -8,11 +8,13 @@ const __colors = {
   greenDeep: '#54C59F',
   orange: '#ffca85',
   orangeDeep: '#E79E3F',
+  orangeTransparent: '#d2992233',
   greenTransparent: '#aafe661a',
   pink: '#f694ff',
   blue: '#82e2ff',
   red: '#ff6767',
   redDeep: '#E73C3C',
+  redTransparent: '#ff676733',
   white: '#edecee',
   gray: '#6d6d6d',
   lightGray: '#3838387f',
@@ -22,6 +24,11 @@ const __colors = {
   darkLightDeep: '#242329',
   backgroundContextMenu: '#1b1727',
   border: '#191622',
+  shadow: '#00000033',
+  shadowStrong: '#00000052',
+  overlay: '#00000080',
+  overlayStrong: '#0000007a',
+  focusOutline: '#d3d343',
   transparent: 'transparent',
 };
 
@@ -110,6 +117,9 @@ const defaultTheme: ITheme<Color> = {
     backgroundColorRowOdd: '__colors.darkLightDeep',
     backgroundColorColumnEdited: '__colors.orange',
     colorColumnEdited: '__colors.dark',
+    selectedColor: '__colors.white',
+    selectedBackgroundColor: '__colors.blueTransparent',
+    selectedBorderColor: '__colors.blue',
   },
 
   modal: {

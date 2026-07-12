@@ -16,7 +16,7 @@ body,
   font-family: Arial, Helvetica, sans-serif;
 
   background-color: var(--color-dark);
-  color: white;
+  color: inherit;
   font-size: 14px;
 }
 
@@ -55,7 +55,7 @@ input::-webkit-inner-spin-button {
 }
 ::-webkit-scrollbar-thumb {
   /*barra de rolagem*/
-  background-color: rgba(128, 128, 128, 0.616);
+  background-color: color-mix(in srgb, currentColor 38%, transparent);
   border-radius: 0px;
 }
 ::-webkit-scrollbar-track {
@@ -72,5 +72,5 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 button:focus-visible {
-  outline: 2px solid #d3d343;
+  outline: 2px solid currentColor;
 }

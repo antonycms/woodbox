@@ -57,6 +57,9 @@ interface Table<Colors> {
   backgroundColorColumnEdited: Colors;
   colorColumnEdited: Colors;
   backgroundColor: Colors;
+  selectedColor?: Colors;
+  selectedBackgroundColor?: Colors;
+  selectedBorderColor?: Colors;
 }
 
 interface Modal<Colors> {
