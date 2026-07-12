@@ -294,7 +294,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
       ascentColor: '__colors.green',
     },
     color: '__colors.white',
-    backgroundColor: '__colors.dark',
+    backgroundColor: '__colors.darkLightBar',
     fieldColor: '__colors.white',
     fieldPlaceholderColor: '__colors.gray',
     fieldBackgroundColor: '__colors.darkLightDeep',
@@ -303,7 +303,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
   },
   mainTab: {
     bar: {
-      backgroundColor: '__colors.dark',
+      backgroundColor: '__colors.darkLightBar',
       borderColor: '__colors.border',
     },
     color: '__colors.white',
@@ -332,12 +332,12 @@ const auraLightThemeOverrides: ThemeOverrides = {
   table: {
     borderColor: '__colors.border',
     colorHeader: '__colors.white',
-    backgroundColorHeader: '__colors.dark',
+    backgroundColorHeader: '__colors.darkLightBar',
     backgroundColor: '__colors.darkLightBar',
-    backgroundColorRowEven: '__colors.darkLightBar',
+    backgroundColorRowEven: '__colors.dark',
     colorRowEven: '__colors.white',
     colorRowOdd: '__colors.white',
-    backgroundColorRowOdd: '__colors.dark',
+    backgroundColorRowOdd: '__colors.darkLightBar',
     backgroundColorColumnEdited: '__colors.orange',
     colorColumnEdited: '__colors.darkLightBar',
     selectedColor: '__colors.white',
@@ -360,7 +360,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
   tableInfo: {
     tab: {
       bar: {
-        backgroundColor: '__colors.dark',
+        backgroundColor: '__colors.darkLightBar',
         borderColor: '__colors.border',
       },
       color: '__colors.white',
@@ -371,7 +371,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
     properties: {
       tab: {
         bar: {
-          backgroundColor: '__colors.dark',
+          backgroundColor: '__colors.darkLightBar',
           borderColor: '__colors.border',
         },
         color: '__colors.white',
@@ -404,7 +404,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
   queryEditor: {
     tab: {
       bar: {
-        backgroundColor: '__colors.dark',
+        backgroundColor: '__colors.darkLightBar',
         borderColor: '__colors.border',
       },
       color: '__colors.white',
@@ -429,7 +429,7 @@ const oneLightProThemeOverrides: ThemeOverrides = {
     ...auraLightThemeOverrides.sideBar,
     menuBar: {
       color: '__colors.white',
-      backgroundColor: '__colors.dark',
+      backgroundColor: '__colors.darkLightBar',
       ascentColor: '__colors.green',
     },
     backgroundColor: '__colors.darkLightBar',
@@ -440,14 +440,14 @@ const oneLightProThemeOverrides: ThemeOverrides = {
       backgroundColor: '__colors.darkLightBar',
       borderColor: '__colors.border',
     },
-    backgroundColor: '__colors.dark',
+    backgroundColor: '__colors.darkLightBar',
   },
   tableInfo: {
     ...auraLightThemeOverrides.tableInfo,
     properties: {
       ...auraLightThemeOverrides.tableInfo?.properties,
       bar: {
-        backgroundColor: '__colors.darkLightBar',
+        backgroundColor: '__colors.darkLightDeep',
         color: '__colors.white',
         borderColor: '__colors.border',
       },
@@ -515,7 +515,7 @@ const catppuccinLatteThemeOverrides: ThemeOverrides = {
     ...auraLightThemeOverrides.sideBar,
     menuBar: {
       color: '__colors.white',
-      backgroundColor: '__colors.dark',
+      backgroundColor: '__colors.darkLightBar',
       ascentColor: '__colors.green',
     },
     backgroundColor: '__colors.darkLightBar',
@@ -527,7 +527,7 @@ const catppuccinLatteThemeOverrides: ThemeOverrides = {
       backgroundColor: '__colors.darkLightBar',
       borderColor: '__colors.border',
     },
-    backgroundColor: '__colors.dark',
+    backgroundColor: '__colors.darkLightBar',
   },
   modal: {
     ...auraLightThemeOverrides.modal,
@@ -536,7 +536,7 @@ const catppuccinLatteThemeOverrides: ThemeOverrides = {
   table: {
     ...auraLightThemeOverrides.table,
     backgroundColorHeader: '__colors.darkLightBar',
-    backgroundColor: '__colors.dark',
+    backgroundColor: '__colors.darkLightBar',
     backgroundColorRowEven: '__colors.dark',
     backgroundColorRowOdd: '__colors.darkLightBar',
   },
