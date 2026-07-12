@@ -56,6 +56,7 @@ export const useRestoreTabsFromStorage = (
                 id_connection={id_connection}
                 schema={schema}
                 table={table}
+                appTabId={tab.id}
                 initialWhere={initialWhere}
                 filterLocked={filterLocked}
                 initialTab={initialTab}

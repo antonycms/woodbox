@@ -242,7 +242,12 @@ const ProjectsMenu = () => {
             table,
           },
           component: () => (
-            <TableInfo id_connection={id_connection} schema={schema} table={table} />
+            <TableInfo
+              id_connection={id_connection}
+              schema={schema}
+              table={table}
+              appTabId={tabId}
+            />
           ),
         });
       }
@@ -380,6 +385,7 @@ const ProjectsMenu = () => {
                   id_connection={id_connection}
                   schema={schema_name}
                   table=""
+                  appTabId={tabId}
                   mode="create"
                   draftTabId={tabId}
                 />

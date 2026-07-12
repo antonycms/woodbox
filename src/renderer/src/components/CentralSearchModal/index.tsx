@@ -102,7 +102,9 @@ export const CentralSearchModal = React.memo(() => {
           schema,
           table,
         },
-        component: () => <TableInfo id_connection={idConnection} schema={schema} table={table} />,
+        component: () => (
+          <TableInfo id_connection={idConnection} schema={schema} table={table} appTabId={tabId} />
+        ),
       });
     },
     [addTab, getTab, setActiveTabId],

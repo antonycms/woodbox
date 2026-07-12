@@ -39,6 +39,7 @@ import {
 } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { prepareQueryVariables } from '../../utils/queryVariables';
 import styles from './styles.module.css';
 
@@ -58,6 +59,13 @@ interface ITabContentSelectProps {
 
 type PreviewTab = 'value' | 'reference' | 'selection';
 
+type OpenTableWithFilterParams = {
+  idConnection: string;
+  schema: string;
+  table: string;
+  initialWhere: string;
+};
+
 export const TabContentSelect = (props: ITabContentSelectProps) => {
   const {
     id_connection,
@@ -72,7 +80,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   } = props;
 
   const { activeTheme } = useThemeContext();
-  const { addTab } = useAppTabContext();
+  const { addTab, getTab, setActiveTabId } = useAppTabContext();
   const { getTableRestrictions, getQueryRowsCount, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
   const dialect = React.useMemo(
@@ -490,39 +498,61 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setContextMenuTable({ data, position: { x: event.clientX, y: event.clientY } });
   };
 
+  const openTableDataTabWithFilter = React.useCallback(
+    (params: OpenTableWithFilterParams) => {
+      const { idConnection, schema, table, initialWhere } = params;
+      const tabId = `${idConnection}_${schema}_${table}`;
+      const existingTab = getTab(tabId);
+
+      if (existingTab?.unsaved) {
+        setActiveTabId(tabId);
+        emitConfirmOpenTableWithFilter({ ...params, tabId });
+        return;
+      }
+
+      addTab({
+        id: tabId,
+        replaceId: existingTab?.id,
+        groupId: existingTab?.groupId,
+        title: `${schema ? `${schema}.` : ''}${table}`,
+        data: {
+          type: 'table-info',
+          id_connection: idConnection,
+          schema,
+          table,
+          initialWhere,
+          initialTab: 'tabData',
+        },
+        component: () => (
+          <TableInfoWithContext
+            id_connection={idConnection}
+            schema={schema}
+            table={table}
+            appTabId={tabId}
+            initialWhere={initialWhere}
+            initialTab="tabData"
+          />
+        ),
+      });
+
+      if (existingTab) setActiveTabId(tabId);
+    },
+    [addTab, getTab, setActiveTabId],
+  );
+
   const onCellLinkClick = (attribute: string, value: any) => {
     const ref = tabFkMap.get(attribute);
 
     if (!ref || value === null || value === undefined) return;
 
     const escapedValue = String(value).replace(/'/g, "''");
-    const initialWhere = `"${ref.reference_column_name}" = '${escapedValue}'`;
+    const initialWhere = `${dialect.quoteIdent(ref.reference_column_name)} = '${escapedValue}'`;
 
-    const tabTitle = `${ref.reference_table_schema ? `${ref.reference_table_schema}.` : ''}${
-      ref.reference_table_name
-    } [${ref.reference_column_name}=${value}]`;
-
-    addTab({
-      title: tabTitle,
-      data: {
-        type: 'table-info',
-        id_connection,
-        schema: ref.reference_table_schema,
-        table: ref.reference_table_name,
-        initialWhere,
-        filterLocked: true,
-        initialTab: 'tabData',
-      },
-      component: () => (
-        <TableInfoWithContext
-          id_connection={id_connection}
-          schema={ref.reference_table_schema}
-          table={ref.reference_table_name}
-          initialWhere={initialWhere}
-          filterLocked
-          initialTab="tabData"
-        />
-      ),
+    openTableDataTabWithFilter({
+      idConnection: id_connection,
+      schema: ref.reference_table_schema,
+      table: ref.reference_table_name,
+      initialWhere,
     });
   };
 
@@ -819,6 +849,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           },
         ]}
       />
+
     </div>
   );
 };

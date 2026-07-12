@@ -37,6 +37,7 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
                 id_connection={id_connection}
                 schema={tableSchema}
                 table={tableMatch.table_name}
+                appTabId={tabId}
               />
             ),
           });

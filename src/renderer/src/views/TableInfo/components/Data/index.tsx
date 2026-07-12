@@ -56,6 +56,7 @@ interface IDataProps extends ITableInfoProps {
     filterValue: string,
   ) => void;
   onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
+  onPendingRowsChangesChange?: (hasPendingChanges: boolean) => void;
 }
 
 type PreviewTab = 'value' | 'reference' | 'selection';
@@ -66,10 +67,12 @@ const Data = ({
   id_connection,
   schema,
   table,
+  appTabId,
   initialWhere,
   filterLocked,
   onOpenTable,
   onRegisterRefresh,
+  onPendingRowsChangesChange,
 }: IDataProps) => {
   const {
     activeTheme: {
@@ -273,6 +276,14 @@ const Data = ({
         columns.filter((column) => column.column_default).map((column) => column.column_name),
       ),
     [columns],
+  );
+
+  const hasPendingRowsChanges = React.useMemo(
+    () =>
+      [...newRows.values()].some((row) => Object.keys(row).length) ||
+      !!editedFieldsRows.size ||
+      !!droppedRows.size,
+    [newRows, editedFieldsRows, droppedRows],
   );
 
   const handleEditNewRow = React.useCallback(
@@ -786,6 +797,12 @@ const Data = ({
   React.useEffect(() => {
     onRegisterRefresh?.(handleRefresh);
   }, [onRegisterRefresh, handleRefresh]);
+
+  React.useEffect(() => {
+    if (!appTabId) return;
+
+    onPendingRowsChangesChange?.(hasPendingRowsChanges);
+  }, [appTabId, hasPendingRowsChanges, onPendingRowsChangesChange]);
 
   React.useEffect(() => {
     if (columns.length === 0) {

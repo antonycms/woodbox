@@ -85,6 +85,7 @@ export const ModalRenameSchema = React.memo(
                   id_connection={idConnection}
                   schema={name}
                   table={tabData.table}
+                  appTabId={newTabId}
                   initialWhere={tabData.initialWhere}
                   filterLocked={tabData.filterLocked}
                   initialTab={tabData.initialTab}
