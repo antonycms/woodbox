@@ -36,6 +36,7 @@ interface ITableAnalysisViewProps<Row = any> {
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
+  onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
 
@@ -155,6 +156,7 @@ const TableAnalysisView = ({
   onStartCellDrag,
   onMoveCellDrag,
   onCellLinkClick,
+  onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
   const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
@@ -216,6 +218,8 @@ const TableAnalysisView = ({
               const linkTitle =
                 cellLinkClickMode === 'single'
                   ? 'Clique para abrir linha referenciada'
+                  : onCellLinkPreviewClick
+                  ? 'Clique para visualizar referência; Ctrl+click para abrir linha referenciada'
                   : 'Ctrl+click para abrir linha referenciada';
 
               if (isEditing) {
@@ -254,7 +258,10 @@ const TableAnalysisView = ({
                       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
                       title={linkTitle}
                       onClick={(e) => {
-                        if (cellLinkClickMode === 'ctrl' && !e.ctrlKey) return;
+                        if (cellLinkClickMode === 'ctrl' && !e.ctrlKey) {
+                          onCellLinkPreviewClick?.(attribute, value);
+                          return;
+                        }
 
                         e.preventDefault();
                         e.stopPropagation();

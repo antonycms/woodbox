@@ -42,6 +42,7 @@ interface ITableDefaultViewProps<Row = any> {
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onSelectColumn?(colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
+  onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
 
@@ -73,6 +74,7 @@ const TableDefaultView = <Row,>({
   onMoveCellDrag,
   onSelectColumn,
   onCellLinkClick,
+  onCellLinkPreviewClick,
   cellLinkClickMode,
 }: ITableDefaultViewProps<Row>) => {
   const [sortContextMenu, setSortContextMenu] = React.useState<{
@@ -183,6 +185,7 @@ const TableDefaultView = <Row,>({
                   dataAutocomplete={column.dataAutocomplete}
                   isLink={column.isLink}
                   onFkCellClick={onCellLinkClick}
+                  onFkCellPreviewClick={onCellLinkPreviewClick}
                   linkClickMode={cellLinkClickMode}
                   isSelectedCell={selectedCells?.has(cellKey(indexRow, columnIndex))}
                   onSelectCell={onSelectCell}

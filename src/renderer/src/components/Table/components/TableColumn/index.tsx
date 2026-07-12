@@ -37,6 +37,7 @@ interface ITableColumnProps {
   type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
   dataAutocomplete?: string[];
   onFkCellClick?(name: string, value: any): void;
+  onFkCellPreviewClick?(name: string, value: any): void;
   linkClickMode?: 'ctrl' | 'single';
   isSelectedCell?: boolean;
   onSelectCell?(rowIndex: number, colIndex: number): void;
@@ -113,6 +114,7 @@ const TableColumn = ({
   type,
   dataAutocomplete,
   onFkCellClick,
+  onFkCellPreviewClick,
   linkClickMode = 'ctrl',
   isSelectedCell,
   onSelectCell,
@@ -124,6 +126,8 @@ const TableColumn = ({
   const linkTitle =
     linkClickMode === 'single'
       ? 'Clique para abrir linha referenciada'
+      : onFkCellPreviewClick
+      ? 'Clique para visualizar referência; Ctrl+click para abrir linha referenciada'
       : 'Ctrl+click para abrir linha referenciada';
 
   const className = (() => {
@@ -182,7 +186,10 @@ const TableColumn = ({
       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
       title={linkTitle}
       onClick={(e: React.MouseEvent) => {
-        if (linkClickMode === 'ctrl' && !e.ctrlKey) return;
+        if (linkClickMode === 'ctrl' && !e.ctrlKey) {
+          onFkCellPreviewClick?.(name, value);
+          return;
+        }
 
         e.preventDefault();
         e.stopPropagation();

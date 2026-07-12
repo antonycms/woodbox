@@ -54,6 +54,7 @@ interface ITableProps<Row = any> {
   onSelectRow?(selectedRows: Row[]): void;
   onSelectCellData?(data: ITableSelectedCellData<Row>): void;
   onCellLinkClick?(attribute: string, value: any): void;
+  onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
 
@@ -84,6 +85,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onSelectRow,
     onSelectCellData,
     onCellLinkClick,
+    onCellLinkPreviewClick,
     cellLinkClickMode = 'ctrl',
   } = props;
 
@@ -1180,6 +1182,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onStartCellDrag={handleStartAnalysisCellDrag}
           onMoveCellDrag={handleMoveAnalysisCellDrag}
           onCellLinkClick={onCellLinkClick}
+          onCellLinkPreviewClick={onCellLinkPreviewClick}
           cellLinkClickMode={cellLinkClickMode}
         />
       ) : (
@@ -1209,6 +1212,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onMoveCellDrag={handleMoveCellDrag}
           onSelectColumn={handleSelectColumn}
           onCellLinkClick={onCellLinkClick}
+          onCellLinkPreviewClick={onCellLinkPreviewClick}
           cellLinkClickMode={cellLinkClickMode}
         />
       )}

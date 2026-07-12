@@ -226,6 +226,17 @@ const Data = ({
     [fkMap, id_connection, onOpenTable],
   );
 
+  const handleFkPreviewClick = React.useCallback(
+    (attribute: string, value: any) => {
+      const ref = fkMap.get(attribute);
+      if (!ref || value === null || value === undefined) return;
+
+      setShowValuePreview(true);
+      setActivePreviewTab('reference');
+    },
+    [fkMap],
+  );
+
   const isLoading = loadingTableInfo.columns || loading;
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate);
@@ -834,6 +845,7 @@ const Data = ({
             editedRows={editedFieldsRows}
             newRows={newRows}
             onCellLinkClick={handleFkCellClick}
+            onCellLinkPreviewClick={handleFkPreviewClick}
             onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
           />

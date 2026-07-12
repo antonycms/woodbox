@@ -526,6 +526,17 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     });
   };
 
+  const handleFkPreviewClick = React.useCallback(
+    (attribute: string, value: any) => {
+      const ref = tabFkMap.get(attribute);
+      if (!ref || value === null || value === undefined) return;
+
+      setShowValuePreview(true);
+      setActivePreviewTab('reference');
+    },
+    [tabFkMap],
+  );
+
   React.useEffect(() => {
     setEditedFieldsRows(new Map());
     setNewRows(new Map());
@@ -561,6 +572,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onSelectRow={setSelectedRows}
             onSelectCellData={setSelectedCell}
             onCellLinkClick={onCellLinkClick}
+            onCellLinkPreviewClick={handleFkPreviewClick}
             newRows={newRows}
             onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
