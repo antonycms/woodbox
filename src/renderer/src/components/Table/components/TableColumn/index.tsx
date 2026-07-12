@@ -37,6 +37,7 @@ interface ITableColumnProps {
   type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
   dataAutocomplete?: string[];
   onFkCellClick?(name: string, value: any): void;
+  linkClickMode?: 'ctrl' | 'single';
   isSelectedCell?: boolean;
   onSelectCell?(rowIndex: number, colIndex: number): void;
   onStartCellDrag?(
@@ -112,6 +113,7 @@ const TableColumn = ({
   type,
   dataAutocomplete,
   onFkCellClick,
+  linkClickMode = 'ctrl',
   isSelectedCell,
   onSelectCell,
   onStartCellDrag,
@@ -119,6 +121,10 @@ const TableColumn = ({
 }: ITableColumnProps) => {
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
+  const linkTitle =
+    linkClickMode === 'single'
+      ? 'Clique para abrir linha referenciada'
+      : 'Ctrl+click para abrir linha referenciada';
 
   const className = (() => {
     return classes(
@@ -174,13 +180,13 @@ const TableColumn = ({
   const content = isEditing ? null : isLinkClickable ? (
     <span
       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
-      title="Ctrl+click para abrir linha referenciada"
+      title={linkTitle}
       onClick={(e: React.MouseEvent) => {
-        if (e.ctrlKey) {
-          e.preventDefault();
-          e.stopPropagation();
-          onFkCellClick?.(name, value);
-        }
+        if (linkClickMode === 'ctrl' && !e.ctrlKey) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        onFkCellClick?.(name, value);
       }}
     >
       {serializedValue}

@@ -54,6 +54,7 @@ interface ITableProps<Row = any> {
   onSelectRow?(selectedRows: Row[]): void;
   onSelectCellData?(data: ITableSelectedCellData<Row>): void;
   onCellLinkClick?(attribute: string, value: any): void;
+  cellLinkClickMode?: 'ctrl' | 'single';
 }
 
 const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
@@ -83,6 +84,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onSelectRow,
     onSelectCellData,
     onCellLinkClick,
+    cellLinkClickMode = 'ctrl',
   } = props;
 
   const {
@@ -1178,6 +1180,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onStartCellDrag={handleStartAnalysisCellDrag}
           onMoveCellDrag={handleMoveAnalysisCellDrag}
           onCellLinkClick={onCellLinkClick}
+          cellLinkClickMode={cellLinkClickMode}
         />
       ) : (
         <TableDefaultView
@@ -1206,6 +1209,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           onMoveCellDrag={handleMoveCellDrag}
           onSelectColumn={handleSelectColumn}
           onCellLinkClick={onCellLinkClick}
+          cellLinkClickMode={cellLinkClickMode}
         />
       )}
     </div>

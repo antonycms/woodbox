@@ -36,6 +36,7 @@ interface ITableAnalysisViewProps<Row = any> {
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onCellLinkClick?(attribute: string, value: any): void;
+  cellLinkClickMode?: 'ctrl' | 'single';
 }
 
 const serializeTableValue = (value: any, type?: IColumn['type']) => {
@@ -154,6 +155,7 @@ const TableAnalysisView = ({
   onStartCellDrag,
   onMoveCellDrag,
   onCellLinkClick,
+  cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
   const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
 
@@ -211,6 +213,10 @@ const TableAnalysisView = ({
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
               const isLinkClickable = column.isLink && value !== null && value !== undefined;
+              const linkTitle =
+                cellLinkClickMode === 'single'
+                  ? 'Clique para abrir linha referenciada'
+                  : 'Ctrl+click para abrir linha referenciada';
 
               if (isEditing) {
                 return (
@@ -246,13 +252,13 @@ const TableAnalysisView = ({
                   {isLinkClickable ? (
                     <span
                       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
-                      title="Ctrl+click para abrir linha referenciada"
+                      title={linkTitle}
                       onClick={(e) => {
-                        if (e.ctrlKey) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onCellLinkClick?.(attribute, value);
-                        }
+                        if (cellLinkClickMode === 'ctrl' && !e.ctrlKey) return;
+
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onCellLinkClick?.(attribute, value);
                       }}
                     >
                       {serializedValue}
