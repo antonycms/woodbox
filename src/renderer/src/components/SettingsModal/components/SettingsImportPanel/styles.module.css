@@ -6,9 +6,9 @@
   max-height: 300px;
   overflow: auto;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--settings-import-border-color);
   border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--settings-import-background-color);
 }
 
 .resultBox {
@@ -27,7 +27,7 @@
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  color: white;
+  color: var(--settings-import-color);
   font-size: 12px;
   user-select: none;
 }
@@ -42,7 +42,7 @@
 }
 
 .mutedText {
-  color: #6d6d6d;
+  color: var(--settings-import-muted-color);
 }
 
 .connectionsPreview {
@@ -60,6 +60,6 @@
 }
 
 .connectionInfo small {
-  color: #6d6d6d;
+  color: var(--settings-import-muted-color);
   line-height: 1.4;
 }

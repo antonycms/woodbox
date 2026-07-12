@@ -29,9 +29,8 @@ input::-webkit-input-placeholder {
   max-height: 200px;
   height: var(--height);
   border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 4px 5px 0 rgba(0, 0, 0, 0.14),
-    0 1px 10px 0 rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--autocomplete-border-color);
+  box-shadow: 0 8px 24px var(--autocomplete-shadow-color);
 }
 
 .row {
@@ -46,15 +45,15 @@ input::-webkit-input-placeholder {
 }
 
 .row:hover {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--autocomplete-hover-background-color);
 }
 
 .row.selected {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--autocomplete-selected-background-color);
 }
 
 .row.active {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--autocomplete-active-background-color);
 }
 
 .emptyMessage {

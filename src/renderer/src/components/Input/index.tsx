@@ -2,6 +2,7 @@ import React from 'react';
 import { generateHash } from '@renderer/utils/string';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
@@ -46,21 +47,31 @@ export const Input = (props: IInputProps) => {
     id: externalId,
     ...gridSystem
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
   const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;
+  const wrapperStyle = React.useMemo(
+    () =>
+      ({
+        '--input-required-color': __colors.red,
+      }) as React.CSSProperties,
+    [__colors.red],
+  );
 
   const inputContainerStyle = React.useMemo(() => ({ backgroundColor }), [backgroundColor]);
 
   const inputStyle = React.useMemo(() => {
     return { ...toCssProperties({ placeholderColor }), maxWidth, color };
-  }, []);
+  }, [color, maxWidth, placeholderColor]);
 
   return (
     <Column {...gridSystem}>
-      <div className={classes(required && styles.isRequired)}>
+      <div className={classes(required && styles.isRequired)} style={wrapperStyle}>
         {!!label && (
-          <Label color={labelColor} htmlFor={id}>
+          <Label color={labelColor || color} htmlFor={id}>
             {label}
           </Label>
         )}

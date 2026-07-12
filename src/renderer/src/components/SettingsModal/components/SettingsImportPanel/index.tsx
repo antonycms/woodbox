@@ -40,6 +40,16 @@ export const SettingsImportPanel = React.memo(() => {
     React.useState<Awaited<ReturnType<typeof importConnectionsFromSource>>>();
 
   const selectedConnectionsCount = React.useMemo(() => selectedItems.size, [selectedItems]);
+  const themedPanelStyle = React.useMemo(
+    () =>
+      ({
+        '--settings-import-border-color': __colors.lightGray,
+        '--settings-import-background-color': __colors.darkLightBar,
+        '--settings-import-color': colors.color,
+        '--settings-import-muted-color': __colors.gray,
+      }) as React.CSSProperties,
+    [__colors.darkLightBar, __colors.gray, __colors.lightGray, colors.color],
+  );
 
   const selectPreviewItems = React.useCallback((importPreview: IImportConnectionsPreview) => {
     const nextSelectedItems = new Set<string>();
@@ -233,7 +243,7 @@ export const SettingsImportPanel = React.memo(() => {
         <>
           <Divider size={12} />
 
-          <div className={styles.previewBox}>
+          <div className={styles.previewBox} style={themedPanelStyle}>
             {preview.projects.map((project) => {
               const projectSelectedCount = project.connections.filter((connection) =>
                 selectedItems.has(makeSelectionKey(project.sourceName, connection.sourceId)),
@@ -289,7 +299,7 @@ export const SettingsImportPanel = React.memo(() => {
         <>
           <Divider size={12} />
 
-          <div className={styles.resultBox}>
+          <div className={styles.resultBox} style={themedPanelStyle}>
             <Text small color={colors.color}>
               Projetos criados: {result.projectsCreated} | reutilizados: {result.projectsReused}
             </Text>

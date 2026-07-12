@@ -3,6 +3,7 @@ import { SpinnerLoading } from '@renderer/components/Loaders';
 import { Input } from '@renderer/components/Input';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { IGridSystem } from '@renderer/components/Grid';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { generateHash } from '@renderer/utils/string';
@@ -45,6 +46,9 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     renderOptionActions,
     ...gridSystem
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
 
   const itemSize = 41;
 
@@ -148,6 +152,28 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   };
 
   const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
+  const dropdownStyle = React.useMemo(
+    () =>
+      ({
+        backgroundColor,
+        color,
+        ...toCssProperties({ height: `${dropdownHeight}px` }),
+        '--autocomplete-hover-background-color': __colors.darkLight,
+        '--autocomplete-selected-background-color': __colors.darkLightDeep,
+        '--autocomplete-active-background-color': __colors.darkLightDeep,
+        '--autocomplete-border-color': __colors.lightGray,
+        '--autocomplete-shadow-color': __colors.shadow,
+      }) as React.CSSProperties,
+    [
+      __colors.darkLight,
+      __colors.darkLightDeep,
+      __colors.lightGray,
+      __colors.shadow,
+      backgroundColor,
+      color,
+      dropdownHeight,
+    ],
+  );
 
   // value ref
   React.useImperativeHandle(
@@ -237,7 +263,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
       {!!(isDropdownOpen && dataFiltered.length) && (
         <div
           className={styles.dropdownContainer}
-          style={{ backgroundColor, ...toCssProperties({ height: `${dropdownHeight}px` }) }}
+          style={dropdownStyle}
         >
           <VirtualizeList
             itemSize={itemSize}

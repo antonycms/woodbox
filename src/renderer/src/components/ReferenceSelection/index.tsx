@@ -185,7 +185,15 @@ const ReferenceSelection = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
+      <div
+        className={styles.filterBar}
+        style={
+          {
+            backgroundColor: theme.bar.backgroundColor,
+            '--reference-border-color': theme.bar.borderColor,
+          } as React.CSSProperties
+        }
+      >
         <ColumnFilterInput
           inputClassName={styles.filterInput}
           placeholder="Filtrar seleção (ex: nome like '%maria%')"

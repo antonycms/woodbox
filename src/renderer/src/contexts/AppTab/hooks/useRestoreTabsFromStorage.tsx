@@ -1,6 +1,7 @@
 import React from 'react';
 import { IAppTab, IAppTabGroup } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
@@ -14,6 +15,9 @@ export const useRestoreTabsFromStorage = (
 ) => {
   const { loadConnectionInfo } = useStoreContext();
   const { showToast } = useToast();
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
 
   const [hasRestoredTabs, setHasRestoredTabs] = React.useState(false);
 
@@ -93,7 +97,7 @@ export const useRestoreTabsFromStorage = (
           storedGroupsById.get(groupId) || {
             id: groupId,
             title: 'Grupo',
-            color: '#8ab4f8',
+            color: __colors.blue,
           },
       );
       const visibleTabs = restoredTabs.filter((tab) => {

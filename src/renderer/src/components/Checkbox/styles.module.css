@@ -1,6 +1,6 @@
 .button {
-  color: var(--color-white);
-  background-color: var(--color-purple);
+  color: var(--checkbox-color);
+  background-color: var(--checkbox-background-color);
 
   border: 0;
   border-radius: 4px;
@@ -30,7 +30,7 @@
 }
 
 .button.text:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--checkbox-hover-background-color);
 }
 
 .button.smallIcon {

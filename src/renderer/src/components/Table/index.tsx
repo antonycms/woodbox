@@ -144,7 +144,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
       __row_index: index,
       __key_row: keyRow,
       __is_new_row: true,
-      __style: { backgroundColor: '#61ffca', color: '#1c1b22' },
+      __style: {
+        backgroundColor: theme.backgroundColorColumnEdited,
+        color: theme.colorColumnEdited,
+      },
     }));
 
     const serializedRows = rows.map((row, index) => {
@@ -159,7 +162,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     });
 
     return [...serializedNewRows, ...serializedRows];
-  }, [rows, newRows]);
+  }, [rows, newRows, theme.backgroundColorColumnEdited, theme.colorColumnEdited]);
 
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;

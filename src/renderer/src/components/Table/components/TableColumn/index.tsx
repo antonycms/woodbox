@@ -49,46 +49,6 @@ interface ITableColumnProps {
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
 }
 
-const getInheritedSelectionStyle = (
-  backgroundColor?: React.CSSProperties['backgroundColor'],
-): React.CSSProperties => {
-  if (typeof backgroundColor !== 'string') return {};
-
-  const color = backgroundColor.trim();
-
-  const hex = color.match(/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
-  if (hex) {
-    const value = hex[1];
-    const rgb =
-      value.length <= 4
-        ? value
-            .slice(0, 3)
-            .split('')
-            .map((char) => char + char)
-            .join('')
-        : value.slice(0, 6);
-
-    return {
-      '--rowSelectedBackgroundColor': `#${rgb}66`,
-      '--rowSelectedBorderColor': `#${rgb}`,
-    } as React.CSSProperties;
-  }
-
-  const rgba = color.match(
-    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*[\d.]+)?\s*\)$/i,
-  );
-  if (rgba) {
-    const [, r, g, b] = rgba;
-
-    return {
-      '--rowSelectedBackgroundColor': `rgba(${r}, ${g}, ${b}, 0.4)`,
-      '--rowSelectedBorderColor': `rgb(${r}, ${g}, ${b})`,
-    } as React.CSSProperties;
-  }
-
-  return {};
-};
-
 const TableColumn = ({
   isEditing,
   isEdited,
@@ -166,7 +126,6 @@ const TableColumn = ({
   const style = React.useMemo(() => {
     return {
       ...styleExternal,
-      ...getInheritedSelectionStyle(styleExternal.backgroundColor),
       '--rowIndex': indexRow,
       '--columnIndex': columnIndex,
       '--rowHeight': `${rowHeight}px`,

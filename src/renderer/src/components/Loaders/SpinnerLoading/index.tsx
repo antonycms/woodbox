@@ -1,4 +1,5 @@
 import React from 'react';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -20,8 +21,12 @@ const SpinnerLoading = (props: IPropsSpinner) => {
     thickness = 3,
     center,
     padding = '3px',
-    background: backgroundColor = 'rgba(0, 0, 0, 0.1)',
+    background,
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
+  const backgroundColor = background || __colors.darkLight;
 
   return (
     <div

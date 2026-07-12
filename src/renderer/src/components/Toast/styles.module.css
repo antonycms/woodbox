@@ -11,7 +11,7 @@
   flex-direction: column;
 
   background: var(--toast-background);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 12px 32px var(--toast-shadow-color);
   animation: toast-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -34,7 +34,7 @@
   max-width: 32px;
   max-height: 32px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--toast-icon-background);
   display: flex;
   align-items: center;
   justify-content: center;

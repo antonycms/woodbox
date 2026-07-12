@@ -27,6 +27,14 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
   } = useThemeContext();
 
   const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('customization');
+  const layoutStyle = React.useMemo(
+    () =>
+      ({
+        '--settings-menu-background-color': __colors.darkLightBar,
+        '--settings-menu-hover-background-color': __colors.darkLightDeep,
+      }) as React.CSSProperties,
+    [__colors.darkLightBar, __colors.darkLightDeep],
+  );
 
   return (
     <Modal
@@ -37,7 +45,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
       closeOutside
       onClose={onClose}
     >
-      <div className={styles.layout}>
+      <div className={styles.layout} style={layoutStyle}>
         <aside className={styles.menu}>
           {menuItems.map((item) => (
             <button

@@ -240,7 +240,15 @@ const ReferencePreview = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.toolbar} style={{ backgroundColor: theme.bar.backgroundColor }}>
+      <div
+        className={styles.toolbar}
+        style={
+          {
+            backgroundColor: theme.bar.backgroundColor,
+            '--reference-border-color': theme.bar.borderColor,
+          } as React.CSSProperties
+        }
+      >
         <Button
           text
           smallIcon

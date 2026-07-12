@@ -3,10 +3,15 @@ import { IItemTreeView } from '@renderer/components/TreeView';
 import styles from './styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import { SpinnerLoading } from '@renderer/components/Loaders';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import IconItemTreeView from '../IconItemTreeView';
 
 const ItemTreeView = (props: IItemTreeViewProps) => {
-  const { icon, loading, color = 'white', iconColor = 'white', childs, openedItemsId = [] } = props;
+  const { icon, loading, childs, openedItemsId = [] } = props;
+  const { activeTheme } = useThemeContext();
+  const color = props.color || activeTheme.sideBar.color;
+  const iconColor = props.iconColor || color;
+  const focusBackgroundColor = activeTheme.__colors.darkLightDeep;
 
   const isOpen = openedItemsId.some((id) => id === props.id);
 
@@ -19,9 +24,14 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
         id={`item_treeview_id_${props.id}`}
         tabIndex={0}
         className={classes(styles.containerItemInfo)}
+        style={
+          {
+            '--tree-item-focus-background-color': focusBackgroundColor,
+          } as React.CSSProperties
+        }
       >
         {loading ? (
-          <SpinnerLoading thickness={2} size={10} color="white" />
+          <SpinnerLoading thickness={2} size={10} color={iconColor} />
         ) : childs ? (
           <IconItemTreeView
             no_margin
@@ -65,6 +75,7 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
               {...child}
               key={child.id}
               color={color}
+              iconColor={iconColor}
               onSwitch={props.onSwitch}
               openedItemsId={openedItemsId}
             />

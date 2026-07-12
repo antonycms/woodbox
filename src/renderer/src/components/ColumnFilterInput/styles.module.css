@@ -20,7 +20,7 @@
   border-radius: 6px;
   background: var(--color-dark);
   color: var(--color-white);
-  box-shadow: 0 8px 24px #00000066;
+  box-shadow: 0 8px 24px var(--column-filter-shadow-color);
 }
 
 .option {
@@ -44,5 +44,5 @@
 
 .option:hover,
 .optionActive {
-  background: #ffffff14;
+  background: var(--column-filter-hover-background-color);
 }

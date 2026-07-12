@@ -104,19 +104,15 @@
 
 .table_row.selected .table_column,
 .table_row.selected .table_row_number {
-  color: white !important;
+  color: var(--selectedColor) !important;
 }
 
 .table_row.selected .table_column {
-  background-color: var(--rowSelectedBackgroundColor, #72a1ff59) !important;
+  background-color: var(--selectedBackgroundColor) !important;
 }
 
 .table_row.selected .table_row_number {
-  background-color: color-mix(
-    in srgb,
-    var(--rowSelectedBorderColor, #72a1ff) 42%,
-    var(--backgroundColorHeader)
-  ) !important;
+  background-color: var(--selectedBackgroundColor) !important;
 }
 
 .header.table_row .table_column {
@@ -135,15 +131,15 @@
 }
 
 .table_column.cell_selected {
-  outline: 2px solid var(--rowSelectedBorderColor, #72a1ff) !important;
+  outline: 2px solid var(--selectedBorderColor) !important;
   outline-offset: -2px;
 }
 
 .analysis_value.cell_selected {
-  outline: 2px solid #72a1ff !important;
+  outline: 2px solid var(--selectedBorderColor) !important;
   outline-offset: -2px;
-  background-color: #72a1ff59;
-  color: white;
+  background-color: var(--selectedBackgroundColor);
+  color: var(--selectedColor);
 }
 
 .analysis_container {
@@ -210,7 +206,7 @@
 }
 
 input.analysis_value {
-  outline: 2px solid #72a1ff;
+  outline: 2px solid var(--selectedBorderColor);
   outline-offset: -2px;
   cursor: text;
   user-select: text;

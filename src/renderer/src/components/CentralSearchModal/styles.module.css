@@ -2,19 +2,19 @@
   position: fixed;
   inset: 0;
   z-index: 110;
-  background: rgba(0, 0, 0, 0.48);
+  background: var(--overlayColor);
 }
 
 .container {
   width: min(720px, calc(100vw - 48px));
   max-height: min(640px, calc(100vh - 80px));
   margin: 8vh auto 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--borderColor);
   border-radius: 10px;
   overflow: hidden;
   color: var(--color);
   background: var(--backgroundColor);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 80px var(--shadowColor);
   animation: enter 120ms ease-out;
 }
 
@@ -23,15 +23,15 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--borderColor);
+  background: var(--subtleBackgroundColor);
 }
 
 .searchInput {
   flex: 1;
   height: 38px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--borderColor);
   border-radius: 6px;
   color: var(--fieldColor);
   background: var(--fieldBackgroundColor);
@@ -42,10 +42,10 @@
 .shortcut,
 .badge {
   flex: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--mutedColor);
+  background: var(--subtleBackgroundColor);
   font-size: 11px;
   line-height: 1;
 }
@@ -62,7 +62,7 @@
 .sectionTitle {
   height: 33px;
   padding: 12px 16px 6px;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--mutedColor);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -86,7 +86,7 @@
 }
 
 .itemActive {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hoverBackgroundColor);
 }
 
 .item:active {
@@ -100,7 +100,7 @@
   flex: none;
   width: 24px;
   height: 24px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--mutedColor);
 }
 
 .itemBody {
@@ -120,12 +120,12 @@
 
 .itemTitle {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.94);
+  color: var(--color);
 }
 
 .connection {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--mutedColor);
 }
 
 .badge {
@@ -134,7 +134,7 @@
 
 .empty {
   padding: 28px 12px 32px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--mutedColor);
   font-size: 13px;
   text-align: center;
 }

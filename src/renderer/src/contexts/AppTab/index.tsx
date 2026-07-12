@@ -8,18 +8,8 @@ import AppTabContext, {
 } from './context';
 import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
 import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
+import { useThemeContext } from '@renderer/contexts/Theme';
 export type * from './context';
-
-const TAB_GROUP_COLORS = [
-  '#8ab4f8',
-  '#f28b82',
-  '#fdd663',
-  '#81c995',
-  '#c58af9',
-  '#78d9ec',
-  '#f6aea9',
-  '#fbbc04',
-];
 
 const moveTabInList = (
   tabs: IAppTab[],
@@ -49,6 +39,9 @@ const cleanupEmptyGroups = (groups: IAppTabGroup[], tabs: IAppTab[]) => {
 };
 
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [tabGroups, setTabGroups] = React.useState<IAppTabGroup[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
@@ -211,10 +204,20 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
   const createTabGroup = React.useCallback(
     (tabId: string) => {
+      const tabGroupColors = [
+        __colors.blue,
+        __colors.red,
+        __colors.orange,
+        __colors.green,
+        __colors.purple,
+        __colors.pink,
+        __colors.orangeDeep,
+        __colors.greenDeep,
+      ];
       const group: IAppTabGroup = {
         id: generateHash(),
         title: 'Grupo',
-        color: TAB_GROUP_COLORS[tabGroups.length % TAB_GROUP_COLORS.length],
+        color: tabGroupColors[tabGroups.length % tabGroupColors.length],
       };
 
       setTabGroups((prev) => [...prev, group]);
@@ -224,7 +227,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
       return group.id;
     },
-    [tabGroups.length],
+    [__colors, tabGroups.length],
   );
 
   const addTabToGroup = React.useCallback(

@@ -6,6 +6,7 @@ import {
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
 import Tab from '../Tab';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from '../../styles.module.css';
 
 export const TAB_DRAG_DATA_TYPE = 'application/x-woodbox-tab-id';
@@ -42,6 +43,9 @@ const TabsBar = (props: ITabsBarProps) => {
     height = '30px',
     width = '100%',
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const handledGroupEditorRequestRef = React.useRef<IGroupEditorRequest>(null);
@@ -153,10 +157,17 @@ const TabsBar = (props: ITabsBarProps) => {
       colorBorder: borderColor,
       backgroundColorBar,
       backgroundColor,
+      colorWhite: color,
+      tabHoverBackgroundColor: __colors.darkLightDeep,
+      tabDraggingBackgroundColor: __colors.darkLightDeep,
+      tabEditorShadowColor: __colors.shadowStrong,
     });
     return { ...cssProperties, height: vertical ? undefined : height };
   }, [
+    __colors.darkLightDeep,
+    __colors.shadowStrong,
     tabs.length,
+    color,
     borderColor,
     backgroundColorBar,
     backgroundColor,
@@ -459,8 +470,21 @@ const TabGroupHeader = (props: ITabGroupHeaderProps) => {
 
 const TabGroupEditor = (props: ITabGroupEditorProps) => {
   const { context, onUpdateGroup, onUngroup, onCloseGroup } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
   const { group, position } = context;
   const [title, setTitle] = React.useState(group.title);
+  const tabGroupColors = [
+    __colors.blue,
+    __colors.red,
+    __colors.orange,
+    __colors.green,
+    __colors.purple,
+    __colors.pink,
+    __colors.orangeDeep,
+    __colors.greenDeep,
+  ];
 
   React.useEffect(() => {
     setTitle(group.title);
@@ -497,7 +521,7 @@ const TabGroupEditor = (props: ITabGroupEditorProps) => {
       />
 
       <div className={styles.tabGroupColors}>
-        {TAB_GROUP_COLORS.map((color) => (
+        {tabGroupColors.map((color) => (
           <button
             key={color}
             type="button"
@@ -530,17 +554,6 @@ const TabGroupEditor = (props: ITabGroupEditorProps) => {
     </div>
   );
 };
-
-const TAB_GROUP_COLORS = [
-  '#8ab4f8',
-  '#f28b82',
-  '#fdd663',
-  '#81c995',
-  '#c58af9',
-  '#78d9ec',
-  '#f6aea9',
-  '#fbbc04',
-];
 
 export interface ITab {
   idTab: string;

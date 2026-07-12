@@ -23,13 +23,17 @@ export const Modal = React.memo((props: IModalProps) => {
 
   const {
     activeTheme: {
+      __colors,
       modal: { backgroundColor, color },
     },
   } = useThemeContext();
 
   const styleOverlay = React.useMemo(() => {
-    return { display: justHide && !show ? 'none' : 'unset' };
-  }, [show, justHide]);
+    return {
+      display: justHide && !show ? 'none' : 'unset',
+      '--modal-overlay-color': __colors.overlay,
+    } as React.CSSProperties;
+  }, [__colors.overlay, show, justHide]);
 
   const styleContainer = React.useMemo(() => {
     return { backgroundColor, height, maxWidth: width };

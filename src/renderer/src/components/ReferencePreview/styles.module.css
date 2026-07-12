@@ -14,7 +14,7 @@
   flex-shrink: 0;
   height: 30px;
   padding: 3px 6px;
-  border-bottom: 1px solid #ffffff1c;
+  border-bottom: 1px solid var(--reference-border-color);
 }
 
 .title {

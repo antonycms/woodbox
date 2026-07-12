@@ -23,6 +23,7 @@ export const CentralSearchModal = React.memo(() => {
   const { scripts, connections, connectionsInfo } = useStoreContext();
   const {
     activeTheme: {
+      __colors,
       modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
     },
   } = useThemeContext();
@@ -448,8 +449,30 @@ export const CentralSearchModal = React.memo(() => {
   }, [highlightedIndex, isOpen, visibleRows]);
 
   const style = React.useMemo(() => {
-    return toCssProperties({ backgroundColor, color, fieldBackgroundColor, fieldColor });
-  }, [backgroundColor, color, fieldBackgroundColor, fieldColor]);
+    return toCssProperties({
+      backgroundColor,
+      color,
+      fieldBackgroundColor,
+      fieldColor,
+      overlayColor: __colors.overlayStrong,
+      borderColor: __colors.lightGray,
+      shadowColor: __colors.shadowStrong,
+      subtleBackgroundColor: __colors.darkLight,
+      hoverBackgroundColor: __colors.darkLightDeep,
+      mutedColor: __colors.gray,
+    });
+  }, [
+    __colors.darkLight,
+    __colors.darkLightDeep,
+    __colors.gray,
+    __colors.lightGray,
+    __colors.overlayStrong,
+    __colors.shadowStrong,
+    backgroundColor,
+    color,
+    fieldBackgroundColor,
+    fieldColor,
+  ]);
 
   if (!isOpen || !constants.containerElement) return null;
 

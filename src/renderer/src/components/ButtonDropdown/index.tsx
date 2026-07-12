@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, IButtonProps } from '@renderer/components/Button';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
 
 export interface IButtonDropdownOption {
@@ -24,6 +25,9 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
     dropdownColor = props.color,
     ...buttonProps
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -51,7 +55,12 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
       {open && (
         <div
           className={`${styles.dropdown} ${direction === 'up' ? styles.up : styles.down}`}
-          style={{ backgroundColor: dropdownBackground }}
+          style={
+            {
+              backgroundColor: dropdownBackground,
+              '--dropdown-option-hover-background-color': __colors.darkLightDeep,
+            } as React.CSSProperties
+          }
         >
           {options.map((option) => (
             <button

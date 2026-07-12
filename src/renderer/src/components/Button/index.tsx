@@ -1,6 +1,7 @@
 import React from 'react';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { SpinnerLoading } from '@renderer/components/Loaders';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -24,6 +25,9 @@ export const Button = React.memo((props: IButtonProps) => {
     type = 'button',
     ...gridProps
   } = props;
+  const {
+    activeTheme: { __colors },
+  } = useThemeContext();
 
   const classesButton = classes(
     styles.button,
@@ -35,8 +39,14 @@ export const Button = React.memo((props: IButtonProps) => {
   const isDisabled = !!(loading || disabled);
 
   const style = React.useMemo(() => {
-    return { color, backgroundColor, width, justifyContent };
-  }, [color, backgroundColor, width, justifyContent]);
+    return {
+      color,
+      backgroundColor,
+      width,
+      justifyContent,
+      '--button-hover-background-color': __colors.darkLightDeep,
+    } as React.CSSProperties;
+  }, [__colors.darkLightDeep, color, backgroundColor, width, justifyContent]);
 
   return (
     <Column {...gridProps}>

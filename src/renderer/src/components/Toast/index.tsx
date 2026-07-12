@@ -14,7 +14,7 @@ export const Toast = ({ close, title, description, type, delay }: IToastProps) =
   const [remainingTime, setRemainingTime] = React.useState(delay);
 
   const {
-    activeTheme: { toast: colors },
+    activeTheme: { __colors, toast: colors },
   } = useThemeContext();
 
   const typeConfig: { [key in ToastType]: ITypeConfig } = {
@@ -69,6 +69,8 @@ export const Toast = ({ close, title, description, type, delay }: IToastProps) =
     '--toast-background': background,
     '--toast-color': color,
     '--toast-progress': `${progress}%`,
+    '--toast-shadow-color': __colors.shadowStrong,
+    '--toast-icon-background': __colors.darkLight,
   } as React.CSSProperties;
 
   return (

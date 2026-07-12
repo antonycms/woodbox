@@ -9,7 +9,7 @@
 .isRequired label::after {
   content: '*';
   margin-left: 1px;
-  color: #ff6767;
+  color: var(--input-required-color);
   font-size: 14px;
 }
 

@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   padding: 4px 10px;
-  border-bottom: 1px solid #191622;
+  border-bottom: 1px solid var(--reference-border-color);
   flex-shrink: 0;
 }
 

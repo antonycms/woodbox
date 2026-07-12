@@ -93,6 +93,11 @@
   cursor: pointer;
 }
 
+.tab p,
+.tab svg {
+  color: var(--colorWhite);
+}
+
 .tab.grouped {
   background-color: color-mix(in srgb, var(--tabGroupColor) 16%, transparent);
 }
@@ -177,7 +182,7 @@
 }
 
 .tabCloseBtn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--tabHoverBackgroundColor);
   border-radius: 4px;
 }
 
@@ -198,7 +203,7 @@
   transform: translateX(-50%) translateY(-50%); /* adicionamos o valor translateY(-50%) */
   border-radius: 50%;
   padding: 4px;
-  background-color: var(--color-white);
+  background-color: var(--colorWhite);
 }
 
 .tabCloseBtn.unsaved svg {
@@ -230,7 +235,7 @@
 }
 
 .tabIsDragging {
-  background-color: #3d3b50;
+  background-color: var(--tabDraggingBackgroundColor);
 }
 
 .ignoreTabDrag {
@@ -247,7 +252,7 @@
   border: 0;
   border-right: var(--borderTab);
   background-color: color-mix(in srgb, var(--tabGroupColor) 24%, transparent);
-  color: var(--color-white);
+  color: var(--colorWhite);
   user-select: none;
   cursor: pointer;
 }
@@ -283,7 +288,7 @@
   border: 1px solid var(--colorBorder);
   border-radius: 8px;
   background-color: var(--backgroundColorBar);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+  box-shadow: 0 12px 32px var(--tabEditorShadowColor);
 }
 
 .tabGroupNameInput {
@@ -293,7 +298,7 @@
   border-radius: 6px;
   outline: 0;
   background-color: var(--backgroundColor);
-  color: var(--color-white);
+  color: var(--colorWhite);
 }
 
 .tabGroupNameInput:focus {
@@ -316,7 +321,7 @@
 }
 
 .selectedTabGroupColor {
-  border-color: var(--color-white);
+  border-color: var(--colorWhite);
 }
 
 .tabGroupAction {
@@ -325,11 +330,11 @@
   border: 0;
   border-radius: 4px;
   background-color: transparent;
-  color: var(--color-white);
+  color: var(--colorWhite);
   text-align: left;
   cursor: pointer;
 }
 
 .tabGroupAction:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: var(--tabHoverBackgroundColor);
 }

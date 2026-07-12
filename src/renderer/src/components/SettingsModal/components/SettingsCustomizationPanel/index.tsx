@@ -79,6 +79,10 @@ const themeLabels = {
   'one-dark-pro': 'One Dark Pro',
   'github-dark': 'GitHub Dark',
   'catppuccin-mocha': 'Catppuccin Mocha',
+  'woodbox-aura-light': 'Aura Light',
+  'one-light-pro': 'One Light Pro',
+  'github-light': 'GitHub Light',
+  'catppuccin-latte': 'Catppuccin Latte',
 };
 
 const getThemeLabel = (theme: ITheme) => themeLabels[theme.name] || theme.name;
@@ -183,6 +187,14 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const advancedGroups = React.useMemo(() => {
     return getAdvancedThemeFields(activeTheme);
   }, [activeTheme]);
+  const panelStyle = React.useMemo(
+    () =>
+      ({
+        '--settings-option-hover-background-color': __colors.darkLightDeep,
+        '--settings-floating-shadow-color': __colors.shadow,
+      }) as React.CSSProperties,
+    [__colors.darkLightDeep, __colors.shadow],
+  );
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
   const isBuiltinTheme = builtinThemeNames.includes(activeTheme.name);
@@ -373,7 +385,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
   }, [showSaveNameInput]);
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} style={panelStyle}>
       <div className={styles.scrollContent}>
         <Text bold color={colors.color} userSelect={false}>
           Personalização
@@ -422,7 +434,15 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={10} />
 
-        <div className={styles.advancedGroups}>
+        <div
+          className={styles.advancedGroups}
+          style={{
+            '--theme-border-color': __colors.lightGray,
+            '--theme-panel-background-color': __colors.darkLightBar,
+            '--theme-hover-background-color': __colors.darkLightDeep,
+            '--theme-muted-color': __colors.gray,
+          } as React.CSSProperties}
+        >
           {advancedGroups.map((group) => (
             <details key={group.name} className={styles.advancedGroup}>
               <summary className={styles.advancedGroupHeader}>
