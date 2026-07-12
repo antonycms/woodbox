@@ -23,22 +23,6 @@ interface IAdvancedThemeField {
   value: string;
 }
 
-const colorLabels = {
-  purple: 'Roxo',
-  green: 'Destaque',
-  orange: 'Alerta',
-  pink: 'Rosa',
-  blue: 'Azul',
-  red: 'Erro',
-  white: 'Texto claro',
-  gray: 'Texto secundário',
-  dark: 'Fundo principal',
-  darkLightBar: 'Barra',
-  darkLightDeep: 'Campo',
-  backgroundContextMenu: 'Menu contextual',
-  border: 'Borda',
-};
-
 const themeGroupLabels = {
   welcome: 'Boas-vindas',
   sideBar: 'Sidebar',
@@ -109,41 +93,6 @@ const normalizeFileName = (value: string) => {
     .toLowerCase()
     .replace(/[^a-z0-9-_]+/g, '-')
     .replace(/^-+|-+$/g, '');
-};
-
-const cloneWithColor = (theme: ITheme<string>, colorName: string, colorValue: string): ITheme => {
-  const previousColor = theme.__colors?.[colorName];
-  const clonedTheme = JSON.parse(JSON.stringify(theme));
-
-  clonedTheme.__colors = {
-    ...(clonedTheme.__colors || {}),
-    [colorName]: colorValue,
-  };
-
-  const replaceThemeColor = (target: unknown) => {
-    if (!target || typeof target !== 'object') return;
-
-    const themePart = target as Record<string, unknown>;
-
-    for (const key in themePart) {
-      const currentValue = themePart[key];
-
-      if (key === '__colors') continue;
-
-      if (currentValue && typeof currentValue === 'object') {
-        replaceThemeColor(currentValue);
-        continue;
-      }
-
-      if (currentValue === previousColor) {
-        themePart[key] = colorValue;
-      }
-    }
-  };
-
-  replaceThemeColor(clonedTheme);
-
-  return clonedTheme;
 };
 
 const cloneWithPathValue = (theme: ITheme<string>, path: string, value: string): ITheme => {
@@ -228,13 +177,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const [inputsVersion, setInputsVersion] = React.useState(0);
   const [showSaveNameInput, setShowSaveNameInput] = React.useState(false);
   const [themeToRemove, setThemeToRemove] = React.useState<string>();
-  const [advancedMode, setAdvancedMode] = React.useState(false);
 
   const { modal: colors, __colors } = activeTheme;
-
-  const colorEntries = React.useMemo(() => {
-    return Object.entries(colorLabels).filter(([key]) => !!activeTheme.__colors?.[key]);
-  }, [activeTheme.__colors]);
 
   const advancedGroups = React.useMemo(() => {
     return getAdvancedThemeFields(activeTheme);
@@ -259,25 +203,6 @@ export const SettingsCustomizationPanel = React.memo(() => {
       setInputsVersion((value) => value + 1);
     },
     [changeTheme],
-  );
-
-  const applyColorChange = useDebounce((colorName: string, colorValue: string) => {
-    const nextTheme = cloneWithColor(activeTheme, colorName, colorValue);
-
-    addTheme(
-      {
-        ...nextTheme,
-        name: currentCustomThemeName,
-      },
-      { activate: true },
-    );
-  }, 250);
-
-  const handleChangeColor = React.useCallback(
-    (colorName: string, colorValue: string) => {
-      applyColorChange(colorName, colorValue);
-    },
-    [applyColorChange],
   );
 
   const applyAdvancedColorChange = useDebounce((path: string, value: string) => {
@@ -491,94 +416,48 @@ export const SettingsCustomizationPanel = React.memo(() => {
         <Divider size={12} />
 
         <Text small color={__colors.gray}>
-          Ao alterar uma cor, o Woodbox cria o tema “{currentCustomThemeName}”. Use o botão de
-          salvar para guardar uma versão com nome próprio.
+          Ao alterar uma cor, será criado um tema “{currentCustomThemeName}”. Você pode definir
+          um nome ao salvar.
         </Text>
 
         <Divider size={10} />
 
-        <div className={styles.modeHeader}>
-          <Text small color={colors.color}>
-            {advancedMode
-              ? 'Modo avançado: cores por área da interface.'
-              : 'Modo simples: paleta base.'}
-          </Text>
-
-          <Button
-            smallIcon
-            text
-            title={advancedMode ? 'Usar modo simples' : 'Usar modo avançado'}
-            onClick={() => setAdvancedMode((value) => !value)}
-            color={colors.testButtonBackgroundColor}
-          >
-            {advancedMode ? 'Simples' : 'Avançado'}
-          </Button>
-        </div>
-
-        <Divider size={10} />
-
-        {!advancedMode && (
-          <div className={styles.colorsGrid}>
-            {colorEntries.map(([colorName, label]) => {
-              const value = activeTheme.__colors[colorName];
-              const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(value);
-
-              return (
-                <div key={colorName} className={styles.colorField}>
-                  <Input
-                    key={`${inputsVersion}:${colorName}`}
-                    label={label}
-                    type={isNativeColor ? 'color' : 'text'}
-                    defaultValue={value}
-                    onChange={(event) => handleChangeColor(colorName, event.target.value)}
-                    color={colors.fieldColor}
-                    backgroundColor={colors.fieldBackgroundColor}
-                    placeholderColor={__colors.gray}
-                    xs={12}
-                  />
-                  <span style={{ color: __colors.gray }}>{colorName}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {advancedMode && (
-          <div className={styles.advancedGroups}>
-            {advancedGroups.map((group) => (
-              <section key={group.name} className={styles.advancedGroup}>
-                <Text small bold color={colors.color} userSelect={false}>
+        <div className={styles.advancedGroups}>
+          {advancedGroups.map((group) => (
+            <details key={group.name} className={styles.advancedGroup}>
+              <summary className={styles.advancedGroupHeader}>
+                <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
                   {group.label}
-                </Text>
+                </span>
+              </summary>
 
-                <div className={styles.advancedGrid}>
-                  {group.fields.map((field) => {
-                    const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(field.value);
+              <div className={styles.advancedGrid}>
+                {group.fields.map((field) => {
+                  const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(field.value);
 
-                    return (
-                      <div key={field.path} className={styles.colorField}>
-                        <Input
-                          key={`${inputsVersion}:${field.path}`}
-                          label={field.label}
-                          type={isNativeColor ? 'color' : 'text'}
-                          defaultValue={field.value}
-                          onChange={(event) =>
-                            handleChangeAdvancedColor(field.path, event.target.value)
-                          }
-                          color={colors.fieldColor}
-                          backgroundColor={colors.fieldBackgroundColor}
-                          placeholderColor={__colors.gray}
-                          xs={12}
-                        />
-                        <span style={{ color: __colors.gray }}>{field.path}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+                  return (
+                    <div key={field.path} className={styles.colorField}>
+                      <Input
+                        key={`${inputsVersion}:${field.path}`}
+                        label={field.label}
+                        type={isNativeColor ? 'color' : 'text'}
+                        defaultValue={field.value}
+                        onChange={(event) =>
+                          handleChangeAdvancedColor(field.path, event.target.value)
+                        }
+                        color={colors.fieldColor}
+                        backgroundColor={colors.fieldBackgroundColor}
+                        placeholderColor={__colors.gray}
+                        xs={12}
+                      />
+                      <span style={{ color: __colors.gray }}>{field.path}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          ))}
+        </div>
       </div>
 
       <div

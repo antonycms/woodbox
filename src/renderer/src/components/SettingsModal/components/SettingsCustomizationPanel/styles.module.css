@@ -47,23 +47,6 @@
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.modeHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-.colorsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 10px;
-}
-
 .advancedGroups {
   display: flex;
   flex-direction: column;
@@ -71,19 +54,62 @@
 }
 
 .advancedGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.025);
+}
+
+.advancedGroupHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 34px 10px 10px;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 160ms ease;
+}
+
+.advancedGroupHeader::-webkit-details-marker {
+  display: none;
+}
+
+.advancedGroupHeader:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.advancedGroupHeader::after {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 1px solid rgba(255, 255, 255, 0.55);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+  content: '';
+  transform: translateY(-50%) rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+.advancedGroup[open] .advancedGroupHeader::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.advancedGroupTitle {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .advancedGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
+  padding: 0 10px 10px;
 }
 
 .colorField {
