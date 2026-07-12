@@ -7,9 +7,14 @@ export interface IThemeProviderProps {
 
 export interface IThemeContext {
   activeTheme: ITheme<string>;
-  availableThemes: ITheme[];
-  addTheme(theme: ITheme): void;
+  availableThemes: ITheme<string>[];
+  addTheme(theme: ITheme, options?: IAddThemeOptions): void;
+  removeTheme(themeName: string, fallbackThemeName?: string): void;
   changeTheme(themeName: string): void;
+}
+
+export interface IAddThemeOptions {
+  activate?: boolean;
 }
 
 export default createContext<IThemeContext>({} as IThemeContext);

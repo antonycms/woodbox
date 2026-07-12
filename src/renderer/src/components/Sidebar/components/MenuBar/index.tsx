@@ -3,7 +3,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
-export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
+export const MenuBar = ({ onChange, value, items, footerItems, onFooterItemClick }: IMenuBarProps) => {
   const { activeTheme } = useThemeContext();
 
   const {
@@ -26,6 +26,21 @@ export const MenuBar = ({ onChange, value, items }: IMenuBarProps) => {
           <item.icon />
         </button>
       ))}
+
+      {!!footerItems?.length && (
+        <div className={styles.footer}>
+          {footerItems.map((item) => (
+            <button
+              key={item.id}
+              title={item.title}
+              onClick={() => onFooterItemClick?.(item.id)}
+              className={classes(styles.categoryBarButton, item.id === value && styles.active)}
+            >
+              <item.icon />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -42,6 +57,8 @@ export interface IMenuBarProps {
    */
   automaticSelectFirst?: boolean;
   items: IItemBar[];
-  value: string;
+  footerItems?: IItemBar[];
+  value?: string;
   onChange?: (idItem: string) => void;
+  onFooterItemClick?: (idItem: string) => void;
 }

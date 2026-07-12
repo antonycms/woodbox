@@ -2,6 +2,7 @@ import React from 'react';
 
 import useStorage from '@renderer/hooks/useStorage';
 import defaultTheme, { applyMonacoTheme, serializeTheme, ITheme } from '@renderer/styles/theme';
+import { builtinThemes } from '@renderer/styles/theme/builtin';
 import { useCssProperties } from '@renderer/hooks/useCssProperties';
 import ThemeContext, { type IThemeProviderProps } from './context';
 export type * from './context';
@@ -11,20 +12,45 @@ const ThemeProvider = ({ children }: IThemeProviderProps) => {
     '@theme:active',
     defaultTheme.name,
   );
-  const [availableThemes, setAvailableThemes] = useStorage<ITheme<string>[]>('@theme:available', [
-    defaultTheme,
-  ]);
+  const [storedThemes, setStoredThemes] = useStorage<ITheme<string>[]>('@theme:available', []);
+
+  const availableThemes = React.useMemo(() => {
+    const builtinNames = new Set(builtinThemes.map((theme) => theme.name));
+    const customThemes = storedThemes.filter((theme) => !builtinNames.has(theme.name));
+
+    return [...builtinThemes, ...customThemes];
+  }, [storedThemes]);
 
   const activeTheme = React.useMemo(() => {
-    return availableThemes.find((theme) => theme.name === activeThemeName);
+    return availableThemes.find((theme) => theme.name === activeThemeName) || defaultTheme;
   }, [availableThemes, activeThemeName]);
 
-  const addTheme = React.useCallback((theme: ITheme) => {
-    setAvailableThemes((prevState) => [
-      ...prevState.filter((t) => t.name !== theme.name),
-      serializeTheme(theme),
-    ]);
-  }, []);
+  const addTheme = React.useCallback(
+    (theme: ITheme, options?: { activate?: boolean }) => {
+      const serializedTheme = serializeTheme(theme);
+
+      setStoredThemes((prevState) => [
+        ...prevState.filter((t) => t.name !== serializedTheme.name),
+        serializedTheme,
+      ]);
+
+      if (options?.activate) {
+        setActiveThemeName(serializedTheme.name);
+      }
+    },
+    [setActiveThemeName, setStoredThemes],
+  );
+
+  const removeTheme = React.useCallback(
+    (themeName: string, fallbackThemeName = defaultTheme.name) => {
+      setStoredThemes((prevState) => prevState.filter((theme) => theme.name !== themeName));
+
+      if (activeThemeName === themeName) {
+        setActiveThemeName(fallbackThemeName);
+      }
+    },
+    [activeThemeName, setActiveThemeName, setStoredThemes],
+  );
 
   const changeTheme = React.useCallback(
     (themeName: string) => {
@@ -44,7 +70,9 @@ const ThemeProvider = ({ children }: IThemeProviderProps) => {
   }, [activeTheme]);
 
   return (
-    <ThemeContext.Provider value={{ activeTheme, availableThemes, addTheme, changeTheme }}>
+    <ThemeContext.Provider
+      value={{ activeTheme, availableThemes, addTheme, removeTheme, changeTheme }}
+    >
       {children}
     </ThemeContext.Provider>
   );

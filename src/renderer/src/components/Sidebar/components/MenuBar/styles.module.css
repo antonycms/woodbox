@@ -35,3 +35,7 @@
   flex-direction: column;
   background-color: var(--backgroundColorMenuBar);
 }
+
+.footer {
+  margin-top: auto;
+}

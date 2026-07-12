@@ -2,17 +2,19 @@ import React from 'react';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { IconDatabase } from '@renderer/styles/icons';
+import { IconDatabase, IconSettings } from '@renderer/styles/icons';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
+import { SettingsModal } from '@renderer/components/SettingsModal';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
 import styles from './styles.module.css';
 
-type Menu = 'projects' | 'settings';
+type Menu = 'projects';
 
 export const Sidebar = React.memo(() => {
-  const [selectedMenu, setSelectedMenu] = React.useState<Menu>('projects');
+  const [selectedMenu, setSelectedMenu] = React.useState<Menu | null>('projects');
+  const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [width, _setWidth] = useStorage('sidebar_width', 300);
   const setWidth = useDebounce(_setWidth);
 
@@ -44,6 +46,8 @@ export const Sidebar = React.memo(() => {
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
         items={[{ id: 'projects', title: 'Projetos', icon: () => <IconDatabase /> }]}
+        footerItems={[{ id: 'settings', title: 'Configurações', icon: () => <IconSettings /> }]}
+        onFooterItemClick={() => setShowSettingsModal(true)}
       />
 
       <ResizableContainer
@@ -57,6 +61,8 @@ export const Sidebar = React.memo(() => {
           <ProjectsMenu />
         </SidebarActiveContent>
       </ResizableContainer>
+
+      <SettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
     </div>
   );
 });

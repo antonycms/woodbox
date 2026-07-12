@@ -1,0 +1,54 @@
+.layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+  height: 100%;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.menuButton {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  text-align: left;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid;
+  border-radius: 7px;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.menuButton:hover,
+.menuButton.active {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.menuButton:active {
+  transform: scale(0.98);
+}
+
+.menuButton strong {
+  font-size: 12px;
+}
+
+.menuButton span {
+  font-size: 11px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}

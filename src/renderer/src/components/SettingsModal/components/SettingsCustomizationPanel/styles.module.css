@@ -1,0 +1,65 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.scrollContent {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.floatingActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid;
+  border-radius: 8px;
+  box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.optionRemoveButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.optionRemoveButton:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.colorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.colorField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.colorField span {
+  font-size: 11px;
+}
