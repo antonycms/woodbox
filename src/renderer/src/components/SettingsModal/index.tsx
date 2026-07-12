@@ -10,14 +10,14 @@ type SettingsMenu = 'import' | 'customization';
 
 const menuItems: { id: SettingsMenu; label: string; description: string }[] = [
   {
-    id: 'import',
-    label: 'Importação',
-    description: 'Origens externas',
-  },
-  {
     id: 'customization',
     label: 'Personalização',
     description: 'Temas e cores',
+  },
+  {
+    id: 'import',
+    label: 'Importação',
+    description: 'Origens externas',
   },
 ];
 
@@ -26,7 +26,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
     activeTheme: { modal: colors, __colors },
   } = useThemeContext();
 
-  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('import');
+  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('customization');
 
   return (
     <Modal
