@@ -8,7 +8,7 @@
   padding: 10px;
   margin-bottom: 8px;
   border-radius: 4px;
-  background: #00000024;
+  background: var(--server-output-background-color);
 }
 
 .outputItem pre {

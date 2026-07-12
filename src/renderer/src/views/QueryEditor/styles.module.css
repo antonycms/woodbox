@@ -49,17 +49,17 @@
   flex-direction: column;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #e73c3c66;
-  border-left: 4px solid #e73c3c;
+  border: 1px solid var(--errorBorderColor);
+  border-left: 4px solid var(--errorAccentColor);
   border-radius: 6px;
-  background: #e73c3c14;
+  background: var(--errorBackgroundColor);
 }
 
 .resultHeader {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ff6767;
+  color: var(--errorAccentColor);
 }
 
 .resultHeader p {
@@ -69,7 +69,7 @@
 .resultMessage {
   padding: 10px;
   border-radius: 4px;
-  background: #00000024;
+  background: var(--errorMessageBackgroundColor);
 }
 
 .resultMessage p {

@@ -224,11 +224,11 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           ...row,
           __style: {
             ...(row as any).__style,
-            backgroundColor: '#d2992233',
+            backgroundColor: activeTheme.__colors.orangeTransparent,
           },
         };
       }),
-    [data.rows, editedFieldsRows],
+    [activeTheme.__colors.orangeTransparent, data.rows, editedFieldsRows],
   );
 
   const handleEditRow = React.useCallback(
@@ -585,7 +585,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   }, [data.loading, data.date_run, data.queryExecutionId]);
 
   return (
-    <div className={styles.container} onKeyDown={handleKeyDown}>
+    <div
+      className={styles.container}
+      onKeyDown={handleKeyDown}
+      style={
+        {
+          '--preview-border-color': activeTheme.queryEditor.bar.borderColor,
+        } as React.CSSProperties
+      }
+    >
       <div className={styles.content}>
         <div className={styles.tableWrapper}>
           <Table

@@ -19,7 +19,7 @@ interface IModalServerOutputProps {
 export const ModalServerOutput = React.memo(
   ({ show, id_connection, onClose }: IModalServerOutputProps) => {
     const {
-      activeTheme: { modal: colors },
+      activeTheme: { __colors, modal: colors },
     } = useThemeContext();
 
     const { getServerOutput, clearServerOutput } = useStoreContext();
@@ -85,7 +85,15 @@ export const ModalServerOutput = React.memo(
           )}
 
           {messages.map((message) => (
-            <div key={message.id} className={styles.outputItem}>
+                <div
+                  key={message.id}
+                  className={styles.outputItem}
+                  style={
+                    {
+                      '--server-output-background-color': __colors.darkLight,
+                    } as React.CSSProperties
+                  }
+                >
               <Text small color={colors.color}>
                 [{toDateTime(message.date)}] {message.severity || 'NOTICE'}
               </Text>
