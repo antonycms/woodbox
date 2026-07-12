@@ -267,11 +267,7 @@ const mergeTheme = (theme: ITheme, overrides?: ThemeOverrides): ITheme => {
   return merge(clonedTheme, overrides as Record<string, unknown>) as unknown as ITheme;
 };
 
-const createTheme = (
-  name: string,
-  __colors: BuiltinColors,
-  overrides?: ThemeOverrides,
-): ITheme => {
+const createTheme = (name: string, __colors: BuiltinColors, overrides?: ThemeOverrides): ITheme => {
   return mergeTheme(
     {
       ...defaultTheme,
@@ -553,7 +549,9 @@ export const builtinThemes = [
   serializeTheme(createTheme('woodbox-aura-light', auraLightColors, auraLightThemeOverrides)),
   serializeTheme(createTheme('one-light-pro', oneLightProColors, oneLightProThemeOverrides)),
   serializeTheme(createTheme('github-light', githubLightColors, githubLightThemeOverrides)),
-  serializeTheme(createTheme('catppuccin-latte', catppuccinLatteColors, catppuccinLatteThemeOverrides)),
+  serializeTheme(
+    createTheme('catppuccin-latte', catppuccinLatteColors, catppuccinLatteThemeOverrides),
+  ),
 ];
 
 export const builtinThemeNames = builtinThemes.map((theme) => theme.name);

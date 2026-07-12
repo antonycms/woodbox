@@ -47,7 +47,7 @@ export const SettingsImportPanel = React.memo(() => {
         '--settings-import-background-color': __colors.darkLightBar,
         '--settings-import-color': colors.color,
         '--settings-import-muted-color': __colors.gray,
-      }) as React.CSSProperties,
+      } as React.CSSProperties),
     [__colors.darkLightBar, __colors.gray, __colors.lightGray, colors.color],
   );
 

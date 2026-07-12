@@ -192,7 +192,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
       ({
         '--settings-option-hover-background-color': __colors.darkLightDeep,
         '--settings-floating-shadow-color': __colors.shadow,
-      }) as React.CSSProperties,
+      } as React.CSSProperties),
     [__colors.darkLightDeep, __colors.shadow],
   );
 
@@ -428,20 +428,22 @@ export const SettingsCustomizationPanel = React.memo(() => {
         <Divider size={12} />
 
         <Text small color={__colors.gray}>
-          Ao alterar uma cor, será criado um tema “{currentCustomThemeName}”. Você pode definir
-          um nome ao salvar.
+          Ao alterar uma cor, será criado um tema “{currentCustomThemeName}”. Você pode definir um
+          nome ao salvar.
         </Text>
 
         <Divider size={10} />
 
         <div
           className={styles.advancedGroups}
-          style={{
-            '--theme-border-color': __colors.lightGray,
-            '--theme-panel-background-color': __colors.darkLightBar,
-            '--theme-hover-background-color': __colors.darkLightDeep,
-            '--theme-muted-color': __colors.gray,
-          } as React.CSSProperties}
+          style={
+            {
+              '--theme-border-color': __colors.lightGray,
+              '--theme-panel-background-color': __colors.darkLightBar,
+              '--theme-hover-background-color': __colors.darkLightDeep,
+              '--theme-muted-color': __colors.gray,
+            } as React.CSSProperties
+          }
         >
           {advancedGroups.map((group) => (
             <details key={group.name} className={styles.advancedGroup}>

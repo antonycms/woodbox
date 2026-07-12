@@ -85,15 +85,15 @@ export const ModalServerOutput = React.memo(
           )}
 
           {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={styles.outputItem}
-                  style={
-                    {
-                      '--server-output-background-color': __colors.darkLight,
-                    } as React.CSSProperties
-                  }
-                >
+            <div
+              key={message.id}
+              className={styles.outputItem}
+              style={
+                {
+                  '--server-output-background-color': __colors.darkLight,
+                } as React.CSSProperties
+              }
+            >
               <Text small color={colors.color}>
                 [{toDateTime(message.date)}] {message.severity || 'NOTICE'}
               </Text>

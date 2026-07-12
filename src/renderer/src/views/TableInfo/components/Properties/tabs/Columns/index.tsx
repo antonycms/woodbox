@@ -181,7 +181,13 @@ const Columns = ({
       }),
       ...pendingColumns.map(serializeColumnBooleanLabels),
     ],
-    [__colors.redTransparent, changedColumnsByOriginalName, columns, droppedColumnNames, pendingColumns],
+    [
+      __colors.redTransparent,
+      changedColumnsByOriginalName,
+      columns,
+      droppedColumnNames,
+      pendingColumns,
+    ],
   );
   const hasPrimaryKey = React.useMemo(
     () =>

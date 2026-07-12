@@ -221,13 +221,15 @@ export default function ColumnFilterInput({
       {!!(isOpen && suggestions.length) && (
         <div
           className={styles.dropdown}
-          style={{
-            backgroundColor: dropdownBackgroundColor,
-            borderColor: dropdownBorderColor,
-            color: dropdownColor,
-            '--column-filter-shadow-color': dropdownBorderColor,
-            '--column-filter-hover-background-color': dropdownBorderColor,
-          } as React.CSSProperties}
+          style={
+            {
+              backgroundColor: dropdownBackgroundColor,
+              borderColor: dropdownBorderColor,
+              color: dropdownColor,
+              '--column-filter-shadow-color': dropdownBorderColor,
+              '--column-filter-hover-background-color': dropdownBorderColor,
+            } as React.CSSProperties
+          }
         >
           {suggestions.map((columnName, index) => (
             <button

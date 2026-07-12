@@ -186,7 +186,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
         '--autocomplete-active-background-color': __colors.darkLightDeep,
         '--autocomplete-border-color': __colors.lightGray,
         '--autocomplete-shadow-color': __colors.shadow,
-      }) as React.CSSProperties,
+      } as React.CSSProperties),
     [
       __colors.darkLight,
       __colors.darkLightDeep,
@@ -254,10 +254,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
       />
 
       {!!isDropdownOpen && (
-        <div
-          className={styles.dropdownContainer}
-          style={dropdownStyle}
-        >
+        <div className={styles.dropdownContainer} style={dropdownStyle}>
           <VirtualizeList
             itemSize={itemSize}
             itemCount={dataFiltered.length}

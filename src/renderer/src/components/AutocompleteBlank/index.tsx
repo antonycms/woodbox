@@ -167,7 +167,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         '--autocomplete-active-background-color': __colors.darkLightDeep,
         '--autocomplete-border-color': __colors.lightGray,
         '--autocomplete-shadow-color': __colors.shadow,
-      }) as React.CSSProperties,
+      } as React.CSSProperties),
     [
       __colors.darkLight,
       __colors.darkLightDeep,
@@ -238,10 +238,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
       />
 
       {!!(isDropdownOpen && dataFiltered.length) && (
-        <div
-          className={styles.dropdownContainer}
-          style={dropdownStyle}
-        >
+        <div className={styles.dropdownContainer} style={dropdownStyle}>
           <VirtualizeList
             itemSize={itemSize}
             itemCount={dataFiltered.length}

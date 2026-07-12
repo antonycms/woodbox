@@ -14,15 +14,7 @@ export interface IPropsSpinner {
 }
 
 const SpinnerLoading = (props: IPropsSpinner) => {
-  const {
-    absolute,
-    color,
-    size = 60,
-    thickness = 3,
-    center,
-    padding = '3px',
-    background,
-  } = props;
+  const { absolute, color, size = 60, thickness = 3, center, padding = '3px', background } = props;
   const {
     activeTheme: { __colors },
   } = useThemeContext();
