@@ -42,6 +42,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     extractLabel = defaultExtractLabel,
     extractValue = defaultExtractValue,
     emptyMessage = 'Não há opções disponíveis',
+    renderOptionActions,
     ...gridSystem
   } = props;
 
@@ -266,7 +267,8 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
                     isActive && styles.active,
                   )}
                 >
-                  {label}
+                  <span className={styles.rowLabel}>{label}</span>
+                  {renderOptionActions?.(item)}
                 </div>
               );
             }}
@@ -293,6 +295,7 @@ export interface IAutocompleteProps<T> extends IGridSystem {
   labelColor?: string;
   extractLabel?: (item: T) => string;
   extractValue?: (item: T) => string | number;
+  renderOptionActions?: (item: T) => React.ReactNode;
   emptyMessage?: string;
   clearable?: boolean;
   ref?: React.Ref<IAutoCompleteRef>;
