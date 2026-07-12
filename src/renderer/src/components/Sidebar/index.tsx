@@ -5,7 +5,6 @@ import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase } from '@renderer/styles/icons';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
 import ProjectsMenu from './components/menus/ProjectsMenu';
-import SettingsMenu from './components/menus/SettingsMenu';
 import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
 import styles from './styles.module.css';
@@ -44,10 +43,7 @@ export const Sidebar = React.memo(() => {
       <MenuBar
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
-        items={[
-          { id: 'projects', title: 'Projetos', icon: () => <IconDatabase /> },
-          // { id: 'settings', title: 'Configurações', icon: () => <IconSettings /> },
-        ]}
+        items={[{ id: 'projects', title: 'Projetos', icon: () => <IconDatabase /> }]}
       />
 
       <ResizableContainer
@@ -59,10 +55,6 @@ export const Sidebar = React.memo(() => {
       >
         <SidebarActiveContent active={selectedMenu === 'projects'}>
           <ProjectsMenu />
-        </SidebarActiveContent>
-
-        <SidebarActiveContent active={selectedMenu === 'settings'}>
-          <SettingsMenu />
         </SidebarActiveContent>
       </ResizableContainer>
     </div>
