@@ -40,7 +40,7 @@ import styles from './styles.module.css';
 
 const ProjectsMenu = () => {
   const {
-    activeTheme: { __colors, sideBar: colors },
+    activeTheme: { sideBar: colors },
   } = useThemeContext();
 
   const {

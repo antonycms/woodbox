@@ -175,7 +175,7 @@ const parseJson = <T>(content: Buffer, path: string): T => {
   }
 };
 
-const decryptDbeaverCredentials = (content: Buffer, _options: DbeaverImportOptions) => {
+const decryptDbeaverCredentials = (content: Buffer) => {
   const decipher = crypto.createDecipheriv(
     'aes-128-cbc',
     DBEAVER_DEFAULT_CREDENTIALS_KEY,

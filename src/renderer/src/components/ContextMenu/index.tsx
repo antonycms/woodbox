@@ -91,10 +91,7 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   };
 
   return (
-    <div
-      className={styles.container}
-      style={{ ...toCssProperties(theme), ...positionStyle }}
-    >
+    <div className={styles.container} style={{ ...toCssProperties(theme), ...positionStyle }}>
       {options?.map?.((option, index) => !!option && renderOption(option, index))}
     </div>
   );

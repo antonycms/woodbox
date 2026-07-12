@@ -59,7 +59,6 @@ const Indexes = ({
     addPendingDroppedIndexes,
     removePendingDroppedIndexes,
     clearPendingChanges,
-    loadTableColumns,
     loadTableIndexes,
     openPendingChangesSqlModal,
     lastFetchDate,

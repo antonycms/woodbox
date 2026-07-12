@@ -60,9 +60,7 @@ const ReferencePreview = ({
   const { connections, getTableColumns, getTableData, getTableReferences } = useStoreContext();
   const dialect = React.useMemo(
     () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === idConnection)?.dialect,
-      ),
+      getRendererDialect(connections.find((connection) => connection.id === idConnection)?.dialect),
     [connections, idConnection],
   );
 
@@ -113,7 +111,9 @@ const ReferencePreview = ({
 
     try {
       const escapedValue = String(currentValue).replace(/'/g, "''");
-      const where = `${dialect.quoteIdent(currentReference.reference_column_name)} = '${escapedValue}'`;
+      const where = `${dialect.quoteIdent(
+        currentReference.reference_column_name,
+      )} = '${escapedValue}'`;
 
       const [columns, references, result] = await Promise.all([
         columnsCache.has(currentTableKey)

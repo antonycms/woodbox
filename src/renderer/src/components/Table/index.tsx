@@ -593,11 +593,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const handleStartCellDrag = React.useCallback(
-    (
-      rowIndex: number,
-      colIndex: number,
-      event: React.MouseEvent<HTMLElement, MouseEvent>,
-    ) => {
+    (rowIndex: number, colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (cellEditingKeyRef.current) return;
 
@@ -636,11 +632,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const handleStartAnalysisCellDrag = React.useCallback(
-    (
-      rowIndex: number,
-      colIndex: number,
-      event: React.MouseEvent<HTMLElement, MouseEvent>,
-    ) => {
+    (rowIndex: number, colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (cellEditingKeyRef.current) return;
 

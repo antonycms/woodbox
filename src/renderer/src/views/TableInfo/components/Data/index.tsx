@@ -258,10 +258,7 @@ const Data = ({
     [columns, fkMap],
   );
 
-  const columnNames = React.useMemo(
-    () => columns.map((column) => column.column_name),
-    [columns],
-  );
+  const columnNames = React.useMemo(() => columns.map((column) => column.column_name), [columns]);
 
   const primaryKeyColumns = React.useMemo(
     () =>

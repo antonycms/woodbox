@@ -247,9 +247,7 @@ const TableAnalysisView = ({
                   key={rowColumnKey}
                   title={serializedValue}
                   onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-                  onMouseDown={(event) =>
-                    onStartCellDrag?.(row.__index_row, columnIndex, event)
-                  }
+                  onMouseDown={(event) => onStartCellDrag?.(row.__index_row, columnIndex, event)}
                   onMouseEnter={() => onMoveCellDrag?.(row.__index_row, columnIndex)}
                   onClick={() => onSelectCell?.(row.__index_row, columnIndex)}
                 >

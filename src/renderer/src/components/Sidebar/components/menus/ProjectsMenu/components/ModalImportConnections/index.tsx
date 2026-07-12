@@ -243,7 +243,8 @@ export const ModalImportConnections = React.memo(
                   selectedItems.has(makeSelectionKey(project.sourceName, connection.sourceId)),
                 ).length;
                 const allProjectSelected =
-                  !!project.connections.length && projectSelectedCount === project.connections.length;
+                  !!project.connections.length &&
+                  projectSelectedCount === project.connections.length;
 
                 return (
                   <div key={project.sourceName} className={styles.projectPreview}>

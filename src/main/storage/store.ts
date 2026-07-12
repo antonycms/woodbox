@@ -159,7 +159,8 @@ export const importConnectionsFromSource = async ({
   for (const parsedProject of parsed.projects) {
     const selectedConnections = parsedProject.connections.filter(
       (connection) =>
-        !selectionKeys || selectionKeys.has(makeSelectionKey(parsedProject.sourceName, connection.sourceId)),
+        !selectionKeys ||
+        selectionKeys.has(makeSelectionKey(parsedProject.sourceName, connection.sourceId)),
     );
 
     if (!selectedConnections.length) continue;

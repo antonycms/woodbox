@@ -258,21 +258,18 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [data.rows],
   );
 
-  const handleEditNewRow = React.useCallback(
-    (rowKey: React.Key, attribute: string, value: any) => {
-      const normalizedValue = value === '' ? null : value;
+  const handleEditNewRow = React.useCallback((rowKey: React.Key, attribute: string, value: any) => {
+    const normalizedValue = value === '' ? null : value;
 
-      setNewRows((prevState) => {
-        const nextState = new Map(prevState);
-        const prevRowEdited = { ...(nextState.get(rowKey) || {}) };
+    setNewRows((prevState) => {
+      const nextState = new Map(prevState);
+      const prevRowEdited = { ...(nextState.get(rowKey) || {}) };
 
-        nextState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
+      nextState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
 
-        return nextState;
-      });
-    },
-    [],
-  );
+      return nextState;
+    });
+  }, []);
 
   const handleApplySelectedCellValue = React.useCallback(
     (value: any) => {
@@ -849,7 +846,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           },
         ]}
       />
-
     </div>
   );
 };

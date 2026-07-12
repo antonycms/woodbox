@@ -56,10 +56,7 @@ const ReferenceSelection = ({
     ].join('.');
   }, [reference]);
 
-  const columnNames = React.useMemo(
-    () => columns.map((column) => column.attribute),
-    [columns],
-  );
+  const columnNames = React.useMemo(() => columns.map((column) => column.attribute), [columns]);
 
   const loadPage = React.useCallback(
     async (nextPage: number, nextWhere = appliedWhere, nextSort = sort, replace = false) => {
