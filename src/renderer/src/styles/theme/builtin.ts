@@ -540,15 +540,15 @@ const catppuccinLatteThemeOverrides: ThemeOverrides = {
 
 export const builtinThemes = [
   serializeTheme(defaultTheme),
+  serializeTheme(createTheme('woodbox-aura-light', auraLightColors, auraLightThemeOverrides)),
   serializeTheme(createTheme('woodbox-graphite', graphiteColors)),
   serializeTheme(createTheme('woodbox-amber', amberColors)),
   serializeTheme(createTheme('dracula', draculaColors)),
   serializeTheme(createTheme('one-dark-pro', oneDarkProColors)),
-  serializeTheme(createTheme('github-dark', githubDarkColors)),
-  serializeTheme(createTheme('catppuccin-mocha', catppuccinMochaColors)),
-  serializeTheme(createTheme('woodbox-aura-light', auraLightColors, auraLightThemeOverrides)),
   serializeTheme(createTheme('one-light-pro', oneLightProColors, oneLightProThemeOverrides)),
+  serializeTheme(createTheme('github-dark', githubDarkColors)),
   serializeTheme(createTheme('github-light', githubLightColors, githubLightThemeOverrides)),
+  serializeTheme(createTheme('catppuccin-mocha', catppuccinMochaColors)),
   serializeTheme(
     createTheme('catppuccin-latte', catppuccinLatteColors, catppuccinLatteThemeOverrides),
   ),
