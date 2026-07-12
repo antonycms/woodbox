@@ -4,7 +4,7 @@ import Table, {
   type ITableSelectedCellData,
 } from '@renderer/components/Table';
 import Editor from '@renderer/components/Editor';
-import { MultiplesBarLoading } from '@renderer/components/Loaders';
+import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
@@ -125,11 +125,6 @@ const Data = ({
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
-  const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
-  const [referenceError, setReferenceError] = React.useState<string>();
-  const [referenceCache, setReferenceCache] = React.useState(
-    new Map<string, Record<string, any>>(),
-  );
 
   const handleDataError = React.useCallback((error: unknown) => {
     setDataErrorMessage(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
@@ -211,46 +206,9 @@ const Data = ({
     ? fkMap.get(String(selectedCell.column.attribute))
     : undefined;
 
-  const selectedReferenceCacheKey = React.useMemo(() => {
-    if (!selectedReference) return undefined;
-    if (selectedCellValue === null || selectedCellValue === undefined) return undefined;
-
-    return [
-      selectedReference.reference_table_schema,
-      selectedReference.reference_table_name,
-      selectedReference.reference_column_name,
-      String(selectedCellValue),
-    ].join('.');
-  }, [selectedReference, selectedCellValue]);
-
-  const referenceRow = selectedReferenceCacheKey
-    ? referenceCache.get(selectedReferenceCacheKey)
-    : undefined;
-
-  const referenceLoading = selectedReferenceCacheKey
-    ? referenceLoadingKeys.has(selectedReferenceCacheKey)
-    : false;
-
-  const referencePreviewValue = React.useMemo(() => {
-    const referenceTableName = selectedReference
-      ? `${
-          selectedReference.reference_table_schema
-            ? `${selectedReference.reference_table_schema}.`
-            : ''
-        }${selectedReference.reference_table_name}`
-      : '';
-
-    return referenceTableName
-      ? `// ${referenceTableName}\n\n${JSON.stringify(referenceRow || {}, null, 2)}`
-      : JSON.stringify(referenceRow || {}, null, 2);
-  }, [selectedReference, referenceRow]);
-
   const closeValuePreview = React.useCallback(() => {
     setShowValuePreview(false);
     setActivePreviewTab('value');
-    setReferenceCache(new Map());
-    setReferenceError(undefined);
-    setReferenceLoadingKeys(new Set());
   }, []);
 
   const handleFkCellClick = React.useCallback(
@@ -267,59 +225,6 @@ const Data = ({
     },
     [fkMap, id_connection, onOpenTable],
   );
-
-  const loadReferenceRow = React.useCallback(async () => {
-    setReferenceError(undefined);
-
-    if (activePreviewTab !== 'reference') return;
-    if (!selectedReference || !selectedReferenceCacheKey) return;
-    if (referenceCache.has(selectedReferenceCacheKey)) return;
-    if (referenceLoadingKeys.has(selectedReferenceCacheKey)) return;
-    if (referenceError) return;
-
-    setReferenceLoadingKeys((prevState) => {
-      const newState = new Set(prevState);
-      newState.add(selectedReferenceCacheKey);
-      return newState;
-    });
-
-    try {
-      const escapedValue = String(selectedCellValue).replace(/'/g, "''");
-
-      const result = await getTableData(id_connection, {
-        schema: selectedReference.reference_table_schema,
-        table: selectedReference.reference_table_name,
-        page: 1,
-        limit: 1,
-        where: `${dialect.quoteIdent(selectedReference.reference_column_name)} = '${escapedValue}'`,
-      });
-
-      setReferenceCache((prevState) => {
-        const newState = new Map(prevState);
-        newState.set(selectedReferenceCacheKey, result.data?.[0] || {});
-        return newState;
-      });
-    } catch (error: any) {
-      setReferenceError(error?.message || 'Erro ao carregar referência');
-    } finally {
-      setReferenceLoadingKeys((prevState) => {
-        const newState = new Set(prevState);
-        newState.delete(selectedReferenceCacheKey);
-        return newState;
-      });
-    }
-  }, [
-    activePreviewTab,
-    selectedReference,
-    selectedReferenceCacheKey,
-    referenceCache,
-    referenceLoadingKeys,
-    referenceError,
-    selectedCellValue,
-    getTableData,
-    id_connection,
-    dialect,
-  ]);
 
   const isLoading = loadingTableInfo.columns || loading;
 
@@ -862,10 +767,6 @@ const Data = ({
   }, []);
 
   React.useEffect(() => {
-    loadReferenceRow();
-  }, [loadReferenceRow]);
-
-  React.useEffect(() => {
     if (!selectedReference && activePreviewTab !== 'value') {
       setActivePreviewTab('value');
     }
@@ -991,21 +892,13 @@ const Data = ({
 
                 {!!selectedReference && (
                   <TabContent idTab="reference">
-                    {referenceLoading ? (
-                      <div className={styles.previewLoading}>
-                        <MultiplesBarLoading background="transparent" />
-                      </div>
-                    ) : referenceError ? (
-                      <Text color={theme.bar.color}>{referenceError}</Text>
-                    ) : (
-                      <Editor
-                        dialect={dialect.editorDialect}
-                        language="json"
-                        readonly
-                        hidePreview
-                        value={referencePreviewValue}
-                      />
-                    )}
+                    <ReferencePreview
+                      active={activePreviewTab === 'reference'}
+                      idConnection={id_connection}
+                      initialReference={selectedReference}
+                      initialValue={selectedCellValue}
+                      onDataError={handleDataError}
+                    />
                   </TabContent>
                 )}
 

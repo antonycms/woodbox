@@ -3,7 +3,7 @@ import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { ContextMenu } from '@renderer/components/ContextMenu';
 import Editor from '@renderer/components/Editor';
-import { MultiplesBarLoading } from '@renderer/components/Loaders';
+import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { RefreshButton } from '@renderer/components/RefreshButton';
@@ -73,8 +73,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const { activeTheme } = useThemeContext();
   const { addTab } = useAppTabContext();
-  const { getTableData, getTableRestrictions, getQueryRowsCount, runSql, connections } =
-    useStoreContext();
+  const { getTableRestrictions, getQueryRowsCount, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
   const dialect = React.useMemo(
     () =>
@@ -91,11 +90,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`select_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
-  const [referenceLoadingKeys, setReferenceLoadingKeys] = React.useState<Set<string>>(new Set());
-  const [referenceError, setReferenceError] = React.useState<string>();
-  const [referenceCache, setReferenceCache] = React.useState(
-    new Map<string, Record<string, any>>(),
-  );
   const [restrictionsCache, setRestrictionsCache] = React.useState(
     new Map<string, IColumnRestrictionsInfo[]>(),
   );
@@ -163,9 +157,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const closeValuePreview = () => {
     setShowValuePreview(false);
     setActivePreviewTab('value');
-    setReferenceCache(new Map());
-    setReferenceError(undefined);
-    setReferenceLoadingKeys(new Set());
   };
 
   const selectedCellValue = React.useMemo(() => {
@@ -231,40 +222,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       }),
     [data.rows, editedFieldsRows],
   );
-
-  const selectedReferenceCacheKey = React.useMemo(() => {
-    if (!selectedReference) return undefined;
-    if (selectedCellValue === null || selectedCellValue === undefined) return undefined;
-
-    return [
-      selectedReference.reference_table_schema,
-      selectedReference.reference_table_name,
-      selectedReference.reference_column_name,
-      String(selectedCellValue),
-    ].join('.');
-  }, [selectedReference, selectedCellValue]);
-
-  const referenceRow = selectedReferenceCacheKey
-    ? referenceCache.get(selectedReferenceCacheKey)
-    : undefined;
-
-  const referenceLoading = selectedReferenceCacheKey
-    ? referenceLoadingKeys.has(selectedReferenceCacheKey)
-    : false;
-
-  const referenceTableName = selectedReference
-    ? `${
-        selectedReference.reference_table_schema
-          ? `${selectedReference.reference_table_schema}.`
-          : ''
-      }${selectedReference.reference_table_name}`
-    : '';
-
-  const referencePreviewValue = React.useMemo(() => {
-    return referenceTableName
-      ? `// ${referenceTableName}\n\n${JSON.stringify(referenceRow || {}, null, 2)}`
-      : JSON.stringify(referenceRow || {}, null, 2);
-  }, [referenceTableName, referenceRow]);
 
   const handleEditRow = React.useCallback(
     (index: number, attribute: string, value: any) => {
@@ -515,62 +472,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [handleCancelSelectedRowsEditions, handleSave],
   );
 
-  const loadReferenceRow = async () => {
-    setReferenceError(undefined);
-
-    if (activePreviewTab !== 'reference') return;
-    if (!selectedReference || !selectedReferenceCacheKey) return;
-    if (referenceCache.has(selectedReferenceCacheKey)) return;
-    if (referenceLoadingKeys.has(selectedReferenceCacheKey)) return;
-    if (referenceError) return;
-
-    setReferenceLoadingKeys((prevState) => {
-      const newState = new Set(prevState);
-      newState.add(selectedReferenceCacheKey);
-      return newState;
-    });
-
-    try {
-      const escapedValue = String(selectedCellValue).replace(/'/g, "''");
-
-      const result = await getTableData(id_connection, {
-        schema: selectedReference.reference_table_schema,
-        table: selectedReference.reference_table_name,
-        page: 1,
-        limit: 1,
-        where: `"${selectedReference.reference_column_name}" = '${escapedValue}'`,
-      });
-
-      setReferenceCache((prevState) => {
-        const newState = new Map(prevState);
-        newState.set(selectedReferenceCacheKey, result.data?.[0] || {});
-        return newState;
-      });
-    } catch (error) {
-      setReferenceError(error?.message || 'Erro ao carregar referência');
-    } finally {
-      setReferenceLoadingKeys((prevState) => {
-        const newState = new Set(prevState);
-        newState.delete(selectedReferenceCacheKey);
-        return newState;
-      });
-    }
-  };
-
-  React.useEffect(() => {
-    loadReferenceRow();
-  }, [
-    activePreviewTab,
-    selectedReference,
-    selectedReferenceCacheKey,
-    referenceCache,
-    referenceLoadingKeys,
-    referenceError,
-    selectedCellValue,
-    getTableData,
-    id_connection,
-  ]);
-
   React.useEffect(() => {
     if (!selectedReference && activePreviewTab !== 'value') {
       setActivePreviewTab('value');
@@ -727,21 +628,21 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
                 {!!selectedReference && (
                   <TabContent idTab="reference">
-                    {referenceLoading ? (
-                      <div className={styles.previewLoading}>
-                        <MultiplesBarLoading background="transparent" />
-                      </div>
-                    ) : referenceError ? (
-                      <Text color={activeTheme.queryEditor.bar.color}>{referenceError}</Text>
-                    ) : (
-                      <Editor
-                        dialect={dialect.editorDialect}
-                        language="json"
-                        readonly
-                        hidePreview
-                        value={referencePreviewValue}
-                      />
-                    )}
+                    <ReferencePreview
+                      active={activePreviewTab === 'reference'}
+                      idConnection={id_connection}
+                      initialReference={selectedReference}
+                      initialValue={selectedCellValue}
+                      onDataError={(error) => {
+                        showToast({
+                          type: 'error',
+                          title: 'Erro ao carregar referência.',
+                          description:
+                            error instanceof Error ? error.message : 'Erro desconhecido.',
+                          delay: 8000,
+                        });
+                      }}
+                    />
                   </TabContent>
                 )}
 
