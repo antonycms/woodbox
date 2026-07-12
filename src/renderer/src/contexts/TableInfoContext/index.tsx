@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
 import {
@@ -36,9 +37,6 @@ import TableInfoContext, {
 
 export type * from './context';
 
-const CREATE_STYLE = { backgroundColor: '#3fb95033' };
-const DROP_STYLE = { backgroundColor: '#ff676733', textDecoration: 'line-through' };
-const CHANGE_STYLE = { backgroundColor: '#d2992233' };
 const COLUMN_COMPARE_ATTRIBUTES: Array<keyof IColumnInfo> = [
   'column_name',
   'data_type',
@@ -63,6 +61,9 @@ const hasColumnChanges = (originalColumn: IColumnInfo, changedColumn: IColumnInf
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const {
+    activeTheme: { __colors },
+  } = useThemeContext();
+  const {
     getTableColumns,
     getTableReferences,
     getTableUsedAsReference,
@@ -76,6 +77,18 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     connections,
   } = useStoreContext();
   const { showToast } = useToast();
+  const CREATE_STYLE = React.useMemo<React.CSSProperties>(
+    () => ({ backgroundColor: __colors.greenTransparent }),
+    [__colors.greenTransparent],
+  );
+  const DROP_STYLE = React.useMemo<React.CSSProperties>(
+    () => ({ backgroundColor: __colors.redTransparent, textDecoration: 'line-through' }),
+    [__colors.redTransparent],
+  );
+  const CHANGE_STYLE = React.useMemo<React.CSSProperties>(
+    () => ({ backgroundColor: __colors.orangeTransparent }),
+    [__colors.orangeTransparent],
+  );
 
   const getConnectionDialect = React.useCallback(
     (idConnection: string) =>

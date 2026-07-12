@@ -25,9 +25,9 @@
 }
 
 .warning {
-  border: 1px solid #f0c36d66;
+  border: 1px solid var(--warning-border-color);
   border-radius: 6px;
-  background: #f0c36d22;
+  background: var(--warning-background-color);
   padding: 8px 10px;
   font-size: 13px;
   line-height: 1.4;

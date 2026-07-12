@@ -35,6 +35,7 @@ const Indexes = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
+      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -99,14 +100,14 @@ const Indexes = ({
           ...index,
           __pendingAction: 'drop',
           __style: {
-            backgroundColor: '#ff676733',
+            backgroundColor: __colors.redTransparent,
             textDecoration: 'line-through',
           },
         };
       }),
       ...pendingIndexes,
     ],
-    [indexes, droppedIndexNames, pendingIndexes],
+    [__colors.redTransparent, indexes, droppedIndexNames, pendingIndexes],
   );
   const filteredAndSortedIndexes = React.useMemo(() => {
     if (!indexFilterTextSerialized) return sortRows(allIndexes, sort);

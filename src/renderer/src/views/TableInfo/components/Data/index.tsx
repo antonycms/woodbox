@@ -76,6 +76,7 @@ const Data = ({
 }: IDataProps) => {
   const {
     activeTheme: {
+      __colors,
       tableInfo: { data: theme, tab: tabTheme },
       modal: colors,
     },
@@ -379,7 +380,7 @@ const Data = ({
             __pendingAction: 'drop',
             __style: {
               ...(item as any).__style,
-              backgroundColor: '#ff676733',
+              backgroundColor: __colors.redTransparent,
               textDecoration: 'line-through',
             },
           };
@@ -391,11 +392,11 @@ const Data = ({
           ...item,
           __style: {
             ...(item as any).__style,
-            backgroundColor: '#d2992233',
+            backgroundColor: __colors.orangeTransparent,
           },
         };
       }),
-    [items, droppedRows, editedFieldsRows],
+    [__colors.orangeTransparent, __colors.redTransparent, items, droppedRows, editedFieldsRows],
   );
 
   const onContextMenuTable = (
@@ -826,7 +827,15 @@ const Data = ({
   ]);
 
   return (
-    <div className={styles.container} onKeyDown={handleKeyDown}>
+    <div
+      className={styles.container}
+      onKeyDown={handleKeyDown}
+      style={
+        {
+          '--data-border-color': theme.bar.borderColor,
+        } as React.CSSProperties
+      }
+    >
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
         <ColumnFilterInput
           inputClassName={styles.filterInput}

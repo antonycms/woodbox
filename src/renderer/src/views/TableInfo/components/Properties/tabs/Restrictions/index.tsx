@@ -39,6 +39,7 @@ const Restrictios = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
+      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -106,14 +107,14 @@ const Restrictios = ({
           ...restriction,
           __pendingAction: 'drop',
           __style: {
-            backgroundColor: '#ff676733',
+            backgroundColor: __colors.redTransparent,
             textDecoration: 'line-through',
           },
         };
       }),
       ...pendingRestrictions,
     ],
-    [restrictions, droppedConstraintNames, pendingRestrictions],
+    [__colors.redTransparent, restrictions, droppedConstraintNames, pendingRestrictions],
   );
   const filteredAndSortedRestrictions = React.useMemo(() => {
     if (!restrictionFilterTextSerialized) return sortRows(allRestrictions, sort);

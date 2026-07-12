@@ -133,7 +133,7 @@ const Properties = (props: IPropertiesProps) => {
       <div
         className={styles.propertiesContent}
         style={{
-          border: `1px solid ${theme.bar.borderColor}`,
+          border: `1px 1px 1px 0 solid ${theme.bar.borderColor}`,
           backgroundColor: theme.tab.backgroundColor,
         }}
       >

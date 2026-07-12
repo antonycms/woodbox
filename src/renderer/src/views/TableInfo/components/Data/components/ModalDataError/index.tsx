@@ -14,8 +14,15 @@ interface IModalDataErrorProps {
 
 const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
   const {
-    activeTheme: { modal: colors },
+    activeTheme: { __colors, modal: colors },
   } = useThemeContext();
+  const style = {
+    '--errorBorderColor': __colors.redDeep,
+    '--errorAccentColor': __colors.red,
+    '--errorBackgroundColor': __colors.darkLight,
+    '--errorMessageBackgroundColor': __colors.darkLight,
+  } as React.CSSProperties;
+
   return (
     <Modal
       title="Erro ao carregar dados"
@@ -24,9 +31,9 @@ const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
       closeOutside
       onClose={onClose}
     >
-      <div className={styles.errorCard}>
+      <div className={styles.errorCard} style={style}>
         <div className={styles.errorMessage}>
-          <Text color="#ffe1e1">{message}</Text>
+          <Text color={colors.color}>{message}</Text>
         </div>
       </div>
 

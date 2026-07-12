@@ -64,7 +64,7 @@ const ModalNewReference = ({
   onAdd,
 }: IModalNewReferenceProps) => {
   const {
-    activeTheme: { modal: colors },
+    activeTheme: { __colors, modal: colors },
   } = useThemeContext();
   const { getTableColumns, getTableRestrictions } = useStoreContext();
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
@@ -262,7 +262,16 @@ const ModalNewReference = ({
           />
 
           {hasTypeMismatch && (
-            <div className={styles.warning} style={{ color: colors.color }}>
+            <div
+              className={styles.warning}
+              style={
+                {
+                  color: colors.color,
+                  '--warning-border-color': __colors.orangeDeep,
+                  '--warning-background-color': __colors.orangeTransparent,
+                } as React.CSSProperties
+              }
+            >
               Atenção: a coluna selecionada possui tipo {getColumnTypeLabel(selectedLocalColumn)} e
               a coluna referenciada possui tipo {getColumnTypeLabel(selectedReferenceColumn)}. O
               PostgreSQL pode rejeitar a criação da FK ao salvar.

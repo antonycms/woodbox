@@ -50,6 +50,7 @@ const ForeingKeys = ({
 }: IForeingKeysProps) => {
   const {
     activeTheme: {
+      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -116,7 +117,7 @@ const ForeingKeys = ({
         ? {
             __pendingAction: 'drop' as const,
             __style: {
-              backgroundColor: '#ff676733',
+              backgroundColor: __colors.redTransparent,
               textDecoration: 'line-through',
             },
           }
@@ -131,7 +132,7 @@ const ForeingKeys = ({
     }));
 
     return [...existingReferences, ...createdReferences];
-  }, [references, droppedConstraintNames, pendingReferences]);
+  }, [__colors.redTransparent, references, droppedConstraintNames, pendingReferences]);
 
   const filteredAndSortedReferences = React.useMemo(() => {
     if (!referenceFilterTextSerialized) return sortRows(allReferences, sort);

@@ -99,6 +99,7 @@ const Columns = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
+      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -170,7 +171,7 @@ const Columns = ({
             ...columnWithBooleanLabels,
             __pendingAction: 'drop',
             __style: {
-              backgroundColor: '#ff676733',
+              backgroundColor: __colors.redTransparent,
               textDecoration: 'line-through',
             },
           };
@@ -180,7 +181,7 @@ const Columns = ({
       }),
       ...pendingColumns.map(serializeColumnBooleanLabels),
     ],
-    [changedColumnsByOriginalName, columns, droppedColumnNames, pendingColumns],
+    [__colors.redTransparent, changedColumnsByOriginalName, columns, droppedColumnNames, pendingColumns],
   );
   const hasPrimaryKey = React.useMemo(
     () =>

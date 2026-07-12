@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   padding: 4px 10px;
-  border-bottom: 1px solid #191622;
+  border-bottom: 1px solid var(--data-border-color);
   flex-shrink: 0;
 }
 
@@ -51,7 +51,7 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  border-left: 1px solid #ffffff22;
+  border-left: 1px solid var(--data-border-color);
 }
 
 .previewHeader {
