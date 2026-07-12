@@ -81,6 +81,7 @@ const Data = ({
     columns,
     references,
     restrictions,
+    loadTableColumns,
     loadTableReferences,
     loadTableRestrictions,
     loading: loadingTableInfo,
@@ -875,6 +876,10 @@ const Data = ({
   }, [onRegisterRefresh, handleRefresh]);
 
   React.useEffect(() => {
+    if (columns.length === 0) {
+      loadTableColumns(id_connection, { table, schema });
+    }
+
     if (references.length === 0) {
       loadTableReferences(id_connection, { table, schema });
     }
@@ -886,8 +891,10 @@ const Data = ({
     id_connection,
     table,
     schema,
+    columns.length,
     references.length,
     restrictions.length,
+    loadTableColumns,
     loadTableReferences,
     loadTableRestrictions,
   ]);
