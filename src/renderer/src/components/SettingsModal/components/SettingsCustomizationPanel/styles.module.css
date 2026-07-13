@@ -69,6 +69,7 @@
   padding: 10px 34px 10px 10px;
   cursor: pointer;
   list-style: none;
+  user-select: none;
   transition: background-color 160ms ease;
 }
 
@@ -102,6 +103,7 @@
   font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
+  user-select: none;
   white-space: nowrap;
 }
 
@@ -121,4 +123,5 @@
 
 .colorField span {
   font-size: 11px;
+  user-select: none;
 }
