@@ -132,10 +132,34 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     });
   };
 
+  const removeConnectionsInfo = (connectionIds: string[]) => {
+    if (!connectionIds.length) return;
+
+    setConnectionsInfo((prevState) => {
+      const newState = new Map(prevState);
+
+      connectionIds.forEach((connectionId) => newState.delete(connectionId));
+
+      return newState;
+    });
+  };
+
   const removeProject = async (id: string) => {
-    await call<void>('@remove:projects', id);
+    const connectionIds = connections
+      .filter((connection) => connection.id_project === id)
+      .map((connection) => connection.id);
+
+    await Promise.all([
+      call<void>('@remove:projects', id),
+      ...connectionIds.map((connectionId) =>
+        call<void>('@remove:config_connections_saved', connectionId),
+      ),
+      ...connectionIds.map((connectionId) => call<void>('@get:close_connection', connectionId)),
+    ]);
 
     setProjects((prevState) => prevState.filter((project) => project.id !== id));
+    setConnections((prevState) => prevState.filter((connection) => connection.id_project !== id));
+    removeConnectionsInfo(connectionIds);
   };
 
   const addConnection = async (data: IConnectionCreate) => {
@@ -165,9 +189,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   };
 
   const removeConnection = async (id: string) => {
-    await call<void>('@remove:config_connections_saved', id);
+    await Promise.all([
+      call<void>('@remove:config_connections_saved', id),
+      call<void>('@get:close_connection', id),
+    ]);
 
     setConnections((prevState) => prevState.filter((connection) => connection.id !== id));
+    removeConnectionsInfo([id]);
   };
 
   const previewImportConnectionsFromSource = async (params: IImportConnectionsParams) => {
@@ -210,14 +238,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
   const closeConnection = async (id: string) => {
     await call<void>('@get:close_connection', id);
-
-    setConnectionsInfo((prevState) => {
-      const newState = new Map(prevState);
-
-      newState.delete(id);
-
-      return newState;
-    });
+    removeConnectionsInfo([id]);
   };
 
   const getTableColumns = async (idConnection: string, { table, schema }: TableFilters) => {

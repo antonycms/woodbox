@@ -6,7 +6,7 @@ export interface ITabContext {
   activeTabId: string | undefined;
   setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>;
   addTab(tab: INewAppTab): void;
-  removeTab(tabId: string | string[]): void;
+  removeTab(tabId: string | string[], options?: IRemoveAppTabOptions): void;
   reopenClosedTab(): void;
   moveTab(fromId: string, toId: string, placement?: IAppTabMovePlacement): void;
   createTabGroup(tabId: string): string;
@@ -23,6 +23,10 @@ export interface ITabContext {
 }
 
 export type IAppTabMovePlacement = 'before' | 'after';
+
+export interface IRemoveAppTabOptions {
+  keepHistory?: boolean;
+}
 
 export interface IAppTabGroup {
   id: string;

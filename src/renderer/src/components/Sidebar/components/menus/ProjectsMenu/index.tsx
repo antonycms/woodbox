@@ -54,7 +54,7 @@ const ProjectsMenu = () => {
   } = useStoreContext();
 
   const { showToast } = useToast();
-  const { addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
+  const { tabs, addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
   const treeViewRef = React.useRef<ITreeViewRef>(null);
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
 
@@ -179,6 +179,53 @@ const ProjectsMenu = () => {
     setTableToRename(null);
   }, []);
 
+  const removeTabsFromConnections = React.useCallback(
+    (connectionIds: string[]) => {
+      if (!connectionIds.length) return;
+
+      const connectionIdSet = new Set(connectionIds);
+      const tabsToRemove = tabs
+        .filter((tab) => {
+          if (tab.data?.id_connection && connectionIdSet.has(tab.data.id_connection)) return true;
+
+          return connectionIds.some((connectionId) =>
+            tab.id.startsWith(`new_table_${connectionId}_`),
+          );
+        })
+        .map((tab) => tab.id);
+
+      if (tabsToRemove.length) {
+        removeTab(tabsToRemove, { keepHistory: false });
+      }
+    },
+    [removeTab, tabs],
+  );
+
+  const handleRemoveProject = React.useCallback(
+    async (id?: string) => {
+      if (!id) return;
+
+      const connectionIds =
+        connectionsGroupPerProject
+          .find((project) => project.id === id)
+          ?.connections.map((connection) => connection.id) || [];
+
+      await removeProject(id);
+      removeTabsFromConnections(connectionIds);
+    },
+    [connectionsGroupPerProject, removeProject, removeTabsFromConnections],
+  );
+
+  const handleRemoveConnection = React.useCallback(
+    async (id?: string) => {
+      if (!id) return;
+
+      await removeConnection(id);
+      removeTabsFromConnections([id]);
+    },
+    [removeConnection, removeTabsFromConnections],
+  );
+
   const handleOpemItemTreeView = async (item: IItemTreeViewData, itemIsOpen: boolean) => {
     if (itemIsOpen) return;
 
@@ -291,7 +338,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Excluir Projeto',
-          onClick: () => removeProject(contextMenuItemSelected?.id),
+          onClick: () => handleRemoveProject(contextMenuItemSelected?.id),
         },
       ],
 
@@ -317,7 +364,7 @@ const ProjectsMenu = () => {
         },
         {
           text: 'Excluir Conexão',
-          onClick: () => removeConnection(contextMenuItemSelected?.id),
+          onClick: () => handleRemoveConnection(contextMenuItemSelected?.id),
         },
       ],
 
@@ -415,7 +462,17 @@ const ProjectsMenu = () => {
     };
 
     return optionsAvailable[contextMenuItemSelected?.type] || [];
-  }, [contextMenuItemSelected]);
+  }, [
+    addTab,
+    checkHasConnection,
+    closeConnection,
+    contextMenuItemSelected,
+    handleRemoveConnection,
+    handleRemoveProject,
+    refreshConnectionInfo,
+    removeScript,
+    removeTab,
+  ]);
 
   const projectsSerialized = connectionsGroupPerProject.map((project) => {
     let hasContentWithFilterText = false;

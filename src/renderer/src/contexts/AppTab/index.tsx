@@ -4,6 +4,7 @@ import AppTabContext, {
   type IAppTab,
   type IAppTabGroup,
   type IAppTabMovePlacement,
+  type IRemoveAppTabOptions,
   type INewAppTab,
 } from './context';
 import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
@@ -103,7 +104,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   const removeTab = React.useCallback(
-    (tabId: string | string[]) => {
+    (tabId: string | string[], options?: IRemoveAppTabOptions) => {
       const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
       const remainingTabs = tabs.filter((t) => !tabsIdToRemove.has(t.id));
       const isVisible = (tab: IAppTab) => {
@@ -148,10 +149,12 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
         setActiveTabId(nextId);
       }
 
-      closedTabsRef.current = [
-        ...closedTabsRef.current,
-        ...tabs.filter((t) => tabsIdToRemove.has(t.id)),
-      ];
+      if (options?.keepHistory !== false) {
+        closedTabsRef.current = [
+          ...closedTabsRef.current,
+          ...tabs.filter((t) => tabsIdToRemove.has(t.id)),
+        ];
+      }
       setTabs((prev) => prev.filter((t) => !tabsIdToRemove.has(t.id)));
       setTabGroups((prev) => cleanupEmptyGroups(prev, remainingTabs));
     },
