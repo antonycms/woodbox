@@ -24,7 +24,7 @@ import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
 
 type OpenTableWithFilterParams = {
   idConnection: string;
-  schema: string;
+  schema?: string;
   table: string;
   initialWhere: string;
 };

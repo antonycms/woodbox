@@ -9,6 +9,7 @@ import IconItemTreeView from '@renderer/components/TreeView/IconItemTreeView';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
 import * as constants from './constants';
@@ -62,16 +63,33 @@ export const CentralSearchModal = React.memo(() => {
 
   const openTableTab = React.useCallback(
     (idConnection: string, schema: string | undefined, table: string, initialWhere?: string) => {
+      const tabId = constants.getTableTabId(idConnection, schema, table);
+      const tab = getTab(tabId);
+
       if (initialWhere) {
+        if (tab?.unsaved) {
+          setActiveTabId(tabId);
+          emitConfirmOpenTableWithFilter({
+            tabId,
+            idConnection,
+            schema,
+            table,
+            initialWhere,
+          });
+          return;
+        }
+
         addTab({
-          title: `${constants.getQualifiedName(schema, table)} [${initialWhere}]`,
+          id: tabId,
+          replaceId: tab?.id,
+          groupId: tab?.groupId,
+          title: constants.getQualifiedName(schema, table),
           data: {
             type: 'table-info',
             id_connection: idConnection,
             schema,
             table,
             initialWhere,
-            filterLocked: true,
             initialTab: 'tabData',
           },
           component: () => (
@@ -79,8 +97,8 @@ export const CentralSearchModal = React.memo(() => {
               id_connection={idConnection}
               schema={schema}
               table={table}
+              appTabId={tabId}
               initialWhere={initialWhere}
-              filterLocked
               initialTab="tabData"
             />
           ),
@@ -88,9 +106,6 @@ export const CentralSearchModal = React.memo(() => {
 
         return;
       }
-
-      const tabId = constants.getTableTabId(idConnection, schema, table);
-      const tab = getTab(tabId);
 
       if (tab) return setActiveTabId(tabId);
 
