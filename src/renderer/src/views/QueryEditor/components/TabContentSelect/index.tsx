@@ -680,15 +680,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                       idConnection={id_connection}
                       initialReference={selectedReference}
                       initialValue={selectedCellValue}
-                      onDataError={(error) => {
-                        showToast({
-                          type: 'error',
-                          title: 'Erro ao carregar referência.',
-                          description:
-                            error instanceof Error ? error.message : 'Erro desconhecido.',
-                          delay: 8000,
-                        });
-                      }}
                     />
                   </TabContent>
                 )}

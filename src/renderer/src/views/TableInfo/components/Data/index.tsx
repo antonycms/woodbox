@@ -932,7 +932,6 @@ const Data = ({
                       idConnection={id_connection}
                       initialReference={selectedReference}
                       initialValue={selectedCellValue}
-                      onDataError={handleDataError}
                     />
                   </TabContent>
                 )}

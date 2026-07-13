@@ -20,7 +20,6 @@ interface IReferencePreviewProps {
   idConnection: string;
   initialReference?: IColumnReferenceInfo;
   initialValue: any;
-  onDataError(error: unknown): void;
 }
 
 interface IReferenceHistoryItem {
@@ -50,7 +49,6 @@ const ReferencePreview = ({
   idConnection,
   initialReference,
   initialValue,
-  onDataError,
 }: IReferencePreviewProps) => {
   const {
     activeTheme: {
@@ -103,7 +101,7 @@ const ReferencePreview = ({
   }, [currentReference, currentRow]);
 
   const loadReferenceData = React.useCallback(async () => {
-    if (!active || !currentReference || !currentReferenceKey || loading) return;
+    if (!active || !currentReference || !currentReferenceKey || loading || error) return;
     if (rowsCache.has(currentReferenceKey) && columnsCache.has(currentTableKey)) return;
 
     setLoading(true);
@@ -178,7 +176,6 @@ const ReferencePreview = ({
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Erro ao carregar referência.');
-      onDataError(error);
     } finally {
       setLoading(false);
     }
@@ -195,7 +192,7 @@ const ReferencePreview = ({
     getTableReferences,
     idConnection,
     loading,
-    onDataError,
+    error,
     referencesCache,
     rowsCache,
   ]);

@@ -96,6 +96,7 @@ const ReferenceSelection = ({
         );
         setHasLoaded(true);
       } catch (error: unknown) {
+        setHasLoaded(true);
         onDataError(error);
       } finally {
         setLoading(false);
