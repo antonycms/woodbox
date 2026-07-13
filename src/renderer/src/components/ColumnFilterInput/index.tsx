@@ -5,6 +5,7 @@ import styles from './styles.module.css';
 interface IColumnFilterInputProps {
   value: string;
   columnNames: string[];
+  autoFocus?: boolean;
   placeholder?: string;
   disabled?: boolean;
   inputClassName?: string;
@@ -49,6 +50,7 @@ const getTokenInfo = (value: string, cursorPosition: number): ITokenInfo => {
 export default function ColumnFilterInput({
   value,
   columnNames,
+  autoFocus,
   placeholder,
   disabled,
   inputClassName,
@@ -201,6 +203,7 @@ export default function ColumnFilterInput({
     <div className={styles.container}>
       <input
         ref={inputRef}
+        autoFocus={autoFocus}
         className={inputClassName}
         placeholder={placeholder}
         value={value}

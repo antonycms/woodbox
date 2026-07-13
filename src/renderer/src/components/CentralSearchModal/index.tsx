@@ -6,6 +6,7 @@ import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import IconItemTreeView from '@renderer/components/TreeView/IconItemTreeView';
+import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -19,9 +20,10 @@ export const CentralSearchModal = React.memo(() => {
   const [searchText, setSearchText] = React.useState('');
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const resultsRef = React.useRef<HTMLDivElement>(null);
+  const loadingTableColumnsRef = React.useRef(new Set<string>());
 
   const { tabs, addTab, getTab, activeTabId, setActiveTabId } = useAppTabContext();
-  const { scripts, connections, connectionsInfo } = useStoreContext();
+  const { scripts, connections, connectionsInfo, getTableColumns } = useStoreContext();
   const {
     activeTheme: {
       __colors,
@@ -30,6 +32,9 @@ export const CentralSearchModal = React.memo(() => {
   } = useThemeContext();
 
   const parsedSearch = constants.parseSearchText(searchText);
+  const [columnNamesByTable, setColumnNamesByTable] = React.useState<Map<string, string[]>>(
+    new Map(),
+  );
 
   const getConnectionDescription = React.useCallback(
     (idConnection: string) => {
@@ -196,6 +201,11 @@ export const CentralSearchModal = React.memo(() => {
             searchableTitle: title,
             connectionDescription: getConnectionDescription(id_connection),
             icon: 'table',
+            tableRef: {
+              idConnection: id_connection,
+              schema,
+              table,
+            },
             isOpen: true,
             isActive: activeTabId === tab.id,
             onOpen: (initialWhere) => {
@@ -292,6 +302,11 @@ export const CentralSearchModal = React.memo(() => {
             searchableTitle: title,
             connectionDescription: getConnectionDescription(idConnection),
             icon: 'table',
+            tableRef: {
+              idConnection,
+              schema: table.table_schema,
+              table: table.table_name,
+            },
             onOpen: (initialWhere) =>
               openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
           }),
@@ -395,9 +410,38 @@ export const CentralSearchModal = React.memo(() => {
     };
   }, [closedItemsByType, openTabItems, parsedSearch.filter]);
 
+  const activeTableFilterTarget = React.useMemo(() => {
+    const shouldLoadColumns = /\S+\s/.test(searchText);
+
+    if (!shouldLoadColumns) return undefined;
+
+    return visibleItems[highlightedIndex]?.tableRef;
+  }, [highlightedIndex, searchText, visibleItems]);
+
+  const activeTableColumnsKey = React.useMemo(() => {
+    if (!activeTableFilterTarget) return undefined;
+
+    return [
+      activeTableFilterTarget.idConnection,
+      activeTableFilterTarget.schema || '',
+      activeTableFilterTarget.table,
+    ].join('\0');
+  }, [activeTableFilterTarget]);
+
+  const activeTableColumnNames = React.useMemo(() => {
+    if (!activeTableColumnsKey) return [];
+
+    return columnNamesByTable.get(activeTableColumnsKey) || [];
+  }, [activeTableColumnsKey, columnNamesByTable]);
+
   const closeModal = React.useCallback(() => {
     setIsOpen(false);
     setSearchText('');
+    setHighlightedIndex(0);
+  }, []);
+
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearchText(value);
     setHighlightedIndex(0);
   }, []);
 
@@ -435,6 +479,34 @@ export const CentralSearchModal = React.memo(() => {
   React.useEffect(() => {
     setHighlightedIndex(0);
   }, [searchText, isOpen]);
+
+  React.useEffect(() => {
+    if (!activeTableFilterTarget || !activeTableColumnsKey) return;
+    if (columnNamesByTable.has(activeTableColumnsKey)) return;
+    if (loadingTableColumnsRef.current.has(activeTableColumnsKey)) return;
+
+    loadingTableColumnsRef.current.add(activeTableColumnsKey);
+
+    getTableColumns(activeTableFilterTarget.idConnection, {
+      schema: activeTableFilterTarget.schema,
+      table: activeTableFilterTarget.table,
+    })
+      .then((columns) => {
+        setColumnNamesByTable((prevState) => {
+          const nextState = new Map(prevState);
+          nextState.set(
+            activeTableColumnsKey,
+            (columns || []).map((column) => column.column_name),
+          );
+
+          return nextState;
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        loadingTableColumnsRef.current.delete(activeTableColumnsKey);
+      });
+  }, [activeTableColumnsKey, activeTableFilterTarget, columnNamesByTable, getTableColumns]);
 
   React.useEffect(() => {
     if (!visibleItems.length || highlightedIndex < visibleItems.length) return;
@@ -495,12 +567,16 @@ export const CentralSearchModal = React.memo(() => {
     <div className={styles.overlay} onMouseDown={closeModal} style={style}>
       <div className={styles.container} onMouseDown={(event) => event.stopPropagation()}>
         <div className={styles.searchHeader}>
-          <input
+          <ColumnFilterInput
             autoFocus
-            className={styles.searchInput}
+            inputClassName={styles.searchInput}
             value={searchText}
+            columnNames={activeTableColumnNames}
             placeholder="Buscar abas, scripts, tabelas e funções"
-            onChange={(event) => setSearchText(event.target.value)}
+            onChange={handleSearchChange}
+            dropdownBackgroundColor={fieldBackgroundColor}
+            dropdownBorderColor={__colors.lightGray}
+            dropdownColor={fieldColor}
             onKeyDown={(event) => {
               if (event.key === 'ArrowDown') {
                 event.preventDefault();

@@ -20,6 +20,11 @@ export interface ICentralSearchItem {
   search: string;
   connectionDescription: string;
   icon: AvalailableTreeViewIcon;
+  tableRef?: {
+    idConnection: string;
+    schema?: string;
+    table: string;
+  };
   isOpen?: boolean;
   isActive?: boolean;
   onOpen(argument?: string): void;
