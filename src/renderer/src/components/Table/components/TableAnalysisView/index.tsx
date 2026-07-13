@@ -72,9 +72,15 @@ const TableAnalysisInput = ({
 }) => {
   const inputInitialValue = editInitialValue ?? serializeTableValue(value, column.type);
   const editedValue = React.useRef<string | number>(inputInitialValue);
+  const cancelEditRef = React.useRef(false);
 
   const handleSaveInputValue = React.useCallback(() => {
     onBlurCell?.();
+
+    if (cancelEditRef.current) {
+      cancelEditRef.current = false;
+      return;
+    }
 
     if (serializeTableValue(value, column.type) === editedValue.current) return;
 
@@ -130,6 +136,13 @@ const TableAnalysisInput = ({
       spellCheck={false}
       defaultValue={editedValue.current}
       onBlur={handleSaveInputValue}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+
+        event.preventDefault();
+        cancelEditRef.current = true;
+        onBlurCell?.();
+      }}
       onChange={(e) => {
         editedValue.current = e.target.value;
       }}

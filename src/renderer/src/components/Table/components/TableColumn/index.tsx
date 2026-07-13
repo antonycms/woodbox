@@ -118,8 +118,12 @@ const TableColumn = ({
   })();
 
   const editedValue = React.useRef<string | number | null>(null);
+  const cancelEditRef = React.useRef(false);
 
   const inputInitialValue = editInitialValue ?? serializedValue;
+  const comparableInitialValue = [undefined, null].includes(serializedValue)
+    ? ''
+    : serializedValue;
 
   editedValue.current = [undefined, null].includes(inputInitialValue) ? '' : inputInitialValue;
 
@@ -135,10 +139,15 @@ const TableColumn = ({
   const handleSaveInputValue = React.useCallback(() => {
     onBlurCell?.();
 
-    if (value === editedValue.current) return;
+    if (cancelEditRef.current) {
+      cancelEditRef.current = false;
+      return;
+    }
+
+    if (String(comparableInitialValue) === String(editedValue.current ?? '')) return;
 
     onEditCell?.(indexRow, name, editedValue.current);
-  }, [value, indexRow, name, onEditCell, onBlurCell]);
+  }, [comparableInitialValue, indexRow, name, onEditCell, onBlurCell]);
 
   const content = isEditing ? null : isLinkClickable ? (
     <span
@@ -257,6 +266,7 @@ const TableColumn = ({
           e.preventDefault();
 
           if (e.key === 'Escape') {
+            cancelEditRef.current = true;
             onBlurCell?.();
             return;
           }
