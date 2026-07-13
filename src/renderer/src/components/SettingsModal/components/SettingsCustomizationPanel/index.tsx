@@ -69,6 +69,9 @@ const themeAttributeLabels = {
   colorRowEven: 'Texto da linha par',
   backgroundColorColumnEdited: 'Fundo da coluna editada',
   colorColumnEdited: 'Texto da coluna editada',
+  selectedColor: 'Texto selecionado',
+  selectedBackgroundColor: 'Fundo selecionado',
+  selectedBorderColor: 'Borda selecionada',
 };
 
 const themeLabels = {
@@ -97,6 +100,16 @@ const normalizeFileName = (value: string) => {
     .toLowerCase()
     .replace(/[^a-z0-9-_]+/g, '-')
     .replace(/^-+|-+$/g, '');
+};
+
+const isNativeColorValue = (value: string) => /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(value);
+
+const getNativeColorValue = (value: string) => value.slice(0, 7);
+
+const getColorInputValue = (value: string, currentValue: string) => {
+  const alpha = currentValue.length === 9 ? currentValue.slice(7) : '';
+
+  return `${value}${alpha}`;
 };
 
 const cloneWithPathValue = (theme: ITheme<string>, path: string, value: string): ITheme => {
@@ -455,7 +468,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
               <div className={styles.advancedGrid}>
                 {group.fields.map((field) => {
-                  const isNativeColor = /^#[0-9a-fA-F]{6}$/.test(field.value);
+                  const isNativeColor = isNativeColorValue(field.value);
 
                   return (
                     <div key={field.path} className={styles.colorField}>
@@ -463,9 +476,16 @@ export const SettingsCustomizationPanel = React.memo(() => {
                         key={`${inputsVersion}:${field.path}`}
                         label={field.label}
                         type={isNativeColor ? 'color' : 'text'}
-                        defaultValue={field.value}
+                        defaultValue={
+                          isNativeColor ? getNativeColorValue(field.value) : field.value
+                        }
                         onChange={(event) =>
-                          handleChangeAdvancedColor(field.path, event.target.value)
+                          handleChangeAdvancedColor(
+                            field.path,
+                            isNativeColor
+                              ? getColorInputValue(event.target.value, field.value)
+                              : event.target.value,
+                          )
                         }
                         color={colors.fieldColor}
                         backgroundColor={colors.fieldBackgroundColor}
