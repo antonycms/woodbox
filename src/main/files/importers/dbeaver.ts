@@ -7,7 +7,6 @@ import { generateHash } from '@main/utils/methods';
 const inflateRaw = promisify(zlib.inflateRaw);
 
 const DBEAVER_DEFAULT_CREDENTIALS_KEY = Buffer.from('babb4a9f774ab853c96c2d653dfe544a', 'hex');
-const DBEAVER_DEFAULT_CREDENTIALS_IV = Buffer.alloc(16);
 
 type ZipEntry = {
   name: string;
@@ -175,17 +174,39 @@ const parseJson = <T>(content: Buffer, path: string): T => {
   }
 };
 
-const decryptDbeaverCredentials = (content: Buffer) => {
-  const decipher = crypto.createDecipheriv(
-    'aes-128-cbc',
-    DBEAVER_DEFAULT_CREDENTIALS_KEY,
-    DBEAVER_DEFAULT_CREDENTIALS_IV,
-  );
+const makeDbeaverPasswordKey = (password: string) => {
+  const key = Buffer.alloc(16);
+  Buffer.from(password, 'utf8').copy(key, 0, 0, 16);
 
-  const decrypted = Buffer.concat([decipher.update(content), decipher.final()]);
-  const json = decrypted.subarray(16).toString('utf8').trim();
+  return key;
+};
+
+const decryptDbeaverValue = (content: Buffer, key: Buffer) => {
+  if (content.length <= 16) {
+    throw new Error('Arquivo de credenciais do DBeaver inválido.');
+  }
+
+  const iv = content.subarray(0, 16);
+  const encrypted = content.subarray(16);
+  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+};
+
+const parseDbeaverCredentials = (content: Buffer, key: Buffer) => {
+  const json = decryptDbeaverValue(content, key).toString('utf8').trim();
 
   return JSON.parse(json) as DbeaverCredentials;
+};
+
+const decryptDbeaverCredentials = (content: Buffer, options: DbeaverImportOptions) => {
+  try {
+    return parseDbeaverCredentials(content, DBEAVER_DEFAULT_CREDENTIALS_KEY);
+  } catch (error) {
+    if (!options.masterPassword) throw error;
+
+    return parseDbeaverCredentials(content, makeDbeaverPasswordKey(options.masterPassword));
+  }
 };
 
 const getString = (...values: unknown[]) => {
