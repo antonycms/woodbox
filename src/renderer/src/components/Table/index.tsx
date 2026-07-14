@@ -1170,13 +1170,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       new Set([cellKey(firstCell.rowIndex, firstCell.colIndex)]),
       firstCell,
     );
-  }, [
-    analysisMode,
-    columns.length,
-    enterAnalysisMode,
-    initialAnalysisMode,
-    serializedRows,
-  ]);
+  }, [analysisMode, columns.length, enterAnalysisMode, initialAnalysisMode, serializedRows]);
 
   React.useEffect(() => {
     if (!analysisModeRef.current || !analysisRowsRef.current.length) return;
