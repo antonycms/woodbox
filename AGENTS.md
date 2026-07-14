@@ -14,7 +14,7 @@
 ## Regras globais
 
 - Faça mudanças pequenas e focadas no pedido.
-- Não aplique lint/format geral se não for solicitado.
+- Não aplique lint/format geral, apenas no que for modificado.
 - Não altere linhas, imports, estilos ou arquivos fora do necessário.
 - Reutilize padrões existentes antes de criar abstrações novas.
 - Evite `any` quando houver tipo viável, mesmo com `strict: false` no projeto.
