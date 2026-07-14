@@ -93,6 +93,8 @@ const ReferencePreview = ({
   const canGoBack = historyIndex > 0;
   const canGoForward = historyIndex < history.length - 1;
 
+  const currentRows = React.useMemo(() => (currentRow ? [currentRow] : []), [currentRow]);
+
   const referencePreviewValue = React.useMemo(() => {
     const tableName = getTableName(currentReference);
     const value = JSON.stringify(currentRow || {}, null, 2);
@@ -304,8 +306,10 @@ const ReferencePreview = ({
           />
         ) : (
           <Table
+            key={currentReferenceKey}
             columns={currentColumns}
-            rows={currentRow ? [currentRow] : []}
+            rows={currentRows}
+            initialAnalysisMode
             rowKeyExtractor={() => currentReferenceKey}
             onCellLinkClick={handleOpenNestedReference}
             cellLinkClickMode="single"

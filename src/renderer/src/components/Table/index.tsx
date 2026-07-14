@@ -56,6 +56,7 @@ interface ITableProps<Row = any> {
   onCellLinkClick?(attribute: string, value: any): void;
   onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
+  initialAnalysisMode?: boolean;
 }
 
 const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
@@ -87,6 +88,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onCellLinkClick,
     onCellLinkPreviewClick,
     cellLinkClickMode = 'ctrl',
+    initialAnalysisMode,
   } = props;
 
   const {
@@ -195,6 +197,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     () => columns.map((column) => String(column.attribute)).join('\0'),
     [columns],
   );
+  const initialAnalysisModeAppliedRef = React.useRef(false);
 
   const columnsDetails = React.useMemo(() => {
     const columnsIndexToRender: number[] = [];
@@ -763,6 +766,49 @@ function Table<Row = any>(props: ITableProps<Row>) {
     });
   };
 
+  const enterAnalysisMode = React.useCallback(
+    (
+      rowsToAnalyze: Array<{ __index_row: number }>,
+      selectedCells: Set<string>,
+      anchor?: TableCellPosition | null,
+    ) => {
+      if (!rowsToAnalyze.length) return;
+
+      const firstColumnMinSize = Math.ceil(
+        Math.max(0, ...columnsRef.current.map((column) => calculateTextHtmlWidth(column.label))) +
+          40,
+      );
+      const rowColumnsMinSize = rowsToAnalyze.map((row) =>
+        Math.ceil(calculateTextHtmlWidth(`Linha #${Number(row.__index_row) + 1}`) + 40),
+      );
+      const minSizes = [firstColumnMinSize, ...rowColumnsMinSize];
+      const sizes = minSizes.map((size) => {
+        const defaultSize = size > defaultColumnSize ? size : defaultColumnSize;
+        return defaultSize > maxColumnSize ? maxColumnSize : defaultSize;
+      });
+      const fallbackCell = selectedCells.size
+        ? (() => {
+            const [rowIndex, colIndex] = [...selectedCells][0].split(':').map(Number);
+            return { rowIndex, colIndex };
+          })()
+        : { rowIndex: rowsToAnalyze[0].__index_row, colIndex: 0 };
+
+      setAnalysisRows(rowsToAnalyze);
+      setAnalysisMinColumnsSize(minSizes);
+      setAnalysisColumnsSize(sizes);
+      setAnalysisSelectedCells(
+        selectedCells.size
+          ? new Set(selectedCells)
+          : new Set([cellKey(fallbackCell.rowIndex, fallbackCell.colIndex)]),
+      );
+      lastAnalysisSelectedCellRef.current = anchor ?? fallbackCell;
+      analysisArrowCursorRef.current = anchor ?? fallbackCell;
+      captureDefaultScroll();
+      setAnalysisMode(true);
+    },
+    [captureDefaultScroll, defaultColumnSize, maxColumnSize],
+  );
+
   const resetAnalysisMode = React.useCallback(() => {
     setAnalysisMode(false);
     setAnalysisRows([]);
@@ -804,29 +850,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           const rowsToAnalyze = [...selectedRowsRef.current.values()].sort(
             (a, b) => a.__index_row - b.__index_row,
           );
-          const firstColumnMinSize = Math.ceil(
-            Math.max(
-              0,
-              ...columnsRef.current.map((column) => calculateTextHtmlWidth(column.label)),
-            ) + 40,
-          );
-          const rowColumnsMinSize = rowsToAnalyze.map((row) =>
-            Math.ceil(calculateTextHtmlWidth(`Linha #${Number(row.__index_row) + 1}`) + 40),
-          );
-          const minSizes = [firstColumnMinSize, ...rowColumnsMinSize];
-          const sizes = minSizes.map((size) => {
-            const defaultSize = size > defaultColumnSize ? size : defaultColumnSize;
-            return defaultSize > maxColumnSize ? maxColumnSize : defaultSize;
-          });
-
-          setAnalysisRows(rowsToAnalyze);
-          setAnalysisMinColumnsSize(minSizes);
-          setAnalysisColumnsSize(sizes);
-          setAnalysisSelectedCells(new Set(selectedCellsRef.current));
-          lastAnalysisSelectedCellRef.current = lastSelectedCellRef.current;
-          analysisArrowCursorRef.current = lastSelectedCellRef.current;
-          captureDefaultScroll();
-          setAnalysisMode(true);
+          enterAnalysisMode(rowsToAnalyze, selectedCellsRef.current, lastSelectedCellRef.current);
         }
       }
 
@@ -916,7 +940,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [analysisMode, captureDefaultScroll]);
+  }, [analysisMode, enterAnalysisMode]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
@@ -1126,6 +1150,33 @@ function Table<Row = any>(props: ITableProps<Row>) {
   React.useEffect(() => {
     resetAnalysisMode();
   }, [columnsSignature, resetAnalysisMode]);
+
+  React.useEffect(() => {
+    if (
+      !initialAnalysisMode ||
+      initialAnalysisModeAppliedRef.current ||
+      analysisMode ||
+      !serializedRows.length ||
+      !columns.length
+    )
+      return;
+
+    initialAnalysisModeAppliedRef.current = true;
+
+    const firstCell = { rowIndex: serializedRows[0].__index_row, colIndex: 0 };
+
+    enterAnalysisMode(
+      serializedRows,
+      new Set([cellKey(firstCell.rowIndex, firstCell.colIndex)]),
+      firstCell,
+    );
+  }, [
+    analysisMode,
+    columns.length,
+    enterAnalysisMode,
+    initialAnalysisMode,
+    serializedRows,
+  ]);
 
   React.useEffect(() => {
     if (!analysisModeRef.current || !analysisRowsRef.current.length) return;
