@@ -271,8 +271,27 @@ const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
   return separators;
 };
 
-export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: number) => {
-  if (!content || typeof content !== 'string') return content;
+const trimSqlRange = (content: string, start: number, end: number) => {
+  let sqlStart = start;
+  let sqlEnd = end;
+
+  while (sqlStart < sqlEnd && /\s/.test(content[sqlStart])) sqlStart++;
+  while (sqlStart < sqlEnd && /\s/.test(content[sqlEnd - 1])) sqlEnd--;
+
+  if (content[sqlStart] === ';') {
+    sqlStart++;
+    while (sqlStart < sqlEnd && /\s/.test(content[sqlStart])) sqlStart++;
+  }
+
+  return {
+    sql: content.substring(sqlStart, sqlEnd),
+    start: sqlStart,
+    end: sqlEnd,
+  };
+};
+
+export const getCurrentQuerySqlFromContentRange = (content: string, cursorOffset?: number) => {
+  if (!content || typeof content !== 'string') return { sql: content, start: 0, end: 0 };
 
   const separators = getSqlQuerySeparators(content);
 
@@ -285,16 +304,13 @@ export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: nu
       end = separator.index;
     }
 
-    let chunk = content.substring(end, content.length).trim();
+    let range = trimSqlRange(content, end, content.length);
 
-    if (chunk.startsWith(';')) {
-      chunk = chunk.substring(0 + 1).trim();
-    }
-    if (!chunk) {
-      chunk = content.substring(start, content.length).trim();
+    if (!range.sql) {
+      range = trimSqlRange(content, start, content.length);
     }
 
-    return chunk;
+    return range;
   }
 
   let queryStart = 0;
@@ -309,5 +325,9 @@ export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: nu
     }
   }
 
-  return content.substring(queryStart, queryEnd).trim();
+  return trimSqlRange(content, queryStart, queryEnd);
+};
+
+export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: number) => {
+  return getCurrentQuerySqlFromContentRange(content, cursorOffset).sql;
 };

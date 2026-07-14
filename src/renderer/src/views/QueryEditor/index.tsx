@@ -43,6 +43,23 @@ import { TabContentSelect } from './components/TabContentSelect';
 import { ModalServerOutput } from './components/ModalServerOutput';
 import { getRendererDialect } from '@renderer/database/dialects';
 
+type QueryExecutionError = Error & { position?: string | number };
+
+const formatQueryErrorMessage = (error: unknown) => {
+  const queryError = error as QueryExecutionError;
+  const message = queryError?.message || 'Erro desconhecido';
+
+  if (!queryError?.position) return message;
+
+  return `${message} (position: ${queryError.position})`;
+};
+
+const getQueryErrorOffset = (error: unknown) => {
+  const position = Number((error as QueryExecutionError)?.position);
+
+  return Number.isFinite(position) && position > 0 ? position - 1 : undefined;
+};
+
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
     runSql,
@@ -234,7 +251,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     });
 
     try {
-      if (markErrors) refEditor.current.setMarkers([]);
+      refEditor.current.setMarkers([]);
 
       const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
         await runSql(id_connection, preparedQuery, { queryExecutionId });
@@ -279,7 +296,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
       const message = markErrors
         ? error?.message?.split?.(' - ')?.[1] || error?.message
-        : `${error?.message} (position: ${error.position})`;
+        : formatQueryErrorMessage(error);
 
       updateTabResultData({
         type: 'ERROR',
@@ -290,50 +307,28 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         queryExecutionId: undefined,
       });
 
-      if (!markErrors) return;
+      const errorOffset = getQueryErrorOffset(error);
 
-      const position = Number(error.position) + 1;
+      if (errorOffset === undefined) return;
 
-      let startLine = 1;
-      let endLine = 1;
-      let startColumn = 1;
-      let endColumn = 1;
+      const editorQueryStartOffset = params.editorOffset || 0;
+      const errorPosition = refEditor.current.getPositionAt(editorQueryStartOffset + errorOffset);
+      const endPosition = refEditor.current.getPositionAt(editorQueryStartOffset + query.length);
 
-      let currentLine = 1;
-      let currentColumn = 1;
-
-      for (let i = 1; i <= query.length; i++) {
-        currentColumn++;
-
-        const word = query[i];
-
-        if (word === '\n') {
-          currentLine++;
-          currentColumn = 1;
-        }
-
-        if (i === position) {
-          startLine = currentLine;
-          startColumn = currentColumn;
-        }
-
-        if (i === query.length) {
-          endLine = currentLine;
-          endColumn = currentColumn;
-        }
-      }
+      if (!errorPosition || !endPosition) return;
 
       refEditor.current.setMarkers([
         {
           message,
-          startLineNumber: startLine,
-          endLineNumber: endLine,
+          startLineNumber: errorPosition.lineNumber,
+          endLineNumber: endPosition.lineNumber,
           code: `SQL Error`,
-          startColumn,
-          endColumn,
+          startColumn: errorPosition.column,
+          endColumn: endPosition.column,
           severity: 'Error',
         },
       ]);
+      refEditor.current.setPosition(errorPosition);
     }
   };
 
@@ -480,7 +475,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         return;
       }
 
-      const message = `${error?.message} (position: ${error.position})`;
+      const message = formatQueryErrorMessage(error);
       updateTabResultData({
         type: 'ERROR',
         message,
@@ -493,20 +488,43 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   };
 
   const runCurrentSQL = async (openNewTab?: boolean) => {
-    const query = getSelectionsValues().join('\n') || refEditor.current?.getCurrentValue?.();
+    const selections = refEditor.current?.getSelections?.() || [];
+    const selectionsValue = getSelectionsValues();
+    const firstSelectionPosition = selections
+      .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
+      ?.getStartPosition?.();
+    const selectionOffset = firstSelectionPosition
+      ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
+      : undefined;
+
+    if (selectionsValue.length) {
+      const query = selectionsValue.join('\n');
+      requestQueryExecution({ query, editorOffset: selectionOffset, openNewTab });
+      return;
+    }
+
+    const currentQuery = refEditor.current?.getCurrentQueryRange?.();
+    const query = currentQuery?.sql;
 
     if (!query) return;
 
-    requestQueryExecution({ query, openNewTab });
+    requestQueryExecution({ query, editorOffset: currentQuery.start, openNewTab });
   };
 
   const runSelectionsSQL = async () => {
+    const selections = refEditor.current?.getSelections?.() || [];
     const selectionsValue = getSelectionsValues();
     const query = selectionsValue.join('\n');
+    const firstSelectionPosition = selections
+      .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
+      ?.getStartPosition?.();
+    const selectionOffset = firstSelectionPosition
+      ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
+      : undefined;
 
     if (!query) return;
 
-    requestQueryExecution({ query, forceNewTab: true });
+    requestQueryExecution({ query, editorOffset: selectionOffset, forceNewTab: true });
   };
 
   const runAllSQL = async () => {
@@ -514,7 +532,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     if (!query) return;
 
-    requestQueryExecution({ query, forceNewTab: true, markErrors: true });
+    requestQueryExecution({ query, editorOffset: 0, forceNewTab: true, markErrors: true });
   };
 
   const onScrollEnd = async () => {
@@ -581,7 +599,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         return;
       }
 
-      const message = `${error?.message} (position: ${error.position})`;
+      const message = formatQueryErrorMessage(error);
       updateTabResultData({
         type: 'ERROR',
         query,
@@ -660,7 +678,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         return;
       }
 
-      const message = `${error?.message} (position: ${error.position})`;
+      const message = formatQueryErrorMessage(error);
       updateTabResultData({ type: 'ERROR', message, loading: false, queryExecutionId: undefined });
     }
   };
@@ -760,6 +778,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     editScript(id_script, { content, updated_at: new Date().toISOString() });
   }, 1000);
+
+  const clearEditorErrorMarkers = React.useCallback(() => {
+    refEditor.current?.setMarkers?.([]);
+  }, []);
 
   const handleUpdateCurrentQueryInfo = React.useCallback((query: string) => {
     const tablesQueryInfo = getTablesFromQuerySql(query);
@@ -911,6 +933,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           dialect={dialect.editorDialect}
           onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
+          onDidChangeContent={clearEditorErrorMarkers}
           autocomplete={autocomplete}
           onCtrlClick={handleEditorCtrlClick}
         />

@@ -6,7 +6,7 @@ import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
-import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
+import { getCurrentQuerySqlFromContentRange } from '@renderer/utils/sql';
 import type { Dialect } from '@renderer/database/dialects';
 
 const Editor = ({
@@ -56,6 +56,20 @@ const Editor = ({
     monaco.editor.setModelMarkers(model, null, markers);
   };
 
+  const setPosition = (position: monaco.IPosition) => {
+    editor?.setPosition?.(position);
+    editor?.revealPositionInCenter?.(position);
+    editor?.focus?.();
+  };
+
+  const getPositionAt = (offset: number) => {
+    return editor?.getModel?.()?.getPositionAt?.(offset);
+  };
+
+  const getOffsetAt = (position: monaco.IPosition) => {
+    return editor?.getModel?.()?.getOffsetAt?.(position);
+  };
+
   const setScroll = (scroll: IScroll) => {
     if (typeof scroll !== 'object') return;
     const { scrollTop = 0, scrollLeft = 0 } = scroll;
@@ -97,16 +111,20 @@ const Editor = ({
     return editor?.getModel()?.getValue?.() || '';
   };
 
-  const getCurrentValue = () => {
+  const getCurrentQueryRange = () => {
     const position = editor?.getPosition?.();
     const model = editor?.getModel?.();
 
-    if (!position || !model) return model?.getValue?.() || '';
+    if (!position || !model) return { sql: model?.getValue?.() || '', start: 0, end: 0 };
 
     const fullContent = model.getValue();
     const cursorOffset = model.getOffsetAt(position);
 
-    return getCurrentQuerySqlFromContent(fullContent, cursorOffset);
+    return getCurrentQuerySqlFromContentRange(fullContent, cursorOffset);
+  };
+
+  const getCurrentValue = () => {
+    return getCurrentQueryRange().sql;
   };
 
   const initEditor = () => {
@@ -186,8 +204,12 @@ const Editor = ({
       getSelectionValue,
       getValue,
       getCurrentValue,
+      getCurrentQueryRange,
       setValue,
       setMarkers,
+      setPosition,
+      getPositionAt,
+      getOffsetAt,
       getWordAtPosition,
       element: editor?.getDomNode?.(),
     }),
@@ -257,8 +279,9 @@ const Editor = ({
       listenerSelections && monacoListeners.push(listenerSelections);
     }
 
-    if (props.onChange || props.onChangeCurrentValue) {
+    if (props.onChange || props.onChangeCurrentValue || props.onDidChangeContent) {
       const listenerValueChange = editor?.getModel?.()?.onDidChangeContent(() => {
+        props.onDidChangeContent?.();
         emitValueChange();
         emitCurrentValueChange();
       });
@@ -277,7 +300,7 @@ const Editor = ({
     return () => {
       monacoListeners.forEach((a) => a?.dispose?.());
     };
-  }, [editor, props.onChange, props.onChangeCurrentValue]);
+  }, [editor, props.onChange, props.onChangeCurrentValue, props.onDidChangeContent]);
 
   React.useEffect(() => {
     if (!editor) return;
@@ -307,6 +330,7 @@ export interface IEditorProps {
   onUmounted?: (data: IDataUmounted) => void;
   onChange?: (value: string) => void;
   onChangeCurrentValue?: (value: string) => void;
+  onDidChangeContent?: () => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
   onCtrlClick?: (word: string, schema?: string) => void;
@@ -338,6 +362,7 @@ interface IAddMarkerParams {
 
 export interface IEditorRef {
   getCurrentValue(): string;
+  getCurrentQueryRange(): { sql: string; start: number; end: number };
   getValue(): string;
   setValue(value: string): void;
   getSelections(): monaco.Selection[];
@@ -346,6 +371,9 @@ export interface IEditorRef {
   getScroll(): IScroll;
   setScroll(scroll: IScroll): void;
   setMarkers(params: IAddMarkerParams[]): void;
+  setPosition(position: monaco.IPosition): void;
+  getPositionAt(offset: number): monaco.IPosition | undefined;
+  getOffsetAt(position: monaco.IPosition): number | undefined;
   getWordAtPosition(position: monaco.IPosition): monaco.editor.IWordAtPosition;
   element?: HTMLElement;
 }

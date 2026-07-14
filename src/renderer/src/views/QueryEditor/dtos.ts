@@ -21,6 +21,7 @@ export interface IQueryResult {
 
 export interface IPendingQueryExecution {
   query: string;
+  editorOffset?: number;
   openNewTab?: boolean;
   forceNewTab?: boolean;
   markErrors?: boolean;
