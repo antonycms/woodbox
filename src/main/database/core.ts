@@ -451,7 +451,8 @@ export const runSql = async (
   const { instance, dialect } = connection;
   const adapter = getDialectAdapter(dialect);
 
-  let sql_final = sql.trim();
+  const sql_original = sql.trim();
+  let sql_final = sql_original;
 
   // Cria uma versão normalizada pra fazer verificacoes
   const normalized = sql_final.replace(/\s+/g, ' ').toLowerCase();
@@ -499,8 +500,13 @@ export const runSql = async (
       !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
     const results: { raw: any; statement: string }[] = [];
 
-    for (const statement of statements) {
-      results.push({ raw: await instance.raw(statement).connection(dbConnection), statement });
+    try {
+      for (const statement of statements) {
+        results.push({ raw: await instance.raw(statement).connection(dbConnection), statement });
+      }
+    } catch (error) {
+      if (auto_paginated) throw sanitizeAutoPaginatedError(error, sql_final, sql_original);
+      throw error;
     }
 
     const execution_time_ms = Date.now() - t0;
@@ -512,6 +518,57 @@ export const runSql = async (
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
     await (instance.client as any).releaseConnection(dbConnection);
   }
+};
+
+const sanitizeAutoPaginatedError = (error: unknown, executableSql: string, originalSql: string) => {
+  if (!(error instanceof Error)) return error;
+
+  const queryError = error as Error & { sql?: string; position?: string };
+
+  queryError.message = sanitizeAutoPaginatedText(queryError.message, executableSql, originalSql);
+  queryError.position = sanitizeAutoPaginatedPosition(
+    queryError.position,
+    executableSql,
+    originalSql,
+  );
+
+  if (typeof queryError.sql === 'string') {
+    queryError.sql = queryError.sql.includes('__base_query')
+      ? originalSql
+      : queryError.sql.replace(executableSql, originalSql);
+  }
+
+  if (typeof queryError.stack === 'string') {
+    queryError.stack = queryError.stack.replace(executableSql, originalSql);
+  }
+
+  return queryError;
+};
+
+const sanitizeAutoPaginatedText = (text: string, executableSql: string, originalSql: string) => {
+  const sanitizedText = text.replace(executableSql, originalSql);
+
+  if (!sanitizedText.includes('__base_query')) return sanitizedText;
+
+  return sanitizedText.split(' - ').slice(1).join(' - ') || sanitizedText;
+};
+
+const sanitizeAutoPaginatedPosition = (
+  position: string | undefined,
+  executableSql: string,
+  originalSql: string,
+) => {
+  const numericPosition = Number(position);
+
+  if (!Number.isFinite(numericPosition)) return position;
+
+  const originalSqlStart = executableSql.indexOf(originalSql);
+  const originalSqlEnd = originalSqlStart + originalSql.length;
+
+  if (originalSqlStart < 0) return position;
+  if (numericPosition <= originalSqlStart || numericPosition > originalSqlEnd) return undefined;
+
+  return String(numericPosition - originalSqlStart);
 };
 
 interface IOrderBy {
