@@ -121,9 +121,7 @@ const TableColumn = ({
   const cancelEditRef = React.useRef(false);
 
   const inputInitialValue = editInitialValue ?? serializedValue;
-  const comparableInitialValue = [undefined, null].includes(serializedValue)
-    ? ''
-    : serializedValue;
+  const comparableInitialValue = [undefined, null].includes(serializedValue) ? '' : serializedValue;
 
   editedValue.current = [undefined, null].includes(inputInitialValue) ? '' : inputInitialValue;
 
