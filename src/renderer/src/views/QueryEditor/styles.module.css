@@ -76,4 +76,6 @@
   margin: 0;
   cursor: text;
   user-select: text;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
