@@ -21,10 +21,21 @@ import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { formatSizeFromBytes } from '@renderer/utils/methods';
 import styles from '../Columns/styles.module.css';
 
 const getIndexSelectionKey = (index: IIndexInfo) =>
   (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
+
+const getIndexSizeText = (index: IIndexInfo) => {
+  if (index.index_size_bytes === null || index.index_size_bytes === undefined) return undefined;
+
+  const bytes = Number(index.index_size_bytes);
+
+  if (!Number.isFinite(bytes)) return undefined;
+
+  return formatSizeFromBytes(bytes);
+};
 
 const Indexes = ({
   id_connection,
@@ -92,13 +103,18 @@ const Indexes = ({
     ],
     [columns, droppedColumnNames, pendingColumns],
   );
-  const allIndexes = React.useMemo(
+  const allIndexes = React.useMemo<IIndexInfo[]>(
     () => [
       ...indexes.map((index) => {
-        if (!droppedIndexNames.has(index.index_name)) return index;
+        const indexWithSize = {
+          ...index,
+          index_size: getIndexSizeText(index),
+        };
+
+        if (!droppedIndexNames.has(index.index_name)) return indexWithSize;
 
         return {
-          ...index,
+          ...indexWithSize,
           __pendingAction: 'drop',
           __style: {
             backgroundColor: __colors.redTransparent,
@@ -106,7 +122,10 @@ const Indexes = ({
           },
         };
       }),
-      ...pendingIndexes,
+      ...pendingIndexes.map((index) => ({
+        ...index,
+        index_size: getIndexSizeText(index),
+      })),
     ],
     [__colors.redTransparent, indexes, droppedIndexNames, pendingIndexes],
   );
@@ -124,6 +143,7 @@ const Indexes = ({
         index.is_valid,
         index.expression,
         index.predicate,
+        index.index_size,
       ].some((value) =>
         texts.some(
           (text) =>
@@ -397,6 +417,12 @@ const Indexes = ({
             title: 'Clique para ordenar por essa coluna',
             label: 'Predicado',
             attribute: 'predicate',
+            sortable: true,
+          },
+          {
+            title: 'Clique para ordenar por essa coluna',
+            label: 'Tamanho',
+            attribute: 'index_size',
             sortable: true,
           },
         ]}

@@ -174,6 +174,7 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
     CONCAT('[', GROUP_CONCAT(JSON_QUOTE(column_name) ORDER BY seq_in_index SEPARATOR ','), ']') AS column_names,
     NULL AS expression,
     NULL AS predicate,
+    NULL AS index_size_bytes,
     CONCAT(
       'CREATE ', CASE WHEN non_unique = 0 THEN 'UNIQUE ' ELSE '' END,
       'INDEX ', ${sqlQuoteIdent('index_name')}, ' ON ', ${sqlQuoteIdent('table_name')},

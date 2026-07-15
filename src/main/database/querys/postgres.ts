@@ -258,6 +258,7 @@ const getTableIndexes = ({ schema, table }: ITableWithSchema) => /* sql */ `
     ) AS column_names,
     pg_catalog.pg_get_expr(ix.indexprs, ix.indrelid) AS expression,
     pg_catalog.pg_get_expr(ix.indpred, ix.indrelid) AS predicate,
+    pg_relation_size(ix.indexrelid) AS index_size_bytes,
     pg_catalog.pg_get_indexdef(ix.indexrelid) AS index_definition
   FROM pg_catalog.pg_index ix
   JOIN pg_catalog.pg_class t ON t.oid = ix.indrelid

@@ -159,6 +159,8 @@ export interface IIndexInfo {
   column_names?: string[];
   expression?: string;
   predicate?: string;
+  index_size_bytes?: number | string | null;
+  index_size?: string;
   index_definition?: string;
 }
 
