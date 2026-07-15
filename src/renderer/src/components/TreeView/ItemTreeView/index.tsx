@@ -11,7 +11,8 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
   const { activeTheme } = useThemeContext();
   const color = props.color || activeTheme.sideBar.color;
   const iconColor = props.iconColor || color;
-  const focusBackgroundColor = activeTheme.__colors.darkLightDeep;
+  const focusBackgroundColor =
+    activeTheme.sideBar.selectedBackgroundColor || activeTheme.__colors.darkLightDeep;
 
   const isOpen = openedItemsId.some((id) => id === props.id);
 

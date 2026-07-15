@@ -29,6 +29,7 @@ interface SideBar<Colors> {
   fieldLabelColor?: Colors;
   menuBar?: MenuBar<Colors>;
   borderColor?: Colors;
+  selectedBackgroundColor?: Colors;
 }
 
 interface Editor<Colors> {

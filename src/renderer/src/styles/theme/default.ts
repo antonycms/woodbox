@@ -22,6 +22,7 @@ const __colors = {
   darkLight: '#44475a3d',
   darkLightBar: '#1f1f26',
   darkLightDeep: '#242329',
+  sideBarSelectedBackground: '#302d3a',
   backgroundContextMenu: '#1b1727',
   border: '#191622',
   shadow: '#00000033',
@@ -57,6 +58,7 @@ const defaultTheme: ITheme<Color> = {
     fieldBackgroundColor: '__colors.darkLightDeep',
     fieldLabelColor: '__colors.white',
     borderColor: '__colors.border',
+    selectedBackgroundColor: '__colors.sideBarSelectedBackground',
   },
 
   mainTab: {

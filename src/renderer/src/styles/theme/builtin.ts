@@ -191,6 +191,7 @@ const auraLightColors = {
   darkLight: '#e9e3f83d',
   darkLightBar: '#f3effc',
   darkLightDeep: '#ece8f7',
+  sideBarSelectedBackground: '#ded8ef',
   backgroundContextMenu: '#f7f4ff',
   border: '#d8d1e8',
 };
@@ -487,6 +488,7 @@ const auraLightThemeOverrides: ThemeOverrides = {
     fieldBackgroundColor: '__colors.darkLightDeep',
     fieldLabelColor: '__colors.white',
     borderColor: '__colors.border',
+    selectedBackgroundColor: '__colors.sideBarSelectedBackground',
   },
   mainTab: {
     bar: {
