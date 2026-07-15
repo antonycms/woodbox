@@ -489,7 +489,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           ...tab.capture,
           active: true,
           stopped_at: undefined,
-          rowHashes: [...new Set([...tab.capture.rowHashes, ...(tab.rows || []).map(getCaptureRowHash)])],
+          rowHashes: [
+            ...new Set([...tab.capture.rowHashes, ...(tab.rows || []).map(getCaptureRowHash)]),
+          ],
         },
       });
       return;

@@ -45,9 +45,7 @@ export const RefreshButton = ({
     [autoRefreshMs],
   );
 
-  const refreshTitle = autoRefreshMs
-    ? `Cancelar auto-refresh (${selectedOption?.label})`
-    : title;
+  const refreshTitle = autoRefreshMs ? `Cancelar auto-refresh (${selectedOption?.label})` : title;
   const buttonColor = autoRefreshMs ? activeTheme.__colors.green : color;
   const buttonDisabled = disabled && !autoRefreshMs;
 

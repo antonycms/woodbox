@@ -997,7 +997,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         >
           Atualizado em {toDateTime(data.date_run)}
         </Text>
-
       </Bar>
 
       <ContextMenu
