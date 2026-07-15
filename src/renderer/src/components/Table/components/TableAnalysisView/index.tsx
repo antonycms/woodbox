@@ -5,6 +5,7 @@ import { classes } from '@renderer/styles/theme';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
+import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -172,6 +173,7 @@ const TableAnalysisView = ({
   onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
+  const shortcutKey = getPrimaryShortcutKeyLabel();
   const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
 
   return (
@@ -232,8 +234,8 @@ const TableAnalysisView = ({
                 cellLinkClickMode === 'single'
                   ? 'Clique para abrir linha referenciada'
                   : onCellLinkPreviewClick
-                  ? 'Clique para visualizar referência; Ctrl+click para abrir linha referenciada'
-                  : 'Ctrl+click para abrir linha referenciada';
+                  ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
+                  : `${shortcutKey}+click para abrir linha referenciada`;
 
               if (isEditing) {
                 return (
@@ -269,7 +271,7 @@ const TableAnalysisView = ({
                       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
                       title={linkTitle}
                       onClick={(e) => {
-                        if (cellLinkClickMode === 'ctrl' && !e.ctrlKey) {
+                        if (cellLinkClickMode === 'ctrl' && !isPrimaryShortcutPressed(e)) {
                           onCellLinkPreviewClick?.(attribute, value);
                           return;
                         }

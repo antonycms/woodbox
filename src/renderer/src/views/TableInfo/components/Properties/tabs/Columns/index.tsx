@@ -25,6 +25,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
@@ -561,7 +562,7 @@ const Columns = ({
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSavePendingChanges();
         return;

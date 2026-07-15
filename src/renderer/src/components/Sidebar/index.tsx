@@ -8,6 +8,7 @@ import { SettingsModal } from '@renderer/components/SettingsModal';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 type Menu = 'projects';
@@ -24,7 +25,7 @@ export const Sidebar = React.memo(() => {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key?.toLowerCase?.() === 'f') {
+      if (isPrimaryShortcutPressed(e) && e.shiftKey && e.key?.toLowerCase?.() === 'f') {
         e.preventDefault();
         setSelectedMenu('projects');
 

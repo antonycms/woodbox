@@ -1,20 +1,23 @@
 import { useThemeContext } from '@renderer/contexts/Theme';
 import React from 'react';
 import WoodboxLogo from '@renderer/assets/icons/woodbox.svg?react';
+import { getPrimaryShortcutKeyLabel } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
+
+const shortcutKey = getPrimaryShortcutKeyLabel();
+
+const shortcuts = [
+  { label: 'Busca centralizada', keys: [shortcutKey, 'K'] },
+  { label: 'Filtrar projetos', keys: [shortcutKey, 'Shift', 'F'] },
+  { label: 'Fechar aba ativa', keys: [shortcutKey, 'W'] },
+  { label: 'Executar SQL', keys: [shortcutKey, 'Enter'] },
+  { label: 'Executar SQL em outra aba', keys: [shortcutKey, 'Shift', 'Enter'] },
+];
 
 export const Welcolme = () => {
   const {
     activeTheme: { welcome: colors },
   } = useThemeContext();
-
-  const shortcuts = [
-    { label: 'Busca centralizada', keys: ['Ctrl', 'K'] },
-    { label: 'Filtrar projetos', keys: ['Ctrl', 'Shift', 'F'] },
-    { label: 'Fechar aba ativa', keys: ['Ctrl', 'W'] },
-    { label: 'Executar SQL', keys: ['Ctrl', 'Enter'] },
-    { label: 'Executar SQL em outra aba', keys: ['Ctrl', 'Shift', 'Enter'] },
-  ];
 
   return (
     <div className={styles.container} style={colors}>

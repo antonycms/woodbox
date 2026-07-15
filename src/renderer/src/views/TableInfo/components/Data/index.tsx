@@ -44,6 +44,7 @@ import ModalDataError from './components/ModalDataError';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -750,7 +751,7 @@ const Data = ({
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSaveItems();
         return;

@@ -8,6 +8,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContentRange } from '@renderer/utils/sql';
 import type { Dialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 const Editor = ({
   ref,
@@ -168,7 +169,7 @@ const Editor = ({
     });
 
     currentEditor.onMouseDown((e) => {
-      if (!e.event.ctrlKey) return;
+      if (!isPrimaryShortcutPressed(e.event.browserEvent)) return;
       if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
       const position = e.target.position;
       if (!position) return;

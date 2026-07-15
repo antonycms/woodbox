@@ -24,6 +24,7 @@ import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNaviga
 import { ModalQueryVariables } from './components/ModalQueryVariables';
 import { ModalConfirmProductionQuery } from './components/ModalConfirmProductionQuery';
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { ISortDirection } from '@renderer/components/Table/dtos';
 import type {
   IDataMakeTabResult,
@@ -872,7 +873,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const { element } = refEditor.current;
 
     const keypressCallback = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key.toLowerCase() === 'enter') {
+      if (isPrimaryShortcutPressed(e) && e.key.toLowerCase() === 'enter') {
         e.preventDefault();
 
         if (e.altKey && e.shiftKey) {
@@ -890,7 +891,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         runCurrentSQLRef.current();
       }
 
-      if (e.ctrlKey && e.key.toLocaleLowerCase() === '\\') {
+      if (isPrimaryShortcutPressed(e) && e.key.toLocaleLowerCase() === '\\') {
         return runCurrentSQLRef.current(true);
       }
     };

@@ -3,6 +3,7 @@ import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
+import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../../styles.module.css';
 
 type TableCellEditValue = string | number | (string | number)[];
@@ -83,12 +84,13 @@ const TableColumn = ({
 }: ITableColumnProps) => {
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
+  const shortcutKey = getPrimaryShortcutKeyLabel();
   const linkTitle =
     linkClickMode === 'single'
       ? 'Clique para abrir linha referenciada'
       : onFkCellPreviewClick
-      ? 'Clique para visualizar referência; Ctrl+click para abrir linha referenciada'
-      : 'Ctrl+click para abrir linha referenciada';
+      ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
+      : `${shortcutKey}+click para abrir linha referenciada`;
 
   const className = (() => {
     return classes(
@@ -152,7 +154,7 @@ const TableColumn = ({
       style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
       title={linkTitle}
       onClick={(e: React.MouseEvent) => {
-        if (linkClickMode === 'ctrl' && !e.ctrlKey) {
+        if (linkClickMode === 'ctrl' && !isPrimaryShortcutPressed(e)) {
           onFkCellPreviewClick?.(name, value);
           return;
         }

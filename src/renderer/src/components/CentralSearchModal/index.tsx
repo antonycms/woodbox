@@ -11,6 +11,7 @@ import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
 import * as constants from './constants';
@@ -456,7 +457,10 @@ export const CentralSearchModal = React.memo(() => {
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isCtrlK =
-        event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k';
+        isPrimaryShortcutPressed(event) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'k';
 
       if (isCtrlK) {
         event.preventDefault();

@@ -23,6 +23,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../Columns/styles.module.css';
 
 const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
@@ -277,7 +278,7 @@ const Restrictios = ({
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSavePendingChanges();
         return;

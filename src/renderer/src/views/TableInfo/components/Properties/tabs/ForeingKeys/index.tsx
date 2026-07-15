@@ -23,6 +23,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateReferencesDdl } from '../Columns/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../Columns/styles.module.css';
 
 interface IForeingKeysProps extends ITableInfoProps {
@@ -304,7 +305,7 @@ const ForeingKeys = ({
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSavePendingChanges();
         return;

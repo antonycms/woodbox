@@ -16,6 +16,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
@@ -117,7 +118,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSave();
       }

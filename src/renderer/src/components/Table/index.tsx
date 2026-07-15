@@ -8,6 +8,7 @@ import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
 import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { IColumn, ISortDirection, ITableSort } from './dtos';
 
 type TableCellEditValue = string | number | (string | number)[];
@@ -497,7 +498,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       }
       arrowCursorRef.current = { rowIndex, colIndex };
 
-      if (window.ctrlPressed || window.metaPressed) {
+      if (isPrimaryShortcutPressed()) {
         setSelectedCells((prev) => {
           const next = new Set(prev);
           const key = cellKey(rowIndex, colIndex);
@@ -582,7 +583,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       }
       analysisArrowCursorRef.current = { rowIndex, colIndex };
 
-      if (window.ctrlPressed || window.metaPressed) {
+      if (isPrimaryShortcutPressed()) {
         setAnalysisSelectedCells((prev) => {
           const next = new Set(prev);
           const key = cellKey(rowIndex, colIndex);
@@ -600,7 +601,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleStartCellDrag = React.useCallback(
     (rowIndex: number, colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
-      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.button !== 0 || isPrimaryShortcutPressed(event) || event.shiftKey) return;
       if (cellEditingKeyRef.current) return;
 
       event.preventDefault();
@@ -639,7 +640,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const handleStartAnalysisCellDrag = React.useCallback(
     (rowIndex: number, colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
-      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.button !== 0 || isPrimaryShortcutPressed(event) || event.shiftKey) return;
       if (cellEditingKeyRef.current) return;
 
       event.preventDefault();
@@ -875,8 +876,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
       const isTypingEditKey =
         ev.key.length === 1 &&
-        !ev.ctrlKey &&
-        !ev.metaKey &&
+        !isPrimaryShortcutPressed(ev) &&
         !ev.altKey &&
         !ev.isComposing &&
         !cellEditingKeyRef.current;
@@ -899,7 +899,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
 
-      const isCopy = (window.ctrlPressed || window.metaPressed) && ev.key?.toLowerCase() === 'c';
+      const isCopy = isPrimaryShortcutPressed() && ev.key?.toLowerCase() === 'c';
 
       if (isCopy) {
         const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;

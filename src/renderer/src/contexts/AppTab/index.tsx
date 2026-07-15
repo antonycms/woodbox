@@ -10,6 +10,7 @@ import AppTabContext, {
 import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
 import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 export type * from './context';
 
 const moveTabInList = (
@@ -361,12 +362,12 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key?.toLowerCase?.() === 'w' && activeTabId) {
+      if (isPrimaryShortcutPressed(e) && e.key?.toLowerCase?.() === 'w' && activeTabId) {
         e.preventDefault();
         removeTab(activeTabId);
       }
 
-      if (e.ctrlKey && e.shiftKey && e.key?.toLowerCase?.() === 't') {
+      if (isPrimaryShortcutPressed(e) && e.shiftKey && e.key?.toLowerCase?.() === 't') {
         e.preventDefault();
         reopenClosedTab();
       }

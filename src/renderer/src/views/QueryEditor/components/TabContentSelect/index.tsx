@@ -41,6 +41,7 @@ import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { prepareQueryVariables } from '../../utils/queryVariables';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 import IconMdiClose from '~icons/mdi/close';
@@ -458,7 +459,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSave();
         return;

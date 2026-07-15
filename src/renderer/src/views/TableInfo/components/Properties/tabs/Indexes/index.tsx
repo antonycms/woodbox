@@ -20,6 +20,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../Columns/styles.module.css';
 
 const getIndexSelectionKey = (index: IIndexInfo) =>
@@ -253,7 +254,7 @@ const Indexes = ({
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         handleSavePendingChanges();
         return;

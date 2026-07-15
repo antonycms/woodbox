@@ -1,5 +1,6 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 interface IColumnFilterInputProps {
@@ -136,7 +137,7 @@ export default function ColumnFilterInput({
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       const hasSuggestions = suggestions.length > 0;
 
-      if ((event.ctrlKey || event.metaKey) && event.code === 'Space') {
+      if (isPrimaryShortcutPressed(event) && event.code === 'Space') {
         event.preventDefault();
         updateCursorPosition(event.currentTarget);
         setShowAll(true);
