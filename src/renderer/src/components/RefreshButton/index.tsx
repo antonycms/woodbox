@@ -5,6 +5,7 @@ import {
   type ContextMenuPlacement,
   type IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
+import { useThemeContext } from '@renderer/contexts/Theme';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { IconRefresh } from '@renderer/styles/icons';
 
@@ -33,6 +34,7 @@ export const RefreshButton = ({
   menuPlacement,
   onRefresh,
 }: IRefreshButtonProps) => {
+  const { activeTheme } = useThemeContext();
   const [menuPosition, setMenuPosition] = React.useState<IContextMenuPosition>();
   const [autoRefreshMs, setAutoRefreshMs] = React.useState<number | null>(null);
   const refreshingRef = React.useRef(false);
@@ -43,7 +45,11 @@ export const RefreshButton = ({
     [autoRefreshMs],
   );
 
-  const refreshTitle = autoRefreshMs ? `${title} (auto: ${selectedOption?.label})` : title;
+  const refreshTitle = autoRefreshMs
+    ? `Cancelar auto-refresh (${selectedOption?.label})`
+    : title;
+  const buttonColor = autoRefreshMs ? activeTheme.__colors.green : color;
+  const buttonDisabled = disabled && !autoRefreshMs;
 
   const runRefresh = React.useCallback(async () => {
     if (disabled || refreshingRef.current) return;
@@ -57,16 +63,25 @@ export const RefreshButton = ({
     }
   }, [disabled, latestRefresh]);
 
+  const handleClick = React.useCallback(async () => {
+    if (autoRefreshMs) {
+      setAutoRefreshMs(null);
+      return;
+    }
+
+    await runRefresh();
+  }, [autoRefreshMs, runRefresh]);
+
   const handleContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLSpanElement>) => {
       event.preventDefault();
       event.stopPropagation();
 
-      if (disabled) return;
+      if (buttonDisabled) return;
 
       setMenuPosition({ x: event.clientX, y: event.clientY });
     },
-    [disabled],
+    [buttonDisabled],
   );
 
   React.useEffect(() => {
@@ -84,9 +99,9 @@ export const RefreshButton = ({
           title={refreshTitle}
           text
           smallIcon
-          color={color}
-          disabled={disabled}
-          onClick={runRefresh}
+          color={buttonColor}
+          disabled={buttonDisabled}
+          onClick={handleClick}
         >
           <IconRefresh size={18} />
         </Button>
