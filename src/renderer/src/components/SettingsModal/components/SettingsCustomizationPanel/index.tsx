@@ -82,6 +82,7 @@ const themeLabels = {
   'one-dark-pro': 'One Dark Pro',
   'github-dark': 'GitHub Dark',
   'catppuccin-mocha': 'Catppuccin Mocha',
+  omni: 'Omni',
   'woodbox-aura-light': 'Aura Light',
   'one-light-pro': 'One Light Pro',
   'github-light': 'GitHub Light',

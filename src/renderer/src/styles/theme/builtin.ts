@@ -136,6 +136,40 @@ const catppuccinMochaColors = {
   border: '#11111b',
 };
 
+const omniColors = {
+  ...defaultTheme.__colors,
+  purple: '#988bc7',
+  purpleDark: '#41414D7f',
+  blueTransparent: '#78D1E159',
+  green: '#00F769',
+  greenDeep: '#67e480',
+  orange: '#E89E64',
+  orangeDeep: '#E89E64',
+  orangeTransparent: '#E89E6433',
+  greenTransparent: '#67e4801a',
+  pink: '#FF79C6',
+  blue: '#78D1E1',
+  red: '#E96379',
+  redDeep: '#E96379',
+  redTransparent: '#E9637933',
+  white: '#E1E1E6',
+  gray: '#5A4B81',
+  lightGray: '#41414D7f',
+  dark: '#191622',
+  darkLight: '#44475A75',
+  darkLightBar: '#201B2D',
+  darkLightDeep: '#252131',
+  backgroundContextMenu: '#201B2D',
+  border: '#15121E',
+  focusOutline: '#FF79C6',
+  selection: '#41414D',
+  comment: '#5A4B81',
+  yellow: '#e7de79',
+  cyan: '#988bc7',
+  bgDark: '#13111B',
+  bgDarker: '#15121E',
+};
+
 const auraLightColors = {
   ...defaultTheme.__colors,
   purple: '#7c3aed',
@@ -276,6 +310,163 @@ const createTheme = (name: string, __colors: BuiltinColors, overrides?: ThemeOve
     },
     overrides,
   );
+};
+
+const omniThemeOverrides: ThemeOverrides = {
+  welcome: {
+    color: '__colors.white',
+    backgroundColor: '__colors.dark',
+  },
+  sideBar: {
+    menuBar: {
+      color: '__colors.white',
+      backgroundColor: '__colors.bgDark',
+      ascentColor: '__colors.green',
+    },
+    color: '__colors.white',
+    backgroundColor: '__colors.bgDark',
+    fieldColor: '__colors.white',
+    fieldPlaceholderColor: '__colors.comment',
+    fieldBackgroundColor: '__colors.dark',
+    fieldLabelColor: '__colors.white',
+    borderColor: '__colors.bgDarker',
+  },
+  mainTab: {
+    bar: {
+      backgroundColor: '__colors.bgDarker',
+      borderColor: '__colors.bgDarker',
+    },
+    color: '__colors.white',
+    backgroundColor: '__colors.dark',
+    ascentColor: '__colors.green',
+    borderColor: '__colors.bgDarker',
+  },
+  toast: {
+    success: {
+      color: '__colors.dark',
+      backgroundColor: '__colors.green',
+    },
+    warn: {
+      color: '__colors.dark',
+      backgroundColor: '__colors.orange',
+    },
+    error: {
+      color: '__colors.white',
+      backgroundColor: '__colors.red',
+    },
+  },
+  contextMenu: {
+    color: '__colors.white',
+    backgroundColor: '__colors.backgroundContextMenu',
+    borderColor: '__colors.bgDarker',
+  },
+  editor: {
+    lineNumberColor: '__colors.comment',
+    currentLineNumberColor: '__colors.white',
+    cursorColor: '__colors.white',
+    color: '__colors.white',
+    backgroundColor: '__colors.dark',
+    selectionColor: '__colors.selection',
+    keywordColor: '__colors.pink',
+    identifierColor: '__colors.white',
+    stringColor: '__colors.green',
+    numberColor: '__colors.blue',
+    delimiterColor: '__colors.white',
+    currentLineBackgroundColor: '__colors.darkLightBar',
+  },
+  table: {
+    borderColor: '__colors.lightGray',
+    colorHeader: '__colors.white',
+    backgroundColorHeader: '__colors.dark',
+    backgroundColor: '__colors.dark',
+    backgroundColorRowEven: '__colors.dark',
+    colorRowEven: '__colors.white',
+    colorRowOdd: '__colors.white',
+    backgroundColorRowOdd: '__colors.darkLightBar',
+    backgroundColorColumnEdited: '__colors.orange',
+    colorColumnEdited: '__colors.dark',
+    selectedColor: '__colors.white',
+    selectedBackgroundColor: '__colors.blueTransparent',
+    selectedBorderColor: '__colors.blue',
+  },
+  modal: {
+    color: '__colors.white',
+    backgroundColor: '__colors.darkLightBar',
+    fieldColor: '__colors.white',
+    fieldBackgroundColor: '__colors.dark',
+    fieldLabelColor: '__colors.white',
+    saveButtonColor: '__colors.dark',
+    saveButtonBackgroundColor: '__colors.green',
+    cancelButtonColor: '__colors.dark',
+    cancelButtonBackgroundColor: '__colors.red',
+    testButtonColor: '__colors.dark',
+    testButtonBackgroundColor: '__colors.orange',
+  },
+  tableInfo: {
+    tab: {
+      bar: {
+        backgroundColor: '__colors.bgDarker',
+        borderColor: '__colors.bgDarker',
+      },
+      color: '__colors.white',
+      backgroundColor: '__colors.dark',
+      ascentColor: '__colors.blue',
+      borderColor: '__colors.bgDarker',
+    },
+    properties: {
+      tab: {
+        bar: {
+          backgroundColor: '__colors.bgDarker',
+          borderColor: '__colors.bgDarker',
+        },
+        color: '__colors.white',
+        backgroundColor: '__colors.dark',
+        ascentColor: '__colors.orange',
+        borderColor: '__colors.bgDarker',
+      },
+      header: {
+        backgroundColor: '__colors.dark',
+        fieldColor: '__colors.white',
+        fieldBackgroundColor: '__colors.darkLightDeep',
+        fieldLabelColor: '__colors.white',
+      },
+      bar: {
+        backgroundColor: '__colors.darkLightBar',
+        color: '__colors.white',
+        borderColor: '__colors.bgDarker',
+      },
+    },
+    data: {
+      bar: {
+        color: '__colors.white',
+        backgroundColor: '__colors.darkLightBar',
+        fieldColor: '__colors.white',
+        fieldBackgroundColor: '__colors.dark',
+        fieldPlaceholderColor: '__colors.comment',
+        borderColor: '__colors.bgDarker',
+      },
+    },
+  },
+  queryEditor: {
+    tab: {
+      bar: {
+        backgroundColor: '__colors.bgDarker',
+        borderColor: '__colors.bgDarker',
+      },
+      color: '__colors.white',
+      backgroundColor: '__colors.dark',
+      ascentColor: '__colors.pink',
+      borderColor: '__colors.bgDarker',
+    },
+    bar: {
+      backgroundColor: '__colors.darkLightBar',
+      fieldColor: '__colors.white',
+      color: '__colors.white',
+      fieldBackgroundColor: '__colors.dark',
+      fieldPlaceholderColor: '__colors.comment',
+      borderColor: '__colors.bgDarker',
+    },
+  },
 };
 
 const auraLightThemeOverrides: ThemeOverrides = {
@@ -544,6 +735,7 @@ export const builtinThemes = [
   serializeTheme(createTheme('woodbox-graphite', graphiteColors)),
   serializeTheme(createTheme('woodbox-amber', amberColors)),
   serializeTheme(createTheme('dracula', draculaColors)),
+  serializeTheme(createTheme('omni', omniColors, omniThemeOverrides)),
   serializeTheme(createTheme('one-dark-pro', oneDarkProColors)),
   serializeTheme(createTheme('one-light-pro', oneLightProColors, oneLightProThemeOverrides)),
   serializeTheme(createTheme('github-dark', githubDarkColors)),

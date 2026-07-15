@@ -75,6 +75,8 @@ export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
       { token: '', background: getColor('backgroundColor') },
       { token: 'keyword.sql', foreground: getColor('keywordColor') },
       { token: 'identifier.sql', foreground: getColor('identifierColor') },
+      { token: 'type.sql', foreground: getColor('stringColor') },
+      { token: 'predefined.sql', foreground: getColor('stringColor') },
       { token: 'string.sql', foreground: getColor('stringColor') },
       { token: 'number.sql', foreground: getColor('numberColor') },
       { token: 'identifier.quote.sql', foreground: getColor('identifierColor') },
