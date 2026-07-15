@@ -17,6 +17,7 @@ export interface IQueryResult {
   auto_paginated?: boolean;
   tables_info?: ITableQuery[];
   variableValues?: Record<string, string>;
+  capture?: IQueryCaptureState;
 }
 
 export interface IPendingQueryExecution {
@@ -33,7 +34,20 @@ export interface IExecuteQueryParams extends IPendingQueryExecution {
 
 export type IDataMakeTabResult = IQueryResult & { title?: string };
 
-export type IDataUpdateabResult = Partial<IDataMakeTabResult>;
+export interface IQueryCapturedRow {
+  captured_at: string;
+  row: any;
+}
+
+export interface IQueryCaptureState {
+  active: boolean;
+  started_at?: string;
+  stopped_at?: string;
+  rows: IQueryCapturedRow[];
+  rowHashes: string[];
+}
+
+export type IDataUpdateabResult = Partial<IDataMakeTabResult> & { captureRows?: boolean };
 
 export interface IQueryEditorProps {
   id_connection: string;

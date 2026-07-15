@@ -1,7 +1,11 @@
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
-import { ContextMenu } from '@renderer/components/ContextMenu';
+import {
+  ContextMenu,
+  type IContextMenuOption,
+  type IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
 import Editor from '@renderer/components/Editor';
 import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
@@ -17,8 +21,8 @@ import {
   AddIcon,
   CancelIcon,
   CountIcon,
-  ExportIcon,
   PanelFile,
+  RecordIcon,
   SaveIcon,
 } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
@@ -55,6 +59,8 @@ interface ITabContentSelectProps {
   onSort(column: IColumn<any>, sortType?: ISortDirection | null): void;
   onRefresh(): void;
   onCancelQuery(): void;
+  onToggleCapture(): void;
+  onClearCapture(): void;
   cancelingQuery?: boolean;
 }
 
@@ -75,6 +81,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     onSort,
     onRefresh,
     onCancelQuery,
+    onToggleCapture,
+    onClearCapture,
     cancelingQuery,
     references,
     readOnly,
@@ -94,6 +102,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const [saving, setSaving] = React.useState(false);
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
+  const [captureMenuPosition, setCaptureMenuPosition] = React.useState<IContextMenuPosition>();
   const [showValuePreview, setShowValuePreview] = React.useState(false);
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
@@ -132,6 +141,145 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     return timeMs < 1000 ? `${timeMs}ms` : `${(timeMs / 1000).toFixed(2)}s`;
   };
+
+  const hasCapturedRows = !!data.capture?.rows.length;
+
+  const captureButtonColor = data.capture?.active
+    ? activeTheme.__colors.red
+    : hasCapturedRows
+    ? activeTheme.__colors.orange
+    : activeTheme.queryEditor.bar.color;
+
+  const stringifyCaptureValue = (value: unknown) =>
+    JSON.stringify(value, (_, item) => (typeof item === 'bigint' ? String(item) : item));
+
+  const downloadCaptureFile = React.useCallback(
+    (content: string, extension: string, type: string) => {
+      const startedAt = data.capture?.started_at || new Date().toISOString();
+      const fileDate = startedAt.replace(/[:.]/g, '-');
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.href = url;
+      link.download = `woodbox-captura-query-${fileDate}.${extension}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    },
+    [data.capture?.started_at],
+  );
+
+  const formatCaptureCsvCell = (value: unknown) => {
+    if (value === null || value === undefined) return '""';
+
+    const text =
+      typeof value === 'object' || typeof value === 'bigint'
+        ? stringifyCaptureValue(value)
+        : String(value);
+
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const buildCaptureCsv = (capturedRows: NonNullable<IQueryResult['capture']>['rows']) => {
+    const columns = [
+      ...capturedRows.reduce((acc, capturedRow) => {
+        if (!capturedRow.row || typeof capturedRow.row !== 'object') return acc;
+
+        Object.keys(capturedRow.row).forEach((column) => acc.add(column));
+
+        return acc;
+      }, new Set<string>()),
+    ];
+    const header = ['captured_at', ...columns].map(formatCaptureCsvCell).join(',');
+    const rows = capturedRows.map((capturedRow) => {
+      const row = capturedRow.row && typeof capturedRow.row === 'object' ? capturedRow.row : {};
+
+      return [capturedRow.captured_at, ...columns.map((column) => row[column])]
+        .map(formatCaptureCsvCell)
+        .join(',');
+    });
+
+    return [header, ...rows].join('\n');
+  };
+
+  const handleExportCaptureJsonl = React.useCallback(() => {
+    const capturedRows = data.capture?.rows || [];
+
+    if (!capturedRows.length) {
+      showToast({
+        type: 'warn',
+        title: 'Nenhuma linha capturada.',
+        description: 'Inicie a captura e aguarde novas linhas entrarem na query.',
+      });
+      return;
+    }
+
+    const jsonl = capturedRows.map((row) => stringifyCaptureValue(row)).join('\n');
+    downloadCaptureFile(jsonl, 'jsonl', 'application/x-ndjson;charset=utf-8');
+
+    showToast({
+      type: 'success',
+      title: 'Captura exportada.',
+      description: `${capturedRows.length.toLocaleString('pt-BR')} linha(s) em JSONL.`,
+    });
+  }, [data.capture?.rows, downloadCaptureFile, showToast]);
+
+  const handleExportCaptureCsv = React.useCallback(() => {
+    const capturedRows = data.capture?.rows || [];
+
+    if (!capturedRows.length) {
+      showToast({
+        type: 'warn',
+        title: 'Nenhuma linha capturada.',
+        description: 'Inicie a captura e aguarde novas linhas entrarem na query.',
+      });
+      return;
+    }
+
+    const csv = buildCaptureCsv(capturedRows);
+    downloadCaptureFile(`\ufeff${csv}`, 'csv', 'text/csv;charset=utf-8');
+
+    showToast({
+      type: 'success',
+      title: 'Captura exportada.',
+      description: `${capturedRows.length.toLocaleString('pt-BR')} linha(s) em CSV.`,
+    });
+  }, [data.capture?.rows, downloadCaptureFile, showToast]);
+
+  const openCaptureMenu = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setCaptureMenuPosition({ x: event.clientX, y: event.clientY });
+  }, []);
+
+  const captureMenuOptions = React.useMemo<IContextMenuOption[]>(
+    () =>
+      [
+        {
+          text: data.capture?.active ? 'Parar captura' : 'Iniciar captura',
+          onClick: onToggleCapture,
+        },
+        hasCapturedRows && {
+          text: 'Exportar captura como JSONL',
+          onClick: handleExportCaptureJsonl,
+        },
+        hasCapturedRows && {
+          text: 'Exportar captura como CSV',
+          onClick: handleExportCaptureCsv,
+        },
+        hasCapturedRows && {
+          text: 'Descartar captura',
+          onClick: onClearCapture,
+        },
+      ].filter(Boolean) as IContextMenuOption[],
+    [
+      data.capture?.active,
+      handleExportCaptureCsv,
+      handleExportCaptureJsonl,
+      hasCapturedRows,
+      onClearCapture,
+      onToggleCapture,
+    ],
+  );
 
   const handleLoadRowsCount = React.useCallback(async () => {
     if (loadingRowsCount || data.loading) return;
@@ -740,10 +888,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           </Button>
         )}
 
-        <Button text smallIcon title="Exportar" color={activeTheme.queryEditor.bar.color}>
-          <ExportIcon size={16} />
-        </Button>
-
         <Button
           text
           smallIcon
@@ -761,19 +905,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           <PanelFile size={16} />
         </Button>
 
-        {!!data.loading && (
-          <Button
-            text
-            smallIcon
-            title="Cancelar query"
-            onClick={onCancelQuery}
-            loading={cancelingQuery}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <CancelIcon size={16} />
-          </Button>
-        )}
-
         {!readOnly && (
           <RefreshButton
             menuPlacement="top"
@@ -782,6 +913,17 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onRefresh={onRefresh}
           />
         )}
+
+        <Button
+          text
+          smallIcon
+          title="Opções de captura"
+          onClick={openCaptureMenu}
+          disabled={data.loading}
+          color={captureButtonColor}
+        >
+          <RecordIcon size={16} />
+        </Button>
 
         <Button
           text
@@ -799,7 +941,36 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           )}
         </Button>
 
+        {!!data.loading && (
+          <Button
+            text
+            smallIcon
+            title="Cancelar query"
+            onClick={onCancelQuery}
+            loading={cancelingQuery}
+            color={activeTheme.queryEditor.bar.color}
+          >
+            <CancelIcon size={16} />
+          </Button>
+        )}
+
         <Spacer />
+
+        {(data.capture?.active || !!data.capture?.rows.length) && (
+          <Text
+            title={
+              data.capture.active
+                ? 'Capturando novas linhas retornadas pelo auto-refresh'
+                : 'Captura parada'
+            }
+            userSelect={false}
+            color={
+              data.capture.active ? activeTheme.__colors.red : activeTheme.queryEditor.bar.color
+            }
+          >
+            Captura: {data.capture.rows.length.toLocaleString('pt-BR')} linhas
+          </Text>
+        )}
 
         <Text
           title={data.loading ? 'Tempo de execução atual da query' : 'Tempo de execução da query'}
@@ -826,6 +997,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         >
           Atualizado em {toDateTime(data.date_run)}
         </Text>
+
       </Bar>
 
       <ContextMenu
@@ -845,6 +1017,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
           },
         ]}
+      />
+
+      <ContextMenu
+        placement="top"
+        position={captureMenuPosition}
+        onClose={() => setCaptureMenuPosition(undefined)}
+        options={captureMenuOptions}
       />
     </div>
   );

@@ -61,6 +61,25 @@ const getQueryErrorOffset = (error: unknown) => {
   return Number.isFinite(position) && position > 0 ? position - 1 : undefined;
 };
 
+const normalizeCaptureValue = (value: unknown): unknown => {
+  if (typeof value === 'bigint') return String(value);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(normalizeCaptureValue);
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = normalizeCaptureValue((value as Record<string, unknown>)[key]);
+        return acc;
+      }, {});
+  }
+
+  return value;
+};
+
+const getCaptureRowHash = (row: unknown) => JSON.stringify(normalizeCaptureValue(row));
+
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const {
     runSql,
@@ -116,7 +135,34 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         const newMap = new Map(prevState);
 
         const prevTabResultData = prevState.get(idTab) || ({} as IQueryResult);
-        const newTabResultData = { ...prevTabResultData, ...params };
+        const { captureRows, ...dataParams } = params;
+        const queryChanged =
+          typeof dataParams.query === 'string' &&
+          !!prevTabResultData.query &&
+          dataParams.query !== prevTabResultData.query;
+        const baseTabResultData = queryChanged
+          ? { ...prevTabResultData, capture: undefined }
+          : prevTabResultData;
+        const newTabResultData = { ...baseTabResultData, ...dataParams };
+
+        if (captureRows && newTabResultData.capture?.active && Array.isArray(dataParams.rows)) {
+          const rowHashes = new Set(newTabResultData.capture.rowHashes);
+          const capturedRows = dataParams.rows.flatMap((row) => {
+            const rowHash = getCaptureRowHash(row);
+
+            if (rowHashes.has(rowHash)) return [];
+
+            rowHashes.add(rowHash);
+
+            return [{ captured_at: new Date().toISOString(), row }];
+          });
+
+          newTabResultData.capture = {
+            ...newTabResultData.capture,
+            rows: [...newTabResultData.capture.rows, ...capturedRows],
+            rowHashes: [...rowHashes],
+          };
+        }
 
         newTabResultData.tables_info = getTablesFromQuerySql(newTabResultData.query);
 
@@ -418,6 +464,51 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
+  const toggleResultCapture = (idTab: string) => {
+    const tab = querysResultData.get(idTab);
+
+    if (!tab) return;
+
+    const date = new Date().toISOString();
+    const updateTabResultData = makeUpdateResultTab(idTab);
+
+    if (tab.capture?.active) {
+      updateTabResultData({
+        capture: {
+          ...tab.capture,
+          active: false,
+          stopped_at: date,
+        },
+      });
+      return;
+    }
+
+    if (tab.capture) {
+      updateTabResultData({
+        capture: {
+          ...tab.capture,
+          active: true,
+          stopped_at: undefined,
+          rowHashes: [...new Set([...tab.capture.rowHashes, ...(tab.rows || []).map(getCaptureRowHash)])],
+        },
+      });
+      return;
+    }
+
+    updateTabResultData({
+      capture: {
+        active: true,
+        started_at: date,
+        rows: [],
+        rowHashes: (tab.rows || []).map(getCaptureRowHash),
+      },
+    });
+  };
+
+  const clearResultCapture = (idTab: string) => {
+    makeUpdateResultTab(idTab)({ capture: undefined });
+  };
+
   const refreshResultSqlTab = async (idTab: string) => {
     const tab = querysResultData.get(idTab);
     const updateTabResultData = makeUpdateResultTab(idTab);
@@ -462,6 +553,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         loading: false,
         orderBy: tab.orderBy,
         queryExecutionId: undefined,
+        captureRows: true,
       });
     } catch (error) {
       if (wasQueryCanceled(queryExecutionId)) {
@@ -1028,6 +1120,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                         onScrollEnd={onScrollEnd}
                         onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
                         onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
+                        onToggleCapture={() => toggleResultCapture(tabResult.idTab)}
+                        onClearCapture={() => clearResultCapture(tabResult.idTab)}
                         cancelingQuery={
                           !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
                         }
