@@ -1,0 +1,59 @@
+.isRequired .label::after {
+  content: '*';
+  margin-left: 1px;
+  color: var(--file-picker-required-color);
+  font-size: 14px;
+}
+
+.filePicker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  min-height: 32px;
+  overflow: hidden;
+  color: var(--file-picker-color);
+  background: var(--file-picker-background-color);
+  border: 1px solid var(--file-picker-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filePicker:focus-within {
+  outline: 1px solid var(--file-picker-color);
+  outline-offset: 2px;
+}
+
+.filePicker:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.filePicker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.button {
+  height: 100%;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--file-picker-color);
+  border-right: 1px solid var(--file-picker-border-color);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.name {
+  overflow: hidden;
+  padding: 0 10px;
+  color: var(--file-picker-muted-color);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

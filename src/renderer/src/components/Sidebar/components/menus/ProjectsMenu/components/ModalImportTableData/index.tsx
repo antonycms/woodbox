@@ -3,19 +3,16 @@ import * as XLSX from 'xlsx';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
-import { Column, Row } from '@renderer/components/Grid';
+import { FilePicker } from '@renderer/components/FilePicker';
+import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Input } from '@renderer/components/Input';
-import { Label } from '@renderer/components/Label';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import {
-  DbCellValue,
-  IColumnInfo,
-  useStoreContext,
-} from '@renderer/contexts/Store';
+import { DbCellValue, IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
+import useDebounce from '@renderer/hooks/useDebounce';
 import styles from './styles.module.css';
 
 type FileColumn = {
@@ -60,7 +57,11 @@ const parseMatrix = (fileName: string, matrix: unknown[][]): ParsedFile => {
   const occurrences = new Map<string, number>();
   const columns = (
     headerRow
-      .map((value, index) => String(value ?? '').replace(/^\uFEFF/, '').trim())
+      .map((value) =>
+        String(value ?? '')
+          .replace(/^\uFEFF/, '')
+          .trim(),
+      )
       .map((name, index) => {
         if (!name) return null;
 
@@ -179,10 +180,7 @@ export const ModalImportTableData = React.memo(
     const { getTableColumns, importTableData, loadConnectionInfo } = useStoreContext();
     const { showToast } = useToast();
     const {
-      activeTheme: {
-        __colors,
-        modal: colors,
-      },
+      activeTheme: { __colors, modal: colors },
     } = useThemeContext();
 
     const [loadingColumns, setLoadingColumns] = React.useState(false);
@@ -271,7 +269,6 @@ export const ModalImportTableData = React.memo(
     const handleFileChange = React.useCallback(
       async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        event.target.value = '';
 
         if (!file) return;
 
@@ -289,92 +286,96 @@ export const ModalImportTableData = React.memo(
       [csvSeparator, loadFile],
     );
 
+    const loadCsvWithSeparatorDebounced = useDebounce((separator: string) => {
+      if (!separator || !selectedFile || !isCsvFile(selectedFile)) return;
+      if (csvParsedSeparator === separator) return;
+
+      loadFile(selectedFile, separator);
+    }, 500);
+
     const handleCsvSeparatorChange = React.useCallback(
       (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value.slice(0, 2);
         setCsvSeparator(value);
+        loadCsvWithSeparatorDebounced(value);
       },
-      [],
+      [loadCsvWithSeparatorDebounced],
     );
-
-    const handleCsvSeparatorBlur = React.useCallback(() => {
-      if (!csvSeparator || !selectedFile || !isCsvFile(selectedFile)) return;
-      if (csvParsedSeparator === csvSeparator) return;
-
-      loadFile(selectedFile, csvSeparator);
-    }, [csvParsedSeparator, csvSeparator, loadFile, selectedFile]);
 
     const handleMappingChange = React.useCallback((tableColumn: string, fileColumnKey: string) => {
       setMapping((prevState) => ({ ...prevState, [tableColumn]: fileColumnKey }));
     }, []);
 
-    const handleImport = React.useCallback(async () => {
-      if (selectedFile && isCsvFile(selectedFile) && !csvSeparator) {
-        showToast({
-          type: 'error',
-          title: 'Informe o separador do CSV.',
-        });
-        return;
-      }
+    const handleImport = React.useCallback(
+      async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
 
-      if (!idConnection || !table || !parsedFile || !mappedColumns.length) return;
-
-      try {
-        setImporting(true);
-        let fileData = parsedFile;
-
-        if (selectedFile && isCsvFile(selectedFile) && csvParsedSeparator !== csvSeparator) {
-          const parsed = await loadFile(selectedFile, csvSeparator);
-          if (!parsed) return;
-
-          fileData = parsed;
+        if (!mappedColumns.length) {
+          return showToast({
+            type: 'warn',
+            title: 'Defina as colunas',
+            description: 'É necessário mapear ao menos uma coluna da tabela com o arquivo',
+          });
         }
 
-        const rows = fileData.rows.map((row) =>
-          Object.fromEntries(
-            mappedColumns.map(([tableColumn, fileColumnKey]) => {
-              const fileColumn = fileData.columns.find((column) => column.key === fileColumnKey);
-              return [tableColumn, fileColumn ? row[fileColumn.valueIndex] : null];
-            }),
-          ),
-        );
+        try {
+          setImporting(true);
+          let fileData = parsedFile;
 
-        const result = await importTableData(idConnection, { schema, table, rows });
+          if (selectedFile && isCsvFile(selectedFile) && csvParsedSeparator !== csvSeparator) {
+            const parsed = await loadFile(selectedFile, csvSeparator);
+            if (!parsed) return;
 
-        await loadConnectionInfo(idConnection);
+            fileData = parsed;
+          }
 
-        showToast({
-          type: 'success',
-          title: 'Dados importados com sucesso!',
-          description: `${result.insertedRows} linha(s) importada(s).`,
-        });
+          const rows = fileData.rows.map((row) =>
+            Object.fromEntries(
+              mappedColumns.map(([tableColumn, fileColumnKey]) => {
+                const fileColumn = fileData.columns.find((column) => column.key === fileColumnKey);
+                return [tableColumn, fileColumn ? row[fileColumn.valueIndex] : null];
+              }),
+            ),
+          );
 
-        close();
-      } catch (error: any) {
-        showToast({
-          type: 'error',
-          title: 'Erro ao importar dados.',
-          description: error?.message,
-          delay: 8000,
-        });
-      } finally {
-        setImporting(false);
-      }
-    }, [
-      close,
-      idConnection,
-      importTableData,
-      loadConnectionInfo,
-      loadFile,
-      mappedColumns,
-      parsedFile,
-      schema,
-      showToast,
-      selectedFile,
-      csvSeparator,
-      csvParsedSeparator,
-      table,
-    ]);
+          const result = await importTableData(idConnection, { schema, table, rows });
+
+          await loadConnectionInfo(idConnection);
+
+          showToast({
+            type: 'success',
+            title: 'Dados importados com sucesso!',
+            description: `${result.insertedRows} linha(s) importada(s).`,
+          });
+
+          close();
+        } catch (error: any) {
+          showToast({
+            type: 'error',
+            title: 'Erro ao importar dados.',
+            description: error?.message,
+            delay: 8000,
+          });
+        } finally {
+          setImporting(false);
+        }
+      },
+      [
+        close,
+        idConnection,
+        importTableData,
+        loadConnectionInfo,
+        loadFile,
+        mappedColumns,
+        parsedFile,
+        schema,
+        showToast,
+        selectedFile,
+        csvSeparator,
+        csvParsedSeparator,
+        table,
+      ],
+    );
 
     React.useEffect(() => {
       loadColumns();
@@ -382,8 +383,9 @@ export const ModalImportTableData = React.memo(
 
     return (
       <Modal title="Importar dados" width="640px" show={show}>
-        <div
+        <form
           className={styles.container}
+          onSubmit={handleImport}
           style={
             {
               '--import-border-color': __colors.lightGray,
@@ -400,44 +402,30 @@ export const ModalImportTableData = React.memo(
           <Divider />
 
           <Row>
-            <Column md={selectedFileIsCsv ? 10 : 12}>
-              <Label color={colors.fieldLabelColor}>Arquivo Excel ou CSV</Label>
-
-              <label
-                className={styles.filePicker}
-                style={
-                  {
-                    '--file-picker-background-color': colors.fieldBackgroundColor,
-                    '--file-picker-color': colors.fieldColor,
-                    '--file-picker-border-color': __colors.lightGray,
-                    '--file-picker-muted-color': __colors.gray,
-                  } as React.CSSProperties
-                }
-              >
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  disabled={loadingColumns || loadingFile || importing}
-                  onChange={handleFileChange}
-                />
-
-                <span className={styles.filePickerButton}>Escolher arquivo</span>
-                <span className={styles.filePickerName}>
-                  {selectedFile?.name || 'Nenhum arquivo selecionado'}
-                </span>
-              </label>
-            </Column>
+            <FilePicker
+              label="Arquivo Excel ou CSV"
+              required
+              accept=".xlsx,.xls,.csv"
+              fileName={selectedFile?.name}
+              color={colors.fieldColor}
+              backgroundColor={colors.fieldBackgroundColor}
+              labelColor={colors.fieldLabelColor}
+              placeholderColor={__colors.gray}
+              disabled={loadingColumns || loadingFile || importing}
+              onChange={handleFileChange}
+              md={selectedFileIsCsv ? 10 : 12}
+            />
 
             {selectedFileIsCsv && (
               <Input
                 label="Separador CSV"
+                required
                 value={csvSeparator}
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
                 labelColor={colors.fieldLabelColor}
-                disabled={loadingFile || importing}
+                disabled={importing}
                 onChange={handleCsvSeparatorChange}
-                onBlur={handleCsvSeparatorBlur}
                 md={2}
               />
             )}
@@ -507,13 +495,8 @@ export const ModalImportTableData = React.memo(
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
               loading={importing}
-              disabled={
-                loadingColumns ||
-                loadingFile ||
-                (!parsedFile && !(selectedFile && isCsvFile(selectedFile) && !csvSeparator)) ||
-                (!!parsedFile && !mappedColumns.length)
-              }
-              onClick={handleImport}
+              disabled={loadingColumns || loadingFile || !idConnection || !table}
+              type="submit"
               xs={6}
               sm={4}
               md={3}
@@ -521,7 +504,7 @@ export const ModalImportTableData = React.memo(
               Importar
             </Button>
           </Row>
-        </div>
+        </form>
       </Modal>
     );
   },
