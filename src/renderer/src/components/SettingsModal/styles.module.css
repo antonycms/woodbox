@@ -43,6 +43,12 @@
   font-size: 11px;
 }
 
+.version {
+  margin-top: auto;
+  padding: 8px 12px 0;
+  font-size: 11px;
+}
+
 .content {
   display: flex;
   flex-direction: column;

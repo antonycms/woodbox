@@ -8,6 +8,8 @@ import styles from './styles.module.css';
 
 type SettingsMenu = 'import' | 'customization';
 
+const appVersion = typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__;
+
 const menuItems: { id: SettingsMenu; label: string; description: string }[] = [
   {
     id: 'customization',
@@ -63,6 +65,10 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
               <span style={{ color: __colors.gray }}>{item.description}</span>
             </button>
           ))}
+
+          <div className={styles.version} style={{ color: __colors.gray }}>
+            v{appVersion}
+          </div>
         </aside>
 
         <section className={styles.content}>
