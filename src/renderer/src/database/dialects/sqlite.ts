@@ -32,18 +32,22 @@ const sqliteDdl: RendererDialectDdl = {
     return '';
   },
 
-  getCreateTableDdl(tableName, columns, _restrictions, helpers) {
+  getCreateTableDdl(tableName, columns, restrictions, helpers) {
     const columnLines = columns.map(
       (column) => `  ${this.getColumnDefinitionDdl(column, helpers)}`,
     );
+    const restrictionLines = restrictions.map(
+      (restriction) =>
+        `  CONSTRAINT ${helpers.quoteIdent(
+          restriction.constraint_name,
+        )} ${this.getRestrictionDefinitionDdl(restriction, helpers)}`,
+    );
 
-    return `CREATE TABLE ${tableName} (\n${columnLines.join(',\n')}\n);`;
+    return `CREATE TABLE ${tableName} (\n${[...columnLines, ...restrictionLines].join(',\n')}\n);`;
   },
 
-  getPostCreateTableRestrictionsDdl(tableName, restrictions, helpers) {
-    return restrictions.map((restriction) =>
-      this.getCreateRestrictionDdl(tableName, restriction, helpers),
-    );
+  getPostCreateTableRestrictionsDdl() {
+    return [];
   },
 
   getAddColumnDdl(tableName, column, helpers) {
