@@ -11,6 +11,7 @@ import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import {
   type IPendingColumnChange,
   type IPendingColumnCreate,
+  type IPendingIndexCreate,
   type IPendingReferenceCreate,
   useTableInfoContext,
 } from '@renderer/contexts/TableInfoContext';
@@ -120,10 +121,13 @@ const Columns = ({
     pendingChangedColumns,
     pendingRestrictions,
     pendingReferences,
+    indexes,
+    pendingIndexes,
     columnTypes,
     references,
     restrictions,
     addPendingColumn,
+    addPendingIndex,
     updatePendingColumn,
     addPendingRestriction,
     addPendingReference,
@@ -222,6 +226,7 @@ const Columns = ({
       options?: {
         constraintType?: 'primary_key' | 'unique_key';
         reference?: IPendingReferenceCreate;
+        index?: IPendingIndexCreate;
       },
     ) => {
       const columnName = column.column_name.toLowerCase();
@@ -246,7 +251,23 @@ const Columns = ({
         }
       }
 
+      if (options?.index) {
+        const indexName = options.index.index_name.toLowerCase();
+        const indexAlreadyExists = [...indexes, ...pendingIndexes].some(
+          (item) => item.index_name.toLowerCase() === indexName,
+        );
+
+        if (indexAlreadyExists) {
+          showToast({ type: 'warn', title: 'Já existe um índice com esse nome.' });
+          return false;
+        }
+      }
+
       addPendingColumn(column);
+
+      if (options?.index) {
+        addPendingIndex(options.index);
+      }
 
       if (options?.constraintType) {
         addPendingRestriction({
@@ -273,9 +294,12 @@ const Columns = ({
     },
     [
       addPendingColumn,
+      addPendingIndex,
       addPendingReference,
       addPendingRestriction,
       allColumns,
+      indexes,
+      pendingIndexes,
       pendingReferences,
       references,
       schema,
@@ -599,6 +623,7 @@ const Columns = ({
         tables={connectionInfo?.tables || []}
         hasPrimaryKey={hasPrimaryKey}
         supportsAutoIncrement={dialect.supportsAutoIncrement}
+        indexMethods={dialect.indexMethods || []}
         onClose={() => setShowNewColumnModal(false)}
         onAdd={handleAddPendingColumn}
       />

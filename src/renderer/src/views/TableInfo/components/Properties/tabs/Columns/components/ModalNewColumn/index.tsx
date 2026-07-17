@@ -14,6 +14,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type {
   IPendingColumnCreate,
+  IPendingIndexCreate,
   IPendingReferenceCreate,
 } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
@@ -35,6 +36,11 @@ interface IReferenceColumnOption {
 
 const getGeneratedForeignKeyName = (table: string, column: string, referenceTable: string) => {
   return `${table}_${column}_${referenceTable}_fk`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+};
+
+const getGeneratedIndexName = (table: string, columns: string[]) => {
+  const columnPart = columns.join('_') || 'columns';
+  return `${table}_${columnPart}_idx`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
 const mysqlAutoIncrementTypes = new Set([
@@ -62,6 +68,7 @@ const defaultForm: IFormData = {
   is_unique: false,
   is_auto_increment: false,
   is_foreign_key: false,
+  is_index: false,
   reference_table: '',
   reference_column_name: '',
 };
@@ -74,6 +81,7 @@ const ModalNewColumn = ({
   tables,
   hasPrimaryKey,
   supportsAutoIncrement,
+  indexMethods = [],
   onClose,
   onAdd,
 }: IModalNewColumnProps) => {
@@ -200,6 +208,20 @@ const ModalNewColumn = ({
             reference_table_schema: selectedReferenceTable!.table_schema || '',
             reference_table_name: selectedReferenceTable!.table_name,
             reference_column_name: data.reference_column_name,
+        }
+        : undefined;
+
+      const index: IPendingIndexCreate | undefined = data.is_index
+        ? {
+            __pendingId: generateHash(),
+            __pendingAction: 'create',
+            index_name: getGeneratedIndexName(table, [columnName]),
+            index_method: indexMethods[0] || '',
+            is_unique: false,
+            is_primary: false,
+            is_valid: true,
+            column_names: [columnName],
+            column_orders: ['ASC'],
           }
         : undefined;
 
@@ -210,10 +232,11 @@ const ModalNewColumn = ({
           ? 'unique_key'
           : undefined,
         reference,
+        index,
       });
       if (shouldClose !== false) close();
     }),
-    [handleSubmit, onAdd, close, showToast, selectedReferenceTable, table],
+    [handleSubmit, onAdd, close, showToast, selectedReferenceTable, table, indexMethods],
   );
 
   React.useEffect(() => {
@@ -399,6 +422,16 @@ const ModalNewColumn = ({
           <label className={styles.checkbox} style={{ color: colors.color }}>
             <input
               type="checkbox"
+              name="is_index"
+              checked={state.is_index}
+              onChange={register('is_index').onChange}
+            />
+            Índice
+          </label>
+
+          <label className={styles.checkbox} style={{ color: colors.color }}>
+            <input
+              type="checkbox"
               name="is_foreign_key"
               checked={state.is_foreign_key}
               disabled={state.is_auto_increment}
@@ -488,12 +521,14 @@ interface IModalNewColumnProps {
   tables: ITable[];
   hasPrimaryKey?: boolean;
   supportsAutoIncrement?: boolean;
+  indexMethods?: string[];
   onClose?(): void;
   onAdd?(
     column: IPendingColumnCreate,
     options?: {
       constraintType?: 'primary_key' | 'unique_key';
       reference?: IPendingReferenceCreate;
+      index?: IPendingIndexCreate;
     },
   ): boolean | void;
 }
@@ -508,6 +543,7 @@ interface IFormData {
   is_unique: boolean;
   is_auto_increment: boolean;
   is_foreign_key: boolean;
+  is_index: boolean;
   reference_table: string;
   reference_column_name: string;
 }
