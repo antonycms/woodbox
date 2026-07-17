@@ -5,7 +5,9 @@ import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import Icons from 'unplugin-icons/vite';
 
-const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf-8')) as { version: string };
+const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf-8')) as {
+  version: string;
+};
 
 export default defineConfig({
   main: {
