@@ -205,9 +205,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
     () =>
       ({
         '--settings-option-hover-background-color': __colors.darkLightDeep,
-        '--settings-floating-shadow-color': __colors.shadow,
       } as React.CSSProperties),
-    [__colors.darkLightDeep, __colors.shadow],
+    [__colors.darkLightDeep],
   );
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
