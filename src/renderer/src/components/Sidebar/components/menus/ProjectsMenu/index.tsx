@@ -31,6 +31,7 @@ import { ModalNewConnection } from './components/ModalNewConnection';
 import { ModalNewScript } from './components/ModalNewScript';
 import { ModalDeleteTable } from './components/ModalDeleteTable';
 import { ModalRenameTable } from './components/ModalRenameTable';
+import { ModalImportTableData } from './components/ModalImportTableData';
 import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
@@ -81,6 +82,7 @@ const ProjectsMenu = () => {
   const [schemaToRename, setSchemaToRename] = React.useState<IItemTreeViewData>();
   const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
   const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
+  const [tableToImport, setTableToImport] = React.useState<IItemTreeViewData>();
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
@@ -177,6 +179,10 @@ const ProjectsMenu = () => {
 
   const closeRenameTableModal = React.useCallback(() => {
     setTableToRename(null);
+  }, []);
+
+  const closeImportTableModal = React.useCallback(() => {
+    setTableToImport(null);
   }, []);
 
   const removeTabsFromConnections = React.useCallback(
@@ -397,6 +403,10 @@ const ProjectsMenu = () => {
             const data = contextMenuItemSelected?.data;
             copyToClipboard([data.table_schema, data.table_name].filter(Boolean).join('.'));
           },
+        },
+        {
+          text: 'Importar dados',
+          onClick: () => setTableToImport(contextMenuItemSelected),
         },
         {
           text: 'Renomear Tabela',
@@ -688,6 +698,14 @@ const ProjectsMenu = () => {
         schema={tableToRename?.data?.table_schema}
         table={tableToRename?.data?.table_name}
         onClose={closeRenameTableModal}
+      />
+
+      <ModalImportTableData
+        show={!!tableToImport}
+        idConnection={tableToImport?.data?.id_connection}
+        schema={tableToImport?.data?.table_schema}
+        table={tableToImport?.data?.table_name}
+        onClose={closeImportTableModal}
       />
 
       <Row>

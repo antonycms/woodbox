@@ -42,6 +42,7 @@ export const Input = (props: IInputProps) => {
     onFocus,
     onBlur,
     style,
+    accept,
     'data-value': dataValue,
     icon: Icon,
     id: externalId,
@@ -107,6 +108,7 @@ export const Input = (props: IInputProps) => {
             placeholder={placeholder}
             value={value}
             defaultValue={defaultValue}
+            accept={accept}
             data-value={dataValue}
             type={type}
             required={!useFakeInputToValidate ? required : undefined}
@@ -195,4 +197,5 @@ export type IInputProps = IGridSystem & {
   autoComplete?: React.HTMLInputAutoCompleteAttribute;
   spellCheck?: boolean | 'true' | 'false';
   style?: React.CSSProperties;
+  accept?: string;
 };
