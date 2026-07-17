@@ -516,17 +516,32 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const handleSelectColumn = React.useCallback(
-    (colIndex: number) => {
+    (colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>) => {
       const rows = serializedRowsRef.current;
       if (!rows.length) return;
 
-      lastSelectedCellRef.current = { rowIndex: 0, colIndex };
+      const anchor = lastSelectedCellRef.current;
+      const shouldAppend = isPrimaryShortcutPressed(event);
+      const shouldSelectRange = event.shiftKey && !shouldAppend && anchor;
+
+      if (!shouldSelectRange) {
+        lastSelectedCellRef.current = { rowIndex: 0, colIndex };
+      }
+
       arrowCursorRef.current = { rowIndex: 0, colIndex };
       notifySelectedCell(0, colIndex);
 
-      setSelectedCells(() => {
-        const next = new Set<string>();
-        rows.forEach((_, rowIndex) => next.add(cellKey(rowIndex, colIndex)));
+      setSelectedCells((prev) => {
+        const next = shouldAppend ? new Set(prev) : new Set<string>();
+        const minCol = shouldSelectRange ? Math.min(anchor.colIndex, colIndex) : colIndex;
+        const maxCol = shouldSelectRange ? Math.max(anchor.colIndex, colIndex) : colIndex;
+
+        rows.forEach((_, rowIndex) => {
+          for (let columnIndex = minCol; columnIndex <= maxCol; columnIndex++) {
+            next.add(cellKey(rowIndex, columnIndex));
+          }
+        });
+
         return next;
       });
     },

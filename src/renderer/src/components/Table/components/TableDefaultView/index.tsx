@@ -40,7 +40,7 @@ interface ITableDefaultViewProps<Row = any> {
     event: React.MouseEvent<HTMLElement, MouseEvent>,
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
-  onSelectColumn?(colIndex: number): void;
+  onSelectColumn?(colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>): void;
   onCellLinkClick?(attribute: string, value: any): void;
   onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
@@ -124,7 +124,7 @@ const TableDefaultView = <Row,>({
               rowHeight={rowHeight}
               width={columnsSize[columnIndex]}
               onResize={(e) => onResizeColumn(columnIndex, e.width)}
-              onClick={() => onSelectColumn?.(columnIndex)}
+              onClick={(event) => onSelectColumn?.(columnIndex, event)}
               onContextMenu={
                 column.sortable && onSort
                   ? (event) => handleSortContextMenu(event, column)
