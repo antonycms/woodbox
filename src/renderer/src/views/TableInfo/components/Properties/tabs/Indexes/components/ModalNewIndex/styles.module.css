@@ -23,3 +23,54 @@
   cursor: not-allowed;
   opacity: 0.5;
 }
+
+.orderList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--index-order-color);
+}
+
+.orderTitle {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.orderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  background-color: var(--index-order-background-color);
+}
+
+.orderColumnName {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orderActions {
+  display: inline-flex;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.orderButton {
+  border: 0;
+  padding: 6px 10px;
+  color: var(--index-order-color);
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.orderButton[data-active='true'] {
+  color: var(--index-order-active-color);
+  background-color: var(--index-order-active-background-color);
+}

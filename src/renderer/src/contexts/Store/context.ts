@@ -150,6 +150,8 @@ export interface IColumnRestrictionsInfo {
   comment?: string;
 }
 
+export type IndexColumnOrder = 'ASC' | 'DESC';
+
 export interface IIndexInfo {
   index_name: string;
   index_method: string;
@@ -157,6 +159,8 @@ export interface IIndexInfo {
   is_primary: boolean;
   is_valid: boolean;
   column_names?: string[];
+  column_orders?: IndexColumnOrder[];
+  column_names_display?: string;
   expression?: string;
   predicate?: string;
   index_size_bytes?: number | string | null;

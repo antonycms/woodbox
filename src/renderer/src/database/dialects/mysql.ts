@@ -5,6 +5,7 @@ import type {
   RendererDialect,
   RendererDialectDdl,
 } from './types';
+import { getIndexColumnsDdl } from './utils';
 
 const quoteIdent = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
@@ -291,15 +292,13 @@ const mysqlDdl: RendererDialectDdl = {
       (index.columns || []).map((column) => [column.column_name, column]),
     );
     const method = index.index_method ? ` USING ${index.index_method}` : '';
-    const columns = (index.column_names || [])
-      .map((columnName) => {
-        const column = columnsByName.get(columnName);
-        const dataType = String(column?.data_type || '').toLowerCase();
-        const prefixLength = mysqlPrefixIndexTypes.has(dataType) ? '(255)' : '';
+    const columns = getIndexColumnsDdl(index, helpers, (columnName) => {
+      const column = columnsByName.get(columnName);
+      const dataType = String(column?.data_type || '').toLowerCase();
+      const prefixLength = mysqlPrefixIndexTypes.has(dataType) ? '(255)' : '';
 
-        return `${helpers.quoteIdent(columnName)}${prefixLength}`;
-      })
-      .join(', ');
+      return `${helpers.quoteIdent(columnName)}${prefixLength}`;
+    });
 
     return `CREATE INDEX ${helpers.quoteIdent(
       index.index_name,

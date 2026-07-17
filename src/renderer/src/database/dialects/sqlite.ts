@@ -1,4 +1,5 @@
 import type { RendererDialect, RendererDialectDdl } from './types';
+import { getIndexColumnsDdl } from './utils';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
@@ -95,7 +96,7 @@ const sqliteDdl: RendererDialectDdl = {
   },
 
   getCreateIndexDdl(_schema, table, index, helpers) {
-    const columns = (index.column_names || []).map(helpers.quoteIdent).join(', ');
+    const columns = getIndexColumnsDdl(index, helpers);
 
     return `CREATE INDEX ${helpers.quoteIdent(index.index_name)} ON ${helpers.getTableName(
       undefined,

@@ -37,6 +37,18 @@ const getIndexSizeText = (index: IIndexInfo) => {
   return formatSizeFromBytes(bytes);
 };
 
+const getIndexColumnsText = (index: IIndexInfo) => {
+  const columnNames = index.column_names || [];
+
+  return columnNames
+    .map((columnName, indexColumn) => {
+      const order = index.column_orders?.[indexColumn];
+
+      return order ? `${columnName} ${order}` : columnName;
+    })
+    .join(', ');
+};
+
 const Indexes = ({
   id_connection,
   schema,
@@ -108,6 +120,7 @@ const Indexes = ({
       ...indexes.map((index) => {
         const indexWithSize = {
           ...index,
+          column_names_display: getIndexColumnsText(index),
           index_size: getIndexSizeText(index),
         };
 
@@ -124,6 +137,7 @@ const Indexes = ({
       }),
       ...pendingIndexes.map((index) => ({
         ...index,
+        column_names_display: getIndexColumnsText(index),
         index_size: getIndexSizeText(index),
       })),
     ],
@@ -137,6 +151,7 @@ const Indexes = ({
       [
         index.index_name,
         Array.isArray(index.column_names) ? index.column_names.join(', ') : index.column_names,
+        index.column_names_display,
         index.is_unique,
         index.is_primary,
         index.index_method,
@@ -379,9 +394,8 @@ const Indexes = ({
           {
             title: 'Clique para ordenar por essa coluna',
             label: 'Colunas',
-            attribute: 'column_names',
+            attribute: 'column_names_display',
             sortable: true,
-            type: 'autocomplete-multi',
           },
           {
             title: 'Clique para ordenar por essa coluna',

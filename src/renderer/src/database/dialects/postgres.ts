@@ -1,4 +1,5 @@
 import type { RendererDialect, RendererDialectDdl } from './types';
+import { getIndexColumnsDdl } from './utils';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
@@ -119,7 +120,7 @@ const postgresDdl: RendererDialectDdl = {
 
   getCreateIndexDdl(schema, table, index, helpers) {
     const tableName = helpers.getTableName(schema, table);
-    const columns = (index.column_names || []).map(helpers.quoteIdent).join(', ');
+    const columns = getIndexColumnsDdl(index, helpers);
     const method = index.index_method || 'btree';
 
     return `CREATE INDEX ${helpers.quoteIdent(

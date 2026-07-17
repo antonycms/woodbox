@@ -41,6 +41,7 @@ export interface DdlIndexInfo {
   index_name: string;
   index_method?: string;
   column_names?: string[];
+  column_orders?: ('ASC' | 'DESC')[];
   columns?: DdlColumnInfo[];
 }
 
