@@ -49,10 +49,16 @@ type QueryExecutionError = Error & { position?: string | number };
 const formatQueryErrorMessage = (error: unknown) => {
   const queryError = error as QueryExecutionError;
   const message = queryError?.message || 'Erro desconhecido';
+  const separatorIndex = message.lastIndexOf(' - ');
 
-  if (!queryError?.position) return message;
+  if (separatorIndex < 0) return message;
 
-  return `${message} (position: ${queryError.position})`;
+  const query = message.slice(0, separatorIndex).trim();
+  const errorMessage = message.slice(separatorIndex + 3).trim();
+
+  if (!query || !errorMessage) return message;
+
+  return `${errorMessage}\n\n${query}`;
 };
 
 const getQueryErrorOffset = (error: unknown) => {
