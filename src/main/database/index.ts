@@ -17,6 +17,7 @@ import {
   getTableTriggers,
   getFunctionDefinition,
   runSql,
+  importTableData,
   cancelRunSql,
   getServerOutput,
   clearServerOutput,
@@ -40,6 +41,7 @@ addListener('@get:table_indexes', getTableIndexes);
 addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
+addListener('@post:import_table_data', importTableData);
 addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
 addListener('@delete:server_output', clearServerOutput);

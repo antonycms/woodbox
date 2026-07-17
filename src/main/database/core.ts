@@ -516,6 +516,33 @@ export const runSql = async (
   }
 };
 
+export const importTableData = async (
+  connectionId: string,
+  { schema, table, rows }: IImportTableDataParams,
+): Promise<IImportTableDataResult> => {
+  if (!table) throw new Error('Tabela não informada.');
+
+  const rowsToImport = rows.filter((row) => Object.keys(row).length);
+  if (!rowsToImport.length) return { insertedRows: 0 };
+
+  const connection = await getConnection(connectionId);
+  const { instance } = connection;
+  const chunkSize = 500;
+  let insertedRows = 0;
+
+  await instance.transaction(async (trx) => {
+    for (let index = 0; index < rowsToImport.length; index += chunkSize) {
+      const chunk = rowsToImport.slice(index, index + chunkSize);
+      const query = schema ? trx.withSchema(schema).table(table) : trx.table(table);
+
+      await query.insert(chunk);
+      insertedRows += chunk.length;
+    }
+  });
+
+  return { insertedRows };
+};
+
 const sanitizeAutoPaginatedError = (error: unknown, executableSql: string, originalSql: string) => {
   if (!(error instanceof Error)) return error;
 

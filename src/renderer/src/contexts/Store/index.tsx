@@ -22,6 +22,8 @@ import StoreContext, {
   type IImportConnectionsParams,
   type IImportConnectionsPreview,
   type IImportConnectionsResult,
+  type IImportTableDataParams,
+  type IImportTableDataResult,
 } from './context';
 
 export type * from './context';
@@ -331,6 +333,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     return await call<RunSqlResult>('@post:run_sql', idConnection, sql, options);
   };
 
+  const importTableData = async (idConnection: string, params: IImportTableDataParams) => {
+    return await call<IImportTableDataResult>('@post:import_table_data', idConnection, params);
+  };
+
   const cancelRunSql = async (idConnection: string, queryExecutionId: string) => {
     return await call<boolean>('@post:cancel_run_sql', idConnection, queryExecutionId);
   };
@@ -383,6 +389,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
         getServerOutput,
         clearServerOutput,
         runSql,
+        importTableData,
         cancelRunSql,
 
         // scripts

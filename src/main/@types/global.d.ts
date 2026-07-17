@@ -90,4 +90,16 @@ declare global {
     credentialsMissing: number;
     warnings: string[];
   }
+
+  export type DbCellValue = string | number | boolean | Date | null;
+
+  export interface IImportTableDataParams {
+    schema?: string;
+    table: string;
+    rows: Record<string, DbCellValue>[];
+  }
+
+  export interface IImportTableDataResult {
+    insertedRows: number;
+  }
 }

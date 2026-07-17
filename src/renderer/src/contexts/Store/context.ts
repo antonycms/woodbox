@@ -210,6 +210,18 @@ export interface IServerOutputMessage {
   where?: string;
 }
 
+export type DbCellValue = string | number | boolean | Date | null;
+
+export interface IImportTableDataParams {
+  schema?: string;
+  table: string;
+  rows: Record<string, DbCellValue>[];
+}
+
+export interface IImportTableDataResult {
+  insertedRows: number;
+}
+
 export interface IStoreContext {
   connections: IConnection[];
   previewImportConnectionsFromSource(
@@ -306,6 +318,10 @@ export interface IStoreContext {
     }[]
   >;
   cancelRunSql(idConnection: string, queryExecutionId: string): Promise<boolean>;
+  importTableData(
+    idConnection: string,
+    params: IImportTableDataParams,
+  ): Promise<IImportTableDataResult>;
 }
 
 export interface IConnectionsGroupPerProject extends IProject {
