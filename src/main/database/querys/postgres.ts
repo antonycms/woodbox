@@ -256,6 +256,13 @@ const getTableIndexes = ({ schema, table }: ITableWithSchema) => /* sql */ `
       json_agg(a.attname ORDER BY cols.ordinality) FILTER (WHERE a.attname IS NOT NULL),
       '[]'::json
     ) AS column_names,
+    COALESCE(
+      json_agg(
+        CASE WHEN (opts.indoption & 1) = 1 THEN 'DESC' ELSE 'ASC' END
+        ORDER BY cols.ordinality
+      ) FILTER (WHERE a.attname IS NOT NULL),
+      '[]'::json
+    ) AS column_orders,
     pg_catalog.pg_get_expr(ix.indexprs, ix.indrelid) AS expression,
     pg_catalog.pg_get_expr(ix.indpred, ix.indrelid) AS predicate,
     pg_relation_size(ix.indexrelid) AS index_size_bytes,
@@ -266,6 +273,8 @@ const getTableIndexes = ({ schema, table }: ITableWithSchema) => /* sql */ `
   JOIN pg_catalog.pg_class i ON i.oid = ix.indexrelid
   JOIN pg_catalog.pg_am am ON am.oid = i.relam
   LEFT JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS cols(attnum, ordinality) ON TRUE
+  LEFT JOIN LATERAL unnest(ix.indoption) WITH ORDINALITY AS opts(indoption, ordinality)
+    ON opts.ordinality = cols.ordinality
   LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = cols.attnum
   WHERE n.nspname = '${schema}'
   AND t.relname = '${table}'

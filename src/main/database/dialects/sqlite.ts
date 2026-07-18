@@ -106,8 +106,10 @@ const normalizeRows = (rows: any[]) => {
   return rows.map((row) => {
     const normalized = { ...row };
 
-    if (typeof normalized.column_names === 'string') {
-      normalized.column_names = normalized.column_names.split(',').filter(Boolean);
+    for (const field of ['column_names', 'column_orders']) {
+      if (typeof normalized[field] === 'string') {
+        normalized[field] = normalized[field].split(',').filter(Boolean);
+      }
     }
 
     return normalized;

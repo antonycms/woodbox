@@ -89,11 +89,13 @@ const normalizeRows = (rows: any[]) => {
   return rows.map((row) => {
     const normalized = { ...row };
 
-    if (typeof normalized.column_names === 'string') {
+    for (const field of ['column_names', 'column_orders']) {
+      if (typeof normalized[field] !== 'string') continue;
+
       try {
-        normalized.column_names = JSON.parse(normalized.column_names);
+        normalized[field] = JSON.parse(normalized[field]);
       } catch {
-        normalized.column_names = normalized.column_names.split(',').filter(Boolean);
+        normalized[field] = normalized[field].split(',').filter(Boolean);
       }
     }
 

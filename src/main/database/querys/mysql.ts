@@ -172,13 +172,14 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
     CASE WHEN INDEX_NAME = 'PRIMARY' THEN true ELSE false END AS is_primary,
     true AS is_valid,
     CONCAT('[', GROUP_CONCAT(JSON_QUOTE(column_name) ORDER BY seq_in_index SEPARATOR ','), ']') AS column_names,
+    CONCAT('[', GROUP_CONCAT(JSON_QUOTE(CASE WHEN collation = 'D' THEN 'DESC' ELSE 'ASC' END) ORDER BY seq_in_index SEPARATOR ','), ']') AS column_orders,
     NULL AS expression,
     NULL AS predicate,
     NULL AS index_size_bytes,
     CONCAT(
       'CREATE ', CASE WHEN non_unique = 0 THEN 'UNIQUE ' ELSE '' END,
       'INDEX ', ${sqlQuoteIdent('index_name')}, ' ON ', ${sqlQuoteIdent('table_name')},
-      ' (', GROUP_CONCAT(${sqlQuoteIdent('column_name')} ORDER BY seq_in_index SEPARATOR ', '), ')'
+      ' (', GROUP_CONCAT(CONCAT(${sqlQuoteIdent('column_name')}, ' ', CASE WHEN collation = 'D' THEN 'DESC' ELSE 'ASC' END) ORDER BY seq_in_index SEPARATOR ', '), ')'
     ) AS index_definition
   FROM information_schema.statistics
   WHERE table_schema = DATABASE()

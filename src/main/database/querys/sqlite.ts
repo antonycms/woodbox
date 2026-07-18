@@ -167,6 +167,7 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
     CASE WHEN il.origin = 'pk' THEN true ELSE false END AS is_primary,
     true AS is_valid,
     group_concat(ii.name, ',') AS column_names,
+    group_concat(CASE WHEN ii."desc" = 1 THEN 'DESC' ELSE 'ASC' END, ',') AS column_orders,
     NULL AS expression,
     NULL AS predicate,
     COALESCE(s.index_size_bytes, 0) AS index_size_bytes,
@@ -174,16 +175,17 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
       sm.sql,
       'CREATE ' || CASE WHEN il."unique" = 1 THEN 'UNIQUE ' ELSE '' END ||
       'INDEX ' || ${sqlQuoteIdent('il.name')} || ' ON ' || ${quoteLiteral(quoteIdent(table))} ||
-      ' (' || group_concat(${sqlQuoteIdent('ii.name')}, ', ') || ')'
+      ' (' || group_concat(${sqlQuoteIdent('ii.name')} || ' ' || CASE WHEN ii."desc" = 1 THEN 'DESC' ELSE 'ASC' END, ', ') || ')'
     ) AS index_definition
   FROM pragma_index_list(${quoteLiteral(table)}) il
-  JOIN pragma_index_info(il.name) ii
+  JOIN pragma_index_xinfo(il.name) ii
   LEFT JOIN sqlite_schema sm ON sm.type = 'index' AND sm.name = il.name
   LEFT JOIN (
     SELECT name, SUM(pgsize) AS index_size_bytes
     FROM dbstat
     GROUP BY name
   ) s ON s.name = il.name
+  WHERE ii.key = 1
   GROUP BY il.name, il."unique", il.origin, sm.sql, s.index_size_bytes
   ORDER BY il.name;
 `;
