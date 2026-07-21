@@ -1,34 +1,43 @@
 import React from 'react';
 import { Modal } from '@renderer/components/Modal';
+import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes } from '@renderer/styles/theme';
 import { SettingsCustomizationPanel } from './components/SettingsCustomizationPanel';
 import { SettingsImportPanel } from './components/SettingsImportPanel';
+import { SettingsLanguagePanel } from './components/SettingsLanguagePanel';
 import styles from './styles.module.css';
 
-type SettingsMenu = 'import' | 'customization';
+type SettingsMenu = 'language' | 'customization' | 'import';
 
 const appVersion = typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__;
 
-const menuItems: { id: SettingsMenu; label: string; description: string }[] = [
-  {
-    id: 'customization',
-    label: 'Personalização',
-    description: 'Temas e cores',
-  },
-  {
-    id: 'import',
-    label: 'Importação',
-    description: 'Origens externas',
-  },
-];
+const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: TranslationKey }[] =
+  [
+    {
+      id: 'language',
+      labelKey: 'settings.menu.language.label',
+      descriptionKey: 'settings.menu.language.description',
+    },
+    {
+      id: 'customization',
+      labelKey: 'settings.menu.customization.label',
+      descriptionKey: 'settings.menu.customization.description',
+    },
+    {
+      id: 'import',
+      labelKey: 'settings.menu.import.label',
+      descriptionKey: 'settings.menu.import.description',
+    },
+  ];
 
 export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps) => {
+  const { t } = useI18n();
   const {
     activeTheme: { modal: colors, __colors },
   } = useThemeContext();
 
-  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('customization');
+  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('language');
   const layoutStyle = React.useMemo(
     () =>
       ({
@@ -40,7 +49,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
 
   return (
     <Modal
-      title="Configurações"
+      title={t('settings.title')}
       width="920px"
       height="78vh"
       show={show}
@@ -61,8 +70,8 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
                   activeMenu === item.id ? colors.saveButtonBackgroundColor : __colors.lightGray,
               }}
             >
-              <strong>{item.label}</strong>
-              <span style={{ color: __colors.gray }}>{item.description}</span>
+              <strong>{t(item.labelKey)}</strong>
+              <span style={{ color: __colors.gray }}>{t(item.descriptionKey)}</span>
             </button>
           ))}
 
@@ -72,6 +81,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
         </aside>
 
         <section className={styles.content}>
+          {activeMenu === 'language' && <SettingsLanguagePanel />}
           {activeMenu === 'import' && <SettingsImportPanel />}
           {activeMenu === 'customization' && <SettingsCustomizationPanel />}
         </section>

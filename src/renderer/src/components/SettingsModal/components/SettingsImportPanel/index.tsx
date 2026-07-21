@@ -11,6 +11,7 @@ import {
   type IImportConnectionsPreview,
   type ImportConnectionsSource,
 } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import call from '@renderer/utils/call';
@@ -24,6 +25,7 @@ const makeSelectionKey = (sourceName: string, sourceId: string) => `${sourceName
 
 export const SettingsImportPanel = React.memo(() => {
   const { previewImportConnectionsFromSource, importConnectionsFromSource } = useStoreContext();
+  const { t } = useI18n();
   const { showToast } = useToast();
 
   const {
@@ -82,14 +84,14 @@ export const SettingsImportPanel = React.memo(() => {
       } catch (error) {
         showToast({
           type: 'error',
-          title: 'Falha ao ler arquivo',
+          title: t('settings.import.readFileFailedTitle'),
           description: error.message,
         });
       } finally {
         setLoadingPreview(false);
       }
     },
-    [source, masterPassword, previewImportConnectionsFromSource, selectPreviewItems, showToast],
+    [source, masterPassword, previewImportConnectionsFromSource, selectPreviewItems, showToast, t],
   );
 
   const handleSelectFile = React.useCallback(async () => {
@@ -155,13 +157,15 @@ export const SettingsImportPanel = React.memo(() => {
       setResult(importResult);
       showToast({
         type: 'success',
-        title: 'Importação concluída',
-        description: `${importResult.connectionsImported} conexões importadas`,
+        title: t('settings.import.importCompletedTitle'),
+        description: t('settings.import.connectionsImportedDescription', {
+          count: importResult.connectionsImported,
+        }),
       });
     } catch (error) {
       showToast({
         type: 'error',
-        title: 'Falha ao importar',
+        title: t('settings.import.importFailedTitle'),
         description: error.message,
       });
     } finally {
@@ -175,12 +179,13 @@ export const SettingsImportPanel = React.memo(() => {
     masterPassword,
     importConnectionsFromSource,
     showToast,
+    t,
   ]);
 
   return (
     <>
       <Text bold color={colors.color} userSelect={false}>
-        Importação
+        {t('settings.import.title')}
       </Text>
 
       <Divider size={8} />
@@ -190,7 +195,7 @@ export const SettingsImportPanel = React.memo(() => {
           required
           clearable={false}
           data={originOptions}
-          label="Origem"
+          label={t('settings.import.origin')}
           value={source}
           extractLabel={(item) => item.label}
           extractValue={(item) => item.value}
@@ -204,7 +209,7 @@ export const SettingsImportPanel = React.memo(() => {
       <Divider size={8} />
 
       <Text small color={__colors.gray}>
-        Selecione um arquivo e revise os itens antes de confirmar.
+        {t('settings.import.instructions')}
       </Text>
 
       {!!preview?.requiresMasterPassword && (
@@ -213,9 +218,9 @@ export const SettingsImportPanel = React.memo(() => {
 
           <Row>
             <Input
-              label="Senha mestra"
+              label={t('settings.import.masterPassword')}
               type="password"
-              placeholder="Digite a senha mestra"
+              placeholder={t('settings.import.masterPasswordPlaceholder')}
               value={masterPassword}
               onChange={(event) => setMasterPassword(event.target.value)}
               color={colors.fieldColor}
@@ -233,7 +238,7 @@ export const SettingsImportPanel = React.memo(() => {
               color={colors.testButtonColor}
               backgroundColor={colors.testButtonBackgroundColor}
             >
-              Atualizar preview
+              {t('settings.import.updatePreview')}
             </Button>
           </Row>
         </>
@@ -266,6 +271,17 @@ export const SettingsImportPanel = React.memo(() => {
                   <div className={styles.connectionsPreview}>
                     {project.connections.map((connection) => {
                       const key = makeSelectionKey(project.sourceName, connection.sourceId);
+                      const connectionInfo = [
+                        connection.dialect,
+                        connection.database || connection.host,
+                        connection.alreadyExists ? t('settings.import.alreadyExists') : undefined,
+                        connection.username
+                          ? t('settings.import.userMeta', { username: connection.username })
+                          : undefined,
+                        connection.hasPassword ? t('settings.import.withPassword') : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(' | ');
 
                       return (
                         <label key={key} className={styles.connectionRow}>
@@ -277,12 +293,7 @@ export const SettingsImportPanel = React.memo(() => {
 
                           <span className={styles.connectionInfo}>
                             <strong>{connection.description}</strong>
-                            <small>
-                              {connection.dialect} | {connection.database || connection.host}
-                              {connection.alreadyExists ? ' | já existe' : ''}
-                              {connection.username ? ` | usuário: ${connection.username}` : ''}
-                              {connection.hasPassword ? ' | com senha' : ''}
-                            </small>
+                            <small>{connectionInfo}</small>
                           </span>
                         </label>
                       );
@@ -301,16 +312,22 @@ export const SettingsImportPanel = React.memo(() => {
 
           <div className={styles.resultBox} style={themedPanelStyle}>
             <Text small color={colors.color}>
-              Projetos criados: {result.projectsCreated} | reutilizados: {result.projectsReused}
+              {t('settings.import.projectsSummary', {
+                created: result.projectsCreated,
+                reused: result.projectsReused,
+              })}
             </Text>
             <Text small color={colors.color}>
-              Conexões importadas: {result.connectionsImported} | ignoradas:{' '}
-              {result.connectionsSkipped}
+              {t('settings.import.connectionsSummary', {
+                imported: result.connectionsImported,
+                skipped: result.connectionsSkipped,
+              })}
             </Text>
             {!!result.unsupportedConnections.length && (
               <Text small color={__colors.orange}>
-                {result.unsupportedConnections.length} conexões de dialetos não suportados foram
-                ignoradas.
+                {t('settings.import.unsupportedConnections', {
+                  count: result.unsupportedConnections.length,
+                })}
               </Text>
             )}
             {result.warnings.slice(0, 2).map((warning) => (
@@ -333,7 +350,7 @@ export const SettingsImportPanel = React.memo(() => {
           color={colors.testButtonColor}
           backgroundColor={colors.testButtonBackgroundColor}
         >
-          Selecionar arquivo
+          {t('settings.import.selectFile')}
         </Button>
 
         <Spacer />
@@ -347,7 +364,7 @@ export const SettingsImportPanel = React.memo(() => {
           color={colors.saveButtonColor}
           backgroundColor={colors.saveButtonBackgroundColor}
         >
-          Confirmar importação
+          {t('settings.import.confirmImport')}
         </Button>
       </Row>
     </>

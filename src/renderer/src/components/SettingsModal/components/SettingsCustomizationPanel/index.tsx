@@ -6,6 +6,12 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
+import {
+  useI18n,
+  type TranslateFn,
+  type TranslateTextFn,
+  type TranslationKey,
+} from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
@@ -23,59 +29,58 @@ interface IAdvancedThemeField {
   value: string;
 }
 
-const themeGroupLabels = {
-  welcome: 'Boas-vindas',
-  sideBar: 'Sidebar',
-  mainTab: 'Abas principais',
-  toast: 'Toasts',
-  contextMenu: 'Menu contextual',
-  editor: 'Editor SQL',
-  table: 'Tabela',
-  modal: 'Modal',
-  tableInfo: 'Informações da tabela',
-  queryEditor: 'Editor de query',
+const themeGroupLabelKeys: Record<string, TranslationKey> = {
+  welcome: 'settings.customization.group.welcome',
+  sideBar: 'settings.customization.group.sideBar',
+  mainTab: 'settings.customization.group.mainTab',
+  toast: 'settings.customization.group.toast',
+  contextMenu: 'settings.customization.group.contextMenu',
+  editor: 'settings.customization.group.editor',
+  table: 'settings.customization.group.table',
+  modal: 'settings.customization.group.modal',
+  tableInfo: 'settings.customization.group.tableInfo',
+  queryEditor: 'settings.customization.group.queryEditor',
 };
 
-const themeAttributeLabels = {
-  color: 'Texto',
-  backgroundColor: 'Fundo',
-  fieldColor: 'Texto do campo',
-  fieldPlaceholderColor: 'Placeholder do campo',
-  fieldBackgroundColor: 'Fundo do campo',
-  fieldLabelColor: 'Label do campo',
-  borderColor: 'Borda',
-  ascentColor: 'Destaque',
-  saveButtonColor: 'Texto do botão salvar',
-  saveButtonBackgroundColor: 'Fundo do botão salvar',
-  cancelButtonColor: 'Texto do botão cancelar',
-  cancelButtonBackgroundColor: 'Fundo do botão cancelar',
-  testButtonColor: 'Texto do botão auxiliar',
-  testButtonBackgroundColor: 'Fundo do botão auxiliar',
-  lineNumberColor: 'Número da linha',
-  currentLineNumberColor: 'Número da linha ativa',
-  cursorColor: 'Cursor',
-  currentLineBackgroundColor: 'Linha ativa',
-  selectionColor: 'Seleção',
-  keywordColor: 'Palavra-chave',
-  identifierColor: 'Identificador',
-  numberColor: 'Número',
-  delimiterColor: 'Delimitador',
-  stringColor: 'Texto SQL',
-  colorHeader: 'Texto do cabeçalho',
-  backgroundColorHeader: 'Fundo do cabeçalho',
-  backgroundColorRowOdd: 'Fundo da linha ímpar',
-  colorRowOdd: 'Texto da linha ímpar',
-  backgroundColorRowEven: 'Fundo da linha par',
-  colorRowEven: 'Texto da linha par',
-  backgroundColorColumnEdited: 'Fundo da coluna editada',
-  colorColumnEdited: 'Texto da coluna editada',
-  selectedColor: 'Texto selecionado',
-  selectedBackgroundColor: 'Fundo selecionado',
-  selectedBorderColor: 'Borda selecionada',
+const themeAttributeLabelKeys: Record<string, TranslationKey> = {
+  color: 'settings.customization.attribute.color',
+  backgroundColor: 'settings.customization.attribute.backgroundColor',
+  fieldColor: 'settings.customization.attribute.fieldColor',
+  fieldPlaceholderColor: 'settings.customization.attribute.fieldPlaceholderColor',
+  fieldBackgroundColor: 'settings.customization.attribute.fieldBackgroundColor',
+  fieldLabelColor: 'settings.customization.attribute.fieldLabelColor',
+  borderColor: 'settings.customization.attribute.borderColor',
+  ascentColor: 'settings.customization.attribute.ascentColor',
+  saveButtonColor: 'settings.customization.attribute.saveButtonColor',
+  saveButtonBackgroundColor: 'settings.customization.attribute.saveButtonBackgroundColor',
+  cancelButtonColor: 'settings.customization.attribute.cancelButtonColor',
+  cancelButtonBackgroundColor: 'settings.customization.attribute.cancelButtonBackgroundColor',
+  testButtonColor: 'settings.customization.attribute.testButtonColor',
+  testButtonBackgroundColor: 'settings.customization.attribute.testButtonBackgroundColor',
+  lineNumberColor: 'settings.customization.attribute.lineNumberColor',
+  currentLineNumberColor: 'settings.customization.attribute.currentLineNumberColor',
+  cursorColor: 'settings.customization.attribute.cursorColor',
+  currentLineBackgroundColor: 'settings.customization.attribute.currentLineBackgroundColor',
+  selectionColor: 'settings.customization.attribute.selectionColor',
+  keywordColor: 'settings.customization.attribute.keywordColor',
+  identifierColor: 'settings.customization.attribute.identifierColor',
+  numberColor: 'settings.customization.attribute.numberColor',
+  delimiterColor: 'settings.customization.attribute.delimiterColor',
+  stringColor: 'settings.customization.attribute.stringColor',
+  colorHeader: 'settings.customization.attribute.colorHeader',
+  backgroundColorHeader: 'settings.customization.attribute.backgroundColorHeader',
+  backgroundColorRowOdd: 'settings.customization.attribute.backgroundColorRowOdd',
+  colorRowOdd: 'settings.customization.attribute.colorRowOdd',
+  backgroundColorRowEven: 'settings.customization.attribute.backgroundColorRowEven',
+  colorRowEven: 'settings.customization.attribute.colorRowEven',
+  backgroundColorColumnEdited: 'settings.customization.attribute.backgroundColorColumnEdited',
+  colorColumnEdited: 'settings.customization.attribute.colorColumnEdited',
+  selectedColor: 'settings.customization.attribute.selectedColor',
+  selectedBackgroundColor: 'settings.customization.attribute.selectedBackgroundColor',
+  selectedBorderColor: 'settings.customization.attribute.selectedBorderColor',
 };
 
 const themeLabels = {
-  'default-theme': 'Aura (padrão)',
   'woodbox-graphite': 'Grafite',
   'woodbox-amber': 'Âmbar',
   dracula: 'Dracula',
@@ -89,7 +94,12 @@ const themeLabels = {
   'catppuccin-latte': 'Catppuccin Latte',
 };
 
-const getThemeLabel = (theme: ITheme) => themeLabels[theme.name] || theme.name;
+const getThemeLabel = (theme: ITheme, t: TranslateFn, tText: TranslateTextFn) => {
+  if (theme.name === currentCustomThemeName) return t('settings.customization.currentCustomTheme');
+  if (theme.name === defaultThemeName) return t('settings.customization.defaultThemeLabel');
+
+  return tText(themeLabels[theme.name]) || theme.name;
+};
 
 const isTheme = (value: unknown): value is ITheme => {
   return !!value && typeof value === 'object' && typeof (value as ITheme).name === 'string';
@@ -137,7 +147,7 @@ const formatPathPart = (value: string) => {
     .trim();
 };
 
-const getAdvancedThemeFields = (theme: ITheme<string>) => {
+const getAdvancedThemeFields = (theme: ITheme<string>, t: TranslateFn) => {
   const groups = new Map<string, IAdvancedThemeField[]>();
 
   const walk = (target: unknown, path: string[] = []) => {
@@ -162,7 +172,8 @@ const getAdvancedThemeFields = (theme: ITheme<string>) => {
       const groupFields = groups.get(groupName) || [];
       const fieldName = nextPath[nextPath.length - 1];
       const parentPath = nextPath.slice(1, -1).map(formatPathPart).join(' / ');
-      const label = themeAttributeLabels[fieldName] || formatPathPart(fieldName);
+      const labelKey = themeAttributeLabelKeys[fieldName];
+      const label = labelKey ? t(labelKey) : formatPathPart(fieldName);
 
       groupFields.push({
         path: nextPath.join('.'),
@@ -177,7 +188,7 @@ const getAdvancedThemeFields = (theme: ITheme<string>) => {
 
   return [...groups.entries()].map(([name, fields]) => ({
     name,
-    label: themeGroupLabels[name] || formatPathPart(name),
+    label: themeGroupLabelKeys[name] ? t(themeGroupLabelKeys[name]) : formatPathPart(name),
     fields,
   }));
 };
@@ -185,6 +196,7 @@ const getAdvancedThemeFields = (theme: ITheme<string>) => {
 export const SettingsCustomizationPanel = React.memo(() => {
   const { activeTheme, availableThemes, addTheme, removeTheme, changeTheme } = useThemeContext();
   const { showToast } = useToast();
+  const { t, tText } = useI18n();
   const inputFileRef = React.useRef<HTMLInputElement>(null);
   const saveNameInputRef = React.useRef<HTMLInputElement>(null);
   const baseThemeNameRef = React.useRef(
@@ -199,8 +211,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const { modal: colors, __colors } = activeTheme;
 
   const advancedGroups = React.useMemo(() => {
-    return getAdvancedThemeFields(activeTheme);
-  }, [activeTheme]);
+    return getAdvancedThemeFields(activeTheme, t);
+  }, [activeTheme, t]);
   const panelStyle = React.useMemo(
     () =>
       ({
@@ -255,8 +267,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
     if (!nextThemeName) {
       showToast({
         type: 'warn',
-        title: 'Informe um nome',
-        description: 'Digite um nome para salvar o tema atual.',
+        title: t('settings.customization.themeNameRequiredTitle'),
+        description: t('settings.customization.themeNameRequiredDescription'),
       });
       return;
     }
@@ -264,8 +276,8 @@ export const SettingsCustomizationPanel = React.memo(() => {
     if (builtinThemeNames.includes(nextThemeName)) {
       showToast({
         type: 'warn',
-        title: 'Nome reservado',
-        description: 'Escolha outro nome para o tema.',
+        title: t('settings.customization.reservedNameTitle'),
+        description: t('settings.customization.reservedNameDescription'),
       });
       return;
     }
@@ -283,10 +295,10 @@ export const SettingsCustomizationPanel = React.memo(() => {
     baseThemeNameRef.current = nextThemeName;
     showToast({
       type: 'success',
-      title: 'Tema salvo',
-      description: `${nextThemeName} foi adicionado à seleção.`,
+      title: t('settings.customization.themeSavedTitle'),
+      description: t('settings.customization.themeSavedDescription', { themeName: nextThemeName }),
     });
-  }, [activeTheme, addTheme, showToast, themeName]);
+  }, [activeTheme, addTheme, showToast, t, themeName]);
 
   const handleClickSaveAsTheme = React.useCallback(() => {
     if (!showSaveNameInput) {
@@ -303,10 +315,10 @@ export const SettingsCustomizationPanel = React.memo(() => {
     setInputsVersion((value) => value + 1);
     showToast({
       type: 'success',
-      title: 'Alterações descartadas',
-      description: 'O tema temporário foi removido.',
+      title: t('settings.customization.changesDiscardedTitle'),
+      description: t('settings.customization.changesDiscardedDescription'),
     });
-  }, [removeTheme, showToast]);
+  }, [removeTheme, showToast, t]);
 
   const requestRemoveTheme = React.useCallback(
     (themeNameToRemove: string) => {
@@ -329,10 +341,12 @@ export const SettingsCustomizationPanel = React.memo(() => {
     setInputsVersion((value) => value + 1);
     showToast({
       type: 'success',
-      title: 'Tema removido',
-      description: `${themeToRemove} foi removido da seleção.`,
+      title: t('settings.customization.themeRemovedTitle'),
+      description: t('settings.customization.themeRemovedDescription', {
+        themeName: themeToRemove,
+      }),
     });
-  }, [activeTheme.name, removeTheme, showToast, themeToRemove]);
+  }, [activeTheme.name, removeTheme, showToast, t, themeToRemove]);
 
   const handleRemoveActiveTheme = React.useCallback(() => {
     requestRemoveTheme(activeTheme.name);
@@ -362,7 +376,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
         const importedTheme = JSON.parse(await file.text());
 
         if (!isTheme(importedTheme)) {
-          throw new Error('Arquivo de tema inválido.');
+          throw new Error(t('settings.customization.invalidThemeFile'));
         }
 
         addTheme(importedTheme, { activate: true });
@@ -371,18 +385,20 @@ export const SettingsCustomizationPanel = React.memo(() => {
         setInputsVersion((value) => value + 1);
         showToast({
           type: 'success',
-          title: 'Tema importado',
-          description: `${importedTheme.name} foi adicionado à seleção.`,
+          title: t('settings.customization.themeImportedTitle'),
+          description: t('settings.customization.themeImportedDescription', {
+            themeName: importedTheme.name,
+          }),
         });
       } catch (error) {
         showToast({
           type: 'error',
-          title: 'Falha ao importar tema',
+          title: t('settings.customization.themeImportFailedTitle'),
           description: error.message,
         });
       }
     },
-    [addTheme, showToast],
+    [addTheme, showToast, t],
   );
 
   React.useEffect(() => {
@@ -401,7 +417,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
     <div className={styles.panel} style={panelStyle}>
       <div className={styles.scrollContent}>
         <Text bold color={colors.color} userSelect={false}>
-          Personalização
+          {t('settings.customization.title')}
         </Text>
 
         <Divider size={8} />
@@ -411,9 +427,9 @@ export const SettingsCustomizationPanel = React.memo(() => {
             required
             clearable={false}
             data={availableThemes}
-            label="Tema ativo"
+            label={t('settings.customization.activeTheme')}
             value={activeTheme.name}
-            extractLabel={getThemeLabel}
+            extractLabel={(theme) => getThemeLabel(theme, t, tText)}
             extractValue={(theme) => theme.name}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
@@ -423,7 +439,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
               canRemoveThemeName(theme.name) && (
                 <button
                   type="button"
-                  title="Remover tema"
+                  title={t('settings.customization.removeThemeTitle')}
                   className={styles.optionRemoveButton}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -441,8 +457,9 @@ export const SettingsCustomizationPanel = React.memo(() => {
         <Divider size={12} />
 
         <Text small color={__colors.gray}>
-          Ao alterar uma cor, será criado um tema “{currentCustomThemeName}”. Você pode definir um
-          nome ao salvar.
+          {t('settings.customization.currentCustomHelp', {
+            themeName: t('settings.customization.currentCustomTheme'),
+          })}
         </Text>
 
         <Divider size={10} />
@@ -509,7 +526,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
         {showSaveNameInput && canSaveCurrentTheme && (
           <Input
             ref={saveNameInputRef}
-            placeholder="Nome do tema"
+            placeholder={t('settings.customization.themeNamePlaceholder')}
             value={themeName}
             onChange={(event) => setThemeName(event.target.value)}
             onKeyDown={(event) => {
@@ -527,7 +544,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
           <Button
             smallIcon
             text
-            title="Salvar como tema"
+            title={t('settings.customization.saveAsThemeTitle')}
             icon={() => <SaveIcon size={15} />}
             onClick={handleClickSaveAsTheme}
             color={colors.saveButtonBackgroundColor}
@@ -538,7 +555,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
           <Button
             smallIcon
             text
-            title="Descartar alterações"
+            title={t('settings.customization.discardChangesTitle')}
             icon={() => <CancelIcon size={15} />}
             onClick={handleDiscardCurrentChanges}
             color={colors.cancelButtonBackgroundColor}
@@ -549,7 +566,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
           <Button
             smallIcon
             text
-            title="Remover tema"
+            title={t('settings.customization.removeThemeTitle')}
             icon={() => <RemoveIcon size={15} />}
             onClick={handleRemoveActiveTheme}
             color={colors.cancelButtonBackgroundColor}
@@ -560,7 +577,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
           <Button
             smallIcon
             text
-            title="Exportar tema"
+            title={t('settings.customization.exportThemeTitle')}
             icon={() => <ExportIcon size={15} />}
             onClick={handleExportTheme}
             color={colors.testButtonBackgroundColor}
@@ -570,7 +587,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
         <Button
           smallIcon
           text
-          title="Importar tema"
+          title={t('settings.customization.importThemeTitle')}
           icon={() => <ImportIcon size={15} />}
           onClick={() => inputFileRef.current?.click()}
           color={colors.testButtonBackgroundColor}
@@ -586,14 +603,14 @@ export const SettingsCustomizationPanel = React.memo(() => {
       </div>
 
       <Modal
-        title="Remover tema"
+        title={t('settings.customization.removeThemeTitle')}
         width="420px"
         show={!!themeToRemove}
         closeOutside
         onClose={() => setThemeToRemove(undefined)}
       >
         <Text small color={colors.color}>
-          Remover o tema “{themeToRemove}”?
+          {t('settings.customization.removeThemeQuestion', { themeName: themeToRemove || '' })}
         </Text>
 
         <Divider size={14} />
@@ -606,7 +623,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
             color={colors.testButtonColor}
             backgroundColor={colors.testButtonBackgroundColor}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -616,7 +633,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
-            Remover
+            {t('settings.customization.remove')}
           </Button>
         </Row>
       </Modal>
