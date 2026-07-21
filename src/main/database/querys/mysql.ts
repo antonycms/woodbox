@@ -179,7 +179,9 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
     CONCAT(
       'CREATE ', CASE WHEN non_unique = 0 THEN 'UNIQUE ' ELSE '' END,
       'INDEX ', ${sqlQuoteIdent('index_name')}, ' ON ', ${sqlQuoteIdent('table_name')},
-      ' (', GROUP_CONCAT(CONCAT(${sqlQuoteIdent('column_name')}, ' ', CASE WHEN collation = 'D' THEN 'DESC' ELSE 'ASC' END) ORDER BY seq_in_index SEPARATOR ', '), ')'
+      ' (', GROUP_CONCAT(CONCAT(${sqlQuoteIdent(
+        'column_name',
+      )}, ' ', CASE WHEN collation = 'D' THEN 'DESC' ELSE 'ASC' END) ORDER BY seq_in_index SEPARATOR ', '), ')'
     ) AS index_definition
   FROM information_schema.statistics
   WHERE table_schema = DATABASE()

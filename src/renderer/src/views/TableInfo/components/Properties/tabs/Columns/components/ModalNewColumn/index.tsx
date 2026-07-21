@@ -208,7 +208,7 @@ const ModalNewColumn = ({
             reference_table_schema: selectedReferenceTable!.table_schema || '',
             reference_table_name: selectedReferenceTable!.table_name,
             reference_column_name: data.reference_column_name,
-        }
+          }
         : undefined;
 
       const index: IPendingIndexCreate | undefined = data.is_index

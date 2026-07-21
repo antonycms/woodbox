@@ -175,7 +175,9 @@ const getTableIndexes = ({ table }: ITableWithSchema) => /* sql */ `
       sm.sql,
       'CREATE ' || CASE WHEN il."unique" = 1 THEN 'UNIQUE ' ELSE '' END ||
       'INDEX ' || ${sqlQuoteIdent('il.name')} || ' ON ' || ${quoteLiteral(quoteIdent(table))} ||
-      ' (' || group_concat(${sqlQuoteIdent('ii.name')} || ' ' || CASE WHEN ii."desc" = 1 THEN 'DESC' ELSE 'ASC' END, ', ') || ')'
+      ' (' || group_concat(${sqlQuoteIdent(
+        'ii.name',
+      )} || ' ' || CASE WHEN ii."desc" = 1 THEN 'DESC' ELSE 'ASC' END, ', ') || ')'
     ) AS index_definition
   FROM pragma_index_list(${quoteLiteral(table)}) il
   JOIN pragma_index_xinfo(il.name) ii
