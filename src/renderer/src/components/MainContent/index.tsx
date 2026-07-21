@@ -9,6 +9,7 @@ import {
 import { Welcolme } from '@renderer/components/Welcome';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { IContextMenuOption } from '@renderer/components/ContextMenu';
@@ -51,6 +52,7 @@ export const MainContent = () => {
     ungroupTabGroup,
     closeTabGroup,
   } = useAppTabContext();
+  const { t } = useI18n();
   const { connections } = useStoreContext();
   const {
     activeTheme: { mainTab: theme },
@@ -117,15 +119,15 @@ export const MainContent = () => {
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
     () => [
       {
-        text: 'Copiar',
+        text: t('common.copy'),
         onClick: (info) => copyToClipboard(info.tab.title),
       },
       {
-        text: 'Adicionar aba ao grupo',
+        text: t('tabs.addToGroup'),
         show: (info) => !info?.tab.groupId,
         children: [
           {
-            text: 'Novo grupo',
+            text: t('tabs.newGroup'),
             onClick: (info) => {
               const groupId = createTabGroup(info.tab.idTab);
 
@@ -139,45 +141,54 @@ export const MainContent = () => {
         ],
       },
       {
-        text: 'Remover aba do grupo',
+        text: t('tabs.removeFromGroup'),
         show: (info) => !!info?.tab.groupId,
         onClick: (info) => removeTabFromGroup(info.tab.idTab),
       },
       {
-        text: 'Fechar aba',
+        text: t('tabs.closeTab'),
         onClick: (info) => {
           removeTab(info.tab.idTab);
         },
       },
       tabs.length > 1 && {
-        text: 'Fechar outras abas',
+        text: t('tabs.closeOtherTabs'),
         onClick: (info) => {
           setActiveTabId(info.tab.idTab);
           removeTab(tabs.filter((t) => t.id !== info.tab.idTab).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
-        text: 'Fechar abas à esquerda',
+        text: t('context.closeTabsLeft'),
         onClick: (info) => {
           const idx = tabs.findIndex((t) => t.id === info.tab.idTab);
           removeTab(tabs.slice(0, idx).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
-        text: 'Fechar abas à direita',
+        text: t('context.closeTabsRight'),
         onClick: (info) => {
           const idx = tabs.findIndex((t) => t.id === info.tab.idTab);
           removeTab(tabs.slice(idx + 1).map((t) => t.id));
         },
       },
       tabs.length > 1 && {
-        text: 'Fechar todas as abas',
+        text: t('tabs.closeAllTabs'),
         onClick: () => {
           removeTab(tabs.map((t) => t.id));
         },
       },
     ],
-    [addTabToGroup, createTabGroup, removeTab, removeTabFromGroup, setActiveTabId, tabGroups, tabs],
+    [
+      addTabToGroup,
+      createTabGroup,
+      removeTab,
+      removeTabFromGroup,
+      setActiveTabId,
+      tabGroups,
+      tabs,
+      t,
+    ],
   );
 
   const formatTabBarTabs = React.useCallback(

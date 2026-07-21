@@ -22,6 +22,7 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { copyToClipboard } from '@renderer/utils/methods';
@@ -129,6 +130,7 @@ const Diagram = ({
       tableInfo: { tab: tableInfoTab, properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
 
   const {
     references,
@@ -341,7 +343,7 @@ const Diagram = ({
               pointerEvents: 'none',
             }}
           >
-            {isLoading ? 'Carregando...' : 'Nenhuma ligação encontrada'}
+            {isLoading ? t('message.loading') : t('message.noDiagramLinks')}
           </div>
         )}
 
@@ -379,8 +381,8 @@ const Diagram = ({
           {totalItems > 1 ? `${totalItems} Itens` : `${totalItems} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {lastFetchDateSerialized}
+        <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+          {t('common.updatedAt', { date: lastFetchDateSerialized })}
         </Text>
       </Bar>
     </div>

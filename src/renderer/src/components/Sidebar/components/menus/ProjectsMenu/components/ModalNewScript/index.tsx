@@ -6,12 +6,14 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
+import { useI18n } from '@renderer/contexts/I18n';
 import { IScript, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 
 export const ModalNewScript = React.memo(
   ({ idScript, idConnection, show, onClose, onNewScriptCreated }: IModalNewScriptProps) => {
+    const { t } = useI18n();
     const { updateTab } = useAppTabContext();
     const { addScript, editScript, scripts } = useStoreContext();
 
@@ -65,13 +67,17 @@ export const ModalNewScript = React.memo(
     }, [idScript]);
 
     return (
-      <Modal title={idScript ? 'Editar Script' : 'Novo Script'} width="500px" show={show}>
+      <Modal
+        title={idScript ? t('context.renameScript') : t('context.newSqlScript')}
+        width="500px"
+        show={show}
+      >
         <form id="formNewScript" onSubmit={onSubmit}>
           <Row>
             <Input
               autoFocus
               required
-              label="Nome do script"
+              label={t('field.scriptName')}
               xl={12}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
@@ -92,7 +98,7 @@ export const ModalNewScript = React.memo(
               color={colors.cancelButtonColor}
               backgroundColor={colors.cancelButtonBackgroundColor}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -103,7 +109,7 @@ export const ModalNewScript = React.memo(
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
             >
-              Salvar
+              {t('common.save')}
             </Button>
           </Row>
         </form>

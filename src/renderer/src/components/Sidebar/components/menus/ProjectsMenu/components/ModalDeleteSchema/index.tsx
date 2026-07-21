@@ -6,12 +6,14 @@ import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 
 export const ModalDeleteSchema = React.memo(
   ({ show, idConnection, schema, onClose }: IModalDeleteSchemaProps) => {
+    const { t } = useI18n();
     const { runSql, loadConnectionInfo } = useStoreContext();
     const { tabs, removeTab } = useAppTabContext();
     const { showToast } = useToast();
@@ -60,14 +62,14 @@ export const ModalDeleteSchema = React.memo(
 
         showToast({
           type: 'success',
-          title: 'Schema excluído com sucesso!',
+          title: t('toast.schemaDeleted'),
         });
 
         close();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao excluir schema.',
+          title: t('toast.schemaDeleteError'),
           description: error?.message,
           delay: 8000,
         });
@@ -77,10 +79,8 @@ export const ModalDeleteSchema = React.memo(
     };
 
     return (
-      <Modal width="520px" show={show} title="Excluir Schema">
-        <Text color={colors.color}>
-          Tem certeza que deseja excluir o schema <strong>"{schema}"</strong>?
-        </Text>
+      <Modal width="520px" show={show} title={t('modal.deleteSchema')}>
+        <Text color={colors.color}>{t('message.deleteSchemaQuestion', { schema })}</Text>
 
         <Divider />
 
@@ -91,7 +91,7 @@ export const ModalDeleteSchema = React.memo(
             disabled={loading}
             onChange={(event) => setCascade(event.target.checked)}
           />{' '}
-          Excluir também objetos dentro do schema (CASCADE)
+          {t('message.deleteSchemaCascade')}
         </label>
 
         <Divider />
@@ -108,7 +108,7 @@ export const ModalDeleteSchema = React.memo(
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -120,7 +120,7 @@ export const ModalDeleteSchema = React.memo(
             sm={4}
             md={3}
           >
-            Confirmar
+            {t('common.confirm')}
           </Button>
         </Row>
       </Modal>

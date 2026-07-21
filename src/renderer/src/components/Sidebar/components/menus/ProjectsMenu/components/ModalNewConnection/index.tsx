@@ -7,6 +7,7 @@ import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
 import { useStoreContext } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
@@ -26,6 +27,7 @@ const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironmen
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
     const { showToast } = useToast();
+    const { t } = useI18n();
 
     const { connections, addConnection, editConnection, connectionTypes, testConnection } =
       useStoreContext();
@@ -130,9 +132,13 @@ export const ModalNewConnection = React.memo(
 
         await testConnection(connection);
 
-        showToast({ type: 'success', title: 'Conexão realizada com sucesso' });
+        showToast({ type: 'success', title: t('toast.connectionSuccess') });
       } catch (error) {
-        showToast({ type: 'error', title: 'Falha na conexão', description: error.message });
+        showToast({
+          type: 'error',
+          title: t('toast.connectionFailed'),
+          description: error.message,
+        });
       } finally {
         setLoadingTestConnection(false);
       }
@@ -155,13 +161,17 @@ export const ModalNewConnection = React.memo(
     }, [idConnection]);
 
     return (
-      <Modal title={idConnection ? 'Editar Conexão' : 'Nova Conexão'} width="500px" show={show}>
+      <Modal
+        title={idConnection ? t('modal.editConnection') : t('modal.newConnection')}
+        width="500px"
+        show={show}
+      >
         <form id="formNewConnection" onSubmit={onSubmit} ref={formRef}>
           <Row>
             <Input
               autoFocus
               required
-              label="Descrição"
+              label={t('field.description')}
               xs={12}
               sm={6}
               md={6}
@@ -173,8 +183,10 @@ export const ModalNewConnection = React.memo(
               required
               clearable={false}
               data={connectionEnvironmentOptions}
-              label="Tipo"
-              extractLabel={(item) => item.label}
+              label={t('field.type')}
+              extractLabel={(item) =>
+                item.value === 'production' ? t('field.production') : t('field.development')
+              }
               extractValue={(item) => item.value}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
@@ -188,7 +200,7 @@ export const ModalNewConnection = React.memo(
               required
               clearable={false}
               data={dialectOptions}
-              label="Dialeto"
+              label={t('field.dialect')}
               extractLabel={(item) => item.label}
               extractValue={(item) => item.id}
               color={colors.fieldColor}
@@ -203,7 +215,7 @@ export const ModalNewConnection = React.memo(
               <>
                 <Input
                   required
-                  label="Host"
+                  label={t('field.host')}
                   sm={8}
                   md={6}
                   color={colors.fieldColor}
@@ -212,7 +224,7 @@ export const ModalNewConnection = React.memo(
                 />
                 <Input
                   required
-                  label="Porta"
+                  label={t('field.port')}
                   sm={4}
                   md={2}
                   type="number"
@@ -226,7 +238,7 @@ export const ModalNewConnection = React.memo(
             {isFileConnection ? (
               <Input
                 required
-                label="Arquivo"
+                label={t('field.file')}
                 md={8}
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
@@ -237,7 +249,7 @@ export const ModalNewConnection = React.memo(
               <>
                 <Input
                   required
-                  label="Base de dados"
+                  label={t('field.database')}
                   md={12}
                   color={colors.fieldColor}
                   backgroundColor={colors.fieldBackgroundColor}
@@ -245,7 +257,7 @@ export const ModalNewConnection = React.memo(
                   onClick={isFileConnection ? selectSqliteFile : undefined}
                 />
                 <Input
-                  label="Usuário"
+                  label={t('field.user')}
                   xs={12}
                   md={6}
                   backgroundColor={colors.fieldBackgroundColor}
@@ -253,7 +265,7 @@ export const ModalNewConnection = React.memo(
                   {...register('username')}
                 />
                 <Input
-                  label="Senha"
+                  label={t('field.password')}
                   type="password"
                   xs={12}
                   md={6}
@@ -277,7 +289,7 @@ export const ModalNewConnection = React.memo(
               color={colors.testButtonColor}
               backgroundColor={colors.testButtonBackgroundColor}
             >
-              Testar
+              {t('common.test')}
             </Button>
 
             <Spacer />
@@ -290,7 +302,7 @@ export const ModalNewConnection = React.memo(
               color={colors.cancelButtonColor}
               backgroundColor={colors.cancelButtonBackgroundColor}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -301,7 +313,7 @@ export const ModalNewConnection = React.memo(
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
             >
-              Salvar
+              {t('common.save')}
             </Button>
           </Row>
         </form>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { IModalProps, Modal } from '@renderer/components/Modal';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useForm } from '@renderer/hooks/useForm';
 import { Row } from '../Grid';
 import { Input } from '../Input';
@@ -13,6 +14,7 @@ interface IModalCopyProps extends Omit<IModalProps, 'children'> {
 }
 
 export const ModalCopy = (props: IModalCopyProps) => {
+  const { t } = useI18n();
   const { content, onClose, ...modalProps } = props;
 
   const {
@@ -45,11 +47,11 @@ export const ModalCopy = (props: IModalCopyProps) => {
   );
 
   return (
-    <Modal title="Copiar Conteúdo" {...modalProps}>
+    <Modal title={t('modal.copyContent')} {...modalProps}>
       <form onSubmit={onSubmit}>
         <Row>
           <Input
-            label="Separador"
+            label={t('field.separator')}
             backgroundColor={colors.backgroundColor}
             color={colors.color}
             {...register('separator')}
@@ -57,7 +59,7 @@ export const ModalCopy = (props: IModalCopyProps) => {
 
           {!!attributes.length && (
             <AutocompleteMulti
-              label="Atributos"
+              label={t('field.attributes')}
               backgroundColor={colors.backgroundColor}
               color={colors.color}
               data={attributes}
@@ -77,7 +79,7 @@ export const ModalCopy = (props: IModalCopyProps) => {
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -88,7 +90,7 @@ export const ModalCopy = (props: IModalCopyProps) => {
             color={colors.saveButtonColor}
             backgroundColor={colors.saveButtonBackgroundColor}
           >
-            Salvar
+            {t('common.save')}
           </Button>
         </Row>
       </form>

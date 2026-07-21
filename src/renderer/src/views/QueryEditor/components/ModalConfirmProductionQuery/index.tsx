@@ -5,19 +5,21 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { Dialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 export const ModalConfirmProductionQuery = React.memo(
   ({ show, sql, dialect, onCancel, onConfirm }: IModalConfirmProductionQueryProps) => {
+    const { t } = useI18n();
     const {
       activeTheme: { modal: colors },
     } = useThemeContext();
 
     return (
       <Modal
-        title="Confirmar operação em Produção"
+        title={t('modal.confirmProductionOperation')}
         width="900px"
         height="520px"
         show={show}
@@ -25,10 +27,7 @@ export const ModalConfirmProductionQuery = React.memo(
         onClose={onCancel}
       >
         <div className={styles.message}>
-          <Text color={colors.color}>
-            Esta conexão está marcada como Produção. Confirme para executar uma operação que pode
-            alterar dados ou estrutura.
-          </Text>
+          <Text color={colors.color}>{t('message.confirmProductionQuery')}</Text>
         </div>
 
         <div className={styles.editorContainer}>
@@ -46,7 +45,7 @@ export const ModalConfirmProductionQuery = React.memo(
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -57,7 +56,7 @@ export const ModalConfirmProductionQuery = React.memo(
             color={colors.saveButtonColor}
             backgroundColor={colors.saveButtonBackgroundColor}
           >
-            Executar
+            {t('common.execute')}
           </Button>
         </Row>
       </Modal>

@@ -21,6 +21,7 @@ import {
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import styles from './styles.module.css';
 import { useStoreContext } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
@@ -93,6 +94,7 @@ const Data = ({
   } = useTableInfoContext();
 
   const { getTableData, getTableRowsCount, runSql, connections } = useStoreContext();
+  const { t, language } = useI18n();
   const { showToast } = useToast();
   const dialect = React.useMemo(
     () =>
@@ -131,9 +133,12 @@ const Data = ({
   const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
 
-  const handleDataError = React.useCallback((error: unknown) => {
-    setDataErrorMessage(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
-  }, []);
+  const handleDataError = React.useCallback(
+    (error: unknown) => {
+      setDataErrorMessage(error instanceof Error ? error.message : t('common.unknownError'));
+    },
+    [t],
+  );
 
   const handleLoadRowsCount = React.useCallback(async () => {
     if (loadingRowsCount) return;
@@ -421,7 +426,7 @@ const Data = ({
 
   const handleDuplicateSelectedRows = React.useCallback(() => {
     if (!selectedRows.length) {
-      showToast({ type: 'warn', title: 'Selecione uma ou mais linhas para duplicar.' });
+      showToast({ type: 'warn', title: t('toast.selectRowsDuplicate') });
       return;
     }
 
@@ -568,12 +573,12 @@ const Data = ({
         setEditedFieldsRows(new Map());
         setDroppedRows(new Map());
         setShowNoPkModal(false);
-        showToast({ type: 'success', title: 'Dados salvos com sucesso!' });
+        showToast({ type: 'success', title: t('toast.dataSaved') });
         await handleRefresh();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao salvar dados.',
+          title: t('toast.dataSaveError'),
           description: error?.message,
           delay: 8000,
         });
@@ -595,6 +600,7 @@ const Data = ({
       id_connection,
       showToast,
       handleRefresh,
+      t,
     ],
   );
 
@@ -645,7 +651,7 @@ const Data = ({
 
   const handleRemoveSelectedRows = React.useCallback(() => {
     if (!selectedRows.length) {
-      showToast({ type: 'warn', title: 'Selecione uma ou mais linhas para remover.' });
+      showToast({ type: 'warn', title: t('toast.selectRowsRemove') });
       return;
     }
 
@@ -680,7 +686,7 @@ const Data = ({
     });
 
     setContextMenuTable(undefined);
-  }, [selectedRows, showToast]);
+  }, [selectedRows, showToast, t]);
 
   const handleSort = React.useCallback(
     async (column: IColumn, sortType?: ISortDirection | null) => {
@@ -840,7 +846,7 @@ const Data = ({
       <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
         <ColumnFilterInput
           inputClassName={styles.filterInput}
-          placeholder="Filtrar resultados (ex: id = 1 and status = true)"
+          placeholder={t('placeholder.filterResults')}
           value={whereInput}
           columnNames={columnNames}
           onChange={(value) => !filterLocked && setWhereInput(value)}
@@ -898,14 +904,14 @@ const Data = ({
                   borderColor={tabTheme.borderColor}
                   color={tabTheme.color}
                   tabs={[
-                    { idTab: 'value', title: 'Valor' },
-                    selectedReference && { idTab: 'reference', title: 'Referência' },
-                    selectedReference && { idTab: 'selection', title: 'Seleção' },
+                    { idTab: 'value', title: t('tabs.value') },
+                    selectedReference && { idTab: 'reference', title: t('reference.singular') },
+                    selectedReference && { idTab: 'selection', title: t('tabs.selection') },
                   ].filter(Boolean)}
                 />
 
                 <Button
-                  title="Fechar visualização"
+                  title={t('tooltip.closeValuePreview')}
                   backgroundColor={tabTheme.backgroundColor}
                   color={tabTheme.color}
                   onClick={closeValuePreview}
@@ -956,7 +962,7 @@ const Data = ({
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
-          title="Salvar"
+          title={t('common.save')}
           text
           smallIcon
           color={theme.bar.color}
@@ -966,12 +972,18 @@ const Data = ({
           <SaveIcon size={16} />
         </Button>
 
-        <Button title="Adicionar" text smallIcon color={theme.bar.color} onClick={handleAddItem}>
+        <Button
+          title={t('common.add')}
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={handleAddItem}
+        >
           <AddIcon size={14} />
         </Button>
 
         <Button
-          title="Duplicar itens selecionados"
+          title={t('common.duplicateSelectedItems')}
           text
           smallIcon
           color={theme.bar.color}
@@ -981,7 +993,7 @@ const Data = ({
         </Button>
 
         <Button
-          title="Remover itens selecionados"
+          title={t('common.removeSelectedItems')}
           text
           smallIcon
           color={theme.bar.color}
@@ -991,7 +1003,7 @@ const Data = ({
         </Button>
 
         <Button
-          title={showValuePreview ? 'Fechar visualizacão' : 'Abrir visualizacão'}
+          title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}
           text
           smallIcon
           color={theme.bar.color}
@@ -1010,7 +1022,7 @@ const Data = ({
         <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={handleRefresh} />
 
         <Button
-          title="Contar linhas totais"
+          title={t('common.countTotalRows')}
           text
           smallIcon
           className={styles.countButton}
@@ -1020,14 +1032,14 @@ const Data = ({
         >
           <CountIcon size={16} />
           {rowsCount !== undefined && (
-            <span className={styles.countValue}>{rowsCount.toLocaleString('pt-BR')}</span>
+            <span className={styles.countValue}>{rowsCount.toLocaleString(language)}</span>
           )}
         </Button>
 
         <Spacer />
 
-        <Text userSelect={false} color={theme.bar.color} title="Data da última atualização">
-          Atualizado em {lastFetchDateSerialized}
+        <Text userSelect={false} color={theme.bar.color} title={t('common.lastUpdatedAt')}>
+          {t('common.updatedAt', { date: lastFetchDateSerialized })}
         </Text>
       </Bar>
 
@@ -1041,22 +1053,17 @@ const Data = ({
       <ModalDataError message={dataErrorMessage} onClose={() => setDataErrorMessage(undefined)} />
 
       <Modal
-        title="Tabela sem primary key"
+        title={t('message.noPrimaryKeyWarningTitle')}
         width="560px"
         show={showNoPkModal}
         closeOutside={!applyingChanges}
         onClose={applyingChanges ? undefined : () => setShowNoPkModal(false)}
       >
-        <Text color={colors.color || theme.bar.color}>
-          A tabela não possui primary key. Usar todas as colunas no WHERE pode atualizar nenhuma
-          linha ou múltiplas linhas se existirem registros duplicados.
-        </Text>
+        <Text color={colors.color || theme.bar.color}>{t('message.noPrimaryKeyWarning')}</Text>
 
         <div style={{ height: 16 }} />
 
-        <Text color={colors.color || theme.bar.color}>
-          Deseja continuar usando todas as colunas originais para tentar localizar cada linha?
-        </Text>
+        <Text color={colors.color || theme.bar.color}>{t('message.useAllColumnsQuestion')}</Text>
 
         <div style={{ height: 16 }} />
 
@@ -1073,7 +1080,7 @@ const Data = ({
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -1085,7 +1092,7 @@ const Data = ({
             sm={5}
             md={4}
           >
-            Usar todas as colunas
+            {t('common.useAllColumns')}
           </Button>
         </Row>
       </Modal>
@@ -1095,23 +1102,23 @@ const Data = ({
         onClose={() => setContextMenuTable(undefined)}
         options={[
           {
-            text: 'Copiar',
+            text: t('common.copy'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
           },
           {
-            text: 'Copiar linha',
+            text: t('context.copyRow'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
           },
           {
-            text: 'Copiar linha como JSON',
+            text: t('context.copyRowJson'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
           },
           {
-            text: 'Excluir itens selecionados',
+            text: t('context.deleteSelectedItems'),
             onClick: handleRemoveSelectedRows,
           },
           {
-            text: 'Gerar DDL de INSERT da linha',
+            text: t('context.insertDdlRow'),
             onClick: () => {
               setDdlSql(
                 generateInsertDdl(
@@ -1126,7 +1133,7 @@ const Data = ({
             },
           },
           {
-            text: 'Gerar DDL de INSERT das células selecionadas',
+            text: t('context.insertDdlSelectedCells'),
             onClick: () => {
               setDdlSql(
                 generateInsertDdl(

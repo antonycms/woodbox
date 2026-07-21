@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
+import { useI18n } from '@renderer/contexts/I18n';
 import { IconFileWrited, RunFileIcon, RunIcon, RunSelectionIcon } from '@renderer/styles/icons';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { getPrimaryShortcutKeyLabel } from '@renderer/utils/keyboard';
@@ -13,6 +14,7 @@ interface ILateralBarProps {
 }
 
 export const LateralBar = (props: ILateralBarProps) => {
+  const { t } = useI18n();
   const { activeTheme } = useThemeContext();
   const shortcutKey = getPrimaryShortcutKeyLabel();
 
@@ -27,7 +29,7 @@ export const LateralBar = (props: ILateralBarProps) => {
       <Button
         text
         smallIcon
-        title={`Executar script SQL (${shortcutKey} + Shift + Alt + Enter)`}
+        title={t('query.runScriptSql', { shortcut: shortcutKey })}
         onClick={runAllSQL}
         color={activeTheme.queryEditor.bar.color}
       >
@@ -37,7 +39,7 @@ export const LateralBar = (props: ILateralBarProps) => {
       <Button
         text
         smallIcon
-        title={`Executar SQL selecionado (${shortcutKey} + Alt + Enter)`}
+        title={t('query.runSelectedSql', { shortcut: shortcutKey })}
         onClick={runSelectionsSQL}
         color={activeTheme.queryEditor.bar.color}
       >
@@ -47,7 +49,7 @@ export const LateralBar = (props: ILateralBarProps) => {
       <Button
         text
         smallIcon
-        title={`Executar SQL atual (${shortcutKey} + Shift + Enter)`}
+        title={t('query.runCurrentSql', { shortcut: shortcutKey })}
         onClick={() => runCurrentSQL(true)}
         color={activeTheme.queryEditor.bar.color}
       >
@@ -57,7 +59,7 @@ export const LateralBar = (props: ILateralBarProps) => {
       <Button
         text
         smallIcon
-        title="Mostrar saída do servidor"
+        title={t('tooltip.serverOutput')}
         onClick={showServerOutput}
         color={activeTheme.queryEditor.bar.color}
       >

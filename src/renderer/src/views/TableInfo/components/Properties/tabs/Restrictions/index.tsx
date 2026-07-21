@@ -15,6 +15,7 @@ import {
 } from '@renderer/contexts/TableInfoContext';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -44,6 +45,7 @@ const Restrictios = ({
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { showToast } = useToast();
   const { connections } = useStoreContext();
   const dialect = React.useMemo(
@@ -186,7 +188,7 @@ const Restrictios = ({
       );
 
       if (alreadyExists) {
-        showToast({ type: 'warn', title: 'Já existe uma restrição com esse nome.' });
+        showToast({ type: 'warn', title: t('toast.constraintExists') });
         return false;
       }
 
@@ -198,7 +200,7 @@ const Restrictios = ({
 
   const handleRemoveSelectedRestrictions = React.useCallback(() => {
     if (!selectedRestrictions.length) {
-      showToast({ type: 'warn', title: 'Selecione uma ou mais restrições para remover.' });
+      showToast({ type: 'warn', title: t('toast.selectConstraintsRemove') });
       return;
     }
 
@@ -234,15 +236,15 @@ const Restrictios = ({
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Nova restrição',
+        text: t('modal.newConstraint'),
         onClick: handleOpenNewRestrictionModal,
       },
       {
-        text: 'Excluir itens selecionados',
+        text: t('context.deleteSelectedItems'),
         onClick: handleRemoveSelectedRestrictions,
       },
       {
-        text: 'Gerar DDL',
+        text: t('modal.generateDdl'),
         onClick: () => {
           setDdlSql(generateRestrictionsDdl(dialect, schema, table, selectedRestrictions));
           setShowDdlModal(true);
@@ -256,6 +258,7 @@ const Restrictios = ({
     dialect,
     handleOpenNewRestrictionModal,
     handleRemoveSelectedRestrictions,
+    t,
   ]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -367,7 +370,7 @@ const Restrictios = ({
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar restrições por nome, tipo ou coluna (separe por virgula)"
+          placeholder={t('placeholder.filterConstraints')}
           value={restrictionFilterText}
           onChange={(event) => setRestrictionFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -387,33 +390,33 @@ const Restrictios = ({
         onSelectRow={setSelectedRestrictions}
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome',
+            title: t('common.orderByColumn'),
+            label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Tipo',
+            title: t('common.orderByColumn'),
+            label: t('field.type'),
             attribute: 'constraint_type',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Colunas',
+            title: t('common.orderByColumn'),
+            label: t('field.columns'),
             attribute: 'column_names',
             type: 'autocomplete-multi',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Expressão',
+            title: t('common.orderByColumn'),
+            label: t('field.expression'),
             attribute: 'expression',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Comentário',
+            title: t('common.orderByColumn'),
+            label: t('field.comment'),
             attribute: 'comment',
             sortable: true,
           },
@@ -422,7 +425,7 @@ const Restrictios = ({
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
-          title="Salvar"
+          title={t('common.save')}
           text
           smallIcon
           color={theme.bar.color}
@@ -432,7 +435,7 @@ const Restrictios = ({
         </Button>
 
         <Button
-          title="Cancelar alterações"
+          title={t('common.cancelChanges')}
           text
           smallIcon
           color={theme.bar.color}
@@ -442,7 +445,7 @@ const Restrictios = ({
         </Button>
 
         <Button
-          title="Adicionar"
+          title={t('common.add')}
           text
           smallIcon
           color={theme.bar.color}
@@ -478,8 +481,8 @@ const Restrictios = ({
         </Text>
 
         {mode !== 'create' && (
-          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-            Atualizado em {lastFetchDateSerialized}
+          <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+            {t('common.updatedAt', { date: lastFetchDateSerialized })}
           </Text>
         )}
       </Bar>

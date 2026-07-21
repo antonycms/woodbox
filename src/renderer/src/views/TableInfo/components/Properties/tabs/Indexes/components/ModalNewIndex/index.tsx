@@ -6,6 +6,7 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import type { IndexColumnOrder } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IPendingIndexCreate } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
@@ -34,6 +35,7 @@ const ModalNewIndex = ({
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
+  const { t } = useI18n();
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
 
   const selectedColumns = React.useMemo(
@@ -111,13 +113,13 @@ const ModalNewIndex = ({
   }, [show, indexMethods, setState]);
 
   return (
-    <Modal title="Novo índice" width="440px" show={show} closeOutside onClose={close}>
+    <Modal title={t('modal.newIndex')} width="440px" show={show} closeOutside onClose={close}>
       <form className={styles.form} onSubmit={onSubmit}>
         <Row>
           <AutocompleteMulti
             md={12}
             required
-            label="Colunas"
+            label={t('field.columns')}
             data={columns}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
@@ -128,7 +130,7 @@ const ModalNewIndex = ({
             <Autocomplete
               md={12}
               required
-              label="Método"
+              label={t('field.method')}
               data={indexMethods}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
@@ -138,7 +140,7 @@ const ModalNewIndex = ({
 
           {!!selectedColumns.length && (
             <div className={styles.orderList} style={orderListStyle}>
-              <span className={styles.orderTitle}>Ordem das colunas</span>
+              <span className={styles.orderTitle}>{t('index.columnOrder')}</span>
 
               {selectedColumns.map((columnName) => {
                 const currentOrder = state.column_orders[columnName] || 'ASC';
@@ -181,7 +183,7 @@ const ModalNewIndex = ({
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -192,7 +194,7 @@ const ModalNewIndex = ({
             sm={4}
             md={3}
           >
-            Adicionar
+            {t('common.add')}
           </Button>
         </Row>
       </form>

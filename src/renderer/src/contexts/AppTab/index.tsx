@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '@renderer/contexts/I18n';
 import { generateHash } from '@renderer/utils/string';
 import AppTabContext, {
   type IAppTab,
@@ -41,6 +42,7 @@ const cleanupEmptyGroups = (groups: IAppTabGroup[], tabs: IAppTab[]) => {
 };
 
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
+  const { t } = useI18n();
   const {
     activeTheme: { __colors },
   } = useThemeContext();
@@ -220,7 +222,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       ];
       const group: IAppTabGroup = {
         id: generateHash(),
-        title: 'Grupo',
+        title: t('tabs.group'),
         color: tabGroupColors[tabGroups.length % tabGroupColors.length],
       };
 
@@ -231,7 +233,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
       return group.id;
     },
-    [__colors, tabGroups.length],
+    [__colors, tabGroups.length, t],
   );
 
   const addTabToGroup = React.useCallback(

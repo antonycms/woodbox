@@ -4,6 +4,7 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from './styles.module.css';
 
@@ -13,6 +14,7 @@ interface IModalDataErrorProps {
 }
 
 const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
+  const { t } = useI18n();
   const {
     activeTheme: { __colors, modal: colors },
   } = useThemeContext();
@@ -25,7 +27,7 @@ const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
 
   return (
     <Modal
-      title="Erro ao carregar dados"
+      title={t('modal.dataLoadError')}
       width="640px"
       show={!!message}
       closeOutside
@@ -47,7 +49,7 @@ const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
           sm={4}
           md={3}
         >
-          Fechar
+          {t('common.close')}
         </Button>
       </Row>
     </Modal>

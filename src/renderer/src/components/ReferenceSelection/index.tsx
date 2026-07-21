@@ -2,6 +2,7 @@ import React from 'react';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
@@ -36,6 +37,7 @@ const ReferenceSelection = ({
     },
   } = useThemeContext();
   const { getTableColumns, getTableData } = useStoreContext();
+  const { t } = useI18n();
   const [columns, setColumns] = React.useState<IColumn[]>([]);
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -179,7 +181,7 @@ const ReferenceSelection = ({
   if (!reference) {
     return (
       <div className={styles.emptyState}>
-        <Text color={theme.bar.color}>Selecione uma célula com FK para carregar opções.</Text>
+        <Text color={theme.bar.color}>{t('message.selectFkCellOptions')}</Text>
       </div>
     );
   }
@@ -197,7 +199,7 @@ const ReferenceSelection = ({
       >
         <ColumnFilterInput
           inputClassName={styles.filterInput}
-          placeholder="Filtrar seleção (ex: nome like '%maria%')"
+          placeholder={t('placeholder.filterSelection')}
           value={whereInput}
           columnNames={columnNames}
           onChange={setWhereInput}

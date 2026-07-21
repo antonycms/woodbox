@@ -4,6 +4,7 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const ModalConfirmDiscardChanges = ({
@@ -11,25 +12,24 @@ const ModalConfirmDiscardChanges = ({
   onCancel,
   onConfirm,
 }: IModalConfirmDiscardChangesProps) => {
+  const { t } = useI18n();
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
 
   return (
     <Modal
-      title="Descartar alterações pendentes"
+      title={t('modal.discardPendingChanges')}
       width="520px"
       show={show}
       closeOutside
       onClose={onCancel}
     >
-      <Text color={colors.color}>
-        Esta aba possui alterações pendentes. Ao aplicar o filtro, essas alterações serão perdidas.
-      </Text>
+      <Text color={colors.color}>{t('message.discardPendingChanges')}</Text>
 
       <div style={{ height: 16 }} />
 
-      <Text color={colors.color}>Deseja prosseguir mesmo assim?</Text>
+      <Text color={colors.color}>{t('modal.confirmProceed')}</Text>
 
       <div style={{ height: 16 }} />
 
@@ -44,7 +44,7 @@ const ModalConfirmDiscardChanges = ({
           color={colors.cancelButtonColor}
           backgroundColor={colors.cancelButtonBackgroundColor}
         >
-          Cancelar
+          {t('settings.customization.cancel')}
         </Button>
 
         <Button
@@ -55,7 +55,7 @@ const ModalConfirmDiscardChanges = ({
           color={colors.saveButtonColor}
           backgroundColor={colors.saveButtonBackgroundColor}
         >
-          Prosseguir
+          {t('common.proceed')}
         </Button>
       </Row>
     </Modal>

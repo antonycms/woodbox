@@ -6,6 +6,7 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
 const EMPTY_INITIAL_VALUES: Record<string, string> = {};
@@ -26,6 +27,7 @@ export const ModalQueryVariables = React.memo(
     onCancel,
     onExecute,
   }: IModalQueryVariablesProps) => {
+    const { t } = useI18n();
     const {
       activeTheme: { modal: colors },
     } = useThemeContext();
@@ -54,7 +56,7 @@ export const ModalQueryVariables = React.memo(
     }, [show, variables, initialValues, reset, setState]);
 
     return (
-      <Modal title="Variáveis da query" width="520px" show={show}>
+      <Modal title={t('modal.queryVariables')} width="520px" show={show}>
         <form onSubmit={onSubmit}>
           <Row>
             {variables.map((variable, index) => (
@@ -83,7 +85,7 @@ export const ModalQueryVariables = React.memo(
               color={colors.cancelButtonColor}
               backgroundColor={colors.cancelButtonBackgroundColor}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -94,7 +96,7 @@ export const ModalQueryVariables = React.memo(
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
             >
-              Executar
+              {t('common.execute')}
             </Button>
           </Row>
         </form>

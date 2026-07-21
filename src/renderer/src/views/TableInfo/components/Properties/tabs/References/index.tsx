@@ -7,6 +7,7 @@ import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
@@ -22,6 +23,7 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } =
     useTableInfoContext();
   const [referenceFilterText, setReferenceFilterText] = React.useState('');
@@ -80,7 +82,7 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar referências por nome, tabela ou coluna (separe por virgula)"
+          placeholder={t('placeholder.filterReferences')}
           value={referenceFilterText}
           onChange={(event) => setReferenceFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -101,27 +103,27 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
         onCellLinkClick={handleCellLinkClick}
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome',
+            title: t('common.orderByColumn'),
+            label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Tabela',
+            title: t('common.orderByColumn'),
+            label: t('field.table'),
             attribute: 'source_table',
             isLink: true,
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Coluna',
+            title: t('common.orderByColumn'),
+            label: t('field.column'),
             attribute: 'column_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Coluna Referenciada',
+            title: t('common.orderByColumn'),
+            label: t('field.referencedColumnTitle'),
             attribute: 'reference_column_name',
             sortable: true,
           },
@@ -143,8 +145,8 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
             : `${filteredAndSortedRows?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {lastFetchDateSerialized}
+        <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+          {t('common.updatedAt', { date: lastFetchDateSerialized })}
         </Text>
       </Bar>
     </>

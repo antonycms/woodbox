@@ -1,6 +1,7 @@
 import React from 'react';
 import IconMdiAlertCircle from '~icons/mdi/alert-circle';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from '../../styles.module.css';
 import { IQueryResult } from '../../dtos';
@@ -12,6 +13,7 @@ interface ITabContentError {
 
 export const TabcontentError = (props: ITabContentError) => {
   const { data } = props;
+  const { t } = useI18n();
   const {
     activeTheme: { __colors },
   } = useThemeContext();
@@ -29,16 +31,16 @@ export const TabcontentError = (props: ITabContentError) => {
           <IconMdiAlertCircle width={18} height={18} />
 
           <Text bold color={__colors.red}>
-            Erro ao executar a query
+            {t('query.executionErrorTitle')}
           </Text>
         </div>
 
         <div className={styles.resultMessage}>
-          <Text color={__colors.white}>{data.message || 'Erro desconhecido'}</Text>
+          <Text color={__colors.white}>{data.message || t('common.unknownErrorNoDot')}</Text>
         </div>
 
         <Text small color={__colors.gray}>
-          Executado em {toDateTime(data.date_run)}
+          {t('query.executedAt', { date: toDateTime(data.date_run) })}
         </Text>
       </div>
     </div>

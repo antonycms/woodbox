@@ -1,6 +1,7 @@
 import React from 'react';
 import { IAppTab, IAppTabGroup } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
@@ -15,6 +16,7 @@ export const useRestoreTabsFromStorage = (
 ) => {
   const { loadConnectionInfo } = useStoreContext();
   const { showToast } = useToast();
+  const { t } = useI18n();
   const {
     activeTheme: { __colors },
   } = useThemeContext();
@@ -96,7 +98,7 @@ export const useRestoreTabsFromStorage = (
         (groupId) =>
           storedGroupsById.get(groupId) || {
             id: groupId,
-            title: 'Grupo',
+            title: t('tabs.group'),
             color: __colors.blue,
           },
       );
@@ -111,7 +113,7 @@ export const useRestoreTabsFromStorage = (
           if (result.status === 'rejected') {
             showToast({
               type: 'error',
-              title: 'Erro ao restaurar conexão',
+              title: t('toast.restoreConnectionError'),
               description: result.reason?.message,
             });
           }

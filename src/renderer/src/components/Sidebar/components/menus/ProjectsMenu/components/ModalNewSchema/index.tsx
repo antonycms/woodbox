@@ -5,6 +5,7 @@ import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
@@ -13,6 +14,7 @@ import { useForm } from '@renderer/hooks/useForm';
 export const ModalNewSchema = React.memo(
   ({ show, idConnection, onClose }: IModalNewSchemaProps) => {
     const { runSql, loadConnectionInfo } = useStoreContext();
+    const { t } = useI18n();
     const { showToast } = useToast();
     const {
       activeTheme: { modal: colors },
@@ -39,14 +41,14 @@ export const ModalNewSchema = React.memo(
 
         showToast({
           type: 'success',
-          title: 'Schema criado com sucesso!',
+          title: t('toast.schemaCreated'),
         });
 
         close();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao criar schema.',
+          title: t('toast.schemaCreateError'),
           description: error?.message,
           delay: 8000,
         });
@@ -56,12 +58,12 @@ export const ModalNewSchema = React.memo(
     });
 
     return (
-      <Modal title="Novo Schema" width="500px" show={show}>
+      <Modal title={t('modal.newSchema')} width="500px" show={show}>
         <form onSubmit={onSubmit}>
           <Input
             autoFocus
             required
-            label="Nome do schema"
+            label={t('field.schemaName')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             labelColor={colors.fieldLabelColor}
@@ -84,7 +86,7 @@ export const ModalNewSchema = React.memo(
               sm={4}
               md={3}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -96,7 +98,7 @@ export const ModalNewSchema = React.memo(
               sm={4}
               md={3}
             >
-              Salvar
+              {t('common.save')}
             </Button>
           </Row>
         </form>

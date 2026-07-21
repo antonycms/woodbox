@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
@@ -76,6 +77,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     runSql,
     connections,
   } = useStoreContext();
+  const { t } = useI18n();
   const { showToast } = useToast();
   const CREATE_STYLE = React.useMemo<React.CSSProperties>(
     () => ({ backgroundColor: __colors.greenTransparent }),
@@ -578,12 +580,12 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
     ) => {
       if (options?.mode === 'create') {
         if (!filters.table?.trim()) {
-          showToast({ type: 'warn', title: 'Informe o nome da tabela.' });
+          showToast({ type: 'warn', title: t('toast.tableNameRequired') });
           return;
         }
 
         if (!pendingColumns.length) {
-          showToast({ type: 'warn', title: 'Adicione ao menos uma coluna.' });
+          showToast({ type: 'warn', title: t('toast.addAtLeastOneColumn') });
           return;
         }
       }
@@ -648,7 +650,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         await runSql(applyInfo.idConnection, sql);
         clearPendingChanges();
         setShowPendingDdlModal(false);
-        showToast({ type: 'success', title: 'Alterações aplicadas com sucesso!' });
+        showToast({ type: 'success', title: t('toast.applyChangesSuccess') });
 
         if (applyInfo.options?.mode === 'create') {
           applyInfo.options.onApplied?.(applyInfo.filters.table);
@@ -664,7 +666,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao aplicar alterações.',
+          title: t('toast.applyChangesError'),
           description: error?.message,
           delay: 8000,
         });

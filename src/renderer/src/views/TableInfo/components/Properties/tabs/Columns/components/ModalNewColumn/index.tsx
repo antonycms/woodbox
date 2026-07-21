@@ -10,6 +10,7 @@ import {
   type ITable,
   useStoreContext,
 } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type {
@@ -89,6 +90,7 @@ const ModalNewColumn = ({
     activeTheme: { modal: colors },
   } = useThemeContext();
   const { getTableColumns, getTableRestrictions } = useStoreContext();
+  const { t } = useI18n();
   const { showToast } = useToast();
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
   const [referenceRestrictions, setReferenceRestrictions] = React.useState<
@@ -155,9 +157,8 @@ const ModalNewColumn = ({
       if (data.is_unique && data.column_default.trim()) {
         showToast({
           type: 'warn',
-          title: 'Coluna única não pode ter valor padrão fixo.',
-          description:
-            'Em tabelas com dados, o valor padrão seria repetido em várias linhas e a constraint UNIQUE falharia.',
+          title: t('column.uniqueFixedDefaultTitle'),
+          description: t('column.uniqueFixedDefaultDescription'),
         });
         return;
       }
@@ -165,8 +166,8 @@ const ModalNewColumn = ({
       if (data.is_auto_increment && !isAutoIncrementType(dataType)) {
         showToast({
           type: 'warn',
-          title: 'Auto increment inválido para esse tipo.',
-          description: 'Use tinyint, smallint, mediumint, int, integer ou bigint.',
+          title: t('toast.invalidAutoIncrementType'),
+          description: t('column.autoIncrementTypesHelp'),
         });
         return;
       }
@@ -174,8 +175,8 @@ const ModalNewColumn = ({
       if (data.is_auto_increment && !data.is_primary_key && !data.is_unique) {
         showToast({
           type: 'warn',
-          title: 'Auto increment precisa de índice.',
-          description: 'Marque Chave Primária ou Única.',
+          title: t('column.autoIncrementNeedsIndex'),
+          description: t('column.autoIncrementNeedsIndexDescription'),
         });
         return;
       }
@@ -236,7 +237,7 @@ const ModalNewColumn = ({
       });
       if (shouldClose !== false) close();
     }),
-    [handleSubmit, onAdd, close, showToast, selectedReferenceTable, table, indexMethods],
+    [handleSubmit, onAdd, close, showToast, selectedReferenceTable, table, indexMethods, t],
   );
 
   React.useEffect(() => {
@@ -300,14 +301,14 @@ const ModalNewColumn = ({
   }, [referenceColumnOptions, setState, state.reference_column_name]);
 
   return (
-    <Modal title="Nova coluna" width="440px" show={show} closeOutside onClose={close}>
+    <Modal title={t('column.newColumn')} width="440px" show={show} closeOutside onClose={close}>
       <form className={styles.form} onSubmit={onSubmit}>
         <Row>
           <Input
             md={12}
             required
             autoFocus
-            label="Nome"
+            label={t('field.name')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             {...register('column_name')}
@@ -316,7 +317,7 @@ const ModalNewColumn = ({
           <Autocomplete
             md={12}
             required
-            label="Tipo"
+            label={t('field.type')}
             data={typeItems}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
@@ -327,17 +328,17 @@ const ModalNewColumn = ({
         <Row>
           <Input
             md={12}
-            label="Valor Padrão"
+            label={t('field.defaultValue')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             disabled={state.is_auto_increment}
-            title={state.is_auto_increment ? 'Auto increment não permite valor padrão.' : undefined}
+            title={state.is_auto_increment ? t('column.autoIncrementNoDefault') : undefined}
             {...register('column_default')}
           />
 
           <Input
             md={12}
-            label="Comentário"
+            label={t('field.comment')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             {...register('description')}
@@ -352,7 +353,7 @@ const ModalNewColumn = ({
               checked={state.required}
               onChange={register('required').onChange}
             />
-            Obrigatório
+            {t('field.required')}
           </label>
 
           <label className={styles.checkbox} style={{ color: colors.color }}>
@@ -361,7 +362,7 @@ const ModalNewColumn = ({
               name="is_primary_key"
               checked={state.is_primary_key}
               disabled={hasPrimaryKey}
-              title={hasPrimaryKey ? 'Já existe uma Chave Primária nessa tabela!' : undefined}
+              title={hasPrimaryKey ? t('message.primaryKeyAlreadyExistsTitle') : undefined}
               onChange={(event) => {
                 const checked = event.target.checked;
                 setState((prevState) => ({
@@ -373,7 +374,7 @@ const ModalNewColumn = ({
                 }));
               }}
             />
-            Chave Primária
+            {t('field.primaryKey')}
           </label>
 
           <label className={styles.checkbox} style={{ color: colors.color }}>
@@ -392,7 +393,7 @@ const ModalNewColumn = ({
                 }));
               }}
             />
-            Única
+            {t('field.unique')}
           </label>
 
           {supportsAutoIncrement && (
@@ -426,7 +427,7 @@ const ModalNewColumn = ({
               checked={state.is_index}
               onChange={register('is_index').onChange}
             />
-            Índice
+            {t('field.index')}
           </label>
 
           <label className={styles.checkbox} style={{ color: colors.color }}>
@@ -437,7 +438,7 @@ const ModalNewColumn = ({
               disabled={state.is_auto_increment}
               onChange={register('is_foreign_key').onChange}
             />
-            Chave Estrangeira
+            {t('tabs.foreignKeys')}
           </label>
         </div>
 
@@ -446,7 +447,7 @@ const ModalNewColumn = ({
             <Autocomplete
               md={12}
               required
-              label="Tabela referenciada"
+              label={t('column.referencedTable')}
               data={tableOptions}
               extractLabel={(item) => item.label}
               extractValue={(item) => item.value}
@@ -467,14 +468,14 @@ const ModalNewColumn = ({
             <Autocomplete
               md={12}
               required
-              label="Coluna referenciada"
+              label={t('column.referencedColumn')}
               data={referenceColumnOptions}
               loading={loadingRestrictions}
               extractLabel={(item) => item.label}
               extractValue={(item) => item.value}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
-              emptyMessage="A tabela não possui PK ou coluna Unique"
+              emptyMessage={t('message.noPkOrUniqueColumn')}
               {...register('reference_column_name')}
             />
           </Row>
@@ -492,7 +493,7 @@ const ModalNewColumn = ({
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -503,7 +504,7 @@ const ModalNewColumn = ({
             sm={4}
             md={3}
           >
-            Adicionar
+            {t('common.add')}
           </Button>
         </Row>
       </form>

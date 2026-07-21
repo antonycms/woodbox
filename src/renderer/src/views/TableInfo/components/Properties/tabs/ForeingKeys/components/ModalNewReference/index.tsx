@@ -10,6 +10,7 @@ import {
   type ITable,
   useStoreContext,
 } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IPendingReferenceCreate } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
@@ -67,6 +68,7 @@ const ModalNewReference = ({
     activeTheme: { __colors, modal: colors },
   } = useThemeContext();
   const { getTableColumns, getTableRestrictions } = useStoreContext();
+  const { t } = useI18n();
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
   const [referenceRestrictions, setReferenceRestrictions] = React.useState<
     IColumnRestrictionsInfo[]
@@ -213,13 +215,19 @@ const ModalNewReference = ({
   }, [referenceColumnOptions, setState, state.reference_column_name]);
 
   return (
-    <Modal title="Nova chave estrangeira" width="520px" show={show} closeOutside onClose={close}>
+    <Modal
+      title={t('foreignKey.newForeignKey')}
+      width="520px"
+      show={show}
+      closeOutside
+      onClose={close}
+    >
       <form className={styles.form} onSubmit={onSubmit}>
         <Row>
           <Autocomplete
             md={12}
             required
-            label="Coluna"
+            label={t('field.column')}
             data={columns}
             extractLabel={(item) => item.column_name}
             extractValue={(item) => item.column_name}
@@ -231,7 +239,7 @@ const ModalNewReference = ({
           <Autocomplete
             md={12}
             required
-            label="Tabela referenciada"
+            label={t('column.referencedTable')}
             data={tableOptions}
             extractLabel={(item) => item.label}
             extractValue={(item) => item.value}
@@ -250,14 +258,14 @@ const ModalNewReference = ({
           <Autocomplete
             md={12}
             required
-            label="Coluna referenciada"
+            label={t('column.referencedColumn')}
             data={referenceColumnOptions}
             loading={loadingRestrictions}
             extractLabel={(item) => item.label}
             extractValue={(item) => item.value}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            emptyMessage="A tabela não possui PK ou coluna Unique"
+            emptyMessage={t('message.noPkOrUniqueColumn')}
             {...register('reference_column_name')}
           />
 
@@ -272,9 +280,10 @@ const ModalNewReference = ({
                 } as React.CSSProperties
               }
             >
-              Atenção: a coluna selecionada possui tipo {getColumnTypeLabel(selectedLocalColumn)} e
-              a coluna referenciada possui tipo {getColumnTypeLabel(selectedReferenceColumn)}. O
-              PostgreSQL pode rejeitar a criação da FK ao salvar.
+              {t('message.fkTypeWarning', {
+                localType: getColumnTypeLabel(selectedLocalColumn),
+                referenceType: getColumnTypeLabel(selectedReferenceColumn),
+              })}
             </div>
           )}
         </Row>
@@ -291,7 +300,7 @@ const ModalNewReference = ({
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -302,7 +311,7 @@ const ModalNewReference = ({
             sm={4}
             md={3}
           >
-            Adicionar
+            {t('common.add')}
           </Button>
         </Row>
       </form>

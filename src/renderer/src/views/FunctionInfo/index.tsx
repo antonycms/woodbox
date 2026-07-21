@@ -12,6 +12,7 @@ import { useStoreContext } from '@renderer/contexts/Store';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { IconRefresh, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
@@ -33,6 +34,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
       tableInfo: { properties: propertiesTheme, tab: tabTheme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { getFunctionDefinition, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
   const dialect = React.useMemo(
@@ -82,7 +84,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
     const sql = refEditor.current?.getValue?.() ?? definition;
 
     if (!sql.trim()) {
-      showToast({ type: 'warn', title: 'Informe o SQL da função.' });
+      showToast({ type: 'warn', title: t('toast.functionSqlRequired') });
       return;
     }
 
@@ -90,7 +92,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
 
     setPendingSql(sql);
     setShowApplyModal(true);
-  }, [definition, savedDefinition, showToast]);
+  }, [definition, savedDefinition, showToast, t]);
 
   const handleApply = React.useCallback(
     async (sql: string) => {
@@ -99,13 +101,13 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
 
         await runSql(id_connection, sql);
         setShowApplyModal(false);
-        showToast({ type: 'success', title: 'Função salva com sucesso!' });
+        showToast({ type: 'success', title: t('toast.functionSaved') });
 
         await Promise.all([load()]);
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao salvar função.',
+          title: t('toast.functionSaveError'),
           description: error?.message,
           delay: 8000,
         });
@@ -113,7 +115,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         setApplying(false);
       }
     },
-    [id_connection, load, runSql, showToast],
+    [id_connection, load, runSql, showToast, t],
   );
 
   const handleKeyDown = React.useCallback(
@@ -145,7 +147,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         tabs={[
           {
             idTab: 'tabProperties',
-            title: 'Propriedades',
+            title: t('tabs.properties'),
             icon: () => <IconFaSolidGripLines className={styles.icon} width={12} height={12} />,
           },
         ]}
@@ -162,7 +164,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                 <Input
                   disabled
                   md={6}
-                  label="Função"
+                  label={t('field.function')}
                   backgroundColor={propertiesTheme.header.fieldBackgroundColor}
                   color={propertiesTheme.header.fieldColor}
                   value={function_name}
@@ -170,7 +172,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                 <Input
                   disabled
                   md={6}
-                  label="Schema"
+                  label={t('field.schema')}
                   backgroundColor={propertiesTheme.header.fieldBackgroundColor}
                   color={propertiesTheme.header.fieldColor}
                   value={schema}
@@ -196,7 +198,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                 backgroundColorBar={propertiesTheme.tab.backgroundColor}
                 borderColor={propertiesTheme.tab.borderColor}
                 color={propertiesTheme.bar.color}
-                tabs={[{ idTab: 'tabDefinition', title: 'Definição' }]}
+                tabs={[{ idTab: 'tabDefinition', title: t('tabs.definition') }]}
               />
 
               <TabWindow activeTabId="tabDefinition">
@@ -215,7 +217,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                     borderColor={propertiesTheme.bar.borderColor}
                   >
                     <Button
-                      title="Salvar"
+                      title={t('common.save')}
                       text
                       smallIcon
                       color={propertiesTheme.bar.color}
@@ -241,10 +243,10 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                     {lastFetchDate && (
                       <Text
                         userSelect={false}
-                        title="Data da última atualização"
+                        title={t('common.lastUpdatedAt')}
                         color={propertiesTheme.bar.color}
                       >
-                        Atualizado em {toDateTime(lastFetchDate)}
+                        {t('common.updatedAt', { date: toDateTime(lastFetchDate) })}
                       </Text>
                     )}
                   </Bar>

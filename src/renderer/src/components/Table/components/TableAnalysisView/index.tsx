@@ -5,6 +5,7 @@ import { classes } from '@renderer/styles/theme';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
+import { useI18n } from '@renderer/contexts/I18n';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 type TableCellEditValue = string | number | (string | number)[];
@@ -173,6 +174,7 @@ const TableAnalysisView = ({
   onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
+  const { t } = useI18n();
   const shortcutKey = getPrimaryShortcutKeyLabel();
   const columnsSizeStyle = columnsSize.map((size) => `${size}px`).join(' ');
 
@@ -192,7 +194,7 @@ const TableAnalysisView = ({
           height={rowHeight}
           onResize={(size) => onResizeColumn?.(0, size.width || 0)}
         >
-          Coluna
+          {t('table.column')}
         </ResizableContainer>
 
         {rows.map((row: any, rowIndex) => (
@@ -204,7 +206,7 @@ const TableAnalysisView = ({
             height={rowHeight}
             onResize={(size) => onResizeColumn?.(rowIndex + 1, size.width || 0)}
           >
-            Linha #{Number(row.__index_row) + 1}
+            {t('table.rowNumber', { number: Number(row.__index_row) + 1 })}
           </ResizableContainer>
         ))}
 
@@ -232,10 +234,10 @@ const TableAnalysisView = ({
               const isLinkClickable = column.isLink && value !== null && value !== undefined;
               const linkTitle =
                 cellLinkClickMode === 'single'
-                  ? 'Clique para abrir linha referenciada'
+                  ? t('tooltip.clickOpenReferencedRow')
                   : onCellLinkPreviewClick
-                  ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
-                  : `${shortcutKey}+click para abrir linha referenciada`;
+                  ? t('tooltip.previewOrOpenReferencedRow', { shortcut: shortcutKey })
+                  : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: shortcutKey });
 
               if (isEditing) {
                 return (

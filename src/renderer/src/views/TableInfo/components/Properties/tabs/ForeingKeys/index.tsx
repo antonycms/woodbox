@@ -15,6 +15,7 @@ import {
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -55,6 +56,7 @@ const ForeingKeys = ({
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { connections, connectionsInfo } = useStoreContext();
   const dialect = React.useMemo(
     () =>
@@ -195,7 +197,7 @@ const ForeingKeys = ({
       );
 
       if (alreadyExists) {
-        showToast({ type: 'warn', title: 'Já existe uma chave estrangeira com esse nome.' });
+        showToast({ type: 'warn', title: t('toast.foreignKeyExists') });
         return false;
       }
 
@@ -211,7 +213,7 @@ const ForeingKeys = ({
 
   const handleRemoveSelectedReferences = React.useCallback(() => {
     if (!selectedReferences.length) {
-      showToast({ type: 'warn', title: 'Selecione uma ou mais chaves estrangeiras para remover.' });
+      showToast({ type: 'warn', title: t('foreignKey.selectRemove') });
       return;
     }
 
@@ -255,15 +257,15 @@ const ForeingKeys = ({
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Nova chave',
+        text: t('foreignKey.newKey'),
         onClick: handleOpenNewReferenceModal,
       },
       {
-        text: 'Excluir itens selecionados',
+        text: t('context.deleteSelectedItems'),
         onClick: handleRemoveSelectedReferences,
       },
       {
-        text: 'Gerar DDL',
+        text: t('modal.generateDdl'),
         onClick: () => {
           setDdlSql(generateReferencesDdl(dialect, schema, table, selectedReferences));
           setShowDdlModal(true);
@@ -277,6 +279,7 @@ const ForeingKeys = ({
     dialect,
     handleOpenNewReferenceModal,
     handleRemoveSelectedReferences,
+    t,
   ]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -387,7 +390,7 @@ const ForeingKeys = ({
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar chaves por nome, coluna ou tabela (separe por virgula)"
+          placeholder={t('placeholder.filterKeys')}
           value={referenceFilterText}
           onChange={(event) => setReferenceFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -408,45 +411,45 @@ const ForeingKeys = ({
         onCellLinkClick={handleCellLinkClick}
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome',
+            title: t('common.orderByColumn'),
+            label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Coluna',
+            title: t('common.orderByColumn'),
+            label: t('field.column'),
             attribute: 'column_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Tabela Referenciada',
+            title: t('common.orderByColumn'),
+            label: t('field.referencedTableTitle'),
             attribute: 'table_reference',
             isLink: true,
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Coluna Referenciada',
+            title: t('common.orderByColumn'),
+            label: t('field.referencedColumnTitle'),
             attribute: 'reference_column_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Comentário',
+            title: t('common.orderByColumn'),
+            label: t('field.comment'),
             attribute: 'comment',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Regra de Remoção',
+            title: t('common.orderByColumn'),
+            label: t('field.deleteRule'),
             attribute: 'remove_rule',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Regra de Alteração',
+            title: t('common.orderByColumn'),
+            label: t('field.updateRule'),
             attribute: 'update_rule',
             sortable: true,
           },
@@ -455,7 +458,7 @@ const ForeingKeys = ({
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
-          title="Salvar"
+          title={t('common.save')}
           text
           smallIcon
           color={theme.bar.color}
@@ -465,7 +468,7 @@ const ForeingKeys = ({
         </Button>
 
         <Button
-          title="Cancelar alterações"
+          title={t('common.cancelChanges')}
           text
           smallIcon
           color={theme.bar.color}
@@ -475,7 +478,7 @@ const ForeingKeys = ({
         </Button>
 
         <Button
-          title="Adicionar"
+          title={t('common.add')}
           text
           smallIcon
           color={theme.bar.color}
@@ -511,8 +514,8 @@ const ForeingKeys = ({
         </Text>
 
         {mode !== 'create' && (
-          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-            Atualizado em {lastFetchDateSerialized}
+          <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+            {t('common.updatedAt', { date: lastFetchDateSerialized })}
           </Text>
         )}
       </Bar>

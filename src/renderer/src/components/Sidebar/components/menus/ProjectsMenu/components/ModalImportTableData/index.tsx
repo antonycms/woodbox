@@ -10,6 +10,7 @@ import { Input } from '@renderer/components/Input';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { DbCellValue, IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
@@ -27,6 +28,14 @@ type ParsedFile = {
   fileName: string;
   columns: FileColumn[];
   rows: DbCellValue[][];
+};
+
+type ImportParserMessages = {
+  noHeader: string;
+  noValidColumns: string;
+  noRows: string;
+  csvSeparatorRequired: string;
+  noSheets: string;
 };
 
 const normalizeColumnName = (value?: string) => {
@@ -50,9 +59,13 @@ const getFileColumnLabel = (name: string, occurrences: Map<string, number>) => {
   return count ? `${name} (${count + 1})` : name;
 };
 
-const parseMatrix = (fileName: string, matrix: unknown[][]): ParsedFile => {
+const parseMatrix = (
+  fileName: string,
+  matrix: unknown[][],
+  messages: ImportParserMessages,
+): ParsedFile => {
   const [headerRow, ...dataRows] = matrix;
-  if (!headerRow?.length) throw new Error('O arquivo não possui cabeçalho.');
+  if (!headerRow?.length) throw new Error(messages.noHeader);
 
   const occurrences = new Map<string, number>();
   const columns = (
@@ -75,13 +88,13 @@ const parseMatrix = (fileName: string, matrix: unknown[][]): ParsedFile => {
       .filter(Boolean) as Omit<FileColumn, 'valueIndex'>[]
   ).map((column, valueIndex) => ({ ...column, valueIndex }));
 
-  if (!columns.length) throw new Error('O arquivo não possui colunas válidas.');
+  if (!columns.length) throw new Error(messages.noValidColumns);
 
   const rows = dataRows
     .map((row) => columns.map((column) => normalizeCellValue(row[column.index])))
     .filter((row) => row.some((value) => value !== null));
 
-  if (!rows.length) throw new Error('O arquivo não possui linhas para importar.');
+  if (!rows.length) throw new Error(messages.noRows);
 
   return { fileName, columns, rows };
 };
@@ -149,20 +162,24 @@ const parseCsvRows = (text: string, separator: string) => {
   return rows.filter((csvRow) => csvRow.some((cell) => cell.trim() !== ''));
 };
 
-const parseImportFile = async (file: File, csvSeparator: string): Promise<ParsedFile> => {
+const parseImportFile = async (
+  file: File,
+  csvSeparator: string,
+  messages: ImportParserMessages,
+): Promise<ParsedFile> => {
   const buffer = await file.arrayBuffer();
 
   if (isCsvFile(file)) {
     const separator = csvSeparator === '\\t' ? '\t' : csvSeparator;
-    if (!separator) throw new Error('Informe o separador do CSV.');
+    if (!separator) throw new Error(messages.csvSeparatorRequired);
 
-    return parseMatrix(file.name, parseCsvRows(decodeCsv(buffer), separator));
+    return parseMatrix(file.name, parseCsvRows(decodeCsv(buffer), separator), messages);
   }
 
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const firstSheetName = workbook.SheetNames[0];
 
-  if (!firstSheetName) throw new Error('O arquivo não possui planilhas.');
+  if (!firstSheetName) throw new Error(messages.noSheets);
 
   const sheet = workbook.Sheets[firstSheetName];
   const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
@@ -172,12 +189,13 @@ const parseImportFile = async (file: File, csvSeparator: string): Promise<Parsed
     raw: true,
   });
 
-  return parseMatrix(file.name, matrix);
+  return parseMatrix(file.name, matrix, messages);
 };
 
 export const ModalImportTableData = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalImportTableDataProps) => {
     const { getTableColumns, importTableData, loadConnectionInfo } = useStoreContext();
+    const { t, language } = useI18n();
     const { showToast } = useToast();
     const {
       activeTheme: { __colors, modal: colors },
@@ -200,6 +218,17 @@ export const ModalImportTableData = React.memo(
       [mapping],
     );
 
+    const parserMessages = React.useMemo<ImportParserMessages>(
+      () => ({
+        noHeader: t('import.noHeader'),
+        noValidColumns: t('import.noValidColumns'),
+        noRows: t('import.noRows'),
+        csvSeparatorRequired: t('import.csvSeparatorRequired'),
+        noSheets: t('import.noSheets'),
+      }),
+      [t],
+    );
+
     const close = React.useCallback(() => {
       setTableColumns([]);
       setParsedFile(undefined);
@@ -220,20 +249,20 @@ export const ModalImportTableData = React.memo(
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao carregar colunas da tabela.',
+          title: t('toast.loadTableColumnsError'),
           description: error?.message,
           delay: 8000,
         });
       } finally {
         setLoadingColumns(false);
       }
-    }, [getTableColumns, idConnection, schema, show, showToast, table]);
+    }, [getTableColumns, idConnection, schema, show, showToast, table, t]);
 
     const loadFile = React.useCallback(
       async (file: File, separator: string) => {
         try {
           setLoadingFile(true);
-          const parsed = await parseImportFile(file, separator);
+          const parsed = await parseImportFile(file, separator, parserMessages);
           const fileColumnsByName = new Map(
             parsed.columns.map((column) => [normalizeColumnName(column.originalName), column.key]),
           );
@@ -255,7 +284,7 @@ export const ModalImportTableData = React.memo(
           setCsvParsedSeparator('');
           showToast({
             type: 'error',
-            title: 'Erro ao ler arquivo.',
+            title: t('toast.readFileError'),
             description: error?.message,
             delay: 8000,
           });
@@ -263,7 +292,7 @@ export const ModalImportTableData = React.memo(
           setLoadingFile(false);
         }
       },
-      [showToast, tableColumns],
+      [showToast, tableColumns, parserMessages, t],
     );
 
     const handleFileChange = React.useCallback(
@@ -313,8 +342,8 @@ export const ModalImportTableData = React.memo(
         if (!mappedColumns.length) {
           return showToast({
             type: 'warn',
-            title: 'Defina as colunas',
-            description: 'É necessário mapear ao menos uma coluna da tabela com o arquivo',
+            title: t('toast.defineColumns'),
+            description: t('toast.defineColumnsHelp'),
           });
         }
 
@@ -344,15 +373,17 @@ export const ModalImportTableData = React.memo(
 
           showToast({
             type: 'success',
-            title: 'Dados importados com sucesso!',
-            description: `${result.insertedRows} linha(s) importada(s).`,
+            title: t('toast.dataImported'),
+            description: t('import.importedRows', {
+              count: result.insertedRows.toLocaleString(language),
+            }),
           });
 
           close();
         } catch (error: any) {
           showToast({
             type: 'error',
-            title: 'Erro ao importar dados.',
+            title: t('toast.dataImportError'),
             description: error?.message,
             delay: 8000,
           });
@@ -369,7 +400,9 @@ export const ModalImportTableData = React.memo(
         mappedColumns,
         parsedFile,
         schema,
+        language,
         showToast,
+        t,
         selectedFile,
         csvSeparator,
         csvParsedSeparator,
@@ -382,7 +415,7 @@ export const ModalImportTableData = React.memo(
     }, [loadColumns]);
 
     return (
-      <Modal title="Importar dados" width="640px" show={show}>
+      <Modal title={t('modal.importData')} width="640px" show={show}>
         <form
           className={styles.container}
           onSubmit={handleImport}
@@ -396,14 +429,14 @@ export const ModalImportTableData = React.memo(
           }
         >
           <Text userSelect={false} color={colors.color}>
-            Tabela: <strong>{tableName}</strong>
+            {t('field.table')}: <strong>{tableName}</strong>
           </Text>
 
           <Divider />
 
           <Row>
             <FilePicker
-              label="Arquivo Excel ou CSV"
+              label={t('field.excelOrCsvFile')}
               required
               accept=".xlsx,.xls,.csv"
               fileName={selectedFile?.name}
@@ -418,7 +451,7 @@ export const ModalImportTableData = React.memo(
 
             {selectedFileIsCsv && (
               <Input
-                label="Separador CSV"
+                label={t('field.csvSeparator')}
                 required
                 value={csvSeparator}
                 color={colors.fieldColor}
@@ -431,21 +464,24 @@ export const ModalImportTableData = React.memo(
             )}
           </Row>
 
-          {!!loadingColumns && <Text color={colors.color}>Carregando colunas da tabela...</Text>}
-          {!!loadingFile && <Text color={colors.color}>Lendo arquivo...</Text>}
+          {!!loadingColumns && <Text color={colors.color}>{t('import.loadingColumns')}</Text>}
+          {!!loadingFile && <Text color={colors.color}>{t('import.readingFile')}</Text>}
 
           {!!parsedFile && (
             <>
               <Divider />
 
               <Text color={colors.color} small>
-                {parsedFile.fileName} — {parsedFile.rows.length} linha(s),{' '}
-                {parsedFile.columns.length} coluna(s).
+                {t('import.fileSummary', {
+                  fileName: parsedFile.fileName,
+                  rows: parsedFile.rows.length.toLocaleString(language),
+                  columns: parsedFile.columns.length.toLocaleString(language),
+                })}
               </Text>
 
               <div className={styles.mappingHeader}>
-                <span>Coluna da tabela</span>
-                <span>Coluna do arquivo</span>
+                <span>{t('import.tableColumn')}</span>
+                <span>{t('import.fileColumn')}</span>
               </div>
 
               <div className={styles.mappingList}>
@@ -459,7 +495,7 @@ export const ModalImportTableData = React.memo(
                     <Autocomplete
                       data={parsedFile.columns}
                       value={mapping[column.column_name] || null}
-                      placeholder="Não importar"
+                      placeholder={t('field.doNotImport')}
                       color={colors.fieldColor}
                       backgroundColor={colors.fieldBackgroundColor}
                       extractLabel={(fileColumn) => fileColumn.label}
@@ -488,7 +524,7 @@ export const ModalImportTableData = React.memo(
               sm={4}
               md={3}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -501,7 +537,7 @@ export const ModalImportTableData = React.memo(
               sm={4}
               md={3}
             >
-              Importar
+              {t('modal.importData')}
             </Button>
           </Row>
         </form>

@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useStoreContext, type IFunctionDb, type IScript } from '@renderer/contexts/Store';
 import { QueryEditor } from '@renderer/views/QueryEditor';
@@ -17,6 +18,7 @@ import styles from './styles.module.css';
 import * as constants from './constants';
 
 export const CentralSearchModal = React.memo(() => {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
@@ -373,19 +375,19 @@ export const CentralSearchModal = React.memo(() => {
 
     const filteredSections = [
       {
-        title: 'Abas abertas',
+        title: t('tabs.openTabs'),
         items: filterAndSortItems(openTabItems),
       },
       {
-        title: 'Scripts',
+        title: t('tabs.scripts'),
         items: filterAndSortItems(closedItemsByType.script),
       },
       {
-        title: 'Tabelas',
+        title: t('tabs.tables'),
         items: filterAndSortItems(closedItemsByType.table),
       },
       {
-        title: 'Funções',
+        title: t('tabs.functions'),
         items: filterAndSortItems(closedItemsByType.function),
       },
     ].filter((section) => section.items.length);
@@ -409,7 +411,7 @@ export const CentralSearchModal = React.memo(() => {
       visibleItems: items,
       visibleRows: rows,
     };
-  }, [closedItemsByType, openTabItems, parsedSearch.filter]);
+  }, [closedItemsByType, openTabItems, parsedSearch.filter, t]);
 
   const activeTableFilterTarget = React.useMemo(() => {
     const shouldLoadColumns = /\S+\s/.test(searchText);
@@ -576,7 +578,7 @@ export const CentralSearchModal = React.memo(() => {
             inputClassName={styles.searchInput}
             value={searchText}
             columnNames={activeTableColumnNames}
-            placeholder="Buscar abas, scripts, tabelas e funções"
+            placeholder={t('placeholder.searchAll')}
             onChange={handleSearchChange}
             dropdownBackgroundColor={fieldBackgroundColor}
             dropdownBorderColor={__colors.lightGray}
@@ -636,14 +638,16 @@ export const CentralSearchModal = React.memo(() => {
                       <span className={styles.connection}>{item.connectionDescription}</span>
                     </span>
 
-                    {item.isActive && <span className={styles.badge}>Atual</span>}
-                    {item.isOpen && !item.isActive && <span className={styles.badge}>Aberta</span>}
+                    {item.isActive && <span className={styles.badge}>{t('common.current')}</span>}
+                    {item.isOpen && !item.isActive && (
+                      <span className={styles.badge}>{t('common.open')}</span>
+                    )}
                   </button>
                 );
               }}
             </VirtualizeList>
           ) : (
-            <div className={styles.empty}>Nenhum resultado encontrado</div>
+            <div className={styles.empty}>{t('search.noResults')}</div>
           )}
         </div>
       </div>

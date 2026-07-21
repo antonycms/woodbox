@@ -4,6 +4,7 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IServerOutputMessage } from '@renderer/contexts/Store/context';
 import { toDateTime } from '@renderer/utils/date';
@@ -18,6 +19,7 @@ interface IModalServerOutputProps {
 
 export const ModalServerOutput = React.memo(
   ({ show, id_connection, onClose }: IModalServerOutputProps) => {
+    const { t } = useI18n();
     const {
       activeTheme: { __colors, modal: colors },
     } = useThemeContext();
@@ -73,16 +75,14 @@ export const ModalServerOutput = React.memo(
     return (
       <Modal
         closeOutside
-        title="Saída do servidor"
+        title={t('modal.serverOutput')}
         width="900px"
         height="520px"
         show={show || showLocal}
         onClose={handleClose}
       >
         <div ref={listRef} className={styles.outputList} style={{ color: colors.color }}>
-          {!messages.length && (
-            <Text color={colors.color}>Nenhuma saída capturada até o momento.</Text>
-          )}
+          {!messages.length && <Text color={colors.color}>{t('message.noServerOutput')}</Text>}
 
           {messages.map((message) => (
             <div
@@ -119,7 +119,7 @@ export const ModalServerOutput = React.memo(
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
-            Limpar
+            {t('common.clear')}
           </Button>
 
           <Button
@@ -130,7 +130,7 @@ export const ModalServerOutput = React.memo(
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
-            Fechar
+            {t('common.close')}
           </Button>
         </Row>
       </Modal>

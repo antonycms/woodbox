@@ -5,6 +5,7 @@ import {
   IContextMenuOption,
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
+import { useI18n } from '@renderer/contexts/I18n';
 import Tab from '../Tab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import styles from '../../styles.module.css';
@@ -469,6 +470,7 @@ const TabGroupHeader = (props: ITabGroupHeaderProps) => {
 };
 
 const TabGroupEditor = (props: ITabGroupEditorProps) => {
+  const { t } = useI18n();
   const { context, onUpdateGroup, onUngroup, onCloseGroup } = props;
   const {
     activeTheme: { __colors },
@@ -491,7 +493,7 @@ const TabGroupEditor = (props: ITabGroupEditorProps) => {
   }, [group.title]);
 
   const saveTitle = () => {
-    const nextTitle = title.trim() || 'Grupo';
+    const nextTitle = title.trim() || t('tabs.group');
 
     setTitle(nextTitle);
     onUpdateGroup({ title: nextTitle });
@@ -541,15 +543,15 @@ const TabGroupEditor = (props: ITabGroupEditorProps) => {
         className={styles.tabGroupAction}
         onClick={() => onUpdateGroup({ collapsed: !group.collapsed })}
       >
-        {group.collapsed ? 'Expandir grupo' : 'Recolher grupo'}
+        {group.collapsed ? t('tabs.expandGroup') : t('tabs.collapseGroup')}
       </button>
 
       <button type="button" className={styles.tabGroupAction} onClick={onUngroup}>
-        Desagrupar
+        {t('tabs.ungroup')}
       </button>
 
       <button type="button" className={styles.tabGroupAction} onClick={onCloseGroup}>
-        Fechar grupo
+        {t('tabs.closeGroup')}
       </button>
     </div>
   );

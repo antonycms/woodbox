@@ -12,6 +12,7 @@ import { type IPendingIndexCreate, useTableInfoContext } from '@renderer/context
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -64,6 +65,7 @@ const Indexes = ({
     },
   } = useThemeContext();
   const { showToast } = useToast();
+  const { t } = useI18n();
   const { connections } = useStoreContext();
   const dialect = React.useMemo(
     () =>
@@ -204,7 +206,7 @@ const Indexes = ({
       const alreadyExists = allIndexes.some((item) => item.index_name.toLowerCase() === indexName);
 
       if (alreadyExists) {
-        showToast({ type: 'warn', title: 'Já existe um índice com esse nome.' });
+        showToast({ type: 'warn', title: t('toast.indexExists') });
         return false;
       }
 
@@ -216,7 +218,7 @@ const Indexes = ({
 
   const handleRemoveSelectedIndexes = React.useCallback(() => {
     if (!selectedIndexes.length) {
-      showToast({ type: 'warn', title: 'Selecione um ou mais índices para remover.' });
+      showToast({ type: 'warn', title: t('toast.selectIndexesRemove') });
       return;
     }
 
@@ -252,22 +254,22 @@ const Indexes = ({
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Novo índice',
+        text: t('modal.newIndex'),
         onClick: handleOpenNewIndexModal,
       },
       {
-        text: 'Excluir itens selecionados',
+        text: t('context.deleteSelectedItems'),
         onClick: handleRemoveSelectedIndexes,
       },
       {
-        text: 'Gerar DDL',
+        text: t('modal.generateDdl'),
         onClick: () => {
           setDdlSql(generateIndexesDdl(selectedIndexes));
           setShowDdlModal(true);
         },
       },
     ];
-  }, [selectedIndexes, handleOpenNewIndexModal, handleRemoveSelectedIndexes]);
+  }, [selectedIndexes, handleOpenNewIndexModal, handleRemoveSelectedIndexes, t]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     setContextMenuPosition({
@@ -366,7 +368,7 @@ const Indexes = ({
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar índices por nome, coluna ou método (separe por virgula)"
+          placeholder={t('placeholder.filterIndexes')}
           value={indexFilterText}
           onChange={(event) => setIndexFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -386,56 +388,56 @@ const Indexes = ({
         }
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome',
+            title: t('common.orderByColumn'),
+            label: t('field.name'),
             attribute: 'index_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Colunas',
+            title: t('common.orderByColumn'),
+            label: t('field.columns'),
             attribute: 'column_names_display',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Único',
+            title: t('common.orderByColumn'),
+            label: t('index.uniqueSingle'),
             attribute: 'is_unique',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Chave Primária',
+            title: t('common.orderByColumn'),
+            label: t('field.primaryKey'),
             attribute: 'is_primary',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Método',
+            title: t('common.orderByColumn'),
+            label: t('field.method'),
             attribute: 'index_method',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Válido',
+            title: t('common.orderByColumn'),
+            label: t('field.valid'),
             attribute: 'is_valid',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Expressão',
+            title: t('common.orderByColumn'),
+            label: t('field.expression'),
             attribute: 'expression',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Predicado',
+            title: t('common.orderByColumn'),
+            label: t('field.predicate'),
             attribute: 'predicate',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Tamanho',
+            title: t('common.orderByColumn'),
+            label: t('field.size'),
             attribute: 'index_size',
             sortable: true,
           },
@@ -444,7 +446,7 @@ const Indexes = ({
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
-          title="Salvar"
+          title={t('common.save')}
           text
           smallIcon
           color={theme.bar.color}
@@ -454,7 +456,7 @@ const Indexes = ({
         </Button>
 
         <Button
-          title="Cancelar alterações"
+          title={t('common.cancelChanges')}
           text
           smallIcon
           color={theme.bar.color}
@@ -464,7 +466,7 @@ const Indexes = ({
         </Button>
 
         <Button
-          title="Adicionar"
+          title={t('common.add')}
           text
           smallIcon
           color={theme.bar.color}
@@ -500,8 +502,8 @@ const Indexes = ({
         </Text>
 
         {mode !== 'create' && (
-          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-            Atualizado em {toDateTime(lastFetchDate.indexes)}
+          <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+            {t('common.updatedAt', { date: toDateTime(lastFetchDate.indexes) })}
           </Text>
         )}
       </Bar>

@@ -4,6 +4,7 @@ import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import Table from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { getRendererDialect } from '@renderer/database/dialects';
@@ -55,6 +56,7 @@ const ReferencePreview = ({
       tableInfo: { data: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { connections, getTableColumns, getTableData, getTableReferences } = useStoreContext();
   const dialect = React.useMemo(
     () =>
@@ -177,7 +179,7 @@ const ReferencePreview = ({
         });
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'Erro ao carregar referência.');
+      setError(error instanceof Error ? error.message : t('reference.loadError'));
     } finally {
       setLoading(false);
     }
@@ -193,6 +195,7 @@ const ReferencePreview = ({
     getTableData,
     getTableReferences,
     idConnection,
+    t,
     loading,
     error,
     referencesCache,
@@ -232,7 +235,7 @@ const ReferencePreview = ({
   if (!currentReference) {
     return (
       <div className={styles.emptyState}>
-        <Text color={theme.bar.color}>Selecione uma célula com FK para carregar referência.</Text>
+        <Text color={theme.bar.color}>{t('message.selectFkCellReference')}</Text>
       </div>
     );
   }
@@ -251,7 +254,7 @@ const ReferencePreview = ({
         <Button
           text
           smallIcon
-          title="Voltar referência"
+          title={t('tooltip.referenceBack')}
           color={theme.bar.color}
           disabled={!canGoBack}
           onClick={() => setHistoryIndex((prevState) => Math.max(0, prevState - 1))}
@@ -262,7 +265,7 @@ const ReferencePreview = ({
         <Button
           text
           smallIcon
-          title="Avançar referência"
+          title={t('tooltip.referenceForward')}
           color={theme.bar.color}
           disabled={!canGoForward}
           onClick={() =>
@@ -279,7 +282,7 @@ const ReferencePreview = ({
         <Button
           text
           smallIcon
-          title={viewMode === 'table' ? 'Visualizar JSON' : 'Visualizar tabela'}
+          title={viewMode === 'table' ? t('tooltip.viewJson') : t('tooltip.viewTable')}
           color={theme.bar.color}
           onClick={() => setViewMode((prevState) => (prevState === 'table' ? 'json' : 'table'))}
         >

@@ -17,6 +17,7 @@ import {
 } from '@renderer/contexts/TableInfoContext';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { ITableSort } from '@renderer/components/Table/dtos';
@@ -114,6 +115,7 @@ const Columns = ({
     [connections, id_connection],
   );
   const { showToast } = useToast();
+  const { t } = useI18n();
   const {
     columns,
     pendingColumns,
@@ -235,7 +237,7 @@ const Columns = ({
       );
 
       if (alreadyExists) {
-        showToast({ type: 'warn', title: 'Já existe uma coluna com esse nome.' });
+        showToast({ type: 'warn', title: t('toast.columnExists') });
         return false;
       }
 
@@ -246,7 +248,7 @@ const Columns = ({
         );
 
         if (referenceAlreadyExists) {
-          showToast({ type: 'warn', title: 'Já existe uma chave estrangeira com esse nome.' });
+          showToast({ type: 'warn', title: t('toast.foreignKeyExists') });
           return false;
         }
       }
@@ -258,7 +260,7 @@ const Columns = ({
         );
 
         if (indexAlreadyExists) {
-          showToast({ type: 'warn', title: 'Já existe um índice com esse nome.' });
+          showToast({ type: 'warn', title: t('toast.indexExists') });
           return false;
         }
       }
@@ -320,7 +322,7 @@ const Columns = ({
         nextValue = String(value ?? '').trim();
 
         if (!nextValue) {
-          showToast({ type: 'warn', title: 'Informe o nome da coluna.' });
+          showToast({ type: 'warn', title: t('toast.columnNameRequired') });
           return;
         }
 
@@ -339,14 +341,14 @@ const Columns = ({
         });
 
         if (alreadyExists) {
-          showToast({ type: 'warn', title: 'Já existe uma coluna com esse nome.' });
+          showToast({ type: 'warn', title: t('toast.columnExists') });
           return;
         }
       } else if (attribute === 'data_type') {
         nextValue = String(value ?? '').trim();
 
         if (!nextValue) {
-          showToast({ type: 'warn', title: 'Informe o tipo da coluna.' });
+          showToast({ type: 'warn', title: t('toast.columnTypeRequired') });
           return;
         }
       } else if (attribute === 'is_nullable_label') {
@@ -355,8 +357,8 @@ const Columns = ({
         if (parsedNullableValue === null) {
           showToast({
             type: 'warn',
-            title: 'Valor inválido para nulável.',
-            description: 'Use true/false, sim/não, yes/no ou 1/0.',
+            title: t('toast.invalidNullable'),
+            description: t('toast.invalidNullableHelp'),
           });
           return;
         }
@@ -369,8 +371,8 @@ const Columns = ({
         if (parsedAutoIncrementValue === null) {
           showToast({
             type: 'warn',
-            title: 'Valor inválido para auto increment.',
-            description: 'Use sim/não, yes/no, true/false ou 1/0.',
+            title: t('toast.invalidAutoIncrement'),
+            description: t('toast.invalidAutoIncrementHelp'),
           });
           return;
         }
@@ -378,8 +380,8 @@ const Columns = ({
         if (parsedAutoIncrementValue && !isMysqlAutoIncrementType(column.data_type)) {
           showToast({
             type: 'warn',
-            title: 'Auto increment inválido para esse tipo.',
-            description: 'No MySQL, use tinyint, smallint, mediumint, int, integer ou bigint.',
+            title: t('toast.invalidAutoIncrementType'),
+            description: t('toast.invalidAutoIncrementMysqlHelp'),
           });
           return;
         }
@@ -419,12 +421,13 @@ const Columns = ({
       filteredColumnsAndSortedColumns,
       showToast,
       updatePendingColumn,
+      t,
     ],
   );
 
   const handleRemoveSelectedColumns = React.useCallback(() => {
     if (!selectedColumns.length) {
-      showToast({ type: 'warn', title: 'Selecione uma ou mais colunas para remover.' });
+      showToast({ type: 'warn', title: t('toast.selectColumnsRemove') });
       return;
     }
 
@@ -440,7 +443,7 @@ const Columns = ({
     });
 
     setContextMenuPosition(null);
-  }, [selectedColumns, removePendingColumn, addPendingDroppedColumns, showToast]);
+  }, [selectedColumns, removePendingColumn, addPendingDroppedColumns, showToast, t]);
 
   const handleClearPendingChanges = React.useCallback(() => {
     clearPendingChanges();
@@ -494,19 +497,19 @@ const Columns = ({
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Nova coluna',
+        text: t('column.newColumn'),
         onClick: handleOpenNewColumnModal,
       },
       {
-        text: 'Duplicar itens selecionados',
+        text: t('common.duplicateSelectedItems'),
         onClick: () => null,
       },
       {
-        text: 'Excluir itens selecionados',
+        text: t('context.deleteSelectedItems'),
         onClick: handleRemoveSelectedColumns,
       },
       {
-        text: 'Gerar DDL',
+        text: t('modal.generateDdl'),
         onClick: () => {
           setDdlSql(
             generateAddColumnsDdl(dialect, schema, table, selectedColumns, {
@@ -528,6 +531,7 @@ const Columns = ({
     dialect,
     handleOpenNewColumnModal,
     handleRemoveSelectedColumns,
+    t,
   ]);
 
   const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -637,7 +641,7 @@ const Columns = ({
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar colunas por nome ou tipo (separe por virgula)"
+          placeholder={t('placeholder.filterColumns')}
           value={columnFilterText}
           onChange={(event) => setColumnFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -658,15 +662,15 @@ const Columns = ({
         }
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome da coluna',
+            title: t('common.orderByColumn'),
+            label: t('column.columnName'),
             attribute: 'column_name',
             editable: true,
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Tipo',
+            title: t('common.orderByColumn'),
+            label: t('field.type'),
             attribute: 'data_type',
             editable: true,
             sortable: true,
@@ -674,8 +678,8 @@ const Columns = ({
             dataAutocomplete: columnTypes,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nulável',
+            title: t('common.orderByColumn'),
+            label: t('field.nullable'),
             attribute: 'is_nullable_label',
             editable: true,
             sortable: true,
@@ -685,8 +689,8 @@ const Columns = ({
           ...(dialect.supportsAutoIncrement
             ? [
                 {
-                  title: 'Clique para ordenar por essa coluna',
-                  label: 'Auto inc.',
+                  title: t('common.orderByColumn'),
+                  label: t('column.autoInc'),
                   attribute: 'is_auto_increment_label' as const,
                   editable: true,
                   sortable: true,
@@ -696,15 +700,15 @@ const Columns = ({
               ]
             : []),
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Padrão',
+            title: t('common.orderByColumn'),
+            label: t('field.default'),
             attribute: 'column_default',
             editable: true,
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Comentário',
+            title: t('common.orderByColumn'),
+            label: t('field.comment'),
             attribute: 'description',
             editable: true,
             sortable: true,
@@ -714,7 +718,7 @@ const Columns = ({
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
         <Button
-          title="Salvar"
+          title={t('common.save')}
           text
           smallIcon
           color={theme.bar.color}
@@ -724,7 +728,7 @@ const Columns = ({
         </Button>
 
         <Button
-          title="Cancelar alterações"
+          title={t('common.cancelChanges')}
           text
           smallIcon
           color={theme.bar.color}
@@ -734,7 +738,7 @@ const Columns = ({
         </Button>
 
         <Button
-          title="Adicionar"
+          title={t('common.add')}
           text
           smallIcon
           color={theme.bar.color}
@@ -770,8 +774,8 @@ const Columns = ({
         </Text>
 
         {mode !== 'create' && (
-          <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-            Atualizado em {lastFetchDateSerialized}
+          <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+            {t('common.updatedAt', { date: lastFetchDateSerialized })}
           </Text>
         )}
       </Bar>

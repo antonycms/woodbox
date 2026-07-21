@@ -3,6 +3,7 @@ import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
 import { generateHash } from '@renderer/utils/string';
 import TableInfoProvider from '@renderer/contexts/TableInfoContext';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useStoreContext } from '@renderer/contexts/Store';
@@ -44,6 +45,7 @@ const TableInfo = (props: ITableInfoProps) => {
     pendingReferences,
     pendingDroppedReferences,
   } = useTableInfoContext();
+  const { t } = useI18n();
   const { addTab, getTab, setActiveTabId, updateTab } = useAppTabContext();
   const { connections } = useStoreContext();
   const [id] = React.useState(generateHash());
@@ -275,12 +277,12 @@ const TableInfo = (props: ITableInfoProps) => {
         tabs={[
           {
             idTab: 'tabProperties',
-            title: 'Propriedades',
+            title: t('tabs.properties'),
             icon: () => <IconFaSolidGripLines className={styles.icon} width={12} height={12} />,
           },
           !isCreateMode && {
             idTab: 'tabData',
-            title: 'Dados',
+            title: t('tabs.data'),
             icon: () => <IconFaRegularListAlt className={styles.icon} width={12} height={12} />,
           },
         ].filter(Boolean)}

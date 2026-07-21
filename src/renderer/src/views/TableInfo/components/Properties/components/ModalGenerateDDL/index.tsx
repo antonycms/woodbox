@@ -4,6 +4,7 @@ import Editor from '@renderer/components/Editor';
 import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { useToast } from '@renderer/contexts/Toast';
@@ -16,6 +17,7 @@ const ModalGenerateDDL = ({
   dialect = getRendererDialect(),
   onClose,
 }: IModalGenerateDDLProps) => {
+  const { t } = useI18n();
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
@@ -24,12 +26,12 @@ const ModalGenerateDDL = ({
   const handleCopy = React.useCallback(() => {
     copyToClipboard(sql);
     onClose?.();
-    showToast({ type: 'success', title: 'Conteudo copiado com sucesso!' });
-  }, [sql, onClose]);
+    showToast({ type: 'success', title: t('common.contentCopied') });
+  }, [sql, onClose, showToast, t]);
 
   return (
     <Modal
-      title="Gerar DDL"
+      title={t('modal.generateDdl')}
       width="900px"
       height="440px"
       show={show}
@@ -52,7 +54,7 @@ const ModalGenerateDDL = ({
           sm={4}
           md={3}
         >
-          Copiar
+          {t('common.copy')}
         </Button>
       </Row>
     </Modal>

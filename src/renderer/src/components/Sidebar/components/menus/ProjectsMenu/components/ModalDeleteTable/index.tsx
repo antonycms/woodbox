@@ -6,6 +6,7 @@ import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
@@ -13,6 +14,7 @@ import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalDeleteTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalDeleteTableProps) => {
+    const { t } = useI18n();
     const { runSql, loadConnectionInfo, connections } = useStoreContext();
     const { removeTab } = useAppTabContext();
     const { showToast } = useToast();
@@ -43,14 +45,14 @@ export const ModalDeleteTable = React.memo(
 
         showToast({
           type: 'success',
-          title: 'Tabela excluída com sucesso!',
+          title: t('toast.tableDeleted'),
         });
 
         onClose?.();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao excluir tabela.',
+          title: t('toast.tableDeleteError'),
           description: error?.message,
           delay: 8000,
         });
@@ -60,10 +62,8 @@ export const ModalDeleteTable = React.memo(
     };
 
     return (
-      <Modal width="520px" show={show} title="Excluir Tabela">
-        <Text color={colors.color}>
-          Tem certeza que deseja excluir a tabela <strong>"{tableName}"</strong>?
-        </Text>
+      <Modal width="520px" show={show} title={t('modal.deleteTable')}>
+        <Text color={colors.color}>{t('message.deleteTableQuestion', { table: tableName })}</Text>
 
         <Divider />
 
@@ -79,7 +79,7 @@ export const ModalDeleteTable = React.memo(
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -91,7 +91,7 @@ export const ModalDeleteTable = React.memo(
             sm={4}
             md={3}
           >
-            Confirmar
+            {t('common.confirm')}
           </Button>
         </Row>
       </Modal>

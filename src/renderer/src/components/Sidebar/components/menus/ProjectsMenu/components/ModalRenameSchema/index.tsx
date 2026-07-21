@@ -6,6 +6,7 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
@@ -15,6 +16,7 @@ import TableInfo from '@renderer/views/TableInfo';
 
 export const ModalRenameSchema = React.memo(
   ({ show, idConnection, schema, onClose }: IModalRenameSchemaProps) => {
+    const { t } = useI18n();
     const { runSql, loadConnectionInfo } = useStoreContext();
     const { tabs, addTab, activeTabId, setActiveTabId } = useAppTabContext();
     const { showToast } = useToast();
@@ -130,14 +132,14 @@ export const ModalRenameSchema = React.memo(
 
         showToast({
           type: 'success',
-          title: 'Schema renomeado com sucesso!',
+          title: t('toast.schemaRenamed'),
         });
 
         close();
       } catch (error: any) {
         showToast({
           type: 'error',
-          title: 'Erro ao renomear schema.',
+          title: t('toast.schemaRenameError'),
           description: error?.message,
           delay: 8000,
         });
@@ -153,12 +155,12 @@ export const ModalRenameSchema = React.memo(
     }, [show, schema, setState]);
 
     return (
-      <Modal title="Renomear Esquema" width="500px" show={show}>
+      <Modal title={t('modal.renameSchema')} width="500px" show={show}>
         <form onSubmit={onSubmit}>
           <Input
             autoFocus
             required
-            label="Novo nome do schema"
+            label={t('field.newSchemaName')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
             labelColor={colors.fieldLabelColor}
@@ -181,7 +183,7 @@ export const ModalRenameSchema = React.memo(
               sm={4}
               md={3}
             >
-              Cancelar
+              {t('settings.customization.cancel')}
             </Button>
 
             <Button
@@ -193,7 +195,7 @@ export const ModalRenameSchema = React.memo(
               sm={4}
               md={3}
             >
-              Salvar
+              {t('common.save')}
             </Button>
           </Row>
         </form>

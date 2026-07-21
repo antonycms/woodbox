@@ -10,6 +10,7 @@ import { useStoreContext } from '@renderer/contexts/Store';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort, sortRows } from '@renderer/utils/tableSort';
@@ -25,6 +26,7 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { triggers, loadTableTriggers, lastFetchDate, loading } = useTableInfoContext();
   const { connections } = useStoreContext();
   const dialect = React.useMemo(
@@ -121,7 +123,7 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
       >
         <input
           className={styles.filterInput}
-          placeholder="Filtrar triggers por nome, evento ou função (separe por virgula)"
+          placeholder={t('placeholder.filterTriggers')}
           value={triggerFilterText}
           onChange={(event) => setTriggerFilterText(event.target.value)}
           style={{ color: theme.bar.color }}
@@ -149,39 +151,39 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         }}
         columns={[
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nome',
+            title: t('common.orderByColumn'),
+            label: t('field.name'),
             attribute: 'trigger_name',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Momento',
+            title: t('common.orderByColumn'),
+            label: t('field.timing'),
             attribute: 'timing',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Evento',
+            title: t('common.orderByColumn'),
+            label: t('field.event'),
             attribute: 'event',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Nível',
+            title: t('common.orderByColumn'),
+            label: t('field.level'),
             attribute: 'orientation',
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Função',
+            title: t('common.orderByColumn'),
+            label: t('field.function'),
             attribute: 'function_name',
             isLink: true,
             sortable: true,
           },
           {
-            title: 'Clique para ordenar por essa coluna',
-            label: 'Status',
+            title: t('common.orderByColumn'),
+            label: t('field.status'),
             attribute: 'status',
             sortable: true,
           },
@@ -203,8 +205,8 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
             : `${filteredAndSortedTriggers?.length || 0} Item`}
         </Text>
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {toDateTime(lastFetchDate.triggers)}
+        <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+          {t('common.updatedAt', { date: toDateTime(lastFetchDate.triggers) })}
         </Text>
       </Bar>
     </>

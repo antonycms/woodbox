@@ -16,6 +16,7 @@ import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import {
   AddIcon,
@@ -89,6 +90,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   } = props;
 
   const { activeTheme } = useThemeContext();
+  const { t, language } = useI18n();
   const { addTab, getTab, setActiveTabId } = useAppTabContext();
   const { getTableRestrictions, getQueryRowsCount, runSql, connections } = useStoreContext();
   const { showToast } = useToast();
@@ -208,8 +210,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     if (!capturedRows.length) {
       showToast({
         type: 'warn',
-        title: 'Nenhuma linha capturada.',
-        description: 'Inicie a captura e aguarde novas linhas entrarem na query.',
+        title: t('toast.noCapturedRows'),
+        description: t('toast.noCapturedRowsHelp'),
       });
       return;
     }
@@ -219,10 +221,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     showToast({
       type: 'success',
-      title: 'Captura exportada.',
-      description: `${capturedRows.length.toLocaleString('pt-BR')} linha(s) em JSONL.`,
+      title: t('toast.captureExported'),
+      description: t('capture.exportedRowsJsonl', {
+        count: capturedRows.length.toLocaleString(language),
+      }),
     });
-  }, [data.capture?.rows, downloadCaptureFile, showToast]);
+  }, [data.capture?.rows, downloadCaptureFile, language, showToast, t]);
 
   const handleExportCaptureCsv = React.useCallback(() => {
     const capturedRows = data.capture?.rows || [];
@@ -230,8 +234,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     if (!capturedRows.length) {
       showToast({
         type: 'warn',
-        title: 'Nenhuma linha capturada.',
-        description: 'Inicie a captura e aguarde novas linhas entrarem na query.',
+        title: t('toast.noCapturedRows'),
+        description: t('toast.noCapturedRowsHelp'),
       });
       return;
     }
@@ -241,10 +245,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     showToast({
       type: 'success',
-      title: 'Captura exportada.',
-      description: `${capturedRows.length.toLocaleString('pt-BR')} linha(s) em CSV.`,
+      title: t('toast.captureExported'),
+      description: t('capture.exportedRowsCsv', {
+        count: capturedRows.length.toLocaleString(language),
+      }),
     });
-  }, [data.capture?.rows, downloadCaptureFile, showToast]);
+  }, [data.capture?.rows, downloadCaptureFile, language, showToast, t]);
 
   const openCaptureMenu = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -294,8 +300,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     } catch (error) {
       showToast({
         type: 'error',
-        title: 'Erro ao contar linhas.',
-        description: error instanceof Error ? error.message : 'Erro desconhecido.',
+        title: t('toast.countRowsError'),
+        description: error instanceof Error ? error.message : t('common.unknownError'),
         delay: 8000,
       });
     } finally {
@@ -309,6 +315,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     loadingRowsCount,
     getQueryRowsCount,
     showToast,
+    t,
   ]);
 
   const closeValuePreview = () => {
@@ -483,8 +490,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     if (!editableTable?.name) {
       showToast({
         type: 'error',
-        title: 'Não foi possível salvar.',
-        description: 'A query precisa retornar dados de uma única tabela identificável.',
+        title: t('toast.saveNotPossible'),
+        description: t('toast.querySingleTableRequired'),
       });
 
       return;
@@ -503,8 +510,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
           showToast({
             type: 'error',
-            title: 'Não foi possível salvar.',
-            description: `A tabela "${fullName}" não possui primary key.`,
+            title: t('toast.saveNotPossible'),
+            description: t('query.tableNoPrimaryKey', { table: fullName }),
           });
 
           return;
@@ -515,8 +522,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         if (missingPk) {
           showToast({
             type: 'error',
-            title: 'Não foi possível salvar.',
-            description: `A linha alterada não possui informação da PK "${missingPk}" no resultado da query.`,
+            title: t('toast.saveNotPossible'),
+            description: t('query.rowMissingPk', { pk: missingPk }),
           });
 
           return;
@@ -551,12 +558,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
       setNewRows(new Map());
       setEditedFieldsRows(new Map());
-      showToast({ type: 'success', title: 'Dados salvos com sucesso!' });
+      showToast({ type: 'success', title: t('toast.dataSaved') });
       onRefresh();
     } catch (error) {
       showToast({
         type: 'error',
-        title: 'Erro ao salvar dados.',
+        title: t('toast.dataSaveError'),
         description: error?.message,
         delay: 8000,
       });
@@ -575,6 +582,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     runSql,
     saving,
     showToast,
+    t,
   ]);
 
   const handleCancelSelectedRowsEditions = React.useCallback(() => {
@@ -761,7 +769,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
             columns={(data.columns || []).map((column) => ({
-              title: readOnly ? undefined : 'Clique para ordenar por essa coluna',
+              title: readOnly ? undefined : t('common.orderByColumn'),
               attribute: column,
               label: column,
               sortable: !readOnly,
@@ -794,14 +802,14 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   borderColor={activeTheme.queryEditor.tab.borderColor}
                   color={activeTheme.queryEditor.tab.color}
                   tabs={[
-                    { idTab: 'value', title: 'Valor' },
-                    selectedReference && { idTab: 'reference', title: 'Referência' },
-                    canSelectReferenceValue && { idTab: 'selection', title: 'Seleção' },
+                    { idTab: 'value', title: t('tabs.value') },
+                    selectedReference && { idTab: 'reference', title: t('reference.singular') },
+                    canSelectReferenceValue && { idTab: 'selection', title: t('tabs.selection') },
                   ].filter(Boolean)}
                 />
 
                 <Button
-                  title="Fechar visualização"
+                  title={t('tooltip.closeValuePreview')}
                   backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
                   color={activeTheme.queryEditor.tab.color}
                   onClick={closeValuePreview}
@@ -842,9 +850,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                       onDataError={(error) => {
                         showToast({
                           type: 'error',
-                          title: 'Erro ao carregar seleção.',
+                          title: t('toast.selectionLoadError'),
                           description:
-                            error instanceof Error ? error.message : 'Erro desconhecido.',
+                            error instanceof Error ? error.message : t('common.unknownError'),
                           delay: 8000,
                         });
                       }}
@@ -866,7 +874,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           <Button
             text
             smallIcon
-            title="Salvar"
+            title={t('common.save')}
             color={activeTheme.queryEditor.bar.color}
             onClick={handleSave}
             loading={saving}
@@ -879,7 +887,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           <Button
             text
             smallIcon
-            title="Adicionar linha"
+            title={t('common.addRow')}
             onClick={handleAddRow}
             disabled={data.loading}
             color={activeTheme.queryEditor.bar.color}
@@ -891,7 +899,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Button
           text
           smallIcon
-          title={showValuePreview ? 'Fechar visualizacão' : 'Abrir visualizacão'}
+          title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}
           onClick={() => {
             if (showValuePreview) {
               closeValuePreview();
@@ -917,7 +925,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Button
           text
           smallIcon
-          title="Opções de captura"
+          title={t('tooltip.captureOptions')}
           onClick={openCaptureMenu}
           disabled={data.loading}
           color={captureButtonColor}
@@ -928,7 +936,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Button
           text
           smallIcon
-          title="Contar linhas totais"
+          title={t('common.countTotalRows')}
           className={styles.countButton}
           onClick={handleLoadRowsCount}
           loading={loadingRowsCount}
@@ -937,7 +945,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         >
           <CountIcon size={16} />
           {rowsCount !== undefined && (
-            <span className={styles.countValue}>{rowsCount.toLocaleString('pt-BR')}</span>
+            <span className={styles.countValue}>{rowsCount.toLocaleString(language)}</span>
           )}
         </Button>
 
@@ -945,7 +953,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           <Button
             text
             smallIcon
-            title="Cancelar query"
+            title={t('common.cancelQuery')}
             onClick={onCancelQuery}
             loading={cancelingQuery}
             color={activeTheme.queryEditor.bar.color}
@@ -958,44 +966,44 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
         {(data.capture?.active || !!data.capture?.rows.length) && (
           <Text
-            title={
-              data.capture.active
-                ? 'Capturando novas linhas retornadas pelo auto-refresh'
-                : 'Captura parada'
-            }
+            title={data.capture.active ? t('capture.activeTitle') : t('capture.stoppedTitle')}
             userSelect={false}
             color={
               data.capture.active ? activeTheme.__colors.red : activeTheme.queryEditor.bar.color
             }
           >
-            Captura: {data.capture.rows.length.toLocaleString('pt-BR')} linhas
+            {t('capture.status', {
+              count: data.capture.rows.length.toLocaleString(language),
+            })}
           </Text>
         )}
 
         <Text
-          title={data.loading ? 'Tempo de execução atual da query' : 'Tempo de execução da query'}
+          title={
+            data.loading ? t('tooltip.currentQueryExecutionTime') : t('tooltip.queryExecutionTime')
+          }
           userSelect={false}
           color={activeTheme.queryEditor.bar.color}
         >
           {data.loading
-            ? `Executando há ${formatExecutionTime(executionTimeMs)}`
+            ? t('query.runningFor', { time: formatExecutionTime(executionTimeMs) })
             : formatExecutionTime(executionTimeMs)}
         </Text>
 
         <Text
-          title="Total de Linhas sendo exibidas"
+          title={t('common.totalRowsDisplayed')}
           userSelect={false}
           color={activeTheme.queryEditor.bar.color}
         >
-          Linhas exibidas: {(data.rows || []).length}
+          {t('query.displayedRows', { count: (data.rows || []).length })}
         </Text>
 
         <Text
-          title="Data da última atualização"
+          title={t('common.lastUpdatedAt')}
           userSelect={false}
           color={activeTheme.queryEditor.bar.color}
         >
-          Atualizado em {toDateTime(data.date_run)}
+          {t('common.updatedAt', { date: toDateTime(data.date_run) })}
         </Text>
       </Bar>
 
@@ -1004,15 +1012,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         onClose={() => setContextMenuTable(undefined)}
         options={[
           {
-            text: 'Copiar',
+            text: t('common.copy'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
           },
           {
-            text: 'Copiar linha',
+            text: t('context.copyRow'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
           },
           {
-            text: 'Copiar linha como JSON',
+            text: t('context.copyRowJson'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
           },
         ]}

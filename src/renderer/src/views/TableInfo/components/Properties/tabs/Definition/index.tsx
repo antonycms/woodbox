@@ -7,6 +7,7 @@ import Editor from '@renderer/components/Editor';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { useStoreContext } from '@renderer/contexts/Store';
@@ -19,6 +20,7 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
+  const { t } = useI18n();
   const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoContext();
   const { connections } = useStoreContext();
   const dialect = React.useMemo(
@@ -54,8 +56,8 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
 
         <Spacer />
 
-        <Text userSelect={false} title="Data da última atualização" color={theme.bar.color}>
-          Atualizado em {toDateTime(lastFetchDate.definition)}
+        <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
+          {t('common.updatedAt', { date: toDateTime(lastFetchDate.definition) })}
         </Text>
       </Bar>
     </>

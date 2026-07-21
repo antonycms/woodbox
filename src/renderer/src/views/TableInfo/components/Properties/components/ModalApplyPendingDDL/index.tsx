@@ -4,6 +4,7 @@ import Editor from '@renderer/components/Editor';
 import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { copyToClipboard } from '@renderer/utils/methods';
@@ -18,6 +19,7 @@ const ModalApplyPendingDDL = ({
   onApply,
   dialect = getRendererDialect(),
 }: IModalApplyPendingDDLProps) => {
+  const { t } = useI18n();
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
@@ -30,12 +32,12 @@ const ModalApplyPendingDDL = ({
 
   const handleCopy = React.useCallback(() => {
     copyToClipboard(editableSql);
-    showToast({ type: 'success', title: 'Conteudo copiado com sucesso!' });
-  }, [editableSql, showToast]);
+    showToast({ type: 'success', title: t('common.contentCopied') });
+  }, [editableSql, showToast, t]);
 
   return (
     <Modal
-      title="Alterações pendentes"
+      title={t('modal.pendingChanges')}
       width="900px"
       height="520px"
       show={show}
@@ -63,7 +65,7 @@ const ModalApplyPendingDDL = ({
           sm={4}
           md={3}
         >
-          Copiar
+          {t('common.copy')}
         </Button>
 
         <Spacer />
@@ -78,7 +80,7 @@ const ModalApplyPendingDDL = ({
           sm={4}
           md={3}
         >
-          Cancelar
+          {t('settings.customization.cancel')}
         </Button>
 
         <Button
@@ -91,7 +93,7 @@ const ModalApplyPendingDDL = ({
           sm={4}
           md={3}
         >
-          Aplicar
+          {t('common.apply')}
         </Button>
       </Row>
     </Modal>

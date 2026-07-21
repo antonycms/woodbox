@@ -6,6 +6,7 @@ import { generateHash } from '@renderer/utils/string';
 import { useForm } from '@renderer/hooks/useForm';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { useI18n } from '@renderer/contexts/I18n';
 import { ITableInfoProps } from '../../dtos';
 import Columns from './tabs/Columns';
 import ForeingKeys from './tabs/ForeingKeys';
@@ -31,6 +32,7 @@ const Properties = (props: IPropertiesProps) => {
     },
   } = useThemeContext();
 
+  const { t } = useI18n();
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState<string>('1');
   const {
@@ -87,23 +89,23 @@ const Properties = (props: IPropertiesProps) => {
 
   const tabs = React.useMemo(() => {
     const allowedTabs = [
-      { idTab: '1', title: 'Colunas' },
-      { idTab: '8', title: 'Índices' },
-      { idTab: '2', title: 'Restrições' },
-      { idTab: '3', title: 'Chaves Estrangeiras' },
+      { idTab: '1', title: t('tabs.columns') },
+      { idTab: '8', title: t('tabs.indexes') },
+      { idTab: '2', title: t('tabs.constraints') },
+      { idTab: '3', title: t('tabs.foreignKeys') },
     ];
 
     if (!isCreateMode) {
       allowedTabs.push(
-        { idTab: '4', title: 'Referências' },
-        { idTab: '6', title: 'Triggers' },
-        { idTab: '7', title: 'Diagrama' },
-        { idTab: '5', title: 'Definição' },
+        { idTab: '4', title: t('tabs.references') },
+        { idTab: '6', title: t('tabs.triggers') },
+        { idTab: '7', title: t('tabs.diagram') },
+        { idTab: '5', title: t('tabs.definition') },
       );
     }
 
     return allowedTabs;
-  }, []);
+  }, [isCreateMode, t]);
 
   return (
     <div className={styles.propertiesContainer}>
@@ -115,14 +117,14 @@ const Properties = (props: IPropertiesProps) => {
           <Input
             md={6}
             required
-            label="Tabela"
+            label={t('field.table')}
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
             {...register('table')}
           />
           <Input
             md={6}
-            label="Comentário"
+            label={t('field.comment')}
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
             {...register('comment')}

@@ -6,6 +6,7 @@ import Editor from '@renderer/components/Editor';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IPendingRestrictionCreate } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
@@ -15,10 +16,19 @@ import styles from './styles.module.css';
 
 type RestrictionType = 'primary_key' | 'unique_key' | 'check';
 
-const restrictionTypes: { label: string; value: RestrictionType }[] = [
-  { label: 'Chave Primária', value: 'primary_key' },
-  { label: 'Única', value: 'unique_key' },
-  { label: 'Check', value: 'check' },
+const restrictionTypeKeys: Record<
+  RestrictionType,
+  'field.primaryKey' | 'field.unique' | 'field.check'
+> = {
+  primary_key: 'field.primaryKey',
+  unique_key: 'field.unique',
+  check: 'field.check',
+};
+
+const restrictionTypes: { value: RestrictionType }[] = [
+  { value: 'primary_key' },
+  { value: 'unique_key' },
+  { value: 'check' },
 ];
 
 const getGeneratedConstraintName = (
@@ -51,6 +61,7 @@ const ModalNewRestriction = ({
   const {
     activeTheme: { modal: colors },
   } = useThemeContext();
+  const { t } = useI18n();
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
   const usesColumns = state.constraint_type !== 'check';
 
@@ -88,15 +99,15 @@ const ModalNewRestriction = ({
   );
 
   return (
-    <Modal title="Nova restrição" width="520px" show={show} closeOutside onClose={close}>
+    <Modal title={t('modal.newConstraint')} width="520px" show={show} closeOutside onClose={close}>
       <form className={styles.form} onSubmit={onSubmit}>
         <Row>
           <Autocomplete
             md={12}
             required
-            label="Tipo"
+            label={t('field.type')}
             data={restrictionTypes}
-            extractLabel={(item) => item.label}
+            extractLabel={(item) => t(restrictionTypeKeys[item.value])}
             extractValue={(item) => item.value}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
@@ -115,7 +126,7 @@ const ModalNewRestriction = ({
             <AutocompleteMulti
               md={12}
               required
-              label="Colunas"
+              label={t('field.columns')}
               data={columns}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
@@ -138,7 +149,7 @@ const ModalNewRestriction = ({
 
         {state.constraint_type === 'primary_key' && hasPrimaryKey && (
           <p style={{ color: colors.color, margin: '0 0 12px' }}>
-            Já existe uma Chave Primária nessa tabela.
+            {t('message.primaryKeyAlreadyExists')}
           </p>
         )}
 
@@ -154,7 +165,7 @@ const ModalNewRestriction = ({
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('settings.customization.cancel')}
           </Button>
 
           <Button
@@ -166,7 +177,7 @@ const ModalNewRestriction = ({
             sm={4}
             md={3}
           >
-            Adicionar
+            {t('common.add')}
           </Button>
         </Row>
       </form>

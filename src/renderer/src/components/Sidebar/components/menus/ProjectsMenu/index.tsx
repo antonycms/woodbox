@@ -17,6 +17,7 @@ import TreeView, {
   ITreeViewRef,
 } from '@renderer/components/TreeView';
 import { IScript, useStoreContext } from '@renderer/contexts/Store';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useToast } from '@renderer/contexts/Toast';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
@@ -55,6 +56,7 @@ const ProjectsMenu = () => {
   } = useStoreContext();
 
   const { showToast } = useToast();
+  const { t } = useI18n();
   const { tabs, addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
   const treeViewRef = React.useRef<ITreeViewRef>(null);
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
@@ -121,7 +123,7 @@ const ProjectsMenu = () => {
     } catch (error) {
       showToast({
         type: 'error',
-        title: 'Erro ao realizar a conexão',
+        title: t('toast.connectionError'),
         description: error.message,
       });
 
@@ -335,92 +337,92 @@ const ProjectsMenu = () => {
     const optionsAvailable: Record<string, IContextMenuOption[]> = {
       project: [
         {
-          text: 'Nova Conexão',
+          text: t('context.newConnection'),
           onClick: () => setIsNewConnection(true),
         },
         {
-          text: 'Editar Projeto',
+          text: t('context.editProject'),
           onClick: () => setProjectEditing(contextMenuItemSelected),
         },
         {
-          text: 'Excluir Projeto',
+          text: t('context.deleteProject'),
           onClick: () => handleRemoveProject(contextMenuItemSelected?.id),
         },
       ],
 
       connection: [
         !checkHasConnection(contextMenuItemSelected?.id) && {
-          text: 'Conectar',
+          text: t('context.connect'),
           onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id),
         },
         checkHasConnection(contextMenuItemSelected?.id) && {
-          text: 'Desconectar',
+          text: t('context.disconnect'),
           onClick: async () => {
             await closeConnection(contextMenuItemSelected?.id);
             await treeViewRef.current?.switch(contextMenuItemSelected?.id, false);
           },
         },
         {
-          text: 'Recarregar',
+          text: t('context.reload'),
           onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id, true),
         },
         {
-          text: 'Editar Conexão',
+          text: t('context.editConnection'),
           onClick: () => setConnectionEditing(contextMenuItemSelected),
         },
         {
-          text: 'Excluir Conexão',
+          text: t('context.deleteConnection'),
           onClick: () => handleRemoveConnection(contextMenuItemSelected?.id),
         },
       ],
 
       schemas: [
         {
-          text: 'Criar novo schema',
+          text: t('context.createSchema'),
           onClick: () => setSchemaToCreate(contextMenuItemSelected),
         },
       ],
 
       schema: [
         {
-          text: 'Copiar',
+          text: t('common.copy'),
           onClick: () => copyToClipboard(contextMenuItemSelected.data.schema_name),
         },
         {
-          text: 'Renomear Esquema',
+          text: t('modal.renameSchema'),
           onClick: () => setSchemaToRename(contextMenuItemSelected),
         },
         {
-          text: 'Excluir Esquema',
+          text: t('context.deleteSchemaAlt'),
           onClick: () => setSchemaToDelete(contextMenuItemSelected),
         },
       ],
 
       table: [
         {
-          text: 'Copiar',
+          text: t('common.copy'),
           onClick: () => {
             const data = contextMenuItemSelected?.data;
             copyToClipboard([data.table_schema, data.table_name].filter(Boolean).join('.'));
           },
         },
         {
-          text: 'Importar dados',
+          text: t('modal.importData'),
           onClick: () => setTableToImport(contextMenuItemSelected),
         },
         {
-          text: 'Renomear Tabela',
+          text: t('modal.renameTable'),
           onClick: () => setTableToRename(contextMenuItemSelected),
         },
         {
-          text: 'Excluir Tabela',
+          text: t('modal.deleteTable'),
           onClick: () => setTableToDelete(contextMenuItemSelected),
         },
       ],
 
       tables: [
         {
-          text: 'Criar nova tabela',
+          text: t('context.createTable'),
           onClick: () => {
             const { id_connection, schema_name } = contextMenuItemSelected?.data || {};
             if (!id_connection) return;
@@ -429,7 +431,7 @@ const ProjectsMenu = () => {
 
             addTab({
               id: tabId,
-              title: 'Nova tabela',
+              title: t('modal.newTable'),
               unsaved: true,
               component: () => (
                 <TableInfo
@@ -448,18 +450,18 @@ const ProjectsMenu = () => {
 
       scripts: [
         {
-          text: 'Novo script SQL',
+          text: t('context.newSqlScript'),
           onClick: () => setIsNewScript(true),
         },
       ],
 
       script: [
         {
-          text: 'Renomear Script',
+          text: t('context.renameScript'),
           onClick: () => setScriptEditing(contextMenuItemSelected?.data?.script),
         },
         {
-          text: 'Excluir Script',
+          text: t('context.deleteScript'),
           onClick: () => {
             const id_script = contextMenuItemSelected?.data?.script?.id;
             const tabId = `script_${id_script}`;
@@ -482,6 +484,7 @@ const ProjectsMenu = () => {
     refreshConnectionInfo,
     removeScript,
     removeTab,
+    t,
   ]);
 
   const projectsSerialized = connectionsGroupPerProject.map((project) => {
@@ -572,7 +575,7 @@ const ProjectsMenu = () => {
                 childs: [
                   {
                     id: `tables_${connection.id}:${schema}`,
-                    label: 'Tabelas',
+                    label: t('tabs.tables'),
                     icon: 'multi',
                     childs: tablesSchema,
                     type: 'tables' as const,
@@ -580,7 +583,7 @@ const ProjectsMenu = () => {
                   },
                   {
                     id: `fns_${connection.id}:${schema}`,
-                    label: 'Funções',
+                    label: t('tabs.functions'),
                     childs: functionsSchema,
                     icon: 'functions',
                   },
@@ -613,7 +616,7 @@ const ProjectsMenu = () => {
             dialect.supportsSchemas && {
               id: `schemas_${connection.id}`,
               type: 'schemas',
-              label: 'Esquemas',
+              label: t('sidebar.schemas'),
               childs: schemasThreeView,
               icon: 'schema',
               data: dataConnection,
@@ -621,14 +624,14 @@ const ProjectsMenu = () => {
             !dialect.supportsSchemas && {
               id: `tables_${connection.id}`,
               type: 'tables',
-              label: 'Tabelas',
+              label: t('tabs.tables'),
               childs: tablesThreeView,
               data: dataConnection,
             },
             {
               id: `scripts_${connection.id}`,
               type: 'scripts',
-              label: 'Scripts',
+              label: t('tabs.scripts'),
               childs: scriptsThreeView,
               icon: 'fileSql',
               data: dataConnection,
@@ -710,7 +713,7 @@ const ProjectsMenu = () => {
 
       <Row>
         <Text bold color={colors.color} userSelect={false}>
-          Projetos
+          {t('sidebar.projects')}
         </Text>
 
         <Spacer />
@@ -748,7 +751,7 @@ const ProjectsMenu = () => {
 
       <Input
         id="input_filter_projects"
-        placeholder="Filtrar"
+        placeholder={t('common.filter')}
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
         color={colors.fieldColor}
