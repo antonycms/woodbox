@@ -1,14 +1,14 @@
 export const en = {
   'settings.title': 'Settings',
-  'settings.menu.language.label': 'Language',
-  'settings.menu.language.description': 'App language',
+  'settings.menu.general.label': 'General',
+  'settings.menu.general.description': 'App preferences',
   'settings.menu.customization.label': 'Customization',
   'settings.menu.customization.description': 'Themes and colors',
   'settings.menu.import.label': 'Import',
   'settings.menu.import.description': 'External sources',
 
-  'settings.language.title': 'Language',
-  'settings.language.activeLanguage': 'App language',
+  'settings.general.title': 'General',
+  'settings.language.activeLanguage': 'Language',
   'settings.language.description':
     'Choose the language used by Woodbox. New languages can be added later.',
   'settings.language.systemHint':

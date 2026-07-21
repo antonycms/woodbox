@@ -2,15 +2,15 @@ import type { TranslationKey } from './en';
 
 export const ptBR: Record<TranslationKey, string> = {
   'settings.title': 'Configurações',
-  'settings.menu.language.label': 'Idioma',
-  'settings.menu.language.description': 'Idioma do app',
+  'settings.menu.general.label': 'Geral',
+  'settings.menu.general.description': 'Preferências do app',
   'settings.menu.customization.label': 'Personalização',
   'settings.menu.customization.description': 'Temas e cores',
   'settings.menu.import.label': 'Importação',
   'settings.menu.import.description': 'Origens externas',
 
-  'settings.language.title': 'Idioma',
-  'settings.language.activeLanguage': 'Idioma do aplicativo',
+  'settings.general.title': 'Geral',
+  'settings.language.activeLanguage': 'Idioma',
   'settings.language.description':
     'Escolha o idioma usado pelo Woodbox. Novos idiomas poderão ser adicionados depois.',
   'settings.language.systemHint':

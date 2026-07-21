@@ -4,20 +4,20 @@ import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes } from '@renderer/styles/theme';
 import { SettingsCustomizationPanel } from './components/SettingsCustomizationPanel';
+import { SettingsGeneralPanel } from './components/SettingsGeneralPanel';
 import { SettingsImportPanel } from './components/SettingsImportPanel';
-import { SettingsLanguagePanel } from './components/SettingsLanguagePanel';
 import styles from './styles.module.css';
 
-type SettingsMenu = 'language' | 'customization' | 'import';
+type SettingsMenu = 'general' | 'customization' | 'import';
 
 const appVersion = typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__;
 
 const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: TranslationKey }[] =
   [
     {
-      id: 'language',
-      labelKey: 'settings.menu.language.label',
-      descriptionKey: 'settings.menu.language.description',
+      id: 'general',
+      labelKey: 'settings.menu.general.label',
+      descriptionKey: 'settings.menu.general.description',
     },
     {
       id: 'customization',
@@ -37,7 +37,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
     activeTheme: { modal: colors, __colors },
   } = useThemeContext();
 
-  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('language');
+  const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('general');
   const layoutStyle = React.useMemo(
     () =>
       ({
@@ -81,7 +81,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
         </aside>
 
         <section className={styles.content}>
-          {activeMenu === 'language' && <SettingsLanguagePanel />}
+          {activeMenu === 'general' && <SettingsGeneralPanel />}
           {activeMenu === 'import' && <SettingsImportPanel />}
           {activeMenu === 'customization' && <SettingsCustomizationPanel />}
         </section>

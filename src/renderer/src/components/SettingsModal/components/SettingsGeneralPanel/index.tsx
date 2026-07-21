@@ -6,7 +6,7 @@ import { Text } from '@renderer/components/Text';
 import { useI18n, type LanguageCode } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 
-export const SettingsLanguagePanel = React.memo(() => {
+export const SettingsGeneralPanel = React.memo(() => {
   const { language, availableLanguages, changeLanguage, t } = useI18n();
   const {
     activeTheme: { modal: colors },
@@ -17,7 +17,7 @@ export const SettingsLanguagePanel = React.memo(() => {
   return (
     <>
       <Text bold color={colors.color} userSelect={false}>
-        {t('settings.language.title')}
+        {t('settings.general.title')}
       </Text>
 
       <Divider size={8} />
@@ -41,4 +41,4 @@ export const SettingsLanguagePanel = React.memo(() => {
   );
 });
 
-SettingsLanguagePanel.displayName = 'SettingsLanguagePanel';
+SettingsGeneralPanel.displayName = 'SettingsGeneralPanel';
