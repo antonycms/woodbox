@@ -11,24 +11,27 @@ import AppTabProvider from '@renderer/contexts/AppTab';
 import StoreContextProvider from '@renderer/contexts/Store';
 import ToastProvider from '@renderer/contexts/Toast';
 import ThemeProvider from '@renderer/contexts/Theme';
+import I18nProvider from '@renderer/contexts/I18n';
 
 const App = () => {
   return (
-    <ThemeProvider>
-      <StoreContextProvider>
-        <ContainerApp>
-          <ToastProvider>
-            <AppTabProvider>
-              <Sidebar />
+    <I18nProvider>
+      <ThemeProvider>
+        <StoreContextProvider>
+          <ContainerApp>
+            <ToastProvider>
+              <AppTabProvider>
+                <Sidebar />
 
-              <MainContent />
+                <MainContent />
 
-              <CentralSearchModal />
-            </AppTabProvider>
-          </ToastProvider>
-        </ContainerApp>
-      </StoreContextProvider>
-    </ThemeProvider>
+                <CentralSearchModal />
+              </AppTabProvider>
+            </ToastProvider>
+          </ContainerApp>
+        </StoreContextProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 };
 
