@@ -254,7 +254,6 @@ const Data = ({
   const columnsSerialized = React.useMemo(
     () =>
       columns.map<IColumn>((column) => ({
-        title: 'Clique para ordenar por essa coluna',
         label: column.column_name,
         attribute: column.column_name,
         required: !!column.is_nullable,

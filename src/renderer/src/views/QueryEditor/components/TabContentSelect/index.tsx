@@ -769,7 +769,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
             columns={(data.columns || []).map((column) => ({
-              title: readOnly ? undefined : t('common.orderByColumn'),
               attribute: column,
               label: column,
               sortable: !readOnly,

@@ -103,26 +103,22 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
         onCellLinkClick={handleCellLinkClick}
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.table'),
             attribute: 'source_table',
             isLink: true,
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.column'),
             attribute: 'column_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.referencedColumnTitle'),
             attribute: 'reference_column_name',
             sortable: true,

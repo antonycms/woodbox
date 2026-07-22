@@ -411,44 +411,37 @@ const ForeingKeys = ({
         onCellLinkClick={handleCellLinkClick}
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.column'),
             attribute: 'column_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.referencedTableTitle'),
             attribute: 'table_reference',
             isLink: true,
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.referencedColumnTitle'),
             attribute: 'reference_column_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.comment'),
             attribute: 'comment',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.deleteRule'),
             attribute: 'remove_rule',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.updateRule'),
             attribute: 'update_rule',
             sortable: true,

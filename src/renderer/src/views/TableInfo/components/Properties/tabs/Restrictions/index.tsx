@@ -390,32 +390,27 @@ const Restrictios = ({
         onSelectRow={setSelectedRestrictions}
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('field.name'),
             attribute: 'constraint_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.type'),
             attribute: 'constraint_type',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.columns'),
             attribute: 'column_names',
             type: 'autocomplete-multi',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.expression'),
             attribute: 'expression',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.comment'),
             attribute: 'comment',
             sortable: true,

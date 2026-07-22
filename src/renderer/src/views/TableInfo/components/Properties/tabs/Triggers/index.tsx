@@ -151,38 +151,32 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         }}
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('field.name'),
             attribute: 'trigger_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.timing'),
             attribute: 'timing',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.event'),
             attribute: 'event',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.level'),
             attribute: 'orientation',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.function'),
             attribute: 'function_name',
             isLink: true,
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.status'),
             attribute: 'status',
             sortable: true,

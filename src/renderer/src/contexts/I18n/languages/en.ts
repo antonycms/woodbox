@@ -142,7 +142,6 @@ export const en = {
   'common.removeSelectedItems': 'Remove selected items',
   'common.duplicateSelectedItems': 'Duplicate selected items',
   'common.cancelChanges': 'Cancel changes',
-  'common.orderByColumn': 'Click to sort by this column',
   'common.noSorting': 'No sorting',
   'common.cancelQuery': 'Cancel query',
   'common.filter': 'Filter',

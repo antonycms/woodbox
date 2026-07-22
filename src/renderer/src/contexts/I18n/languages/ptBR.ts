@@ -145,7 +145,6 @@ export const ptBR: Record<TranslationKey, string> = {
   'common.removeSelectedItems': 'Remover itens selecionados',
   'common.duplicateSelectedItems': 'Duplicar itens selecionados',
   'common.cancelChanges': 'Cancelar alterações',
-  'common.orderByColumn': 'Clique para ordenar por essa coluna',
   'common.noSorting': 'Sem ordenação',
   'common.cancelQuery': 'Cancelar query',
   'common.filter': 'Filtrar',

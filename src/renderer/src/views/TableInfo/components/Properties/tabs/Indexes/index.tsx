@@ -388,55 +388,46 @@ const Indexes = ({
         }
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('field.name'),
             attribute: 'index_name',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.columns'),
             attribute: 'column_names_display',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('index.uniqueSingle'),
             attribute: 'is_unique',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.primaryKey'),
             attribute: 'is_primary',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.method'),
             attribute: 'index_method',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.valid'),
             attribute: 'is_valid',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.expression'),
             attribute: 'expression',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.predicate'),
             attribute: 'predicate',
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.size'),
             attribute: 'index_size',
             sortable: true,

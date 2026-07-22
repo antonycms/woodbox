@@ -662,14 +662,12 @@ const Columns = ({
         }
         columns={[
           {
-            title: t('common.orderByColumn'),
             label: t('column.columnName'),
             attribute: 'column_name',
             editable: true,
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.type'),
             attribute: 'data_type',
             editable: true,
@@ -678,7 +676,6 @@ const Columns = ({
             dataAutocomplete: columnTypes,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.nullable'),
             attribute: 'is_nullable_label',
             editable: true,
@@ -689,7 +686,6 @@ const Columns = ({
           ...(dialect.supportsAutoIncrement
             ? [
                 {
-                  title: t('common.orderByColumn'),
                   label: t('column.autoInc'),
                   attribute: 'is_auto_increment_label' as const,
                   editable: true,
@@ -700,14 +696,12 @@ const Columns = ({
               ]
             : []),
           {
-            title: t('common.orderByColumn'),
             label: t('field.default'),
             attribute: 'column_default',
             editable: true,
             sortable: true,
           },
           {
-            title: t('common.orderByColumn'),
             label: t('field.comment'),
             attribute: 'description',
             editable: true,
