@@ -4,6 +4,7 @@ import type { IColumn, ISortDirection } from '../../dtos';
 import styles from '../../styles.module.css';
 import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
+import { useI18n } from '@renderer/contexts/I18n';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -77,6 +78,8 @@ const TableDefaultView = <Row,>({
   onCellLinkPreviewClick,
   cellLinkClickMode,
 }: ITableDefaultViewProps<Row>) => {
+  const { t } = useI18n();
+
   const [sortContextMenu, setSortContextMenu] = React.useState<{
     column: IColumn<Row>;
     position: IContextMenuPosition;
@@ -203,15 +206,15 @@ const TableDefaultView = <Row,>({
         onClose={() => setSortContextMenu(undefined)}
         options={[
           {
-            text: 'Ordenar crescente',
+            text: t('table.sortAsc'),
             onClick: () => handleSortMenuClick('ASC'),
           },
           {
-            text: 'Ordenar decrescente',
+            text: t('table.sortDesc'),
             onClick: () => handleSortMenuClick('DESC'),
           },
           {
-            text: 'Sem ordenação',
+            text: t('table.noSorting'),
             onClick: () => handleSortMenuClick(null),
           },
         ]}
