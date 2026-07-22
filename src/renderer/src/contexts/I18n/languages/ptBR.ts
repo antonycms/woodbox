@@ -372,6 +372,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'context.copyRow': 'Copiar linha',
   'context.copyRowJson': 'Copiar linha como JSON',
   'context.deleteSelectedItems': 'Excluir itens selecionados',
+  'context.setSelectedCellsNull': 'Definir como NULL',
   'context.insertDdlRow': 'Gerar DDL de INSERT da linha',
   'column.uniqueFixedDefaultTitle': 'Coluna única não pode ter valor padrão fixo.',
   'column.uniqueFixedDefaultDescription':

@@ -20,12 +20,20 @@ type TableDragSelectionState = {
   hasMoved: boolean;
 };
 
-export interface ITableContextMenuData {
+export interface ITableContextMenuCellData<Row = any> {
+  row: Row;
+  column: IColumn<Row>;
+  rowIndex: number;
+  colIndex: number;
+}
+
+export interface ITableContextMenuData<Row = any> {
   cellsText: string;
   rowsText: string;
   rowsJson: string;
   rows: Record<string, any>[];
   selectedCellRows: Record<string, any>[];
+  selectedCells: ITableContextMenuCellData<Row>[];
 }
 
 export interface ITableSelectedCellData<Row = any> {
@@ -40,7 +48,7 @@ interface ITableProps<Row = any> {
   rowKeyExtractor?(rowData: Row, index: number): React.Key;
   onContextMenu?(
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    data: ITableContextMenuData,
+    data: ITableContextMenuData<Row>,
   ): void;
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: any, rowKey?: React.Key): void;
@@ -868,6 +876,18 @@ function Table<Row = any>(props: ITableProps<Row>) {
         );
       });
 
+    const selectedCells = [...cells]
+      .map((key) => {
+        const [rowIndex, colIndex] = key.split(':').map(Number);
+        const row = serializedRowsRef.current[rowIndex];
+        const column = columnsRef.current[colIndex];
+
+        if (!row || !column) return null;
+
+        return { row, column, rowIndex, colIndex };
+      })
+      .filter((cell): cell is ITableContextMenuCellData<Row> => !!cell);
+
     const rowsJson =
       rowObjects.length === 1
         ? JSON.stringify(rowObjects[0], null, 2)
@@ -879,6 +899,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       rowsJson,
       rows: rowObjects,
       selectedCellRows,
+      selectedCells,
     });
   };
 

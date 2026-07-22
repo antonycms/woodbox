@@ -368,6 +368,7 @@ export const en = {
   'context.copyRow': 'Copy row',
   'context.copyRowJson': 'Copy row as JSON',
   'context.deleteSelectedItems': 'Delete selected items',
+  'context.setSelectedCellsNull': 'Set as NULL',
   'context.insertDdlRow': 'Generate INSERT DDL from row',
   'column.uniqueFixedDefaultTitle': 'Unique column cannot have a fixed default value.',
   'column.uniqueFixedDefaultDescription':

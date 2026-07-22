@@ -290,14 +290,14 @@ const Data = ({
   );
 
   const handleEditNewRow = React.useCallback(
-    (rowKey: React.Key, attribute: string, value: any) => {
+    (rowKey: React.Key, attribute: string, value: any, useDefaultOnNull = true) => {
       const normalizedValue = normalizeCellValue(value);
 
       setNewRows((prevState) => {
         const newState = new Map(prevState);
         const prevRowEdited = { ...(newState.get(rowKey) || {}) };
 
-        if (normalizedValue === null && defaultColumnNames.has(attribute)) {
+        if (useDefaultOnNull && normalizedValue === null && defaultColumnNames.has(attribute)) {
           delete prevRowEdited[attribute];
           newState.set(rowKey, prevRowEdited);
           return newState;
@@ -633,6 +633,26 @@ const Data = ({
       return newState;
     });
   }, [selectedRows]);
+
+  const handleSetSelectedCellsNull = React.useCallback(() => {
+    const cells = contextMenuTable?.data?.selectedCells || [];
+
+    cells.forEach(({ row, column, rowIndex }) => {
+      if (!column.editable) return;
+
+      const rowData = row as any;
+      const attribute = String(column.attribute);
+
+      if (rowData.__is_new_row) {
+        handleEditNewRow(rowData.__key_row, attribute, null, false);
+        return;
+      }
+
+      handleEditRow(rowData.__row_index ?? rowIndex, attribute, null, rowData.__key_row);
+    });
+
+    setContextMenuTable(undefined);
+  }, [contextMenuTable, handleEditNewRow, handleEditRow]);
 
   const handleUndoSelectedDroppedRows = React.useCallback(() => {
     if (!selectedRows.length) return;
@@ -1111,6 +1131,12 @@ const Data = ({
           {
             text: t('context.copyRowJson'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+          },
+          {
+            text: t('context.setSelectedCellsNull'),
+            onClick: handleSetSelectedCellsNull,
+            show: () =>
+              !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
           },
           {
             text: t('context.deleteSelectedItems'),
