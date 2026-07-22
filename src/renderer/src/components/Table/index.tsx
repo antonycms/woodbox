@@ -361,6 +361,98 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [sort],
   );
 
+  const scrollDefaultCellIntoView = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      const container = refScrollContainer.current;
+      if (!container) return;
+
+      const cellTop = (rowIndex + 1) * rowHeight;
+      const cellBottom = cellTop + rowHeight;
+      const visibleTop = container.scrollTop + rowHeight;
+      const visibleBottom = container.scrollTop + container.clientHeight;
+      let top = container.scrollTop;
+
+      if (cellTop < visibleTop) {
+        top = Math.max(0, cellTop - rowHeight);
+      } else if (cellBottom > visibleBottom) {
+        top = cellBottom - container.clientHeight;
+      }
+
+      const sizes = columnsSizeRef.current;
+      let cellLeft = rowNumberColumnWidth;
+      for (let i = 0; i < colIndex; i++) cellLeft += sizes[i] || 0;
+
+      const cellRight = cellLeft + (sizes[colIndex] || 0);
+      const visibleLeft = container.scrollLeft + rowNumberColumnWidth;
+      const visibleRight = container.scrollLeft + container.clientWidth;
+      let left = container.scrollLeft;
+
+      if (cellLeft < visibleLeft) {
+        left = Math.max(0, cellLeft - rowNumberColumnWidth);
+      } else if (cellRight > visibleRight) {
+        left = cellRight - container.clientWidth;
+      }
+
+      const nextScroll = { left, top };
+      container.scrollLeft = nextScroll.left;
+      container.scrollTop = nextScroll.top;
+      defaultScrollRef.current = nextScroll;
+      setScroll(nextScroll);
+    },
+    [rowHeight, rowNumberColumnWidth],
+  );
+
+  const scrollAnalysisCellIntoView = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      const container = refScrollContainer.current?.querySelector(
+        `.${styles.analysis_container}`,
+      ) as HTMLElement;
+      if (!container) return;
+
+      const cellTop = (colIndex + 1) * rowHeight;
+      const cellBottom = cellTop + rowHeight;
+      let top = container.scrollTop;
+
+      if (cellTop < container.scrollTop + rowHeight) {
+        top = Math.max(0, cellTop - rowHeight);
+      } else if (cellBottom > container.scrollTop + container.clientHeight) {
+        top = cellBottom - container.clientHeight;
+      }
+
+      const rowPosition = analysisRowsRef.current.findIndex((row) => row.__index_row === rowIndex);
+      if (rowPosition === -1) return;
+
+      const sizes = analysisColumnsSizeRef.current;
+      let cellLeft = sizes[0] || 0;
+      for (let i = 1; i <= rowPosition; i++) cellLeft += sizes[i] || 0;
+
+      const cellRight = cellLeft + (sizes[rowPosition + 1] || 0);
+      let left = container.scrollLeft;
+
+      if (cellLeft < container.scrollLeft + (sizes[0] || 0)) {
+        left = Math.max(0, cellLeft - (sizes[0] || 0));
+      } else if (cellRight > container.scrollLeft + container.clientWidth) {
+        left = cellRight - container.clientWidth;
+      }
+
+      container.scrollLeft = left;
+      container.scrollTop = top;
+    },
+    [rowHeight],
+  );
+
+  const scrollCellIntoView = React.useCallback(
+    (rowIndex: number, colIndex: number) => {
+      if (analysisModeRef.current) {
+        scrollAnalysisCellIntoView(rowIndex, colIndex);
+        return;
+      }
+
+      scrollDefaultCellIntoView(rowIndex, colIndex);
+    },
+    [scrollAnalysisCellIntoView, scrollDefaultCellIntoView],
+  );
+
   const onSaveCell = React.useCallback(
     (
       indexRow: number,
@@ -429,15 +521,23 @@ function Table<Row = any>(props: ITableProps<Row>) {
     refScrollContainer.current?.focus();
   }, []);
 
-  const handleDoubleClickCell = React.useCallback((rowColumnKey: string) => {
-    const [, attribute] = rowColumnKey.split(':');
-    const column = columnsRef.current.find((item) => String(item.attribute) === attribute);
+  const handleDoubleClickCell = React.useCallback(
+    (rowColumnKey: string) => {
+      const [keyRow, attribute] = rowColumnKey.split(':');
+      const columnIndex = columnsRef.current.findIndex(
+        (item) => String(item.attribute) === attribute,
+      );
+      const row = serializedRowsRef.current.find((item) => String(item.__key_row) === keyRow);
+      const column = columnsRef.current[columnIndex];
 
-    if (!column?.editable) return;
+      if (!row || !column?.editable) return;
 
-    setCellEditInitialValue(undefined);
-    setCellEditingKey(rowColumnKey);
-  }, []);
+      scrollCellIntoView(row.__index_row, columnIndex);
+      setCellEditInitialValue(undefined);
+      setCellEditingKey(rowColumnKey);
+    },
+    [scrollCellIntoView],
+  );
 
   const notifySelectedCell = React.useCallback(
     (rowIndex: number, colIndex: number) => {
@@ -885,6 +985,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
         if (!row || !column?.editable) return;
 
+        scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
         setCellEditInitialValue(undefined);
         setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
@@ -910,6 +1011,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         if (!row || !column?.editable) return;
 
         ev.preventDefault();
+        scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
         setCellEditInitialValue(ev.key);
         setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
       }
@@ -955,7 +1057,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [analysisMode, enterAnalysisMode]);
+  }, [analysisMode, enterAnalysisMode, scrollCellIntoView]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
