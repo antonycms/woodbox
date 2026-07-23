@@ -38,7 +38,9 @@ import {
 } from '@renderer/contexts/Store';
 import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useToast } from '@renderer/contexts/Toast';
+import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
 import {
+  generateDeleteDdl,
   generateInsertDdl,
   generateUpdateDdl,
 } from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
@@ -116,17 +118,19 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [editedFieldsRows, setEditedFieldsRows] = React.useState(
     new Map<number, Record<string, any>>(),
   );
+  const [droppedRows, setDroppedRows] = React.useState<Map<React.Key, Record<string, any>>>(
+    new Map(),
+  );
   const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
+  const [ddlSql, setDdlSql] = React.useState('');
+  const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [now, setNow] = React.useState(Date.now());
   const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
   const [rowsCount, setRowsCount] = React.useState<number>();
 
-  const editableTable = readOnly
-    ? undefined
-    : data.tables_info?.length !== 1
-    ? undefined
-    : data.tables_info[0];
+  const singleResultTable = data.tables_info?.length === 1 ? data.tables_info[0] : undefined;
+  const editableTable = readOnly ? undefined : singleResultTable;
 
   const executionTimeMs = React.useMemo(() => {
     if (data.loading && data.date_run) {
@@ -374,6 +378,18 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const rowsWithPendingStyles = React.useMemo(
     () =>
       data.rows.map((row, index) => {
+        if (droppedRows.has(index)) {
+          return {
+            ...row,
+            __pendingAction: 'drop',
+            __style: {
+              ...(row as any).__style,
+              backgroundColor: activeTheme.__colors.redTransparent,
+              textDecoration: 'line-through',
+            },
+          };
+        }
+
         if (!editedFieldsRows.has(index)) return row;
 
         return {
@@ -384,7 +400,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           },
         };
       }),
-    [activeTheme.__colors.orangeTransparent, data.rows, editedFieldsRows],
+    [
+      activeTheme.__colors.orangeTransparent,
+      activeTheme.__colors.redTransparent,
+      data.rows,
+      droppedRows,
+      editedFieldsRows,
+    ],
   );
 
   const handleEditRow = React.useCallback(
@@ -484,8 +506,11 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const handleSave = React.useCallback(async () => {
     const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
+    const rowsToDelete = [...droppedRows.values()];
 
-    if ((!rowsToInsert.length && !editedFieldsRows.size) || saving) return;
+    if ((!rowsToInsert.length && !editedFieldsRows.size && !rowsToDelete.length) || saving) {
+      return;
+    }
 
     if (!editableTable?.name) {
       showToast({
@@ -500,9 +525,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setSaving(true);
 
     try {
+      let deleteSql = '';
       let updateSql = '';
 
-      if (editedFieldsRows.size) {
+      if (editedFieldsRows.size || rowsToDelete.length) {
         const primaryKeyColumns = await getPrimaryKeyColumns();
 
         if (!primaryKeyColumns.length) {
@@ -529,18 +555,33 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           return;
         }
 
-        const rowsToUpdate = [...editedFieldsRows.entries()].map(([index, changes]) => ({
-          originalRow: data.rows[index],
-          changes,
-        }));
+        if (rowsToDelete.length) {
+          deleteSql = generateDeleteDdl(
+            dialect,
+            editableTable.schema,
+            editableTable.name,
+            rowsToDelete,
+            primaryKeyColumns,
+          );
+        }
 
-        updateSql = generateUpdateDdl(
-          dialect,
-          editableTable.schema,
-          editableTable.name,
-          rowsToUpdate,
-          primaryKeyColumns,
-        );
+        if (editedFieldsRows.size) {
+          const rowsToUpdate = [...editedFieldsRows.entries()]
+            .map(([index, changes]) => ({
+              originalRow: data.rows[index],
+              changes,
+              rowKey: index,
+            }))
+            .filter((row) => !droppedRows.has(row.rowKey));
+
+          updateSql = generateUpdateDdl(
+            dialect,
+            editableTable.schema,
+            editableTable.name,
+            rowsToUpdate,
+            primaryKeyColumns,
+          );
+        }
       }
 
       const insertSql = generateInsertDdl(
@@ -550,7 +591,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         rowsToInsert,
         data.columns,
       );
-      const sql = [insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
+      const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
 
       if (!sql) return;
 
@@ -558,6 +599,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
       setNewRows(new Map());
       setEditedFieldsRows(new Map());
+      setDroppedRows(new Map());
       showToast({ type: 'success', title: t('toast.dataSaved') });
       onRefresh();
     } catch (error) {
@@ -573,6 +615,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   }, [
     data.rows,
     data.columns,
+    droppedRows,
     editedFieldsRows,
     editableTable,
     getPrimaryKeyColumns,
@@ -609,6 +652,81 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     });
   }, [selectedRows]);
 
+  const handleSetSelectedCellsNull = React.useCallback(() => {
+    const cells = contextMenuTable?.data?.selectedCells || [];
+
+    cells.forEach(({ row, column, rowIndex }) => {
+      if (!column.editable) return;
+
+      const rowData = row as any;
+      const attribute = String(column.attribute);
+
+      if (rowData.__is_new_row) {
+        handleEditNewRow(rowData.__key_row, attribute, null);
+        return;
+      }
+
+      handleEditRow(rowData.__row_index ?? rowIndex, attribute, null);
+    });
+
+    setContextMenuTable(undefined);
+  }, [contextMenuTable, handleEditNewRow, handleEditRow]);
+
+  const handleUndoSelectedDroppedRows = React.useCallback(() => {
+    if (!selectedRows.length) return;
+
+    setDroppedRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+  }, [selectedRows]);
+
+  const handleRemoveSelectedRows = React.useCallback(() => {
+    if (!editableTable) return;
+
+    if (!selectedRows.length) {
+      showToast({ type: 'warn', title: t('toast.selectRowsRemove') });
+      return;
+    }
+
+    setNewRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        if (row.__is_new_row) nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+
+    setDroppedRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        if (!row.__is_new_row) nextState.set(row.__key_row, row);
+      });
+
+      return nextState;
+    });
+
+    setEditedFieldsRows((prevState) => {
+      const nextState = new Map(prevState);
+
+      selectedRows.forEach((row) => {
+        nextState.delete(row.__key_row);
+      });
+
+      return nextState;
+    });
+
+    setContextMenuTable(undefined);
+  }, [editableTable, selectedRows, showToast, t]);
+
   const handleAddRow = React.useCallback(() => {
     setNewRows((prevState) => new Map(prevState).set(`new_${generateHash()}`, {}));
   }, []);
@@ -626,12 +744,25 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
       if (isEditableTarget || target?.isContentEditable) return;
 
+      if (event.key === 'Delete' && editableTable) {
+        event.preventDefault();
+        handleRemoveSelectedRows();
+        return;
+      }
+
       if (event.key === 'Escape') {
         event.preventDefault();
         handleCancelSelectedRowsEditions();
+        handleUndoSelectedDroppedRows();
       }
     },
-    [handleCancelSelectedRowsEditions, handleSave],
+    [
+      editableTable,
+      handleCancelSelectedRowsEditions,
+      handleRemoveSelectedRows,
+      handleSave,
+      handleUndoSelectedDroppedRows,
+    ],
   );
 
   React.useEffect(() => {
@@ -723,6 +854,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   React.useEffect(() => {
     setEditedFieldsRows(new Map());
+    setDroppedRows(new Map());
     setNewRows(new Map());
     setSelectedRows([]);
   }, [data.rows, data.columns, data.query]);
@@ -1006,6 +1138,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         </Text>
       </Bar>
 
+      <ModalGenerateDDL
+        show={showDdlModal}
+        sql={ddlSql}
+        dialect={dialect}
+        onClose={() => setShowDdlModal(false)}
+      />
+
       <ContextMenu
         position={contextMenuTable?.position}
         onClose={() => setContextMenuTable(undefined)}
@@ -1021,6 +1160,53 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           {
             text: t('context.copyRowJson'),
             onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+          },
+          {
+            text: t('context.setSelectedCellsNull'),
+            onClick: handleSetSelectedCellsNull,
+            show: () =>
+              !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+          },
+          {
+            text: t('context.deleteSelectedItems'),
+            onClick: handleRemoveSelectedRows,
+            show: () => !!editableTable,
+          },
+          {
+            text: t('context.insertDdlRow'),
+            onClick: () => {
+              if (!singleResultTable) return;
+
+              setDdlSql(
+                generateInsertDdl(
+                  dialect,
+                  singleResultTable.schema,
+                  singleResultTable.name,
+                  contextMenuTable?.data?.rows || [],
+                  data.columns,
+                ),
+              );
+              setShowDdlModal(true);
+            },
+            show: () => !!singleResultTable,
+          },
+          {
+            text: t('context.insertDdlSelectedCells'),
+            onClick: () => {
+              if (!singleResultTable) return;
+
+              setDdlSql(
+                generateInsertDdl(
+                  dialect,
+                  singleResultTable.schema,
+                  singleResultTable.name,
+                  contextMenuTable?.data?.selectedCellRows || [],
+                  data.columns,
+                ),
+              );
+              setShowDdlModal(true);
+            },
+            show: () => !!singleResultTable,
           },
         ]}
       />
