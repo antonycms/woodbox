@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
-import { languages } from 'monaco-editor';
+import { languages } from './monaco';
 import { language as sqlLanguage } from 'monaco-editor/languages/definitions/sql/sql';
 
 const sqlLanguageWithTs: ILanguage = sqlLanguage;

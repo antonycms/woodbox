@@ -1,5 +1,5 @@
 import React from 'react';
-import * as monaco from 'monaco-editor';
+import * as monaco from './monaco';
 
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';

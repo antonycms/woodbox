@@ -1,4 +1,4 @@
-import { editor } from 'monaco-editor';
+import { editor } from '@renderer/components/Editor/monaco';
 import type { ITheme } from './theme';
 import defaultTheme from './default';
 
