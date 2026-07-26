@@ -50,7 +50,7 @@ const ModalNewIndex = ({
         '--index-order-background-color': colors.fieldBackgroundColor,
         '--index-order-active-color': colors.saveButtonColor,
         '--index-order-active-background-color': colors.saveButtonBackgroundColor,
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [
       colors.fieldColor,
       colors.fieldBackgroundColor,

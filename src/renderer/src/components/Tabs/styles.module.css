@@ -119,7 +119,7 @@
 }
 
 .tab.active::after {
-  content: '';
+  content: "";
   position: absolute;
   height: 1px;
   width: 100%;
@@ -128,7 +128,7 @@
   background-color: var(--ascentColor);
 }
 .tab.vertical.active::before {
-  content: '';
+  content: "";
   position: absolute;
   height: 1px;
   width: 100%;
@@ -196,7 +196,7 @@
 
 .tabCloseBtn.unsaved::after {
   z-index: 2;
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   top: 50%;

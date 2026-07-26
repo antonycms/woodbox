@@ -143,8 +143,8 @@ const mysqlDdl: RendererDialectDdl = {
     const nullSql = column.is_auto_increment
       ? ' NOT NULL'
       : column.is_nullable
-      ? ' NULL'
-      : ' NOT NULL';
+        ? ' NULL'
+        : ' NOT NULL';
     const autoIncrementSql = column.is_auto_increment ? ' AUTO_INCREMENT' : '';
     const defaultSql = column.is_auto_increment
       ? ''

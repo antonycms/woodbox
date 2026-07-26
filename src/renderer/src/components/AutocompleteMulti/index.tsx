@@ -177,7 +177,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
         '--autocomplete-active-background-color': __colors.darkLightDeep,
         '--autocomplete-border-color': __colors.lightGray,
         '--autocomplete-shadow-color': __colors.shadow,
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [
       __colors.darkLight,
       __colors.darkLightDeep,

@@ -1062,8 +1062,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
                   return value === undefined
                     ? ''
                     : typeof value === 'object'
-                    ? JSON.stringify(value)
-                    : String(value);
+                      ? JSON.stringify(value)
+                      : String(value);
                 })
                 .join(', ');
             });

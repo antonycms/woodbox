@@ -18,7 +18,7 @@ export function useForm<Data = unknown>(initialValue = {} as Data) {
       throw new Error('Error on change event in [useForm], "name" is required.');
     }
 
-    const v = type === 'checkbox' ? !!checked : value ?? null;
+    const v = type === 'checkbox' ? !!checked : (value ?? null);
 
     setState((prevState) => setObjectProperty(prevState as any, name, v, true));
   }, []);

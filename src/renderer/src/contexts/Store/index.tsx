@@ -39,11 +39,14 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const [scripts, setScripts] = React.useState<IScript[]>([]);
 
   const connectionsGroupPerProject = React.useMemo<IConnectionsGroupPerProject[]>(() => {
-    const groupedConnections = connections.reduce((acm, connection) => {
-      const group = acm[connection.id_project] || [];
+    const groupedConnections = connections.reduce(
+      (acm, connection) => {
+        const group = acm[connection.id_project] || [];
 
-      return { ...acm, [connection.id_project]: [...group, connection] };
-    }, {} as { [key: string]: IConnection[] });
+        return { ...acm, [connection.id_project]: [...group, connection] };
+      },
+      {} as { [key: string]: IConnection[] },
+    );
 
     const projectsWithConnections = projects.map((project) => ({
       ...project,

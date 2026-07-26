@@ -1,5 +1,5 @@
 .isRequired .label::after {
-  content: '*';
+  content: "*";
   margin-left: 1px;
   color: var(--file-picker-required-color);
   font-size: 14px;

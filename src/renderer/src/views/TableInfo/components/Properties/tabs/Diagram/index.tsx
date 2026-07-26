@@ -196,40 +196,52 @@ const Diagram = ({
     };
 
     // Group outgoing FKs (current → other) by constraint name
-    const outgoingMap = references.reduce((acc, ref) => {
-      const key = ref.constraint_name;
-      const target = ref.reference_table_schema
-        ? `${ref.reference_table_schema}.${ref.reference_table_name}`
-        : ref.reference_table_name;
-      if (!acc[key]) acc[key] = { constraint_name: key, target, columns: [] };
-      acc[key].columns.push(`${ref.column_name} → ${ref.reference_column_name}`);
-      return acc;
-    }, {} as Record<string, { constraint_name: string; target: string; columns: string[] }>);
+    const outgoingMap = references.reduce(
+      (acc, ref) => {
+        const key = ref.constraint_name;
+        const target = ref.reference_table_schema
+          ? `${ref.reference_table_schema}.${ref.reference_table_name}`
+          : ref.reference_table_name;
+        if (!acc[key]) acc[key] = { constraint_name: key, target, columns: [] };
+        acc[key].columns.push(`${ref.column_name} → ${ref.reference_column_name}`);
+        return acc;
+      },
+      {} as Record<string, { constraint_name: string; target: string; columns: string[] }>,
+    );
 
     // Group incoming FKs (other → current) by constraint name
-    const incomingMap = usedAsReference.reduce((acc, ref) => {
-      const key = ref.constraint_name;
-      const source = ref.table_schema ? `${ref.table_schema}.${ref.table_name}` : ref.table_name;
-      if (!acc[key]) acc[key] = { constraint_name: key, source, columns: [] };
-      acc[key].columns.push(`${ref.column_name} → ${ref.reference_column_name}`);
-      return acc;
-    }, {} as Record<string, { constraint_name: string; source: string; columns: string[] }>);
+    const incomingMap = usedAsReference.reduce(
+      (acc, ref) => {
+        const key = ref.constraint_name;
+        const source = ref.table_schema ? `${ref.table_schema}.${ref.table_name}` : ref.table_name;
+        if (!acc[key]) acc[key] = { constraint_name: key, source, columns: [] };
+        acc[key].columns.push(`${ref.column_name} → ${ref.reference_column_name}`);
+        return acc;
+      },
+      {} as Record<string, { constraint_name: string; source: string; columns: string[] }>,
+    );
 
     const outgoing = Object.values(outgoingMap);
     const incoming = Object.values(incomingMap);
 
     // Group all FK columns by table (a table may have multiple FK constraints)
-    const targetColumnsMap = outgoing.reduce((acc, fk) => {
-      if (!acc[fk.target]) acc[fk.target] = [];
-      acc[fk.target].push(...fk.columns);
-      return acc;
-    }, {} as Record<string, string[]>);
+    const targetColumnsMap = outgoing.reduce(
+      (acc, fk) => {
+        if (!acc[fk.target]) acc[fk.target] = [];
+        acc[fk.target].push(...fk.columns);
+        return acc;
+      },
+      {} as Record<string, string[]>,
+    );
 
-    const sourceColumnsMap = incoming.reduce((acc, fk) => {
-      if (!acc[fk.source]) acc[fk.source] = [];
-      acc[fk.source].push(...fk.columns);
-      return acc;
-    }, {} as Record<string, string[]>);
+    const sourceColumnsMap = incoming.reduce(
+      (acc, fk) => {
+        if (!acc[fk.source]) acc[fk.source] = [];
+        acc[fk.source].push(...fk.columns);
+        return acc;
+      },
+      {} as Record<string, string[]>,
+    );
 
     const uniqueTargets = [...new Set(outgoing.map((f) => f.target))];
     const uniqueSources = [...new Set(incoming.map((f) => f.source))];

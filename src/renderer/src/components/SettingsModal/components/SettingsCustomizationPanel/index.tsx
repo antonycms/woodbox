@@ -217,7 +217,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
     () =>
       ({
         '--settings-option-hover-background-color': __colors.darkLightDeep,
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [__colors.darkLightDeep],
   );
 

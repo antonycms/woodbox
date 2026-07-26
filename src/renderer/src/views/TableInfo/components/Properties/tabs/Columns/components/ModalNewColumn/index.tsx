@@ -230,8 +230,8 @@ const ModalNewColumn = ({
         constraintType: data.is_primary_key
           ? 'primary_key'
           : data.is_unique
-          ? 'unique_key'
-          : undefined,
+            ? 'unique_key'
+            : undefined,
         reference,
         index,
       });

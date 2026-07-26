@@ -236,8 +236,8 @@ const TableAnalysisView = ({
                 cellLinkClickMode === 'single'
                   ? t('tooltip.clickOpenReferencedRow')
                   : onCellLinkPreviewClick
-                  ? t('tooltip.previewOrOpenReferencedRow', { shortcut: shortcutKey })
-                  : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: shortcutKey });
+                    ? t('tooltip.previewOrOpenReferencedRow', { shortcut: shortcutKey })
+                    : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: shortcutKey });
 
               if (isEditing) {
                 return (

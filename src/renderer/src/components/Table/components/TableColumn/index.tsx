@@ -89,8 +89,8 @@ const TableColumn = ({
     linkClickMode === 'single'
       ? 'Clique para abrir linha referenciada'
       : onFkCellPreviewClick
-      ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
-      : `${shortcutKey}+click para abrir linha referenciada`;
+        ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
+        : `${shortcutKey}+click para abrir linha referenciada`;
 
   const className = (() => {
     return classes(

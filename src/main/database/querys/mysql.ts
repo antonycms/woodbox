@@ -61,8 +61,8 @@ const getTableReferences = ({ table }: ITableWithSchema) => /* sql */ `
     CONCAT(
       'FOREIGN KEY (', ${sqlQuoteIdent('kcu.column_name')}, ') REFERENCES ',
       ${sqlQuoteIdent('kcu.referenced_table_name')}, ' (', ${sqlQuoteIdent(
-  'kcu.referenced_column_name',
-)}, ')'
+        'kcu.referenced_column_name',
+      )}, ')'
     ) AS constraint_definition,
     kcu.ORDINAL_POSITION AS constraint_order,
     NULL AS comment,

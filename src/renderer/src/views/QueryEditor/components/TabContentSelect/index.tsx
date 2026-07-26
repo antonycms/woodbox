@@ -153,8 +153,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const captureButtonColor = data.capture?.active
     ? activeTheme.__colors.red
     : hasCapturedRows
-    ? activeTheme.__colors.orange
-    : activeTheme.queryEditor.bar.color;
+      ? activeTheme.__colors.orange
+      : activeTheme.queryEditor.bar.color;
 
   const stringifyCaptureValue = (value: unknown) =>
     JSON.stringify(value, (_, item) => (typeof item === 'bigint' ? String(item) : item));

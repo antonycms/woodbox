@@ -70,7 +70,7 @@
   cursor: pointer;
 }
 
-.orderButton[data-active='true'] {
+.orderButton[data-active="true"] {
   color: var(--index-order-active-color);
   background-color: var(--index-order-active-background-color);
 }

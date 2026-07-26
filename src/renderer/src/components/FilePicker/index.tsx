@@ -44,7 +44,7 @@ export const FilePicker = (props: IFilePickerProps) => {
     () =>
       ({
         '--file-picker-required-color': __colors.red,
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [__colors.red],
   );
 
@@ -56,7 +56,7 @@ export const FilePicker = (props: IFilePickerProps) => {
         '--file-picker-border-color': __colors.lightGray,
         '--file-picker-muted-color': placeholderColor || __colors.gray,
         ...(style || {}),
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [__colors.gray, __colors.lightGray, backgroundColor, color, placeholderColor, style],
   );
 

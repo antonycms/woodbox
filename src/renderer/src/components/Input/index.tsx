@@ -58,7 +58,7 @@ export const Input = (props: IInputProps) => {
     () =>
       ({
         '--input-required-color': __colors.red,
-      } as React.CSSProperties),
+      }) as React.CSSProperties,
     [__colors.red],
   );
 

@@ -7,7 +7,7 @@
 }
 
 .isRequired label::after {
-  content: '*';
+  content: "*";
   margin-left: 1px;
   color: var(--input-required-color);
   font-size: 14px;
@@ -26,7 +26,7 @@
   color: var(--placeholderColor);
 }
 
-.input[type='color'] {
+.input[type="color"] {
   padding: 2px 4px;
 }
 

@@ -88,7 +88,7 @@
   height: 7px;
   border-right: 1px solid var(--theme-muted-color);
   border-bottom: 1px solid var(--theme-muted-color);
-  content: '';
+  content: "";
   transform: translateY(-50%) rotate(-45deg);
   transition: transform 160ms ease;
 }

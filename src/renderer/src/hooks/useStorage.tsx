@@ -7,7 +7,7 @@ export default function useStorage<T = unknown>(key: string, initialValue: T, op
     try {
       const storagedValue = storage.getItem(key);
       return storagedValue ? JSON.parse(storagedValue) : initialValue;
-    } catch (error) {
+    } catch (_error) {
       return initialValue;
     }
   });

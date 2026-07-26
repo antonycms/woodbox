@@ -56,8 +56,8 @@ const getTableReferences = ({ table }: ITableWithSchema) => /* sql */ `
     "table" AS reference_table_name,
     "to" AS reference_column_name,
     'FOREIGN KEY (' || ${sqlQuoteIdent('"from"')} || ') REFERENCES ' || ${sqlQuoteIdent(
-  '"table"',
-)} || ' (' || ${sqlQuoteIdent('"to"')} || ')' AS constraint_definition,
+      '"table"',
+    )} || ' (' || ${sqlQuoteIdent('"to"')} || ')' AS constraint_definition,
     seq AS constraint_order,
     NULL AS comment,
     on_delete AS remove_rule,
