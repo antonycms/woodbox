@@ -1,7 +1,7 @@
 /* eslint-disable prefer-const */
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
 import { languages } from 'monaco-editor';
-import { language as sqlLanguage } from 'monaco-editor/esm/vs/basic-languages/sql/sql';
+import { language as sqlLanguage } from 'monaco-editor/languages/definitions/sql/sql';
 
 const sqlLanguageWithTs: ILanguage = sqlLanguage;
 
@@ -199,32 +199,9 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
 };
 
 interface ILanguage {
-  defaultToken: string;
-  tokenPostfix: string;
-  ignoreCase: boolean;
   keywords: string[];
   operators: string[];
   builtinFunctions: string[];
-  pseudoColumns: string[];
-  brackets: {
-    open: string;
-    close: string;
-    token: string;
-  }[];
-  tokenizer: {
-    root: any;
-    whitespace: any;
-    comments: any;
-    comment: any;
-    pseudoColumns: any;
-    numbers: any;
-    strings: any;
-    string: any;
-    complexIdentifiers: any;
-    bracketedIdentifier: any;
-    quotedIdentifier: any;
-    scopes: any;
-  };
 }
 
 interface IItem {

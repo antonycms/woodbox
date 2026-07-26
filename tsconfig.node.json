@@ -4,9 +4,8 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "composite": true,
-    "baseUrl": ".",
     "paths": {
-      "@main/*": ["src/main/*"]
+      "@main/*": ["./src/main/*"]
     }
   }
 }
