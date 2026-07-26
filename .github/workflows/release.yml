@@ -49,10 +49,10 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run ${{ matrix.platform.script }}
+        run: pnpm run ${{ matrix.platform.script }}
 
       - name: Upload release assets
         if: startsWith(github.ref, 'refs/tags/')

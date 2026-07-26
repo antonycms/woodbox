@@ -47,36 +47,36 @@ Woodbox is a desktop application for managing database connections and executing
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18+
-- npm or yarn
+- pnpm
 
 ### Installation
 
 ```bash
 git clone https://github.com/antonycms/pg-manager-react-novo.git
 cd pg-manager-react-novo
-npm install
+pnpm install
 ```
 
 ### Running
 
 ```bash
 # Development (with hot reload)
-npm run dev
+pnpm run dev
 
 # Preview production build
-npm start
+pnpm start
 ```
 
 ### Building
 
 ```bash
 # Build for current platform
-npm run build
+pnpm run build
 
 # Platform-specific builds
-npm run build:win    # Windows
-npm run build:mac    # macOS
-npm run build:linux  # Linux
+pnpm run build:win    # Windows
+pnpm run build:mac    # macOS
+pnpm run build:linux  # Linux
 ```
 
 ## Project Structure
@@ -100,11 +100,11 @@ src/
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start in development mode |
-| `npm run build` | Build with TypeScript checks |
-| `npm run typecheck` | Run TypeScript type checks |
-| `npm run lint` | Lint and auto-fix with ESLint |
-| `npm run format` | Format code with Prettier |
+| `pnpm run dev` | Start in development mode |
+| `pnpm run build` | Build with TypeScript checks |
+| `pnpm run typecheck` | Run TypeScript type checks |
+| `pnpm run lint` | Lint and auto-fix with Biome |
+| `pnpm run format` | Format code with Biome |
 
 ## License
 
