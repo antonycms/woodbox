@@ -7,6 +7,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { closeAllConnections } from '@main/database';
 import { getWindowState, saveWindowState } from '@main/storage/store';
 
+// fix Wayland color bug
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1');
+}
+
 function createWindow() {
   const savedState = getWindowState();
 
