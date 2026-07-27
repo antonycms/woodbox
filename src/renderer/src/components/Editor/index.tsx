@@ -142,7 +142,7 @@ const Editor = ({
       },
       {
         contextMenuService: {
-          showContextMenu: (b) => console.log(b),
+          showContextMenu: () => undefined,
         },
       },
     );
@@ -218,6 +218,7 @@ const Editor = ({
   );
 
   React.useEffect(() => {
+    // Inicializa uma vez por montagem; mudanças de props são sincronizadas nos efeitos abaixo.
     let currentEditor: monaco.editor.IStandaloneCodeEditor;
 
     // fix startup freeze
@@ -306,7 +307,10 @@ const Editor = ({
   React.useEffect(() => {
     if (!editor) return;
 
-    const disposable = defineSQlAutocomplete(props.autocomplete);
+    const model = editor.getModel();
+    if (!model) return;
+
+    const disposable = defineSQlAutocomplete(model, props.autocomplete);
 
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);

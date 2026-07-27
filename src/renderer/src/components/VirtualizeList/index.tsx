@@ -43,60 +43,71 @@ export const VirtualizeList = (props: IVirtualizeListProps) => {
   const [containerSize, setContainerSize] = useStateWithDebounce(0);
   const viewScrollEnd = scrollTop + containerSize;
 
-  let size = 0;
-  let totalHeight = childrenSticky ? childrenStickySize : 0;
-
   const childrens = [];
-
+  const stickyOffset = childrenSticky ? childrenStickySize : 0;
+  let totalHeight = stickyOffset;
   let indexStart = -1;
   let indexEnd = -1;
 
-  for (let index = 0; index < itemCount; index++) {
-    const position = totalHeight;
+  const renderChildren = (index: number, position: number) => {
+    childrens.push(
+      <div
+        key={index}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          transform:
+            direction === 'horizontal' ? `translateX(${position}px)` : `translateY(${position}px)`,
+          willChange: 'transform',
+          overflow: 'hidden',
+          width: direction === 'vertical' ? '100%' : 'auto',
+          height: direction === 'horizontal' ? '100%' : 'auto',
+        }}
+      >
+        {props.children({ index })}
+      </div>,
+    );
+  };
 
-    size = itemSize instanceof Function ? itemSize(index) : itemSize;
+  if (typeof itemSize === 'number' && itemSize > 0) {
+    totalHeight = stickyOffset + itemCount * itemSize;
+    indexStart = Math.max(0, Math.floor((scrollTop - stickyOffset) / itemSize) - 1);
+    indexEnd = Math.min(itemCount - 1, Math.ceil((viewScrollEnd - stickyOffset) / itemSize));
 
-    totalHeight += size;
-
-    if (indexStart === -1 && totalHeight >= scrollTop) {
-      const prevIndex = index - 1;
-      indexStart = prevIndex >= 0 ? prevIndex : index;
+    for (let index = indexStart; index <= indexEnd; index++) {
+      renderChildren(index, stickyOffset + index * itemSize);
     }
+  } else {
+    for (let index = 0; index < itemCount; index++) {
+      const position = totalHeight;
+      const size = itemSize instanceof Function ? itemSize(index) : itemSize;
 
-    if (indexStart !== -1 && totalHeight <= viewScrollEnd) {
-      const nextIndex = index + 1;
-      indexEnd = nextIndex >= itemCount ? index : nextIndex;
-    }
+      totalHeight += size;
 
-    if (index >= indexStart && index <= indexEnd) {
-      childrens.push(
-        <div
-          key={index}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            transform:
-              direction === 'horizontal'
-                ? `translateX(${position}px)`
-                : `translateY(${position}px)`,
-            willChange: 'transform',
-            overflow: 'hidden',
-            width: direction === 'vertical' ? '100%' : 'auto',
-            height: direction === 'horizontal' ? '100%' : 'auto',
-          }}
-        >
-          {props.children({ index })}
-        </div>,
-      );
+      if (indexStart === -1 && totalHeight >= scrollTop) {
+        const prevIndex = index - 1;
+        indexStart = prevIndex >= 0 ? prevIndex : index;
+      }
+
+      if (indexStart !== -1 && totalHeight <= viewScrollEnd) {
+        const nextIndex = index + 1;
+        indexEnd = nextIndex >= itemCount ? index : nextIndex;
+      }
+
+      if (index >= indexStart && index <= indexEnd) {
+        renderChildren(index, position);
+      }
     }
   }
 
-  const handleScroll = (event: any) => {
-    setScrollTop(event.target.scrollTop);
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop);
     onScroll?.(event);
 
-    const isEnd = event.target.scrollTop + event.target.clientHeight === event.target.scrollHeight;
+    const isEnd =
+      event.currentTarget.scrollTop + event.currentTarget.clientHeight >=
+      event.currentTarget.scrollHeight - 1;
 
     if (isEnd) onEndReached?.();
   };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks/useDropdownOutsideClick';
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { IGridSystem } from '@renderer/components/Grid';
@@ -190,21 +191,11 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   );
 
   // Clique fora para fechar
-  React.useEffect(() => {
-    const onClickOutside = (e: Event) => {
-      const container = document.getElementById(idContainer);
-
-      if (container && !container.contains(e.target as Node)) closeDropdown(true);
-    };
-
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('focusin', onClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('focusin', onClickOutside);
-    };
-  }, []);
+  useDropdownOutsideClick({
+    idContainer,
+    isOpen: isDropdownOpen,
+    onClose: () => closeDropdown(true),
+  });
 
   // Scrolla para o item selecionado ao abrir o dropdown
   React.useEffect(() => {

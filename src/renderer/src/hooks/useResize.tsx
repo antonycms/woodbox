@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import useStateWithDebounce from './useStateWithDebounce';
 
 interface IUseResize {
@@ -11,16 +11,22 @@ const useResize = (options: IUseResize = {}) => {
   const { ignoreZeroValue } = options;
   const [elementWidth, setElementWidth] = useStateWithDebounce(0);
   const [elementHeight, setElementHeight] = useStateWithDebounce(0);
+  const sizeRef = useRef({ width: 0, height: 0 });
 
-  const setSize = (width: number, height: number) => {
-    if (((ignoreZeroValue && width) || !ignoreZeroValue) && width !== elementWidth) {
-      setElementWidth(width);
-    }
+  const setSize = useCallback(
+    (width: number, height: number) => {
+      if (((ignoreZeroValue && width) || !ignoreZeroValue) && width !== sizeRef.current.width) {
+        sizeRef.current.width = width;
+        setElementWidth(width);
+      }
 
-    if (((ignoreZeroValue && height) || !ignoreZeroValue) && height !== elementHeight) {
-      setElementHeight(height);
-    }
-  };
+      if (((ignoreZeroValue && height) || !ignoreZeroValue) && height !== sizeRef.current.height) {
+        sizeRef.current.height = height;
+        setElementHeight(height);
+      }
+    },
+    [ignoreZeroValue, setElementHeight, setElementWidth],
+  );
 
   useEffect(() => {
     const properties = Object.getOwnPropertyNames(options);
@@ -52,7 +58,7 @@ const useResize = (options: IUseResize = {}) => {
     window.addEventListener('resize', handle);
 
     return () => window.removeEventListener('resize', handle);
-  }, [options?.HTMLElement, options?.idHTMLElement]);
+  }, [options?.HTMLElement, options?.idHTMLElement, setSize]);
 
   return { height: elementHeight, width: elementWidth };
 };

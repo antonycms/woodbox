@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 
 type DebouncedFunction = (...args: unknown[]) => unknown;
 
@@ -24,6 +24,14 @@ function useDebounce<Fn extends DebouncedFunction>(fn: Fn, delay?: number): Fn {
     debounceRef.current.timeout = setTimeout(() => {
       debounceRef.current.fn?.(...args);
     }, debounceRef.current.delay);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current.timeout) {
+        clearTimeout(debounceRef.current.timeout);
+      }
+    };
   }, []);
 
   return debounceFn as Fn;

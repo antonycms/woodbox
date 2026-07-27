@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
-import { languages } from './monaco';
+import { editor, languages } from './monaco';
 import { language as sqlLanguage } from 'monaco-editor/languages/definitions/sql/sql';
 
 const sqlLanguageWithTs: ILanguage = sqlLanguage;
@@ -38,15 +38,20 @@ export interface IDefineSQlAutocompleteParams {
 }
 
 const triggerCharacters = [' ', '.'];
+const autocompleteParamsByModelUri = new Map<string, IDefineSQlAutocompleteParams>();
+let autocompleteProviderDisposable:
+  | ReturnType<typeof languages.registerCompletionItemProvider>
+  | undefined;
 
-export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {}) => {
-  const { schemas, columns = [], tablesAvailable = [], tablesUsed = [] } = params;
+const ensureSqlAutocompleteProvider = () => {
+  if (autocompleteProviderDisposable) return;
 
-  const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
-
-  return languages.registerCompletionItemProvider('sql', {
+  autocompleteProviderDisposable = languages.registerCompletionItemProvider('sql', {
     triggerCharacters,
     provideCompletionItems: (model, position) => {
+      const params = autocompleteParamsByModelUri.get(model.uri.toString()) || {};
+      const { schemas, columns = [], tablesAvailable = [], tablesUsed = [] } = params;
+      const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
       let availableWords: IItem[] = defaultSugestions;
 
       const value = model.getValueInRange({
@@ -196,6 +201,27 @@ export const defineSQlAutocomplete = (params: IDefineSQlAutocompleteParams = {})
       return { suggestions };
     },
   });
+};
+
+export const defineSQlAutocomplete = (
+  model: editor.ITextModel,
+  params: IDefineSQlAutocompleteParams = {},
+) => {
+  const modelUri = model.uri.toString();
+
+  autocompleteParamsByModelUri.set(modelUri, params);
+  ensureSqlAutocompleteProvider();
+
+  return {
+    dispose: () => {
+      autocompleteParamsByModelUri.delete(modelUri);
+
+      if (autocompleteParamsByModelUri.size) return;
+
+      autocompleteProviderDisposable?.dispose();
+      autocompleteProviderDisposable = undefined;
+    },
+  };
 };
 
 interface ILanguage {

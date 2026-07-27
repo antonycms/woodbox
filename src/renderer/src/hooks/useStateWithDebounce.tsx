@@ -6,7 +6,7 @@ function useStateWithDebounce<Type = unknown>(initialValue: Type, delay?: number
 
   const setDebounce = useDebounce<React.Dispatch<React.SetStateAction<Type>>>(setState, delay);
 
-  return [state, setDebounce] as const;
+  return [state, delay === undefined ? setState : setDebounce] as const;
 }
 
 export default useStateWithDebounce;

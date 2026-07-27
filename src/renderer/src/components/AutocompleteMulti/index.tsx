@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks/useDropdownOutsideClick';
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import { Input } from '@renderer/components/Input';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
@@ -198,21 +199,11 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
     [],
   );
 
-  React.useEffect(() => {
-    const onClickOutside = (e: Event) => {
-      const container = document.getElementById(idContainer);
-
-      if (container && !container.contains(e.target as Node)) closeDropdown();
-    };
-
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('focusin', onClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('focusin', onClickOutside);
-    };
-  }, []);
+  useDropdownOutsideClick({
+    idContainer,
+    isOpen: isDropdownOpen,
+    onClose: closeDropdown,
+  });
 
   React.useEffect(() => {
     if (!isDropdownOpen || activeIndex < 0 || !refScrollElement.current) return;
