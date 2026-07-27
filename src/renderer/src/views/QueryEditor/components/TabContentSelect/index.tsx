@@ -776,12 +776,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     }
   }, [activePreviewTab, canSelectReferenceValue, selectedReference]);
 
-  const onContextMenuTable = (
+  const onContextMenuTable = React.useCallback((
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData,
   ) => {
     setContextMenuTable({ data, position: { x: event.clientX, y: event.clientY } });
-  };
+  }, []);
 
   const openTableDataTabWithFilter = React.useCallback(
     (params: OpenTableWithFilterParams) => {
@@ -825,21 +825,24 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [addTab, getTab, setActiveTabId],
   );
 
-  const onCellLinkClick = (attribute: string, value: any) => {
-    const ref = tabFkMap.get(attribute);
+  const onCellLinkClick = React.useCallback(
+    (attribute: string, value: any) => {
+      const ref = tabFkMap.get(attribute);
 
-    if (!ref || value === null || value === undefined) return;
+      if (!ref || value === null || value === undefined) return;
 
-    const escapedValue = String(value).replace(/'/g, "''");
-    const initialWhere = `${dialect.quoteIdent(ref.reference_column_name)} = '${escapedValue}'`;
+      const escapedValue = String(value).replace(/'/g, "''");
+      const initialWhere = `${dialect.quoteIdent(ref.reference_column_name)} = '${escapedValue}'`;
 
-    openTableDataTabWithFilter({
-      idConnection: id_connection,
-      schema: ref.reference_table_schema,
-      table: ref.reference_table_name,
-      initialWhere,
-    });
-  };
+      openTableDataTabWithFilter({
+        idConnection: id_connection,
+        schema: ref.reference_table_schema,
+        table: ref.reference_table_name,
+        initialWhere,
+      });
+    },
+    [dialect, id_connection, openTableDataTabWithFilter, tabFkMap],
+  );
 
   const handleFkPreviewClick = React.useCallback(
     (attribute: string, value: any) => {
@@ -873,6 +876,88 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     return () => clearInterval(interval);
   }, [data.loading, data.date_run, data.queryExecutionId]);
 
+  const tableColumns = React.useMemo(() => {
+    return (data.columns || []).map((column) => ({
+      attribute: column,
+      label: column,
+      sortable: !readOnly,
+      editable: !!editableTable,
+      isLink: tabFkMap.has(column),
+    }));
+  }, [data.columns, editableTable, readOnly, tabFkMap]);
+
+  const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
+    return [
+      {
+        text: t('common.copy'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+      },
+      {
+        text: t('context.copyRow'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+      },
+      {
+        text: t('context.copyRowJson'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+      },
+      {
+        text: t('context.setSelectedCellsNull'),
+        onClick: handleSetSelectedCellsNull,
+        show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+      },
+      {
+        text: t('context.deleteSelectedItems'),
+        onClick: handleRemoveSelectedRows,
+        show: () => !!editableTable,
+      },
+      {
+        text: t('context.insertDdlRow'),
+        onClick: () => {
+          if (!singleResultTable) return;
+
+          setDdlSql(
+            generateInsertDdl(
+              dialect,
+              singleResultTable.schema,
+              singleResultTable.name,
+              contextMenuTable?.data?.rows || [],
+              data.columns,
+            ),
+          );
+          setShowDdlModal(true);
+        },
+        show: () => !!singleResultTable,
+      },
+      {
+        text: t('context.insertDdlSelectedCells'),
+        onClick: () => {
+          if (!singleResultTable) return;
+
+          setDdlSql(
+            generateInsertDdl(
+              dialect,
+              singleResultTable.schema,
+              singleResultTable.name,
+              contextMenuTable?.data?.selectedCellRows || [],
+              data.columns,
+            ),
+          );
+          setShowDdlModal(true);
+        },
+        show: () => !!singleResultTable,
+      },
+    ];
+  }, [
+    contextMenuTable,
+    data.columns,
+    dialect,
+    editableTable,
+    handleRemoveSelectedRows,
+    handleSetSelectedCellsNull,
+    singleResultTable,
+    t,
+  ]);
+
   return (
     <div
       className={styles.container}
@@ -900,13 +985,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             newRows={newRows}
             onEditNewRow={handleEditNewRow}
             onEditRow={handleEditRow}
-            columns={(data.columns || []).map((column) => ({
-              attribute: column,
-              label: column,
-              sortable: !readOnly,
-              editable: !!editableTable,
-              isLink: tabFkMap.has(column),
-            }))}
+            columns={tableColumns}
           />
         </div>
 
@@ -1148,67 +1227,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       <ContextMenu
         position={contextMenuTable?.position}
         onClose={() => setContextMenuTable(undefined)}
-        options={[
-          {
-            text: t('common.copy'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
-          },
-          {
-            text: t('context.copyRow'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
-          },
-          {
-            text: t('context.copyRowJson'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
-          },
-          {
-            text: t('context.setSelectedCellsNull'),
-            onClick: handleSetSelectedCellsNull,
-            show: () =>
-              !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
-          },
-          {
-            text: t('context.deleteSelectedItems'),
-            onClick: handleRemoveSelectedRows,
-            show: () => !!editableTable,
-          },
-          {
-            text: t('context.insertDdlRow'),
-            onClick: () => {
-              if (!singleResultTable) return;
-
-              setDdlSql(
-                generateInsertDdl(
-                  dialect,
-                  singleResultTable.schema,
-                  singleResultTable.name,
-                  contextMenuTable?.data?.rows || [],
-                  data.columns,
-                ),
-              );
-              setShowDdlModal(true);
-            },
-            show: () => !!singleResultTable,
-          },
-          {
-            text: t('context.insertDdlSelectedCells'),
-            onClick: () => {
-              if (!singleResultTable) return;
-
-              setDdlSql(
-                generateInsertDdl(
-                  dialect,
-                  singleResultTable.schema,
-                  singleResultTable.name,
-                  contextMenuTable?.data?.selectedCellRows || [],
-                  data.columns,
-                ),
-              );
-              setShowDdlModal(true);
-            },
-            show: () => !!singleResultTable,
-          },
-        ]}
+        options={contextMenuOptions}
       />
 
       <ContextMenu
