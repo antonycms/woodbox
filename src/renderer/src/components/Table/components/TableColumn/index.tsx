@@ -8,6 +8,11 @@ import styles from '../../styles.module.css';
 
 type TableCellEditValue = string | number | (string | number)[];
 
+const linkStyle: React.CSSProperties = {
+  textDecoration: 'underline dotted',
+  cursor: 'pointer',
+};
+
 interface ITableColumnProps {
   indexRow?: number;
   minWidth?: number;
@@ -92,7 +97,7 @@ const TableColumn = ({
         ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
         : `${shortcutKey}+click para abrir linha referenciada`;
 
-  const className = (() => {
+  const className = React.useMemo(() => {
     return classes(
       styles.table_column,
       indexRow % 2 ? styles.even : styles.odd,
@@ -101,14 +106,14 @@ const TableColumn = ({
       isHeaderColumn && styles.disableSelection,
       isSelectedCell && !resizable && styles.cell_selected,
     );
-  })();
+  }, [indexRow, isEdited, isHeaderColumn, isSelectedCell, resizable]);
 
   // minify string lenght in cell to improve performance
-  const serializedValue = (() => {
+  const serializedValue = React.useMemo(() => {
     let v: any = value;
 
     if (Array.isArray(v) && type === 'autocomplete-multi') v = v.join(', ');
-    else if (typeof v === 'boolean' || typeof v === null) v = `${v}`;
+    else if (typeof v === 'boolean' || v === null) v = `${v}`;
     else if (v instanceof Date) v = v.toISOString();
     else if (typeof v === 'object') v = JSON.stringify(v);
     else if (typeof v !== 'string') return v;
@@ -117,7 +122,7 @@ const TableColumn = ({
     const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
 
     return isEditing ? v : v.slice(0, valueLenght);
-  })();
+  }, [isEditing, type, value, width]);
 
   const editedValue = React.useRef<string | number | null>(null);
   const cancelEditRef = React.useRef(false);
@@ -149,21 +154,100 @@ const TableColumn = ({
     onEditCell?.(indexRow, name, editedValue.current);
   }, [comparableInitialValue, indexRow, name, onEditCell, onBlurCell]);
 
-  const content = isEditing ? null : isLinkClickable ? (
-    <span
-      style={{ textDecoration: 'underline dotted', cursor: 'pointer' }}
-      title={linkTitle}
-      onClick={(e: React.MouseEvent) => {
-        if (linkClickMode === 'ctrl' && !isPrimaryShortcutPressed(e)) {
-          onFkCellPreviewClick?.(name, value);
-          return;
-        }
+  const handleLinkClick = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (linkClickMode === 'ctrl' && !isPrimaryShortcutPressed(event)) {
+        onFkCellPreviewClick?.(name, value);
+        return;
+      }
 
-        e.preventDefault();
-        e.stopPropagation();
-        onFkCellClick?.(name, value);
-      }}
-    >
+      event.preventDefault();
+      event.stopPropagation();
+      onFkCellClick?.(name, value);
+    },
+    [linkClickMode, name, onFkCellClick, onFkCellPreviewClick, value],
+  );
+
+  const handleDoubleClick = React.useCallback(() => {
+    onDoubleClick?.(rowColumnKey);
+  }, [onDoubleClick, rowColumnKey]);
+
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      if (isHeaderColumn) return onClick?.(event);
+
+      onSelectCell?.(indexRow, columnIndex);
+    },
+    [columnIndex, indexRow, isHeaderColumn, onClick, onSelectCell],
+  );
+
+  const handleMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      if (isHeaderColumn) return;
+
+      onStartCellDrag?.(indexRow, columnIndex, event);
+    },
+    [columnIndex, indexRow, isHeaderColumn, onStartCellDrag],
+  );
+
+  const handleMouseEnter = React.useCallback(() => {
+    if (isHeaderColumn) return;
+
+    onMoveCellDrag?.(indexRow, columnIndex);
+  }, [columnIndex, indexRow, isHeaderColumn, onMoveCellDrag]);
+
+  const handleInputKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter' && event.key !== 'Escape') return;
+
+      event.preventDefault();
+
+      if (event.key === 'Escape') {
+        cancelEditRef.current = true;
+        onBlurCell?.();
+        return;
+      }
+
+      handleSaveInputValue();
+    },
+    [handleSaveInputValue, onBlurCell],
+  );
+
+  const handleInputChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    editedValue.current = event.target.value;
+  }, []);
+
+  const handleEditEscapeKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'Escape') return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      onBlurCell?.();
+    },
+    [onBlurCell],
+  );
+
+  const handleAutocompleteChange = React.useCallback(
+    ({ value: newValue }: { value: string | number }) => {
+      onBlurCell?.();
+
+      if (newValue === null || value === newValue) return;
+
+      onEditCell?.(indexRow, name, newValue);
+    },
+    [indexRow, name, onBlurCell, onEditCell, value],
+  );
+
+  const handleAutocompleteMultiChange = React.useCallback(
+    ({ value: newValue }: { value: (string | number)[] }) => {
+      onEditCell?.(indexRow, name, newValue, true);
+    },
+    [indexRow, name, onEditCell],
+  );
+
+  const content = isEditing ? null : isLinkClickable ? (
+    <span style={linkStyle} title={linkTitle} onClick={handleLinkClick}>
       {serializedValue}
     </span>
   ) : (
@@ -181,11 +265,8 @@ const TableColumn = ({
         minWidth={minWidth}
         onResize={onResize}
         onContextMenu={onContextMenu}
-        onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-        onClick={(event) => {
-          if (isHeaderColumn) return onClick?.(event);
-          onSelectCell?.(indexRow, columnIndex);
-        }}
+        onDoubleClick={handleDoubleClick}
+        onClick={handleClick}
       >
         {content}
       </ResizableContainer>
@@ -207,18 +288,8 @@ const TableColumn = ({
           className={styles.table_autocomplete_input}
           placeholder={serializedValue === undefined ? '' : String(serializedValue)}
           onBlurWithoutChange={onBlurCell}
-          onKeyDown={(event) => {
-            if (event.key !== 'Escape') return;
-
-            event.preventDefault();
-            event.stopPropagation();
-            onBlurCell?.();
-          }}
-          onChange={({ value: newValue }) => {
-            onBlurCell?.();
-            if (newValue === null || value === newValue) return;
-            onEditCell?.(indexRow, name, newValue);
-          }}
+          onKeyDown={handleEditEscapeKeyDown}
+          onChange={handleAutocompleteChange}
         />
       );
     }
@@ -237,16 +308,8 @@ const TableColumn = ({
           className={styles.table_autocomplete_input}
           placeholder={serializedValue === undefined ? '' : String(serializedValue)}
           onBlurWithoutChange={onBlurCell}
-          onKeyDown={(event) => {
-            if (event.key !== 'Escape') return;
-
-            event.preventDefault();
-            event.stopPropagation();
-            onBlurCell?.();
-          }}
-          onChange={({ value: newValue }) => {
-            onEditCell?.(indexRow, name, newValue, true);
-          }}
+          onKeyDown={handleEditEscapeKeyDown}
+          onChange={handleAutocompleteMultiChange}
         />
       );
     }
@@ -260,24 +323,10 @@ const TableColumn = ({
         spellCheck={false}
         defaultValue={inputInitialValue}
         onBlur={handleSaveInputValue}
-        onKeyDown={(e) => {
-          if (e.key !== 'Enter' && e.key !== 'Escape') return;
-
-          e.preventDefault();
-
-          if (e.key === 'Escape') {
-            cancelEditRef.current = true;
-            onBlurCell?.();
-            return;
-          }
-
-          handleSaveInputValue();
-        }}
-        onChange={(e) => {
-          editedValue.current = e.target.value;
-        }}
-        onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
-        onClick={() => onSelectCell?.(indexRow, columnIndex)}
+        onKeyDown={handleInputKeyDown}
+        onChange={handleInputChange}
+        onDoubleClick={handleDoubleClick}
+        onClick={handleClick}
       />
     );
   }
@@ -287,20 +336,11 @@ const TableColumn = ({
       className={className}
       title={title}
       style={style}
-      onDoubleClick={() => onDoubleClick?.(rowColumnKey)}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={onContextMenu}
-      onMouseDown={(event) => {
-        if (isHeaderColumn) return;
-        onStartCellDrag?.(indexRow, columnIndex, event);
-      }}
-      onMouseEnter={() => {
-        if (isHeaderColumn) return;
-        onMoveCellDrag?.(indexRow, columnIndex);
-      }}
-      onClick={(event) => {
-        if (isHeaderColumn) return onClick?.(event);
-        onSelectCell?.(indexRow, columnIndex);
-      }}
+      onMouseDown={handleMouseDown}
+      onMouseEnter={handleMouseEnter}
+      onClick={handleClick}
     >
       {content}
     </div>

@@ -4,6 +4,8 @@ import type { IColumn, ISortDirection } from '../../dtos';
 import styles from '../../styles.module.css';
 import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
+import TableHeaderColumn from '../TableHeaderColumn';
+import TableRowNumber from '../TableRowNumber';
 import { useI18n } from '@renderer/contexts/I18n';
 
 type TableCellEditValue = string | number | (string | number)[];
@@ -85,7 +87,9 @@ const TableDefaultView = <Row,>({
     position: IContextMenuPosition;
   }>();
 
-  const rowsToRender = rows.slice(firstRowIndex, lastRowIndex);
+  const rowsToRender = React.useMemo(() => {
+    return rows.slice(firstRowIndex, lastRowIndex);
+  }, [firstRowIndex, lastRowIndex, rows]);
 
   const handleSortContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement, MouseEvent>, column: IColumn<Row>) => {
@@ -110,35 +114,44 @@ const TableDefaultView = <Row,>({
     [onSort, sortContextMenu],
   );
 
+  const sortContextMenuOptions = React.useMemo(
+    () => [
+      {
+        text: t('table.sortAsc'),
+        onClick: () => handleSortMenuClick('ASC'),
+      },
+      {
+        text: t('table.sortDesc'),
+        onClick: () => handleSortMenuClick('DESC'),
+      },
+      {
+        text: t('table.noSorting'),
+        onClick: () => handleSortMenuClick(null),
+      },
+    ],
+    [handleSortMenuClick, t],
+  );
+
   return (
     <div className={styles.table_container}>
       <TableRow isHeader>
-        <div className={styles.table_row_number}>#</div>
+        <TableRowNumber isHeader />
 
-        {columnsIndexToRender.map((columnIndex) => {
-          const column = columns[columnIndex];
-
-          return (
-            <TableColumn
-              resizable
-              title={column.title}
-              key={String(column.attribute)}
-              columnIndex={columnIndex}
-              rowHeight={rowHeight}
-              width={columnsSize[columnIndex]}
-              onResize={(e) => onResizeColumn(columnIndex, e.width)}
-              onClick={(event) => onSelectColumn?.(columnIndex, event)}
-              onContextMenu={
-                column.sortable && onSort
-                  ? (event) => handleSortContextMenu(event, column)
-                  : undefined
-              }
-              style={{ cursor: column.sortable && onSort ? 'pointer' : undefined }}
-              minWidth={minColumnsSize[columnIndex]}
-              value={getSortLabel(column)}
-            />
-          );
-        })}
+        {columnsIndexToRender.map((columnIndex) => (
+          <TableHeaderColumn
+            key={String(columns[columnIndex].attribute)}
+            column={columns[columnIndex]}
+            columnIndex={columnIndex}
+            rowHeight={rowHeight}
+            width={columnsSize[columnIndex]}
+            minWidth={minColumnsSize[columnIndex]}
+            getSortLabel={getSortLabel}
+            onResizeColumn={onResizeColumn}
+            onSelectColumn={onSelectColumn}
+            onSort={onSort}
+            onSortContextMenu={handleSortContextMenu}
+          />
+        ))}
       </TableRow>
 
       {rowsToRender.map((row: any) => {
@@ -149,12 +162,7 @@ const TableDefaultView = <Row,>({
 
         return (
           <TableRow key={keyRow} row={row} isSelected={selectedRows.get(keyRow)}>
-            <div
-              className={styles.table_row_number}
-              style={{ '--rowIndex': indexRow } as React.CSSProperties}
-            >
-              {Number(indexRow) + 1}
-            </div>
+            <TableRowNumber indexRow={indexRow} />
 
             {columnsIndexToRender.map((columnIndex) => {
               const column = columns[columnIndex];
@@ -204,20 +212,7 @@ const TableDefaultView = <Row,>({
       <ContextMenu
         position={sortContextMenu?.position}
         onClose={() => setSortContextMenu(undefined)}
-        options={[
-          {
-            text: t('table.sortAsc'),
-            onClick: () => handleSortMenuClick('ASC'),
-          },
-          {
-            text: t('table.sortDesc'),
-            onClick: () => handleSortMenuClick('DESC'),
-          },
-          {
-            text: t('table.noSorting'),
-            onClick: () => handleSortMenuClick(null),
-          },
-        ]}
+        options={sortContextMenuOptions}
       />
     </div>
   );

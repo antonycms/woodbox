@@ -6,10 +6,11 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
-import { toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { IColumn, ISortDirection, ITableSort } from './dtos';
+import { useTableLayout } from './hooks/useTableLayout';
+import { useTableColumnResize } from './hooks/useTableColumnResize';
 
 type TableCellEditValue = string | number | (string | number)[];
 type TableScrollState = { left: number; top: number };
@@ -104,10 +105,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     activeTheme: { table: theme },
   } = useThemeContext();
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
-  const rowHeight = React.useMemo(() => 35, []);
-  const maxColumnSize = React.useMemo(() => 760, []);
-  const defaultColumnSize = React.useMemo(() => 200, []);
-  const rowNumberColumnWidth = React.useMemo(() => 56, []);
   const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
@@ -173,7 +170,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     });
 
     return [...serializedNewRows, ...serializedRows];
-  }, [rows, newRows, theme.backgroundColorColumnEdited, theme.colorColumnEdited]);
+  }, [rows, newRows, rowKeyExtractor, theme.backgroundColorColumnEdited, theme.colorColumnEdited]);
 
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;
@@ -188,6 +185,34 @@ function Table<Row = any>(props: ITableProps<Row>) {
   analysisColumnsSizeRef.current = analysisColumnsSize;
   const analysisModeEnterRef = React.useRef(analysisMode);
   analysisModeEnterRef.current = analysisMode;
+
+  const {
+    rowHeight,
+    maxColumnSize,
+    defaultColumnSize,
+    rowNumberColumnWidth,
+    columnsDetails,
+    rowsDetails,
+    tableDetails,
+    cssVars,
+  } = useTableLayout({
+    theme,
+    columnsLength: columns.length,
+    columnsSize,
+    scroll,
+    widthBodyContainer,
+    heightBodyContainer,
+    serializedRowsLength: serializedRows.length,
+    analysisRowsLength: analysisRows.length,
+  });
+
+  const { onResize, onResizeAnalysisColumn } = useTableColumnResize({
+    maxColumnSize,
+    minColumnsSize,
+    analysisMinColumnsSize,
+    setColumnsSize,
+    setAnalysisColumnsSize,
+  });
 
   const selectedRows = React.useMemo(() => {
     const map = new Map<React.Key, any>();
@@ -207,98 +232,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [columns],
   );
   const initialAnalysisModeAppliedRef = React.useRef(false);
-
-  const columnsDetails = React.useMemo(() => {
-    const columnsIndexToRender: number[] = [];
-    const length = Math.min(columnsSize.length, columns.length);
-    const effectiveScrollLeft = Math.max(0, scroll.left - rowNumberColumnWidth);
-
-    let startColumnPosition = 0;
-    let endColumnPosition = 0;
-
-    for (let i = 0; i < length; i++) {
-      const colSize = columnsSize[i];
-      endColumnPosition = startColumnPosition + colSize;
-
-      if (startColumnPosition >= effectiveScrollLeft || endColumnPosition >= effectiveScrollLeft) {
-        columnsIndexToRender.push(i);
-      }
-
-      startColumnPosition = endColumnPosition;
-
-      if (startColumnPosition > widthBodyContainer + effectiveScrollLeft) break;
-    }
-
-    return { columnsIndexToRender };
-  }, [scroll.left, rowNumberColumnWidth, columnsSize, widthBodyContainer, columns]);
-
-  const rowsDetails = (() => {
-    const numberOfRowsToShowOnScreen = heightBodyContainer / rowHeight;
-
-    let first = Math.ceil(scroll.top / rowHeight);
-    let last = first + numberOfRowsToShowOnScreen;
-
-    last = first + numberOfRowsToShowOnScreen + 4;
-    first = first < 5 ? 0 : first - 4;
-
-    return { first, last };
-  })();
-
-  const tableDetails = React.useMemo(() => {
-    let width = 0;
-    let columnsSizeStr = '';
-
-    columnsSize.forEach((size) => {
-      width += size;
-      columnsSizeStr += ` ${size}px`;
-    });
-
-    return { width, columnsSizeStr };
-  }, [columnsSize]);
-
-  const onResize = React.useCallback(
-    (index: number, size: number) => {
-      const minSizeAllowed = minColumnsSize[index] ?? 0;
-      let allowedSize = size;
-
-      if (size <= minSizeAllowed) {
-        allowedSize = minSizeAllowed;
-      } else if (allowedSize > maxColumnSize) {
-        allowedSize = maxColumnSize;
-      }
-
-      setColumnsSize((prevState) => {
-        const nextState = [...prevState];
-
-        nextState[index] = allowedSize;
-
-        return nextState;
-      });
-    },
-    [maxColumnSize, minColumnsSize],
-  );
-
-  const onResizeAnalysisColumn = React.useCallback(
-    (index: number, size: number) => {
-      const minSizeAllowed = analysisMinColumnsSize[index] ?? 0;
-      let allowedSize = size;
-
-      if (size <= minSizeAllowed) {
-        allowedSize = minSizeAllowed;
-      } else if (allowedSize > maxColumnSize) {
-        allowedSize = maxColumnSize;
-      }
-
-      setAnalysisColumnsSize((prevState) => {
-        const nextState = [...prevState];
-
-        nextState[index] = allowedSize;
-
-        return nextState;
-      });
-    },
-    [analysisMinColumnsSize, maxColumnSize],
-  );
 
   const checkScrollEnd = React.useCallback(() => {
     const element = refScrollContainer.current;
@@ -955,17 +888,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     lastAnalysisSelectedCellRef.current = null;
     analysisArrowCursorRef.current = null;
   }, []);
-
-  const cssVars = toCssProperties({
-    ...theme,
-    height: `${serializedRows.length * rowHeight}px`,
-    width: `${tableDetails.width + rowNumberColumnWidth}px`,
-    rowHeight: `${rowHeight}px`,
-    rowNumberColumnWidth: `${rowNumberColumnWidth}px`,
-    totalRows: serializedRows.length,
-    columnsSize: tableDetails.columnsSizeStr,
-    analysisRows: analysisRows.length,
-  });
 
   React.useEffect(() => {
     window.addEventListener('mouseup', handleEndCellDrag);
