@@ -4,6 +4,7 @@ import type {
   ICentralSearchRow,
   IParsedSearch,
 } from './dtos';
+import type { IConnection } from '@renderer/contexts/Store';
 
 export const containerElement = document.getElementById('modal-root');
 
@@ -15,6 +16,30 @@ export const ITEM_TYPE_ORDER: Record<ICentralSearchItemType, number> = {
   script: 0,
   table: 1,
   function: 2,
+};
+
+export const EMPTY_CONNECTIONS_BY_ID = new Map<string, IConnection>();
+
+export const EMPTY_OPEN_TAB_RESULT: {
+  openTabItems: ICentralSearchItem[];
+  openTabIds: Set<string>;
+} = {
+  openTabItems: [],
+  openTabIds: new Set(),
+};
+
+export const EMPTY_CLOSED_ITEMS: Record<ICentralSearchItemType, ICentralSearchItem[]> = {
+  script: [],
+  table: [],
+  function: [],
+};
+
+export const EMPTY_VISIBLE_RESULT: {
+  visibleItems: ICentralSearchItem[];
+  visibleRows: ICentralSearchRow[];
+} = {
+  visibleItems: [],
+  visibleRows: [],
 };
 
 export function getScriptTabId(idScript: string) {
@@ -104,12 +129,13 @@ export function getRowSize(row: ICentralSearchRow) {
   return row.type === 'section' ? SECTION_ROW_HEIGHT : ITEM_ROW_HEIGHT;
 }
 
-export function getRowOffset(rows: ICentralSearchRow[], indexTarget: number) {
+export function getRowOffsets(rows: ICentralSearchRow[]) {
   let offset = 0;
 
-  for (let index = 0; index < indexTarget; index++) {
-    offset += getRowSize(rows[index]);
-  }
+  return rows.map((row) => {
+    const rowOffset = offset;
+    offset += getRowSize(row);
 
-  return offset;
+    return rowOffset;
+  });
 }

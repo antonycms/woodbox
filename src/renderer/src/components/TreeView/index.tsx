@@ -4,43 +4,87 @@ import styles from './styles.module.css';
 
 import { AvalailableTreeViewIcon } from './IconItemTreeView';
 import ItemTreeView, { IItemTreeViewProps } from './ItemTreeView';
+import { useThemeContext } from '@renderer/contexts/Theme';
 
-const TreeView = (props: ITreeViewProps) => {
-  const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
+const getVisibleItemIds = (items: IItemTreeView[] = [], openedItemsIdSet: Set<string>) => {
+  const ids: string[] = [];
 
-  const getItemRecursive = (items: IItemTreeView[], id: string) => {
-    if (!id || !items?.length) return;
-
-    for (const item of items) {
+  const addItems = (itemsToAdd: IItemTreeView[] = []) => {
+    for (const item of itemsToAdd) {
       if (!item) continue;
 
-      if (item.id === id) return item;
+      ids.push(item.id);
 
-      const itemChild = getItemRecursive(item.childs, id);
-
-      if (itemChild) return itemChild;
+      if (openedItemsIdSet.has(item.id)) {
+        addItems(item.childs);
+      }
     }
   };
 
-  const getItemFromElement = (target: HTMLDivElement): IItemTreeView => {
+  addItems(items);
+
+  return ids;
+};
+
+const TreeView = (props: ITreeViewProps) => {
+  const { activeTheme } = useThemeContext();
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
+  const openedItemsIdSet = React.useMemo(() => new Set(openedItemsId), [openedItemsId]);
+  const defaultColor = activeTheme.sideBar.color;
+  const focusBackgroundColor =
+    activeTheme.sideBar.selectedBackgroundColor || activeTheme.__colors.darkLightDeep;
+
+  const itemsById = React.useMemo(() => {
+    const map = new Map<string, IItemTreeView>();
+
+    const addItems = (items: IItemTreeView[] = []) => {
+      for (const item of items) {
+        if (!item) continue;
+
+        map.set(item.id, item);
+        addItems(item.childs);
+      }
+    };
+
+    addItems(props.items);
+
+    return map;
+  }, [props.items]);
+
+  const visibleItemIds = React.useMemo(
+    () => getVisibleItemIds(props.items, openedItemsIdSet),
+    [openedItemsIdSet, props.items],
+  );
+
+  const getItem = React.useCallback((id?: string) => {
+    return id ? itemsById.get(id) : undefined;
+  }, [itemsById]);
+
+  const getItemFromElement = React.useCallback((target: HTMLDivElement): IItemTreeView => {
     const idItem = target?.id?.replace?.('item_treeview_id_', '');
-    const item = getItemRecursive(props.items, idItem);
+    const item = getItem(idItem);
 
     return item;
+  }, [getItem]);
+
+  const getItemElement = (id?: string) => {
+    if (!id) return null;
+
+    return document.getElementById(`item_treeview_id_${id}`) as HTMLDivElement | null;
   };
 
-  const getSurroundingElements = () => {
-    const elements = Array.from(
-      document.querySelectorAll<HTMLDivElement>(`.${styles.container} *[tabindex="0"]`),
-    );
+  const getActiveItemId = () =>
+    (document.activeElement as HTMLDivElement)?.id?.replace?.('item_treeview_id_', '');
 
-    const index = elements.indexOf(document.activeElement as HTMLDivElement);
+  const getSurroundingElements = () => {
+    const index = visibleItemIds.indexOf(getActiveItemId());
 
     if (index === -1) return { prevItem: null, nextItem: null };
 
     return {
-      prevItem: elements[index - 1] ?? null,
-      nextItem: elements[index + 1] ?? null,
+      prevItem: getItemElement(visibleItemIds[index - 1]),
+      nextItem: getItemElement(visibleItemIds[index + 1]),
     };
   };
 
@@ -121,7 +165,7 @@ const TreeView = (props: ITreeViewProps) => {
 
   React.useImperativeHandle(props.ref, () => ({
     switch: async (id: string, open?: boolean) => {
-      const item = getItemRecursive(props.items, id);
+      const item = getItem(id);
 
       if (!item) return;
 
@@ -129,7 +173,7 @@ const TreeView = (props: ITreeViewProps) => {
     },
     reveal: async (id: string, parentIds: string[] = []) => {
       for (const parentId of parentIds) {
-        const parent = getItemRecursive(props.items, parentId);
+        const parent = getItem(parentId);
 
         if (parent) await handleSwitchItem(parent, true);
       }
@@ -148,6 +192,7 @@ const TreeView = (props: ITreeViewProps) => {
 
   return (
     <div
+      ref={containerRef}
       className={classes(styles.container)}
       onDoubleClick={handleDoubleClick}
       onClick={handleClick}
@@ -162,9 +207,10 @@ const TreeView = (props: ITreeViewProps) => {
             {...item}
             isFirst
             key={item.id}
-            color={item.color}
-            iconColor={item.iconColor}
-            openedItemsId={openedItemsId}
+            color={item.color || defaultColor}
+            iconColor={item.iconColor || item.color || defaultColor}
+            focusBackgroundColor={focusBackgroundColor}
+            openedItemsIdSet={openedItemsIdSet}
             onSwitch={handleSwitchItem}
           />
         );

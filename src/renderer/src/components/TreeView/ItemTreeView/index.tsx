@@ -3,18 +3,15 @@ import { IItemTreeView } from '@renderer/components/TreeView';
 import styles from './styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import { SpinnerLoading } from '@renderer/components/Loaders';
-import { useThemeContext } from '@renderer/contexts/Theme';
 import IconItemTreeView from '../IconItemTreeView';
 
 const ItemTreeView = (props: IItemTreeViewProps) => {
-  const { icon, loading, childs, openedItemsId = [] } = props;
-  const { activeTheme } = useThemeContext();
-  const color = props.color || activeTheme.sideBar.color;
+  const { icon, loading, childs, openedItemsIdSet } = props;
+  const color = props.color;
   const iconColor = props.iconColor || color;
-  const focusBackgroundColor =
-    activeTheme.sideBar.selectedBackgroundColor || activeTheme.__colors.darkLightDeep;
+  const focusBackgroundColor = props.focusBackgroundColor;
 
-  const isOpen = openedItemsId.some((id) => id === props.id);
+  const isOpen = !!openedItemsIdSet?.has(props.id);
 
   return (
     <div
@@ -72,13 +69,14 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
           if (!child) return null;
 
           return (
-            <ItemTreeView
+            <ItemTreeViewMemo
               {...child}
               key={child.id}
               color={color}
               iconColor={iconColor}
+              focusBackgroundColor={focusBackgroundColor}
               onSwitch={props.onSwitch}
-              openedItemsId={openedItemsId}
+              openedItemsIdSet={openedItemsIdSet}
             />
           );
         })}
@@ -86,11 +84,14 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
   );
 };
 
-export default ItemTreeView;
+const ItemTreeViewMemo = React.memo(ItemTreeView);
+
+export default ItemTreeViewMemo;
 
 export interface IItemTreeViewProps extends IItemTreeView {
   isFirst?: boolean;
   color?: string;
-  openedItemsId?: string[];
+  focusBackgroundColor?: string;
+  openedItemsIdSet?: Set<string>;
   onSwitch?(item: IItemTreeView): void;
 }

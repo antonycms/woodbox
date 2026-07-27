@@ -46,33 +46,71 @@ type SidebarRevealTarget = {
   name: string;
 };
 
+type SidebarRevealPath = { id: string; parentIds: string[] };
+
 const normalizeSchema = (schema?: string | null) => schema || undefined;
 
-const getSidebarRevealPath = (
-  items: IItemTreeView[],
-  target: SidebarRevealTarget,
-  parentIds: string[] = [],
-): { id: string; parentIds: string[] } | undefined => {
-  for (const item of items) {
-    if (!item) continue;
+const getSidebarRevealKey = (target: SidebarRevealTarget) => {
+  return [target.type, target.idConnection, normalizeSchema(target.schema) || '', target.name].join(
+    '\0',
+  );
+};
 
-    const itemSchema =
-      target.type === 'table' ? item.data?.table_schema : item.data?.function_schema;
-    const itemName = target.type === 'table' ? item.data?.table_name : item.data?.function_name;
+const getSidebarRevealItemKey = (item: IItemTreeView) => {
+  if (item.type !== 'table' && item.type !== 'function') return;
 
-    if (
-      item.type === target.type &&
-      item.data?.id_connection === target.idConnection &&
-      normalizeSchema(itemSchema) === normalizeSchema(target.schema) &&
-      itemName === target.name
-    ) {
-      return { id: item.id, parentIds };
-    }
+  if (item.type === 'table') {
+    if (!item.data?.id_connection || !item.data?.table_name) return;
 
-    const childPath = getSidebarRevealPath(item.childs || [], target, [...parentIds, item.id]);
-
-    if (childPath) return childPath;
+    return getSidebarRevealKey({
+      type: 'table',
+      idConnection: item.data?.id_connection,
+      schema: item.data?.table_schema,
+      name: item.data?.table_name,
+    });
   }
+
+  if (item.type === 'function') {
+    if (!item.data?.id_connection || !item.data?.function_name) return;
+
+    return getSidebarRevealKey({
+      type: 'function',
+      idConnection: item.data?.id_connection,
+      schema: item.data?.function_schema,
+      name: item.data?.function_name,
+    });
+  }
+};
+
+const buildSidebarRevealIndex = (items: IItemTreeView[]) => {
+  const index = new Map<string, SidebarRevealPath>();
+
+  const addItems = (itemsToAdd: IItemTreeView[] = [], parentIds: string[] = []) => {
+    for (const item of itemsToAdd) {
+      if (!item) continue;
+
+      const itemKey = getSidebarRevealItemKey(item);
+
+      if (itemKey) {
+        index.set(itemKey, { id: item.id, parentIds });
+      }
+
+      if (item.childs?.length) {
+        addItems(item.childs, [...parentIds, item.id]);
+      }
+    }
+  };
+
+  addItems(items);
+
+  return index;
+};
+
+const getSidebarRevealPath = (
+  sidebarRevealIndex: Map<string, SidebarRevealPath>,
+  target: SidebarRevealTarget,
+) => {
+  return sidebarRevealIndex.get(getSidebarRevealKey(target));
 };
 
 const ProjectsMenu = () => {
@@ -129,7 +167,23 @@ const ProjectsMenu = () => {
 
   const filterTextSerialized = filterText?.trim?.() ?? '';
 
-  const checkFilterText = (text: string, text2?: string) => {
+  const scriptsByConnectionId = React.useMemo(() => {
+    const grouped = new Map<string, IScript[]>();
+
+    scripts.forEach((script) => {
+      const connectionScripts = grouped.get(script.id_connection) || [];
+      connectionScripts.push(script);
+      grouped.set(script.id_connection, connectionScripts);
+    });
+
+    return grouped;
+  }, [scripts]);
+
+  const loadingConnectionsIdSet = React.useMemo(() => {
+    return new Set(loadingConnectionsId);
+  }, [loadingConnectionsId]);
+
+  const checkFilterText = React.useCallback((text: string, text2?: string) => {
     const filterWithSchema = filterTextSerialized.includes('.');
 
     if (isWholeWordFilter) {
@@ -142,13 +196,18 @@ const ProjectsMenu = () => {
       ? filterTextSerialized.startsWith(text2) &&
           `${text2}.${text}`.trim().includes(filterTextSerialized)
       : text?.includes?.(filterTextSerialized);
-  };
+  }, [filterTextSerialized, isWholeWordFilter]);
 
-  const checkHasConnection = (id: string) => {
-    return connectionsInfo.has(id);
-  };
+  const checkHasConnection = React.useCallback(
+    (id?: string) => {
+      return !!id && connectionsInfo.has(id);
+    },
+    [connectionsInfo],
+  );
 
-  const refreshConnectionInfo = async (id: string, force?: boolean) => {
+  const refreshConnectionInfo = React.useCallback(async (id?: string, force?: boolean) => {
+    if (!id) return false;
+
     const hasInfo = connectionsInfo.get(id);
 
     if (hasInfo && !force) return;
@@ -170,20 +229,17 @@ const ProjectsMenu = () => {
         prevState.filter((idConnection) => idConnection !== id),
       );
     }
-  };
+  }, [connectionsInfo, loadConnectionInfo, showToast, t]);
 
-  const onContextMenuTreeView = (
-    item: IItemTreeViewData,
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-  ) => {
-    const position = { x: event.clientX, y: event.clientY };
+  const onContextMenuTreeView = React.useCallback(
+    (item: IItemTreeViewData, event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      const position = { x: event.clientX, y: event.clientY };
 
-    setContextMenuPosition(position);
-
-    if (item?.id !== contextMenuItemSelected?.id) {
-      setContextMenuItemSelected(item);
-    }
-  };
+      setContextMenuPosition(position);
+      setContextMenuItemSelected((prevState) => (item?.id === prevState?.id ? prevState : item));
+    },
+    [],
+  );
 
   const onCloseModalProject = React.useCallback(() => {
     setIsNewProject(false);
@@ -271,21 +327,24 @@ const ProjectsMenu = () => {
     [removeConnection, removeTabsFromConnections],
   );
 
-  const handleOpemItemTreeView = async (item: IItemTreeViewData, itemIsOpen: boolean) => {
-    if (itemIsOpen) return;
+  const handleOpemItemTreeView = React.useCallback(
+    async (item: IItemTreeViewData, itemIsOpen: boolean) => {
+      if (itemIsOpen) return;
 
-    if (item.type === 'connection') {
-      const success = await refreshConnectionInfo(item.id);
-      return success;
-    }
-  };
+      if (item.type === 'connection') {
+        const success = await refreshConnectionInfo(item.id);
+        return success;
+      }
+    },
+    [refreshConnectionInfo],
+  );
 
-  const handleClickItemThreeView = (item: IItemTreeViewData) => {
+  const handleClickItemThreeView = React.useCallback((item: IItemTreeViewData) => {
     setIdConnectionSelected(item?.data?.id_connection);
     setIdProjectSelected(item?.data?.id_project);
-  };
+  }, []);
 
-  const openTabScriptSql = (script: IScript) => {
+  const openTabScriptSql = React.useCallback((script: IScript) => {
     const tabId = `script_${script.id}`;
 
     const tab = getTab(tabId);
@@ -305,9 +364,18 @@ const ProjectsMenu = () => {
       },
       component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
     });
-  };
+  }, [addTab, getTab, refreshConnectionInfo, setActiveTabId]);
 
-  const handleDoubleClickItemThreeView = (item: IItemTreeViewData) => {
+  const openSelectedConnectionScript = React.useCallback(() => {
+    if (!idConnectionSelected) return;
+
+    const connectionScripts = scriptsByConnectionId.get(idConnectionSelected) || [];
+    const script = connectionScripts[connectionScripts.length - 1];
+
+    script ? openTabScriptSql(script) : setIsNewScript(true);
+  }, [idConnectionSelected, openTabScriptSql, scriptsByConnectionId]);
+
+  const handleDoubleClickItemThreeView = React.useCallback((item: IItemTreeViewData) => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;
@@ -368,7 +436,7 @@ const ProjectsMenu = () => {
       const { script } = item.data;
       openTabScriptSql(script);
     }
-  };
+  }, [addTab, getTab, openTabScriptSql, setActiveTabId]);
 
   const contextOptions = React.useMemo(() => {
     const optionsAvailable: Record<string, IContextMenuOption[]> = {
@@ -524,163 +592,182 @@ const ProjectsMenu = () => {
     t,
   ]);
 
-  const projectsSerialized = connectionsGroupPerProject.map((project) => {
-    let hasContentWithFilterText = false;
+  const projectsSerialized = React.useMemo(() => {
+    return connectionsGroupPerProject.map((project) => {
+      let hasContentWithFilterText = false;
 
-    const projects: IItemTreeView = {
-      id: project.id,
-      label: project.description,
-      type: 'project' as const,
-      icon: 'grid',
-      data: { id_project: project.id },
-      childs: project.connections.map((connection) => {
-        const connectionInfo = connectionsInfo.get(connection.id);
-        const dialect = getRendererDialect(connection.dialect);
+      const projects: IItemTreeView = {
+        id: project.id,
+        label: project.description,
+        type: 'project' as const,
+        icon: 'grid',
+        data: { id_project: project.id },
+        childs: project.connections.map((connection) => {
+          const connectionInfo = connectionsInfo.get(connection.id);
+          const dialect = getRendererDialect(connection.dialect);
 
-        const dataConnection = {
-          id_project: project.id,
-          id_connection: connection.id,
-          description_connection: connection.description,
-        };
+          const dataConnection = {
+            id_project: project.id,
+            id_connection: connection.id,
+            description_connection: connection.description,
+          };
 
-        let tablesThreeView: IItemTreeView[] =
-          connectionInfo?.tables?.map((table) => {
-            const { table_name, table_schema, total_size } = table;
-
-            return {
-              id: table_schema
-                ? `${connection.id}:${table_schema}_${table_name}`
-                : `${connection.id}:${table_name}`,
-              label: table_name,
-              labelInfo: formatSizeFromBytes(total_size),
-              icon: 'table' as const,
-              type: 'table' as const,
-              data: { ...table, ...dataConnection },
-            };
-          }) || [];
-
-        let functionsThreeView: IItemTreeView[] = dialect.supportsFunctions
-          ? connectionInfo?.functions?.map((fn, index) => {
-              const { function_name, function_schema } = fn;
+          let tablesThreeView: IItemTreeView[] =
+            connectionInfo?.tables?.map((table) => {
+              const { table_name, table_schema, total_size } = table;
 
               return {
-                id: function_schema
-                  ? `${connection.id}:${function_schema}_${function_name}:${index}`
-                  : `${connection.id}:${function_name}:${index}`,
-                label: function_name,
-                icon: 'function',
-                type: 'function',
-                data: { ...fn, ...dataConnection },
+                id: table_schema
+                  ? `${connection.id}:${table_schema}_${table_name}`
+                  : `${connection.id}:${table_name}`,
+                label: table_name,
+                labelInfo: formatSizeFromBytes(total_size),
+                icon: 'table' as const,
+                type: 'table' as const,
+                data: { ...table, ...dataConnection },
               };
-            }) || []
-          : [];
+            }) || [];
 
-        const connectionScripts = scripts.filter((s) => s.id_connection === connection.id);
+          let functionsThreeView: IItemTreeView[] = dialect.supportsFunctions
+            ? connectionInfo?.functions?.map((fn, index) => {
+                const { function_name, function_schema } = fn;
 
-        const scriptsThreeView: IItemTreeView[] = connectionScripts.map((script) => ({
-          id: `script_${script.id}`,
-          label: script.name,
-          icon: 'file' as const,
-          type: 'script' as const,
-          data: { script, ...dataConnection },
-        }));
+                return {
+                  id: function_schema
+                    ? `${connection.id}:${function_schema}_${function_name}:${index}`
+                    : `${connection.id}:${function_name}:${index}`,
+                  label: function_name,
+                  icon: 'function',
+                  type: 'function',
+                  data: { ...fn, ...dataConnection },
+                };
+              }) || []
+            : [];
 
-        if (filterTextSerialized) {
-          tablesThreeView = tablesThreeView.filter((table) =>
-            checkFilterText(table?.label, table?.data?.table_schema),
-          );
-          functionsThreeView = functionsThreeView.filter((fn) =>
-            checkFilterText(fn?.label, fn?.data?.function_schema),
-          );
-        }
+          const connectionScripts = scriptsByConnectionId.get(connection.id) || [];
 
-        let schemasThreeView: IItemTreeView[] = dialect.supportsSchemas
-          ? connectionInfo?.schemas?.map?.((schema) => {
-              const tablesSchema = tablesThreeView.filter(
-                ({ data }) => data.table_schema === schema,
-              );
-              const functionsSchema = functionsThreeView.filter(
-                ({ data }) => data.function_schema === schema,
-              );
+          const scriptsThreeView: IItemTreeView[] = connectionScripts.map((script) => ({
+            id: `script_${script.id}`,
+            label: script.name,
+            icon: 'file' as const,
+            type: 'script' as const,
+            data: { script, ...dataConnection },
+          }));
 
-              return {
-                id: `${connection.id}:${schema}`,
-                label: schema,
-                data: { schema_name: schema, ...dataConnection },
-                icon: 'folder' as const,
-                type: 'schema' as const,
-                childs: [
-                  {
-                    id: `tables_${connection.id}:${schema}`,
-                    label: t('tabs.tables'),
-                    icon: 'multi',
-                    childs: tablesSchema,
-                    type: 'tables' as const,
-                    data: { schema_name: schema, ...dataConnection },
-                  },
-                  {
-                    id: `fns_${connection.id}:${schema}`,
-                    label: t('tabs.functions'),
-                    childs: functionsSchema,
-                    icon: 'functions',
-                  },
-                ],
-              };
-            }) || []
-          : [];
+          if (filterTextSerialized) {
+            tablesThreeView = tablesThreeView.filter((table) =>
+              checkFilterText(table?.label, table?.data?.table_schema),
+            );
+            functionsThreeView = functionsThreeView.filter((fn) =>
+              checkFilterText(fn?.label, fn?.data?.function_schema),
+            );
+          }
 
-        if (filterTextSerialized) {
-          schemasThreeView = schemasThreeView.filter((schema) =>
-            schema.childs.some((group) => group.childs?.length),
-          );
-        }
+          let schemasThreeView: IItemTreeView[] = dialect.supportsSchemas
+            ? connectionInfo?.schemas?.map?.((schema) => {
+                const tablesSchema = tablesThreeView.filter(
+                  ({ data }) => data.table_schema === schema,
+                );
+                const functionsSchema = functionsThreeView.filter(
+                  ({ data }) => data.function_schema === schema,
+                );
 
-        hasContentWithFilterText =
-          hasContentWithFilterText || !!tablesThreeView.length || !!functionsThreeView.length;
+                return {
+                  id: `${connection.id}:${schema}`,
+                  label: schema,
+                  data: { schema_name: schema, ...dataConnection },
+                  icon: 'folder' as const,
+                  type: 'schema' as const,
+                  childs: [
+                    {
+                      id: `tables_${connection.id}:${schema}`,
+                      label: t('tabs.tables'),
+                      icon: 'multi',
+                      childs: tablesSchema,
+                      type: 'tables' as const,
+                      data: { schema_name: schema, ...dataConnection },
+                    },
+                    {
+                      id: `fns_${connection.id}:${schema}`,
+                      label: t('tabs.functions'),
+                      childs: functionsSchema,
+                      icon: 'functions',
+                    },
+                  ],
+                };
+              }) || []
+            : [];
 
-        return {
-          id: connection.id,
-          label: connection.description,
-          labelInfo:
-            dialect.connectionMode === 'file'
-              ? connection.database
-              : `${connection.host}:${connection.port}`,
-          loading: loadingConnectionsId.includes(connection.id),
-          icon: 'database' as const,
-          type: 'connection' as const,
-          data: { id_connection: connection.id, description_connection: connection.description },
-          childs: [
-            dialect.supportsSchemas && {
-              id: `schemas_${connection.id}`,
-              type: 'schemas',
-              label: t('sidebar.schemas'),
-              childs: schemasThreeView,
-              icon: 'schema',
-              data: dataConnection,
-            },
-            !dialect.supportsSchemas && {
-              id: `tables_${connection.id}`,
-              type: 'tables',
-              label: t('tabs.tables'),
-              childs: tablesThreeView,
-              data: dataConnection,
-            },
-            {
-              id: `scripts_${connection.id}`,
-              type: 'scripts',
-              label: t('tabs.scripts'),
-              childs: scriptsThreeView,
-              icon: 'fileSql',
-              data: dataConnection,
-            },
-          ].filter(Boolean),
-        } as IItemTreeView;
-      }),
-    };
+          if (filterTextSerialized) {
+            schemasThreeView = schemasThreeView.filter((schema) =>
+              schema.childs.some((group) => group.childs?.length),
+            );
+          }
 
-    return { ...projects, hasContentWithFilterText };
-  });
+          hasContentWithFilterText =
+            hasContentWithFilterText || !!tablesThreeView.length || !!functionsThreeView.length;
 
+          return {
+            id: connection.id,
+            label: connection.description,
+            labelInfo:
+              dialect.connectionMode === 'file'
+                ? connection.database
+                : `${connection.host}:${connection.port}`,
+            loading: loadingConnectionsIdSet.has(connection.id),
+            icon: 'database' as const,
+            type: 'connection' as const,
+            data: { id_connection: connection.id, description_connection: connection.description },
+            childs: [
+              dialect.supportsSchemas && {
+                id: `schemas_${connection.id}`,
+                type: 'schemas',
+                label: t('sidebar.schemas'),
+                childs: schemasThreeView,
+                icon: 'schema',
+                data: dataConnection,
+              },
+              !dialect.supportsSchemas && {
+                id: `tables_${connection.id}`,
+                type: 'tables',
+                label: t('tabs.tables'),
+                childs: tablesThreeView,
+                data: dataConnection,
+              },
+              {
+                id: `scripts_${connection.id}`,
+                type: 'scripts',
+                label: t('tabs.scripts'),
+                childs: scriptsThreeView,
+                icon: 'fileSql',
+                data: dataConnection,
+              },
+            ].filter(Boolean),
+          } as IItemTreeView;
+        }),
+      };
+
+      return { ...projects, hasContentWithFilterText };
+    });
+  }, [
+    checkFilterText,
+    connectionsGroupPerProject,
+    connectionsInfo,
+    filterTextSerialized,
+    loadingConnectionsIdSet,
+    scriptsByConnectionId,
+    t,
+  ]);
+
+  const sidebarRevealIndex = React.useMemo(() => {
+    return buildSidebarRevealIndex(projectsSerialized);
+  }, [projectsSerialized]);
+
+  const treeViewItems = React.useMemo(() => {
+    return filterTextSerialized
+      ? projectsSerialized.filter((project) => project.hasContentWithFilterText)
+      : projectsSerialized;
+  }, [filterTextSerialized, projectsSerialized]);
 
   const activeSidebarRevealTarget = React.useMemo<SidebarRevealTarget | undefined>(() => {
     const tab = tabs.find((item) => item.id === activeTabId);
@@ -711,7 +798,7 @@ const ProjectsMenu = () => {
       return;
     }
 
-    const revealPath = getSidebarRevealPath(projectsSerialized, activeSidebarRevealTarget);
+    const revealPath = getSidebarRevealPath(sidebarRevealIndex, activeSidebarRevealTarget);
 
     if (!revealPath) {
       lastRevealKeyRef.current = '';
@@ -724,7 +811,19 @@ const ProjectsMenu = () => {
 
     lastRevealKeyRef.current = revealKey;
     treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds);
-  }, [activeSidebarRevealTarget, activeTabId, projectsSerialized]);
+  }, [activeSidebarRevealTarget, activeTabId, sidebarRevealIndex]);
+
+  const closeContextMenu = React.useCallback(() => {
+    setContextMenuItemSelected(null);
+  }, []);
+
+  const openNewProject = React.useCallback(() => {
+    setIsNewProject(true);
+  }, []);
+
+  const toggleWholeWordFilter = React.useCallback(() => {
+    setIsWholeWordFilter((prevState) => !prevState);
+  }, []);
 
   return (
     <>
@@ -807,15 +906,7 @@ const ProjectsMenu = () => {
             title="Abrir editor SQL"
             color={colors.color}
             icon={() => <FileSqlIcon size={14} />}
-            onClick={() => {
-              const connectionScripts = scripts.filter(
-                (s) => s.id_connection === idConnectionSelected,
-              );
-
-              const script = connectionScripts[connectionScripts.length - 1];
-
-              script ? openTabScriptSql(script) : setIsNewScript(true);
-            }}
+            onClick={openSelectedConnectionScript}
           />
         )}
 
@@ -825,7 +916,7 @@ const ProjectsMenu = () => {
           title="Adicionar Novo Projeto"
           color={colors.color}
           icon={() => <AddIcon size={12} />}
-          onClick={() => setIsNewProject(true)}
+          onClick={openNewProject}
         />
       </Row>
 
@@ -846,7 +937,7 @@ const ProjectsMenu = () => {
             title="Palavra exata"
             icon={() => <WholeWordIcon />}
             color={isWholeWordFilter ? 'white' : 'gray'}
-            onClick={() => setIsWholeWordFilter((prevState) => !prevState)}
+            onClick={toggleWholeWordFilter}
           />
         )}
       />
@@ -860,17 +951,13 @@ const ProjectsMenu = () => {
           onSwitchItem={handleOpemItemTreeView}
           onDoubleClick={handleDoubleClickItemThreeView}
           onClick={handleClickItemThreeView}
-          items={
-            filterTextSerialized
-              ? projectsSerialized.filter((project) => project.hasContentWithFilterText)
-              : projectsSerialized
-          }
+          items={treeViewItems}
         />
 
         <ContextMenu
           position={contextMenuPosition}
           options={contextOptions}
-          onClose={() => setContextMenuItemSelected(null)}
+          onClose={closeContextMenu}
         />
       </div>
     </>

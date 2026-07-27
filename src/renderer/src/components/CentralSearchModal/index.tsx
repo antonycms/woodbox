@@ -39,13 +39,15 @@ export const CentralSearchModal = React.memo(() => {
     new Map(),
   );
 
-  const getConnectionDescription = React.useCallback(
-    (idConnection: string) => {
-      const connectionById = new Map(connections.map((connection) => [connection.id, connection]));
-      return connectionById.get(idConnection)?.description;
-    },
-    [connections],
-  );
+  const connectionsById = React.useMemo(() => {
+    if (!isOpen) return constants.EMPTY_CONNECTIONS_BY_ID;
+
+    return new Map(connections.map((connection) => [connection.id, connection]));
+  }, [connections, isOpen]);
+
+  const getConnectionDescription = React.useCallback((idConnection: string) => {
+    return connectionsById.get(idConnection)?.description;
+  }, [connectionsById]);
 
   const openScriptTab = React.useCallback(
     (script: IScript) => {
@@ -164,6 +166,8 @@ export const CentralSearchModal = React.memo(() => {
   );
 
   const { openTabItems, openTabIds } = React.useMemo(() => {
+    if (!isOpen) return constants.EMPTY_OPEN_TAB_RESULT;
+
     const items: ICentralSearchItem[] = [];
 
     for (const tab of tabs) {
@@ -251,19 +255,19 @@ export const CentralSearchModal = React.memo(() => {
       openTabItems: items,
       openTabIds: itemsList,
     };
-  }, [activeTabId, getConnectionDescription, openTableTab, setActiveTabId, tabs]);
+  }, [activeTabId, getConnectionDescription, isOpen, openTableTab, setActiveTabId, tabs]);
 
   const closedItemsByType = React.useMemo<
     Record<ICentralSearchItemType, ICentralSearchItem[]>
   >(() => {
-    const openConnectionIds = new Set(Array.from(connectionsInfo.keys()));
+    if (!isOpen) return constants.EMPTY_CLOSED_ITEMS;
 
     const closedScripts: ICentralSearchItem[] = [];
     const closedTables: ICentralSearchItem[] = [];
     const closedFunctions: ICentralSearchItem[] = [];
 
     for (const script of scripts) {
-      const connected = openConnectionIds.has(script.id_connection);
+      const connected = connectionsInfo.has(script.id_connection);
       const opened = openTabIds.has(constants.getScriptTabId(script.id));
 
       if (!connected || opened) continue;
@@ -315,9 +319,7 @@ export const CentralSearchModal = React.memo(() => {
           }),
         );
       }
-    }
 
-    for (const [idConnection, info] of connectionsInfo) {
       for (let index = 0; index < info?.functions?.length || 0; index++) {
         const fn = info.functions[index];
 
@@ -362,10 +364,13 @@ export const CentralSearchModal = React.memo(() => {
     openScriptTab,
     openTabIds,
     openTableTab,
+    isOpen,
     scripts,
   ]);
 
   const { visibleItems, visibleRows } = React.useMemo(() => {
+    if (!isOpen) return constants.EMPTY_VISIBLE_RESULT;
+
     const filter = constants.normalizeSearch(parsedSearch.filter);
 
     const matchItem = (item: ICentralSearchItem) => !filter || item.search.includes(filter);
@@ -411,7 +416,7 @@ export const CentralSearchModal = React.memo(() => {
       visibleItems: items,
       visibleRows: rows,
     };
-  }, [closedItemsByType, openTabItems, parsedSearch.filter, t]);
+  }, [closedItemsByType, isOpen, openTabItems, parsedSearch.filter, t]);
 
   const activeTableFilterTarget = React.useMemo(() => {
     const shouldLoadColumns = /\S+\s/.test(searchText);
@@ -436,6 +441,12 @@ export const CentralSearchModal = React.memo(() => {
 
     return columnNamesByTable.get(activeTableColumnsKey) || [];
   }, [activeTableColumnsKey, columnNamesByTable]);
+
+  const visibleRowOffsets = React.useMemo(() => {
+    if (!isOpen) return [];
+
+    return constants.getRowOffsets(visibleRows);
+  }, [isOpen, visibleRows]);
 
   const closeModal = React.useCallback(() => {
     setIsOpen(false);
@@ -529,7 +540,7 @@ export const CentralSearchModal = React.memo(() => {
 
     if (rowIndex < 0 || !resultsRef.current) return;
 
-    const rowTop = constants.getRowOffset(visibleRows, rowIndex);
+    const rowTop = visibleRowOffsets[rowIndex] || 0;
     const rowBottom = rowTop + constants.getRowSize(visibleRows[rowIndex]);
     const viewTop = resultsRef.current.scrollTop;
     const viewBottom = viewTop + resultsRef.current.clientHeight;
@@ -539,7 +550,7 @@ export const CentralSearchModal = React.memo(() => {
     } else if (rowBottom > viewBottom) {
       resultsRef.current.scrollTop = rowBottom - resultsRef.current.clientHeight;
     }
-  }, [highlightedIndex, isOpen, visibleRows]);
+  }, [highlightedIndex, isOpen, visibleRowOffsets, visibleRows]);
 
   const style = React.useMemo(() => {
     return toCssProperties({
