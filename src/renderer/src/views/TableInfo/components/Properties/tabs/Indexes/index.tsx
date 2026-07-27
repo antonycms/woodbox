@@ -15,13 +15,15 @@ import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
+import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
+import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { formatSizeFromBytes } from '@renderer/utils/methods';
 import styles from '../Columns/styles.module.css';
 
@@ -49,6 +51,24 @@ const getIndexColumnsText = (index: IIndexInfo) => {
     })
     .join(', ');
 };
+
+type IIndexInfoSerialized = IIndexInfo & {
+  column_names_display?: string;
+  index_size?: string;
+};
+
+const getIndexSearchValues = (index: IIndexInfoSerialized) => [
+  index.index_name,
+  Array.isArray(index.column_names) ? index.column_names.join(', ') : index.column_names,
+  index.column_names_display,
+  index.is_unique,
+  index.is_primary,
+  index.index_method,
+  index.is_valid,
+  index.expression,
+  index.predicate,
+  index.index_size,
+];
 
 const Indexes = ({
   id_connection,
@@ -99,7 +119,6 @@ const Indexes = ({
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showNewIndexModal, setShowNewIndexModal] = React.useState(false);
 
-  const indexFilterTextSerialized = indexFilterText.trim().toLowerCase();
   const droppedIndexNames = React.useMemo(
     () => new Set(pendingDroppedIndexes.map((index) => index.index_name)),
     [pendingDroppedIndexes],
@@ -117,7 +136,7 @@ const Indexes = ({
     ],
     [columns, droppedColumnNames, pendingColumns],
   );
-  const allIndexes = React.useMemo<IIndexInfo[]>(
+  const allIndexes = React.useMemo<IIndexInfoSerialized[]>(
     () => [
       ...indexes.map((index) => {
         const indexWithSize = {
@@ -145,35 +164,70 @@ const Indexes = ({
     ],
     [__colors.redTransparent, indexes, droppedIndexNames, pendingIndexes],
   );
-  const filteredAndSortedIndexes = React.useMemo(() => {
-    if (!indexFilterTextSerialized) return sortRows(allIndexes, sort);
+  const filteredAndSortedIndexes = useFilteredSortedRows({
+    rows: allIndexes,
+    filterText: indexFilterText,
+    sort,
+    getSearchValues: getIndexSearchValues,
+  });
 
-    const texts = indexFilterTextSerialized.split(',').map((text) => text.trim());
-    const indexesFiltered = allIndexes.filter((index) =>
-      [
-        index.index_name,
-        Array.isArray(index.column_names) ? index.column_names.join(', ') : index.column_names,
-        index.column_names_display,
-        index.is_unique,
-        index.is_primary,
-        index.index_method,
-        index.is_valid,
-        index.expression,
-        index.predicate,
-        index.index_size,
-      ].some((value) =>
-        texts.some(
-          (text) =>
-            text &&
-            String(value ?? '')
-              .toLowerCase()
-              .includes(text),
-        ),
-      ),
-    );
+  const handleSortIndexes = React.useCallback(
+    (column: IColumn<IIndexInfoSerialized>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
 
-    return sortRows(indexesFiltered, sort);
-  }, [allIndexes, indexFilterTextSerialized, sort]);
+  const tableColumns = React.useMemo<IColumn<IIndexInfoSerialized>[]>(
+    () => [
+      {
+        label: t('field.name'),
+        attribute: 'index_name',
+        sortable: true,
+      },
+      {
+        label: t('field.columns'),
+        attribute: 'column_names_display',
+        sortable: true,
+      },
+      {
+        label: t('index.uniqueSingle'),
+        attribute: 'is_unique',
+        sortable: true,
+      },
+      {
+        label: t('field.primaryKey'),
+        attribute: 'is_primary',
+        sortable: true,
+      },
+      {
+        label: t('field.method'),
+        attribute: 'index_method',
+        sortable: true,
+      },
+      {
+        label: t('field.valid'),
+        attribute: 'is_valid',
+        sortable: true,
+      },
+      {
+        label: t('field.expression'),
+        attribute: 'expression',
+        sortable: true,
+      },
+      {
+        label: t('field.predicate'),
+        attribute: 'predicate',
+        sortable: true,
+      },
+      {
+        label: t('field.size'),
+        attribute: 'index_size',
+        sortable: true,
+      },
+    ],
+    [t],
+  );
 
   const handleOpenNewIndexModal = React.useCallback(() => {
     setShowNewIndexModal(true);
@@ -271,41 +325,24 @@ const Indexes = ({
     ];
   }, [selectedIndexes, handleOpenNewIndexModal, handleRemoveSelectedIndexes, t]);
 
-  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    setContextMenuPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
-
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
-
-      if (isEditableTarget || target?.isContentEditable) return;
-
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        handleRemoveSelectedIndexes();
-        return;
-      }
-
-      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        handleSavePendingChanges();
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        handleUndoSelectedDroppedIndexes();
-      }
+  const onContextMenuTable = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
     },
-    [handleRemoveSelectedIndexes, handleSavePendingChanges, handleUndoSelectedDroppedIndexes],
+    [],
   );
 
+  const handleKeyDown = usePropertiesKeyboardShortcuts({
+    onRemove: handleRemoveSelectedIndexes,
+    onSave: handleSavePendingChanges,
+    onUndo: handleUndoSelectedDroppedIndexes,
+  });
+
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableIndexes(id_connection, { schema, table });
@@ -313,27 +350,13 @@ const Indexes = ({
 
   React.useEffect(() => {
     setSelectedIndexes([]);
-  }, [indexFilterTextSerialized]);
+  }, [indexFilterText]);
 
-  React.useEffect(() => {
-    setSelectedIndexes((currentSelectedIndexes) => {
-      if (!currentSelectedIndexes.length) return currentSelectedIndexes;
-
-      const indexesByKey = new Map(allIndexes.map((index) => [getIndexSelectionKey(index), index]));
-      const nextSelectedIndexes = currentSelectedIndexes
-        .map((index) => indexesByKey.get(getIndexSelectionKey(index)))
-        .filter((index): index is IIndexInfo => !!index);
-
-      if (
-        nextSelectedIndexes.length === currentSelectedIndexes.length &&
-        nextSelectedIndexes.every((index, idx) => index === currentSelectedIndexes[idx])
-      ) {
-        return currentSelectedIndexes;
-      }
-
-      return nextSelectedIndexes;
-    });
-  }, [allIndexes]);
+  useSelectionReconciliation({
+    rows: allIndexes,
+    setSelectedRows: setSelectedIndexes,
+    getSelectionKey: getIndexSelectionKey,
+  });
 
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
@@ -383,56 +406,8 @@ const Indexes = ({
         loading={loading.indexes}
         rows={filteredAndSortedIndexes}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
-        columns={[
-          {
-            label: t('field.name'),
-            attribute: 'index_name',
-            sortable: true,
-          },
-          {
-            label: t('field.columns'),
-            attribute: 'column_names_display',
-            sortable: true,
-          },
-          {
-            label: t('index.uniqueSingle'),
-            attribute: 'is_unique',
-            sortable: true,
-          },
-          {
-            label: t('field.primaryKey'),
-            attribute: 'is_primary',
-            sortable: true,
-          },
-          {
-            label: t('field.method'),
-            attribute: 'index_method',
-            sortable: true,
-          },
-          {
-            label: t('field.valid'),
-            attribute: 'is_valid',
-            sortable: true,
-          },
-          {
-            label: t('field.expression'),
-            attribute: 'expression',
-            sortable: true,
-          },
-          {
-            label: t('field.predicate'),
-            attribute: 'predicate',
-            sortable: true,
-          },
-          {
-            label: t('field.size'),
-            attribute: 'index_size',
-            sortable: true,
-          },
-        ]}
+        onSort={handleSortIndexes}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

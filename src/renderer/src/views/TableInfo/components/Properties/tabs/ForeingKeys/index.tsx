@@ -18,13 +18,15 @@ import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
+import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
+import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateReferencesDdl } from '../Columns/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../Columns/styles.module.css';
 
 interface IForeingKeysProps extends ITableInfoProps {
@@ -40,6 +42,16 @@ interface IReferenceSerialized extends IColumnReferenceInfo {
 const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>
   (reference as IColumnReferenceInfo & { __pendingId?: string }).__pendingId ||
   `${reference.constraint_name}-${reference.column_name}`;
+
+const getReferenceSearchValues = (reference: IReferenceSerialized) => [
+  reference.constraint_name,
+  reference.column_name,
+  reference.table_reference,
+  reference.reference_column_name,
+  reference.comment,
+  reference.remove_rule,
+  reference.update_rule,
+];
 
 const ForeingKeys = ({
   id_connection,
@@ -93,7 +105,6 @@ const ForeingKeys = ({
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.references);
   const connectionInfo = connectionsInfo.get(id_connection);
-  const referenceFilterTextSerialized = referenceFilterText.trim().toLowerCase();
   const droppedConstraintNames = React.useMemo(
     () => new Set(pendingDroppedReferences.map((reference) => reference.constraint_name)),
     [pendingDroppedReferences],
@@ -137,32 +148,61 @@ const ForeingKeys = ({
     return [...existingReferences, ...createdReferences];
   }, [__colors.redTransparent, references, droppedConstraintNames, pendingReferences]);
 
-  const filteredAndSortedReferences = React.useMemo(() => {
-    if (!referenceFilterTextSerialized) return sortRows(allReferences, sort);
+  const filteredAndSortedReferences = useFilteredSortedRows({
+    rows: allReferences,
+    filterText: referenceFilterText,
+    sort,
+    getSearchValues: getReferenceSearchValues,
+  });
 
-    const texts = referenceFilterTextSerialized.split(',').map((text) => text.trim());
-    const referencesFiltered = allReferences.filter((reference) =>
-      [
-        reference.constraint_name,
-        reference.column_name,
-        reference.table_reference,
-        reference.reference_column_name,
-        reference.comment,
-        reference.remove_rule,
-        reference.update_rule,
-      ].some((value) =>
-        texts.some(
-          (text) =>
-            text &&
-            String(value ?? '')
-              .toLowerCase()
-              .includes(text),
-        ),
-      ),
-    );
+  const handleSortReferences = React.useCallback(
+    (column: IColumn<IReferenceSerialized>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
 
-    return sortRows(referencesFiltered, sort);
-  }, [allReferences, referenceFilterTextSerialized, sort]);
+  const tableColumns = React.useMemo<IColumn<IReferenceSerialized>[]>(
+    () => [
+      {
+        label: t('field.name'),
+        attribute: 'constraint_name',
+        sortable: true,
+      },
+      {
+        label: t('field.column'),
+        attribute: 'column_name',
+        sortable: true,
+      },
+      {
+        label: t('field.referencedTableTitle'),
+        attribute: 'table_reference',
+        isLink: true,
+        sortable: true,
+      },
+      {
+        label: t('field.referencedColumnTitle'),
+        attribute: 'reference_column_name',
+        sortable: true,
+      },
+      {
+        label: t('field.comment'),
+        attribute: 'comment',
+        sortable: true,
+      },
+      {
+        label: t('field.deleteRule'),
+        attribute: 'remove_rule',
+        sortable: true,
+      },
+      {
+        label: t('field.updateRule'),
+        attribute: 'update_rule',
+        sortable: true,
+      },
+    ],
+    [t],
+  );
 
   const handleOpenNewReferenceModal = React.useCallback(() => {
     setShowNewReferenceModal(true);
@@ -282,47 +322,30 @@ const ForeingKeys = ({
     t,
   ]);
 
-  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    setContextMenuPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
+  const onContextMenuTable = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    },
+    [],
+  );
 
-  const handleCellLinkClick = (attribute: string, value: string) => {
+  const handleCellLinkClick = React.useCallback((attribute: string, value: string) => {
     if (attribute !== 'table_reference' || !onOpenTable) return;
     const row = allReferences.find((r) => r.table_reference === value);
     if (row) onOpenTable(id_connection, row.reference_table_schema, row.reference_table_name);
-  };
+  }, [allReferences, id_connection, onOpenTable]);
 
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
-
-      if (isEditableTarget || target?.isContentEditable) return;
-
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        handleRemoveSelectedReferences();
-        return;
-      }
-
-      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        handleSavePendingChanges();
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        handleUndoSelectedDroppedReferences();
-      }
-    },
-    [handleRemoveSelectedReferences, handleSavePendingChanges, handleUndoSelectedDroppedReferences],
-  );
+  const handleKeyDown = usePropertiesKeyboardShortcuts({
+    onRemove: handleRemoveSelectedReferences,
+    onSave: handleSavePendingChanges,
+    onUndo: handleUndoSelectedDroppedReferences,
+  });
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableReferences(id_connection, { schema, table });
@@ -330,31 +353,13 @@ const ForeingKeys = ({
 
   React.useEffect(() => {
     setSelectedReferences([]);
-  }, [referenceFilterTextSerialized]);
+  }, [referenceFilterText]);
 
-  React.useEffect(() => {
-    setSelectedReferences((currentSelectedReferences) => {
-      if (!currentSelectedReferences.length) return currentSelectedReferences;
-
-      const referencesByKey = new Map(
-        allReferences.map((reference) => [getReferenceSelectionKey(reference), reference]),
-      );
-      const nextSelectedReferences = currentSelectedReferences
-        .map((reference) => referencesByKey.get(getReferenceSelectionKey(reference)))
-        .filter((reference): reference is IReferenceSerialized => !!reference);
-
-      if (
-        nextSelectedReferences.length === currentSelectedReferences.length &&
-        nextSelectedReferences.every(
-          (reference, index) => reference === currentSelectedReferences[index],
-        )
-      ) {
-        return currentSelectedReferences;
-      }
-
-      return nextSelectedReferences;
-    });
-  }, [allReferences]);
+  useSelectionReconciliation({
+    rows: allReferences,
+    setSelectedRows: setSelectedReferences,
+    getSelectionKey: getReferenceSelectionKey,
+  });
 
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
@@ -405,48 +410,9 @@ const ForeingKeys = ({
         loading={loading.references}
         rows={filteredAndSortedReferences}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
+        onSort={handleSortReferences}
         onCellLinkClick={handleCellLinkClick}
-        columns={[
-          {
-            label: t('field.name'),
-            attribute: 'constraint_name',
-            sortable: true,
-          },
-          {
-            label: t('field.column'),
-            attribute: 'column_name',
-            sortable: true,
-          },
-          {
-            label: t('field.referencedTableTitle'),
-            attribute: 'table_reference',
-            isLink: true,
-            sortable: true,
-          },
-          {
-            label: t('field.referencedColumnTitle'),
-            attribute: 'reference_column_name',
-            sortable: true,
-          },
-          {
-            label: t('field.comment'),
-            attribute: 'comment',
-            sortable: true,
-          },
-          {
-            label: t('field.deleteRule'),
-            attribute: 'remove_rule',
-            sortable: true,
-          },
-          {
-            label: t('field.updateRule'),
-            attribute: 'update_rule',
-            sortable: true,
-          },
-        ]}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

@@ -20,14 +20,16 @@ import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
+import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
+import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateAddColumnsDdl } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
@@ -91,6 +93,8 @@ const serializeColumnBooleanLabels = (column: IColumnInfo): IColumnInfo => ({
 
 const getOriginalColumnName = (column: IColumnInfo) =>
   (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
+
+const getColumnSearchValues = (column: IColumnInfo) => [column.column_name, column.data_type];
 
 const Columns = ({
   id_connection,
@@ -157,7 +161,6 @@ const Columns = ({
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
   const connectionInfo = connectionsInfo.get(id_connection);
-  const columnFilterTextSerialized = columnFilterText.trim().toLowerCase();
   const droppedColumnNames = React.useMemo(
     () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
     [pendingDroppedColumns],
@@ -203,19 +206,71 @@ const Columns = ({
     [pendingRestrictions, restrictions],
   );
 
-  const filteredColumnsAndSortedColumns = React.useMemo(() => {
-    if (!columnFilterTextSerialized) return sortRows(allColumns, sort);
+  const filteredColumnsAndSortedColumns = useFilteredSortedRows({
+    rows: allColumns,
+    filterText: columnFilterText,
+    sort,
+    getSearchValues: getColumnSearchValues,
+  });
 
-    const texts = columnFilterTextSerialized.split(',').map((t) => t.trim());
+  const handleSortColumns = React.useCallback(
+    (column: IColumn<IColumnInfo>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
 
-    const columnsFiltered = allColumns.filter((column) =>
-      [column.column_name, column.data_type].some((value) =>
-        texts.some((text) => text && value?.toLowerCase().includes(text)),
-      ),
-    );
-
-    return sortRows(columnsFiltered, sort);
-  }, [allColumns, columnFilterTextSerialized, sort]);
+  const tableColumns = React.useMemo<IColumn<IColumnInfo>[]>(
+    () => [
+      {
+        label: t('column.columnName'),
+        attribute: 'column_name',
+        editable: true,
+        sortable: true,
+      },
+      {
+        label: t('field.type'),
+        attribute: 'data_type',
+        editable: true,
+        sortable: true,
+        type: 'autocomplete',
+        dataAutocomplete: columnTypes,
+      },
+      {
+        label: t('field.nullable'),
+        attribute: 'is_nullable_label',
+        editable: true,
+        sortable: true,
+        type: 'autocomplete',
+        dataAutocomplete: booleanLabelOptions,
+      },
+      ...(dialect.supportsAutoIncrement
+        ? [
+            {
+              label: t('column.autoInc'),
+              attribute: 'is_auto_increment_label' as const,
+              editable: true,
+              sortable: true,
+              type: 'autocomplete' as const,
+              dataAutocomplete: booleanLabelOptions,
+            },
+          ]
+        : []),
+      {
+        label: t('field.default'),
+        attribute: 'column_default',
+        editable: true,
+        sortable: true,
+      },
+      {
+        label: t('field.comment'),
+        attribute: 'description',
+        editable: true,
+        sortable: true,
+      },
+    ],
+    [columnTypes, dialect.supportsAutoIncrement, t],
+  );
 
   const handleOpenNewColumnModal = React.useCallback(() => {
     setShowNewColumnModal(true);
@@ -534,14 +589,18 @@ const Columns = ({
     t,
   ]);
 
-  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    setContextMenuPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
+  const onContextMenuTable = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    },
+    [],
+  );
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     loadColumnTypes(id_connection);
 
     if (mode === 'create') return;
@@ -553,56 +612,19 @@ const Columns = ({
 
   React.useEffect(() => {
     setSelectedColumns([]);
-  }, [columnFilterTextSerialized]);
+  }, [columnFilterText]);
 
-  React.useEffect(() => {
-    setSelectedColumns((currentSelectedColumns) => {
-      if (!currentSelectedColumns.length) return currentSelectedColumns;
+  useSelectionReconciliation({
+    rows: allColumns,
+    setSelectedRows: setSelectedColumns,
+    getSelectionKey: getColumnSelectionKey,
+  });
 
-      const columnsByKey = new Map(
-        allColumns.map((column) => [getColumnSelectionKey(column), column]),
-      );
-      const nextSelectedColumns = currentSelectedColumns
-        .map((column) => columnsByKey.get(getColumnSelectionKey(column)))
-        .filter((column): column is IColumnInfo => !!column);
-
-      if (
-        nextSelectedColumns.length === currentSelectedColumns.length &&
-        nextSelectedColumns.every((column, index) => column === currentSelectedColumns[index])
-      ) {
-        return currentSelectedColumns;
-      }
-
-      return nextSelectedColumns;
-    });
-  }, [allColumns]);
-
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
-
-      if (isEditableTarget || target?.isContentEditable) return;
-
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        handleRemoveSelectedColumns();
-        return;
-      }
-
-      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        handleSavePendingChanges();
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        handleUndoSelectedDroppedColumns();
-      }
-    },
-    [handleRemoveSelectedColumns, handleSavePendingChanges, handleUndoSelectedDroppedColumns],
-  );
+  const handleKeyDown = usePropertiesKeyboardShortcuts({
+    onRemove: handleRemoveSelectedColumns,
+    onSave: handleSavePendingChanges,
+    onUndo: handleUndoSelectedDroppedColumns,
+  });
 
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
@@ -657,57 +679,8 @@ const Columns = ({
         rows={filteredColumnsAndSortedColumns}
         onEditRow={handleEditColumn}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
-        columns={[
-          {
-            label: t('column.columnName'),
-            attribute: 'column_name',
-            editable: true,
-            sortable: true,
-          },
-          {
-            label: t('field.type'),
-            attribute: 'data_type',
-            editable: true,
-            sortable: true,
-            type: 'autocomplete',
-            dataAutocomplete: columnTypes,
-          },
-          {
-            label: t('field.nullable'),
-            attribute: 'is_nullable_label',
-            editable: true,
-            sortable: true,
-            type: 'autocomplete',
-            dataAutocomplete: booleanLabelOptions,
-          },
-          ...(dialect.supportsAutoIncrement
-            ? [
-                {
-                  label: t('column.autoInc'),
-                  attribute: 'is_auto_increment_label' as const,
-                  editable: true,
-                  sortable: true,
-                  type: 'autocomplete' as const,
-                  dataAutocomplete: booleanLabelOptions,
-                },
-              ]
-            : []),
-          {
-            label: t('field.default'),
-            attribute: 'column_default',
-            editable: true,
-            sortable: true,
-          },
-          {
-            label: t('field.comment'),
-            attribute: 'description',
-            editable: true,
-            sortable: true,
-          },
-        ]}
+        onSort={handleSortColumns}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

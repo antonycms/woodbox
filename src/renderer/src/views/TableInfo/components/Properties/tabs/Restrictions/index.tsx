@@ -18,18 +18,30 @@ import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
+import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
+import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../Columns/styles.module.css';
 
 const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
   (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||
   restriction.constraint_name;
+
+const getRestrictionSearchValues = (restriction: IColumnRestrictionsInfo) => [
+  restriction.constraint_name,
+  restriction.constraint_type,
+  Array.isArray(restriction.column_names)
+    ? restriction.column_names.join(', ')
+    : restriction.column_names,
+  restriction.expression,
+  restriction.comment,
+];
 
 const Restrictios = ({
   id_connection,
@@ -83,7 +95,6 @@ const Restrictios = ({
   const [showNewRestrictionModal, setShowNewRestrictionModal] = React.useState(false);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.restrictions);
-  const restrictionFilterTextSerialized = restrictionFilterText.trim().toLowerCase();
   const droppedConstraintNames = React.useMemo(
     () => new Set(pendingDroppedRestrictions.map((restriction) => restriction.constraint_name)),
     [pendingDroppedRestrictions],
@@ -119,32 +130,52 @@ const Restrictios = ({
     ],
     [__colors.redTransparent, restrictions, droppedConstraintNames, pendingRestrictions],
   );
-  const filteredAndSortedRestrictions = React.useMemo(() => {
-    if (!restrictionFilterTextSerialized) return sortRows(allRestrictions, sort);
+  const filteredAndSortedRestrictions = useFilteredSortedRows({
+    rows: allRestrictions,
+    filterText: restrictionFilterText,
+    sort,
+    getSearchValues: getRestrictionSearchValues,
+  });
 
-    const texts = restrictionFilterTextSerialized.split(',').map((text) => text.trim());
-    const restrictionsFiltered = allRestrictions.filter((restriction) =>
-      [
-        restriction.constraint_name,
-        restriction.constraint_type,
-        Array.isArray(restriction.column_names)
-          ? restriction.column_names.join(', ')
-          : restriction.column_names,
-        restriction.expression,
-        restriction.comment,
-      ].some((value) =>
-        texts.some(
-          (text) =>
-            text &&
-            String(value ?? '')
-              .toLowerCase()
-              .includes(text),
-        ),
-      ),
-    );
+  const handleSortRestrictions = React.useCallback(
+    (column: IColumn<IColumnRestrictionsInfo>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
 
-    return sortRows(restrictionsFiltered, sort);
-  }, [allRestrictions, restrictionFilterTextSerialized, sort]);
+  const tableColumns = React.useMemo<IColumn<IColumnRestrictionsInfo>[]>(
+    () => [
+      {
+        label: t('field.name'),
+        attribute: 'constraint_name',
+        sortable: true,
+      },
+      {
+        label: t('field.type'),
+        attribute: 'constraint_type',
+        sortable: true,
+      },
+      {
+        label: t('field.columns'),
+        attribute: 'column_names',
+        type: 'autocomplete-multi',
+        sortable: true,
+      },
+      {
+        label: t('field.expression'),
+        attribute: 'expression',
+        sortable: true,
+      },
+      {
+        label: t('field.comment'),
+        attribute: 'comment',
+        sortable: true,
+      },
+    ],
+    [t],
+  );
+
   const hasPrimaryKey = React.useMemo(
     () =>
       restrictions.some(
@@ -261,45 +292,24 @@ const Restrictios = ({
     t,
   ]);
 
-  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    setContextMenuPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
-
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement;
-      const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
-
-      if (isEditableTarget || target?.isContentEditable) return;
-
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        handleRemoveSelectedRestrictions();
-        return;
-      }
-
-      if (isPrimaryShortcutPressed(event) && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        handleSavePendingChanges();
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        handleUndoSelectedDroppedRestrictions();
-      }
+  const onContextMenuTable = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
     },
-    [
-      handleRemoveSelectedRestrictions,
-      handleSavePendingChanges,
-      handleUndoSelectedDroppedRestrictions,
-    ],
+    [],
   );
 
+  const handleKeyDown = usePropertiesKeyboardShortcuts({
+    onRemove: handleRemoveSelectedRestrictions,
+    onSave: handleSavePendingChanges,
+    onUndo: handleUndoSelectedDroppedRestrictions,
+  });
+
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableRestrictions(id_connection, { schema, table });
@@ -307,34 +317,13 @@ const Restrictios = ({
 
   React.useEffect(() => {
     setSelectedRestrictions([]);
-  }, [restrictionFilterTextSerialized]);
+  }, [restrictionFilterText]);
 
-  React.useEffect(() => {
-    setSelectedRestrictions((currentSelectedRestrictions) => {
-      if (!currentSelectedRestrictions.length) return currentSelectedRestrictions;
-
-      const restrictionsByKey = new Map(
-        allRestrictions.map((restriction) => [
-          getRestrictionSelectionKey(restriction),
-          restriction,
-        ]),
-      );
-      const nextSelectedRestrictions = currentSelectedRestrictions
-        .map((restriction) => restrictionsByKey.get(getRestrictionSelectionKey(restriction)))
-        .filter((restriction): restriction is IColumnRestrictionsInfo => !!restriction);
-
-      if (
-        nextSelectedRestrictions.length === currentSelectedRestrictions.length &&
-        nextSelectedRestrictions.every(
-          (restriction, index) => restriction === currentSelectedRestrictions[index],
-        )
-      ) {
-        return currentSelectedRestrictions;
-      }
-
-      return nextSelectedRestrictions;
-    });
-  }, [allRestrictions]);
+  useSelectionReconciliation({
+    rows: allRestrictions,
+    setSelectedRows: setSelectedRestrictions,
+    getSelectionKey: getRestrictionSelectionKey,
+  });
 
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
@@ -381,41 +370,12 @@ const Restrictios = ({
       <Table
         rows={filteredAndSortedRestrictions}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
+        onSort={handleSortRestrictions}
         loading={loading.restrictions}
         rowKeyExtractor={getRestrictionSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedRestrictions}
-        columns={[
-          {
-            label: t('field.name'),
-            attribute: 'constraint_name',
-            sortable: true,
-          },
-          {
-            label: t('field.type'),
-            attribute: 'constraint_type',
-            sortable: true,
-          },
-          {
-            label: t('field.columns'),
-            attribute: 'column_names',
-            type: 'autocomplete-multi',
-            sortable: true,
-          },
-          {
-            label: t('field.expression'),
-            attribute: 'expression',
-            sortable: true,
-          },
-          {
-            label: t('field.comment'),
-            attribute: 'comment',
-            sortable: true,
-          },
-        ]}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

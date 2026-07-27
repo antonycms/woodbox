@@ -6,16 +6,30 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import styles from '../Columns/styles.module.css';
 
 interface IReferencesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
 }
+
+type IReferenceRow = IColumnReferenceInfo & { source_table: string };
+
+const getReferenceRowKey = (item: IReferenceRow) =>
+  `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`;
+
+const getReferenceSearchValues = (row: IReferenceRow) => [
+  row.constraint_name,
+  row.source_table,
+  row.column_name,
+  row.reference_column_name,
+];
 
 const References = ({ id_connection, schema, table, onOpenTable }: IReferencesProps) => {
   const {
@@ -30,9 +44,9 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
   const [sort, setSort] = React.useState<ITableSort[]>([]);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.usedAsReference);
-  const referenceFilterTextSerialized = referenceFilterText.trim().toLowerCase();
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     loadTableUsedAsReference(id_connection, { schema, table });
   }, []);
 
@@ -45,31 +59,52 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     [usedAsReference],
   );
 
-  const filteredAndSortedRows = React.useMemo(() => {
-    if (!referenceFilterTextSerialized) return sortRows(rowsSerialized, sort);
+  const filteredAndSortedRows = useFilteredSortedRows({
+    rows: rowsSerialized,
+    filterText: referenceFilterText,
+    sort,
+    getSearchValues: getReferenceSearchValues,
+  });
 
-    const texts = referenceFilterTextSerialized.split(',').map((text) => text.trim());
-    const rowsFiltered = rowsSerialized.filter((row) =>
-      [row.constraint_name, row.source_table, row.column_name, row.reference_column_name].some(
-        (value) =>
-          texts.some(
-            (text) =>
-              text &&
-              String(value ?? '')
-                .toLowerCase()
-                .includes(text),
-          ),
-      ),
-    );
+  const handleSortReferences = React.useCallback(
+    (column: IColumn<IReferenceRow>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
 
-    return sortRows(rowsFiltered, sort);
-  }, [referenceFilterTextSerialized, rowsSerialized, sort]);
-
-  const handleCellLinkClick = (attribute: string, value: string) => {
+  const handleCellLinkClick = React.useCallback((attribute: string, value: string) => {
     if (attribute !== 'source_table' || !onOpenTable) return;
     const row = rowsSerialized.find((r) => r.source_table === value);
     if (row) onOpenTable(id_connection, row.table_schema, row.table_name);
-  };
+  }, [id_connection, onOpenTable, rowsSerialized]);
+
+  const tableColumns = React.useMemo<IColumn<IReferenceRow>[]>(
+    () => [
+      {
+        label: t('field.name'),
+        attribute: 'constraint_name',
+        sortable: true,
+      },
+      {
+        label: t('field.table'),
+        attribute: 'source_table',
+        isLink: true,
+        sortable: true,
+      },
+      {
+        label: t('field.column'),
+        attribute: 'column_name',
+        sortable: true,
+      },
+      {
+        label: t('field.referencedColumnTitle'),
+        attribute: 'reference_column_name',
+        sortable: true,
+      },
+    ],
+    [t],
+  );
 
   return (
     <>
@@ -91,39 +126,13 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
       </div>
 
       <Table
-        rowKeyExtractor={(item) =>
-          `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`
-        }
+        rowKeyExtractor={getReferenceRowKey}
         loading={loading.usedAsReference}
         rows={filteredAndSortedRows}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
+        onSort={handleSortReferences}
         onCellLinkClick={handleCellLinkClick}
-        columns={[
-          {
-            label: t('field.name'),
-            attribute: 'constraint_name',
-            sortable: true,
-          },
-          {
-            label: t('field.table'),
-            attribute: 'source_table',
-            isLink: true,
-            sortable: true,
-          },
-          {
-            label: t('field.column'),
-            attribute: 'column_name',
-            sortable: true,
-          },
-          {
-            label: t('field.referencedColumnTitle'),
-            attribute: 'reference_column_name',
-            sortable: true,
-          },
-        ]}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

@@ -33,6 +33,7 @@ const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     loadTableDefinition(id_connection, { schema, table });
   }, []);
 

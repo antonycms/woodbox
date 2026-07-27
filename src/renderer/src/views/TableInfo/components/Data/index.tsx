@@ -9,7 +9,7 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { copyToClipboard } from '@renderer/utils/methods';
-import { ContextMenu } from '@renderer/components/ContextMenu';
+import { ContextMenu, type IContextMenuOption } from '@renderer/components/ContextMenu';
 import {
   AddIcon,
   CountIcon,
@@ -404,7 +404,7 @@ const Data = ({
     [__colors.orangeTransparent, __colors.redTransparent, items, droppedRows, editedFieldsRows],
   );
 
-  const onContextMenuTable = (
+  const onContextMenuTable = React.useCallback((
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData,
   ) => {
@@ -415,7 +415,11 @@ const Data = ({
         y: event.clientY,
       },
     });
-  };
+  }, []);
+
+  const rowKeyExtractor = React.useCallback((row: any, index: number) => {
+    return row.__table_hash_item ?? index;
+  }, []);
 
   const handleAddItem = React.useCallback(() => {
     const key = `new_${generateHash()}`;
@@ -809,6 +813,7 @@ const Data = ({
   );
 
   React.useEffect(() => {
+    // Monta uma vez: a aba de dados é recriada quando a tabela/conexão muda.
     loadData();
   }, []);
 
@@ -852,6 +857,71 @@ const Data = ({
     loadTableRestrictions,
   ]);
 
+  const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
+    return [
+      {
+        text: t('common.copy'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+      },
+      {
+        text: t('context.copyRow'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+      },
+      {
+        text: t('context.copyRowJson'),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+      },
+      {
+        text: t('context.setSelectedCellsNull'),
+        onClick: handleSetSelectedCellsNull,
+        show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+      },
+      {
+        text: t('context.deleteSelectedItems'),
+        onClick: handleRemoveSelectedRows,
+      },
+      {
+        text: t('context.insertDdlRow'),
+        onClick: () => {
+          setDdlSql(
+            generateInsertDdl(
+              dialect,
+              schema,
+              table,
+              contextMenuTable?.data?.rows || [],
+              columnNames,
+            ),
+          );
+          setShowDdlModal(true);
+        },
+      },
+      {
+        text: t('context.insertDdlSelectedCells'),
+        onClick: () => {
+          setDdlSql(
+            generateInsertDdl(
+              dialect,
+              schema,
+              table,
+              contextMenuTable?.data?.selectedCellRows || [],
+              columnNames,
+            ),
+          );
+          setShowDdlModal(true);
+        },
+      },
+    ];
+  }, [
+    columnNames,
+    contextMenuTable,
+    dialect,
+    handleRemoveSelectedRows,
+    handleSetSelectedCellsNull,
+    schema,
+    table,
+    t,
+  ]);
+
   return (
     <div
       className={styles.container}
@@ -885,7 +955,7 @@ const Data = ({
             rows={itemsWithPendingStyles}
             sort={sort}
             onSort={handleSort}
-            rowKeyExtractor={(row, index) => row.__table_hash_item ?? index}
+            rowKeyExtractor={rowKeyExtractor}
             onScrollEnd={loadData}
             loading={isLoading}
             onContextMenu={onContextMenuTable}
@@ -1119,60 +1189,7 @@ const Data = ({
       <ContextMenu
         position={contextMenuTable?.position}
         onClose={() => setContextMenuTable(undefined)}
-        options={[
-          {
-            text: t('common.copy'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
-          },
-          {
-            text: t('context.copyRow'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
-          },
-          {
-            text: t('context.copyRowJson'),
-            onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
-          },
-          {
-            text: t('context.setSelectedCellsNull'),
-            onClick: handleSetSelectedCellsNull,
-            show: () =>
-              !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
-          },
-          {
-            text: t('context.deleteSelectedItems'),
-            onClick: handleRemoveSelectedRows,
-          },
-          {
-            text: t('context.insertDdlRow'),
-            onClick: () => {
-              setDdlSql(
-                generateInsertDdl(
-                  dialect,
-                  schema,
-                  table,
-                  contextMenuTable?.data?.rows || [],
-                  columns.map((column) => column.column_name),
-                ),
-              );
-              setShowDdlModal(true);
-            },
-          },
-          {
-            text: t('context.insertDdlSelectedCells'),
-            onClick: () => {
-              setDdlSql(
-                generateInsertDdl(
-                  dialect,
-                  schema,
-                  table,
-                  contextMenuTable?.data?.selectedCellRows || [],
-                  columns.map((column) => column.column_name),
-                ),
-              );
-              setShowDdlModal(true);
-            },
-          },
-        ]}
+        options={contextMenuOptions}
       />
     </div>
   );

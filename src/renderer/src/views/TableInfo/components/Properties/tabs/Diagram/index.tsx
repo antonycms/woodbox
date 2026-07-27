@@ -115,7 +115,7 @@ const FlowController = ({ nodeCount, active }: { nodeCount: number; active: bool
       const timer = setTimeout(() => fitView({ padding: 0.15 }), 50);
       return () => clearTimeout(timer);
     }
-  }, [active]);
+  }, [active, fitView, nodeCount]);
   return null;
 };
 
@@ -178,6 +178,7 @@ const Diagram = ({
   };
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     loadData();
   }, []);
 

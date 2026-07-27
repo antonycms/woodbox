@@ -12,13 +12,28 @@ import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import type { ITableSort } from '@renderer/components/Table/dtos';
-import { getNextSort, sortRows } from '@renderer/utils/tableSort';
+import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import { getNextSort } from '@renderer/utils/tableSort';
+import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
+import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import { generateTriggersDdl } from '../Columns/ddl';
 import { getRendererDialect } from '@renderer/database/dialects';
 import styles from '../Columns/styles.module.css';
+
+const getTriggerSearchValues = (trigger: ITriggerInfo) => [
+  trigger.trigger_name,
+  trigger.timing,
+  trigger.event,
+  trigger.orientation,
+  trigger.function_name,
+  trigger.status,
+];
+
+const getTriggerSelectionKey = (trigger: ITriggerInfo) => trigger.trigger_name;
+
+const getTriggerRowKey = (item: ITriggerInfo) => item.trigger_name;
 
 const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -44,8 +59,6 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
 
-  const triggerFilterTextSerialized = triggerFilterText.trim().toLowerCase();
-
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
@@ -58,46 +71,93 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     ];
   }, [selectedTriggers]);
 
-  const onContextMenuTable = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    setContextMenuPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-  };
+  const onContextMenuTable = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      setContextMenuPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    },
+    [],
+  );
 
   React.useEffect(() => {
+    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     loadTableTriggers(id_connection, { schema, table });
   }, []);
 
   React.useEffect(() => {
     setSelectedTriggers([]);
-  }, [triggerFilterTextSerialized]);
+  }, [triggerFilterText]);
 
-  const filteredAndSortedTriggers = React.useMemo(() => {
-    if (!triggerFilterTextSerialized) return sortRows(triggers, sort);
+  useSelectionReconciliation({
+    rows: triggers,
+    setSelectedRows: setSelectedTriggers,
+    getSelectionKey: getTriggerSelectionKey,
+  });
 
-    const texts = triggerFilterTextSerialized.split(',').map((text) => text.trim());
-    const triggersFiltered = triggers.filter((trigger) =>
-      [
-        trigger.trigger_name,
-        trigger.timing,
-        trigger.event,
-        trigger.orientation,
-        trigger.function_name,
-        trigger.status,
-      ].some((value) =>
-        texts.some(
-          (text) =>
-            text &&
-            String(value ?? '')
-              .toLowerCase()
-              .includes(text),
-        ),
-      ),
-    );
+  const filteredAndSortedTriggers = useFilteredSortedRows({
+    rows: triggers,
+    filterText: triggerFilterText,
+    sort,
+    getSearchValues: getTriggerSearchValues,
+  });
 
-    return sortRows(triggersFiltered, sort);
-  }, [triggerFilterTextSerialized, triggers, sort]);
+  const handleSortTriggers = React.useCallback(
+    (column: IColumn<ITriggerInfo>, sortType?: ISortDirection | null) => {
+      setSort((current) => getNextSort(current, column.attribute, sortType));
+    },
+    [],
+  );
+
+  const handleFunctionLinkClick = React.useCallback(
+    (_attr: string, value: string) => {
+      const words = value.split('.');
+
+      const functionName = words[1] || words[0];
+      const functionSchema = words[1] ? words[0] : null;
+
+      handleFunctionCtrlClick(functionName, functionSchema);
+    },
+    [handleFunctionCtrlClick],
+  );
+
+  const tableColumns = React.useMemo<IColumn<ITriggerInfo>[]>(
+    () => [
+      {
+        label: t('field.name'),
+        attribute: 'trigger_name',
+        sortable: true,
+      },
+      {
+        label: t('field.timing'),
+        attribute: 'timing',
+        sortable: true,
+      },
+      {
+        label: t('field.event'),
+        attribute: 'event',
+        sortable: true,
+      },
+      {
+        label: t('field.level'),
+        attribute: 'orientation',
+        sortable: true,
+      },
+      {
+        label: t('field.function'),
+        attribute: 'function_name',
+        isLink: true,
+        sortable: true,
+      },
+      {
+        label: t('field.status'),
+        attribute: 'status',
+        sortable: true,
+      },
+    ],
+    [t],
+  );
 
   return (
     <>
@@ -132,56 +192,15 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
       </div>
 
       <Table
-        rowKeyExtractor={(item) => item.trigger_name}
+        rowKeyExtractor={getTriggerRowKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedTriggers}
         loading={loading.triggers}
         rows={filteredAndSortedTriggers}
         sort={sort}
-        onSort={(column, sortType) =>
-          setSort((current) => getNextSort(current, column.attribute, sortType))
-        }
-        onCellLinkClick={(_attr, value) => {
-          const words = value.split('.');
-
-          const fn = words[1] || words[0];
-          const schema = words[1] ? words[0] : null;
-
-          handleFunctionCtrlClick(fn, schema);
-        }}
-        columns={[
-          {
-            label: t('field.name'),
-            attribute: 'trigger_name',
-            sortable: true,
-          },
-          {
-            label: t('field.timing'),
-            attribute: 'timing',
-            sortable: true,
-          },
-          {
-            label: t('field.event'),
-            attribute: 'event',
-            sortable: true,
-          },
-          {
-            label: t('field.level'),
-            attribute: 'orientation',
-            sortable: true,
-          },
-          {
-            label: t('field.function'),
-            attribute: 'function_name',
-            isLink: true,
-            sortable: true,
-          },
-          {
-            label: t('field.status'),
-            attribute: 'status',
-            sortable: true,
-          },
-        ]}
+        onSort={handleSortTriggers}
+        onCellLinkClick={handleFunctionLinkClick}
+        columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
