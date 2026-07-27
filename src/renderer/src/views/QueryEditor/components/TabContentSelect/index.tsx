@@ -14,6 +14,7 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
+import type { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Text } from '@renderer/components/Text';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useI18n } from '@renderer/contexts/I18n';
@@ -322,10 +323,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     t,
   ]);
 
-  const closeValuePreview = () => {
+  const closeValuePreview = React.useCallback(() => {
     setShowValuePreview(false);
     setActivePreviewTab('value');
-  };
+  }, []);
 
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
@@ -374,6 +375,57 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     : undefined;
 
   const canSelectReferenceValue = !!selectedReference && selectedCell?.column.editable === true;
+
+  const previewTabs = React.useMemo(
+    () =>
+      [
+        { idTab: 'value', title: t('tabs.value') },
+        selectedReference && { idTab: 'reference', title: t('reference.singular') },
+        canSelectReferenceValue && { idTab: 'selection', title: t('tabs.selection') },
+      ].filter(Boolean) as ITab[],
+    [canSelectReferenceValue, selectedReference, t],
+  );
+
+  const toggleValuePreview = React.useCallback(() => {
+    if (showValuePreview) {
+      closeValuePreview();
+      return;
+    }
+
+    setShowValuePreview(true);
+  }, [closeValuePreview, showValuePreview]);
+
+  const handlePreviewResize = React.useCallback((size: { width?: number }) => {
+    if (size.width) setPreviewWidth(size.width);
+  }, []);
+
+  const handleActivePreviewTab = React.useCallback((tab?: ITab) => {
+    setActivePreviewTab(tab?.idTab as PreviewTab);
+  }, []);
+
+  const closeDdlModal = React.useCallback(() => {
+    setShowDdlModal(false);
+  }, []);
+
+  const closeContextMenuTable = React.useCallback(() => {
+    setContextMenuTable(undefined);
+  }, []);
+
+  const closeCaptureMenu = React.useCallback(() => {
+    setCaptureMenuPosition(undefined);
+  }, []);
+
+  const handleReferenceSelectionError = React.useCallback(
+    (error: unknown) => {
+      showToast({
+        type: 'error',
+        title: t('toast.selectionLoadError'),
+        description: error instanceof Error ? error.message : t('common.unknownError'),
+        delay: 8000,
+      });
+    },
+    [showToast, t],
+  );
 
   const rowsWithPendingStyles = React.useMemo(
     () =>
@@ -997,7 +1049,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             direction="horizontal"
             horizontalResizeSide="left"
             className={styles.previewResizable}
-            onResize={(size) => size.width && setPreviewWidth(size.width)}
+            onResize={handlePreviewResize}
           >
             <div className={styles.preview}>
               <div className={styles.previewHeader}>
@@ -1005,17 +1057,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   borderBottom
                   idTabBar={previewTabBarId}
                   activeTabId={activePreviewTab}
-                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as PreviewTab)}
+                  onActiveTab={handleActivePreviewTab}
                   ascentColor={activeTheme.queryEditor.tab.ascentColor}
                   backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
                   backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
                   borderColor={activeTheme.queryEditor.tab.borderColor}
                   color={activeTheme.queryEditor.tab.color}
-                  tabs={[
-                    { idTab: 'value', title: t('tabs.value') },
-                    selectedReference && { idTab: 'reference', title: t('reference.singular') },
-                    canSelectReferenceValue && { idTab: 'selection', title: t('tabs.selection') },
-                  ].filter(Boolean)}
+                  tabs={previewTabs}
                 />
 
                 <Button
@@ -1057,15 +1105,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                       active={activePreviewTab === 'selection'}
                       idConnection={id_connection}
                       reference={selectedReference}
-                      onDataError={(error) => {
-                        showToast({
-                          type: 'error',
-                          title: t('toast.selectionLoadError'),
-                          description:
-                            error instanceof Error ? error.message : t('common.unknownError'),
-                          delay: 8000,
-                        });
-                      }}
+                      onDataError={handleReferenceSelectionError}
                       onSelectValue={handleApplySelectedCellValue}
                     />
                   </TabContent>
@@ -1110,14 +1150,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
           text
           smallIcon
           title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}
-          onClick={() => {
-            if (showValuePreview) {
-              closeValuePreview();
-              return;
-            }
-
-            setShowValuePreview(true);
-          }}
+          onClick={toggleValuePreview}
           color={activeTheme.queryEditor.bar.color}
         >
           <PanelFile size={16} />
@@ -1221,19 +1254,19 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         show={showDdlModal}
         sql={ddlSql}
         dialect={dialect}
-        onClose={() => setShowDdlModal(false)}
+        onClose={closeDdlModal}
       />
 
       <ContextMenu
         position={contextMenuTable?.position}
-        onClose={() => setContextMenuTable(undefined)}
+        onClose={closeContextMenuTable}
         options={contextMenuOptions}
       />
 
       <ContextMenu
         placement="top"
         position={captureMenuPosition}
-        onClose={() => setCaptureMenuPosition(undefined)}
+        onClose={closeCaptureMenu}
         options={captureMenuOptions}
       />
     </div>
