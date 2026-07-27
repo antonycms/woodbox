@@ -4,6 +4,7 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase, IconSettings } from '@renderer/styles/icons';
 import { useI18n } from '@renderer/contexts/I18n';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
 import { SettingsModal } from '@renderer/components/SettingsModal';
 import ProjectsMenu from './components/menus/ProjectsMenu';
@@ -16,6 +17,7 @@ type Menu = 'projects';
 
 export const Sidebar = React.memo(() => {
   const { t } = useI18n();
+  const { activeTabId, tabs } = useAppTabContext();
   const [selectedMenu, setSelectedMenu] = React.useState<Menu | null>('projects');
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [width, _setWidth] = useStorage('sidebar_width', 300);
@@ -24,6 +26,17 @@ export const Sidebar = React.memo(() => {
   const style = useCssPropertiesWithActiveTheme((activeTheme) => ({
     borderColor: activeTheme.sideBar.borderColor,
   }));
+
+  const activeTab = React.useMemo(
+    () => tabs.find((tab) => tab.id === activeTabId),
+    [activeTabId, tabs],
+  );
+
+  React.useEffect(() => {
+    if (activeTab?.data?.type === 'table-info' || activeTab?.data?.type === 'function-info') {
+      setSelectedMenu('projects');
+    }
+  }, [activeTab]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

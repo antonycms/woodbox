@@ -127,6 +127,23 @@ const TreeView = (props: ITreeViewProps) => {
 
       await handleSwitchItem(item, open);
     },
+    reveal: async (id: string, parentIds: string[] = []) => {
+      for (const parentId of parentIds) {
+        const parent = getItemRecursive(props.items, parentId);
+
+        if (parent) await handleSwitchItem(parent, true);
+      }
+
+      return new Promise<boolean>((resolve) => {
+        requestAnimationFrame(() => {
+          const element = document.getElementById(`item_treeview_id_${id}`);
+
+          element?.focus();
+          element?.scrollIntoView({ block: 'nearest' });
+          resolve(!!element);
+        });
+      });
+    },
   }));
 
   return (
@@ -177,6 +194,7 @@ export interface IItemTreeView extends IItemTreeViewData {
 
 export interface ITreeViewRef {
   switch(id: string, open?: boolean): Promise<void>;
+  reveal(id: string, parentIds?: string[]): Promise<boolean>;
 }
 
 interface ITreeViewProps {

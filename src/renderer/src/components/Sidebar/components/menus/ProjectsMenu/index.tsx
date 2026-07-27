@@ -39,6 +39,42 @@ import { ModalRenameSchema } from './components/ModalRenameSchema';
 import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
+type SidebarRevealTarget = {
+  type: 'table' | 'function';
+  idConnection: string;
+  schema?: string;
+  name: string;
+};
+
+const normalizeSchema = (schema?: string | null) => schema || undefined;
+
+const getSidebarRevealPath = (
+  items: IItemTreeView[],
+  target: SidebarRevealTarget,
+  parentIds: string[] = [],
+): { id: string; parentIds: string[] } | undefined => {
+  for (const item of items) {
+    if (!item) continue;
+
+    const itemSchema =
+      target.type === 'table' ? item.data?.table_schema : item.data?.function_schema;
+    const itemName = target.type === 'table' ? item.data?.table_name : item.data?.function_name;
+
+    if (
+      item.type === target.type &&
+      item.data?.id_connection === target.idConnection &&
+      normalizeSchema(itemSchema) === normalizeSchema(target.schema) &&
+      itemName === target.name
+    ) {
+      return { id: item.id, parentIds };
+    }
+
+    const childPath = getSidebarRevealPath(item.childs || [], target, [...parentIds, item.id]);
+
+    if (childPath) return childPath;
+  }
+};
+
 const ProjectsMenu = () => {
   const {
     activeTheme: { sideBar: colors },
@@ -57,8 +93,9 @@ const ProjectsMenu = () => {
 
   const { showToast } = useToast();
   const { t } = useI18n();
-  const { tabs, addTab, removeTab, getTab, setActiveTabId } = useAppTabContext();
+  const { tabs, addTab, removeTab, getTab, activeTabId, setActiveTabId } = useAppTabContext();
   const treeViewRef = React.useRef<ITreeViewRef>(null);
+  const lastRevealKeyRef = React.useRef('');
   const [loadingConnectionsId, setLoadingConnectionsId] = React.useState<string[]>([]);
 
   const [filterText, setFilterText] = React.useState('');
@@ -643,6 +680,51 @@ const ProjectsMenu = () => {
 
     return { ...projects, hasContentWithFilterText };
   });
+
+
+  const activeSidebarRevealTarget = React.useMemo<SidebarRevealTarget | undefined>(() => {
+    const tab = tabs.find((item) => item.id === activeTabId);
+    const data = tab?.data;
+
+    if (data?.type === 'table-info') {
+      return {
+        type: 'table',
+        idConnection: data.id_connection,
+        schema: data.schema,
+        name: data.table,
+      };
+    }
+
+    if (data?.type === 'function-info') {
+      return {
+        type: 'function',
+        idConnection: data.id_connection,
+        schema: data.schema,
+        name: data.function_name,
+      };
+    }
+  }, [activeTabId, tabs]);
+
+  React.useEffect(() => {
+    if (!activeSidebarRevealTarget) {
+      lastRevealKeyRef.current = '';
+      return;
+    }
+
+    const revealPath = getSidebarRevealPath(projectsSerialized, activeSidebarRevealTarget);
+
+    if (!revealPath) {
+      lastRevealKeyRef.current = '';
+      return;
+    }
+
+    const revealKey = [activeTabId, revealPath.id, ...revealPath.parentIds].join('|');
+
+    if (lastRevealKeyRef.current === revealKey) return;
+
+    lastRevealKeyRef.current = revealKey;
+    treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds);
+  }, [activeSidebarRevealTarget, activeTabId, projectsSerialized]);
 
   return (
     <>
