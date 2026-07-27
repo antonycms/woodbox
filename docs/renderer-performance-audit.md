@@ -45,8 +45,8 @@ Legenda:
 - 🟡 **6. `ProjectsMenu`**: árvore memoizada, scripts agrupados/reutilizados por conexão, lookups de loading por `Set`, índice plano para revelar itens ativos, itens renderizados memoizados e handlers do TreeView/botões estabilizados. Virtualização de nós segue pendente.
 - ✅ **7. `TreeView`**: lookup por `Map`, navegação limitada ao container, tema centralizado no pai, itens abertos por `Set`, lista plana memoizada de nós visíveis e `ItemTreeView` memoizado.
 - 🟡 **8. `QueryEditor`**: deps do autocomplete corrigidas, loads de colunas/referências usando refs/callbacks, `useQueryCancellation` extraído, helpers puros de resultado/captura/mensagens e marker de erro movidos para `utils/queryResult.ts` e callbacks/dados calculados de tabs/modais estabilizados, incluindo fechamento dos modais de variáveis/produção. Hooks maiores de execução SQL seguem pendentes.
-- ✅ **9. `TabContentSelect`**: colunas, handlers e menu de contexto estabilizados.
-- 🟡 **10. `TableInfo/Data`**: `rowKeyExtractor`, context menu e handlers estabilizados. Unificação com `TabContentSelect` segue pendente.
+- ✅ **9. `TabContentSelect`**: colunas, handlers, menu de contexto, tabs/handlers de preview e fechamento de menus/modais estabilizados.
+- 🟡 **10. `TableInfo/Data`**: `rowKeyExtractor`, context menu, handlers principais e handlers de preview/modais estabilizados; tabs do preview memoizadas. Não unificar com `TabContentSelect`; otimizar cada fluxo localmente.
 - ✅ **11. `CentralSearchModal`**: cálculos pesados evitados quando fechada, `connectionsById` memoizado, loops/offsets otimizados.
 - ✅ **12. `Editor` autocomplete**: provider SQL global único por model e `console.log` removido.
 - 🟡 **13. Autocomplete**: listeners globais só ficam ativos com dropdown aberto e outside-click foi extraído para `useDropdownOutsideClick`. Core completo compartilhado segue pendente.
@@ -285,7 +285,7 @@ Médio/alto. Dificulta correções e aumenta risco de inconsistência.
 
 **Problema**
 
-O prop `columns` passado para `Table` é criado inline com `(data.columns || []).map(...)`. `onContextMenuTable` não usa `useCallback`. Context menu principal é array inline. Há lógica duplicada com `TableInfo/components/Data` para preview, edição, DDL e seleção.
+Já corrigido neste ciclo: `tableColumns`, menus, preview tabs e handlers principais foram estabilizados. Não unificar com `TableInfo/Data`; otimizar localmente.
 
 **Impacto**
 
@@ -293,14 +293,7 @@ Médio/alto. Afeta resultados de query, que podem ter muitos dados e atualizaç�
 
 **Soluções possíveis**
 
-- Memoizar `tableColumns` com `useMemo`.
-- Memoizar `contextMenuOptions`.
-- Extrair hook compartilhado para preview de célula:
-  - valor selecionado
-  - `previewValue`
-  - referência selecionada
-  - aplicação de valor
-- Extrair hook de edição de linhas.
+Sem ação pendente para este tópico.
 
 ---
 
@@ -310,20 +303,19 @@ Médio/alto. Afeta resultados de query, que podem ter muitos dados e atualizaç�
 
 **Problema**
 
-Tem lógica muito parecida com `TabContentSelect`: preview, edição, linhas novas, removidas, DDL, menu de contexto e atalhos. O arquivo também passa `rowKeyExtractor` inline para `Table`, gerando função nova.
+Tem lógica parecida com `TabContentSelect`: preview, edição, linhas novas, removidas, DDL, menu de contexto e atalhos. A decisão atual é não unificar os fluxos; melhorias devem ser locais em `Data`.
 
 `loadData` é chamado em `useEffect(() => { loadData(); }, [])`, ignorando deps. Pode ser intencional para carregar só no mount, mas não está documentado.
 
 **Impacto**
 
-Médio/alto. Duplica bugs e dificulta otimização da tabela.
+Médio/alto. Ainda exige cuidado local por concentrar preview, edição, DDL, menu de contexto e atalhos.
 
 **Soluções possíveis**
 
-- Criar `useEditableRows` compartilhado.
-- Criar `useCellPreview` compartilhado.
-- Criar `useTableDataPagination` para `page`, `lastPageSearch`, `loading`, `refresh`.
-- Estabilizar `rowKeyExtractor` com `useCallback`.
+- Não unificar com `TabContentSelect`.
+- Continuar melhorias locais e pequenas em `Data`.
+- Extrair helpers locais só quando reduzirem risco/ruído.
 - Documentar efeitos mount-only ou reestruturar para deps corretas.
 
 ---
