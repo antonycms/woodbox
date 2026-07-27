@@ -39,18 +39,17 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const [scripts, setScripts] = React.useState<IScript[]>([]);
 
   const connectionsGroupPerProject = React.useMemo<IConnectionsGroupPerProject[]>(() => {
-    const groupedConnections = connections.reduce(
-      (acm, connection) => {
-        const group = acm[connection.id_project] || [];
+    const groupedConnections = new Map<string, IConnection[]>();
 
-        return { ...acm, [connection.id_project]: [...group, connection] };
-      },
-      {} as { [key: string]: IConnection[] },
-    );
+    connections.forEach((connection) => {
+      const group = groupedConnections.get(connection.id_project) || [];
+      group.push(connection);
+      groupedConnections.set(connection.id_project, group);
+    });
 
     const projectsWithConnections = projects.map((project) => ({
       ...project,
-      connections: (groupedConnections[project.id] || []).sort((a, b) =>
+      connections: (groupedConnections.get(project.id) || []).sort((a, b) =>
         a.description.localeCompare(b.description),
       ),
     }));
@@ -60,34 +59,34 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     return projectsWithConnections;
   }, [connections, projects]);
 
-  const loadConnectionTypes = async () => {
+  const loadConnectionTypes = React.useCallback(async () => {
     const storedConnections = await call<string[]>('@get:dialects');
 
     setConnectionTypes(storedConnections || []);
-  };
+  }, []);
 
-  const loadConnections = async () => {
+  const loadConnections = React.useCallback(async () => {
     const storedConnections = await call<IConnection[]>('@get:config_connections_saved');
 
     setConnections(storedConnections || []);
-  };
+  }, []);
 
-  const loadProjects = async () => {
+  const loadProjects = React.useCallback(async () => {
     const storedProjects = await call<IProject[]>('@get:projects');
 
     setProjects(storedProjects || []);
-  };
+  }, []);
 
-  const loadScripts = async () => {
+  const loadScripts = React.useCallback(async () => {
     const meta = await call<IScript[]>('@get:scripts_meta');
     setScripts(meta || []);
-  };
+  }, []);
 
-  const getScriptContent = async (id: string) => {
+  const getScriptContent = React.useCallback(async (id: string) => {
     return (await call<string>('@get:script_content', id)) ?? '';
-  };
+  }, []);
 
-  const addScript = async (data: Omit<IScript, 'id'>) => {
+  const addScript = React.useCallback(async (data: Omit<IScript, 'id'>) => {
     const script: IScript = { ...data, id: generateHash() };
 
     await call<void>('@add:scripts', script);
@@ -95,9 +94,9 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     setScripts((prev) => [...prev, script]);
 
     return script;
-  };
+  }, []);
 
-  const editScript = async (id: string, data: Partial<IScript>) => {
+  const editScript = React.useCallback(async (id: string, data: Partial<IScript>) => {
     await call<void>('@patch:scripts', id, data);
 
     const metaChanges = Object.fromEntries(
@@ -107,22 +106,22 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     if (Object.keys(metaChanges).length) {
       setScripts((prev) => prev.map((s) => (s.id === id ? { ...s, ...metaChanges } : s)));
     }
-  };
+  }, []);
 
-  const removeScript = async (id: string) => {
+  const removeScript = React.useCallback(async (id: string) => {
     await call<void>('@remove:scripts', id);
     setScripts((prev) => prev.filter((s) => s.id !== id));
-  };
+  }, []);
 
-  const addProject = async (data: IProjectCreate) => {
+  const addProject = React.useCallback(async (data: IProjectCreate) => {
     const project = { ...data, id: generateHash() };
 
     await call<void>('@add:projects', project);
 
     setProjects((prevState) => [...prevState, project]);
-  };
+  }, []);
 
-  const editProject = async (id: string, data: IProjectCreate) => {
+  const editProject = React.useCallback(async (id: string, data: IProjectCreate) => {
     const project = { ...data, id };
 
     await call<void>('@edit:projects', id, project);
@@ -135,9 +134,9 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
       return newState;
     });
-  };
+  }, []);
 
-  const removeConnectionsInfo = (connectionIds: string[]) => {
+  const removeConnectionsInfo = React.useCallback((connectionIds: string[]) => {
     if (!connectionIds.length) return;
 
     setConnectionsInfo((prevState) => {
@@ -147,9 +146,9 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
       return newState;
     });
-  };
+  }, []);
 
-  const removeProject = async (id: string) => {
+  const removeProject = React.useCallback(async (id: string) => {
     const connectionIds = connections
       .filter((connection) => connection.id_project === id)
       .map((connection) => connection.id);
@@ -165,17 +164,17 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     setProjects((prevState) => prevState.filter((project) => project.id !== id));
     setConnections((prevState) => prevState.filter((connection) => connection.id_project !== id));
     removeConnectionsInfo(connectionIds);
-  };
+  }, [connections, removeConnectionsInfo]);
 
-  const addConnection = async (data: IConnectionCreate) => {
+  const addConnection = React.useCallback(async (data: IConnectionCreate) => {
     const connection = { ...data, id: generateHash() };
 
     await call<void>('@add:config_connections_saved', connection);
 
     setConnections((prevState) => [...prevState, connection]);
-  };
+  }, []);
 
-  const editConnection = async (id: string, data: IConnectionCreate) => {
+  const editConnection = React.useCallback(async (id: string, data: IConnectionCreate) => {
     const connection = { ...data, id };
 
     await call<void>('@edit:config_connections_saved', id, connection);
@@ -191,9 +190,9 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
       return newState;
     });
-  };
+  }, []);
 
-  const removeConnection = async (id: string) => {
+  const removeConnection = React.useCallback(async (id: string) => {
     await Promise.all([
       call<void>('@remove:config_connections_saved', id),
       call<void>('@get:close_connection', id),
@@ -201,16 +200,19 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
     setConnections((prevState) => prevState.filter((connection) => connection.id !== id));
     removeConnectionsInfo([id]);
-  };
+  }, [removeConnectionsInfo]);
 
-  const previewImportConnectionsFromSource = async (params: IImportConnectionsParams) => {
-    return await call<IImportConnectionsPreview>(
-      '@post:preview_import_connections_from_source',
-      params,
-    );
-  };
+  const previewImportConnectionsFromSource = React.useCallback(
+    async (params: IImportConnectionsParams) => {
+      return await call<IImportConnectionsPreview>(
+        '@post:preview_import_connections_from_source',
+        params,
+      );
+    },
+    [],
+  );
 
-  const importConnectionsFromSource = async (params: IImportConnectionsParams) => {
+  const importConnectionsFromSource = React.useCallback(async (params: IImportConnectionsParams) => {
     const result = await call<IImportConnectionsResult>(
       '@post:import_connections_from_source',
       params,
@@ -219,13 +221,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     await Promise.all([loadProjects(), loadConnections()]);
 
     return result;
-  };
+  }, [loadConnections, loadProjects]);
 
-  const testConnection = async (data: IConnectionCreate) => {
+  const testConnection = React.useCallback(async (data: IConnectionCreate) => {
     return await call<boolean>('@get:test_connection', data);
-  };
+  }, []);
 
-  const loadConnectionInfo = async (id: string) => {
+  const loadConnectionInfo = React.useCallback(async (id: string) => {
     const connectionInfo = await call<IConnectionInfo | null>('@get:connection_info', id);
 
     setConnectionsInfo((prevState) => {
@@ -239,173 +241,250 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
       return newState;
     });
-  };
+  }, []);
 
-  const closeConnection = async (id: string) => {
+  const closeConnection = React.useCallback(async (id: string) => {
     await call<void>('@get:close_connection', id);
     removeConnectionsInfo([id]);
-  };
+  }, [removeConnectionsInfo]);
 
-  const getTableColumns = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<IColumnInfo[]>('@get:table_columns', idConnection, { table, schema });
-  };
+  const getTableColumns = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<IColumnInfo[]>('@get:table_columns', idConnection, { table, schema });
+    },
+    [],
+  );
 
-  const getColumnTypes = async (idConnection: string) => {
+  const getColumnTypes = React.useCallback(async (idConnection: string) => {
     return await call<{ name: string }[]>('@get:column_types', idConnection);
-  };
+  }, []);
 
-  const getTableReferences = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<IColumnReferenceInfo[]>('@get:table_references', idConnection, {
-      table,
-      schema,
-    });
-  };
+  const getTableReferences = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<IColumnReferenceInfo[]>('@get:table_references', idConnection, {
+        table,
+        schema,
+      });
+    },
+    [],
+  );
 
-  const getTableUsedAsReference = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<IColumnReferenceInfo[]>('@get:table_used_as_reference', idConnection, {
-      table,
-      schema,
-    });
-  };
+  const getTableUsedAsReference = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<IColumnReferenceInfo[]>('@get:table_used_as_reference', idConnection, {
+        table,
+        schema,
+      });
+    },
+    [],
+  );
 
-  const getTableRestrictions = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<IColumnRestrictionsInfo[]>('@get:table_restrictions', idConnection, {
-      table,
-      schema,
-    });
-  };
+  const getTableRestrictions = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<IColumnRestrictionsInfo[]>('@get:table_restrictions', idConnection, {
+        table,
+        schema,
+      });
+    },
+    [],
+  );
 
-  const getTableDefinition = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<{ definition: string }[]>('@get:table_definition', idConnection, {
-      table,
-      schema,
-    });
-  };
+  const getTableDefinition = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<{ definition: string }[]>('@get:table_definition', idConnection, {
+        table,
+        schema,
+      });
+    },
+    [],
+  );
 
-  const getFunctionDefinition = async (
-    idConnection: string,
-    { schema, functionName }: { schema: string; functionName: string },
-  ) => {
-    return await call<{ definition: string }[]>('@get:function_definition', idConnection, {
-      schema,
-      functionName,
-    });
-  };
+  const getFunctionDefinition = React.useCallback(
+    async (
+      idConnection: string,
+      { schema, functionName }: { schema: string; functionName: string },
+    ) => {
+      return await call<{ definition: string }[]>('@get:function_definition', idConnection, {
+        schema,
+        functionName,
+      });
+    },
+    [],
+  );
 
-  const getTableIndexes = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<IIndexInfo[]>('@get:table_indexes', idConnection, { table, schema });
-  };
+  const getTableIndexes = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<IIndexInfo[]>('@get:table_indexes', idConnection, { table, schema });
+    },
+    [],
+  );
 
-  const getTableTriggers = async (idConnection: string, { table, schema }: TableFilters) => {
-    return await call<ITriggerInfo[]>('@get:table_triggers', idConnection, { table, schema });
-  };
+  const getTableTriggers = React.useCallback(
+    async (idConnection: string, { table, schema }: TableFilters) => {
+      return await call<ITriggerInfo[]>('@get:table_triggers', idConnection, { table, schema });
+    },
+    [],
+  );
 
-  const getTableData = async (idConnection: string, params: IParamsGetTableData) => {
-    const { table, schema, page = 1, limit = 200, where, orderBy } = params;
+  const getTableData = React.useCallback(
+    async (idConnection: string, params: IParamsGetTableData) => {
+      const { table, schema, page = 1, limit = 200, where, orderBy } = params;
 
-    return await call<IDataTable>('@get:table_data', idConnection, {
-      table,
-      schema,
-      page,
-      limit,
-      where,
-      orderBy,
-    });
-  };
+      return await call<IDataTable>('@get:table_data', idConnection, {
+        table,
+        schema,
+        page,
+        limit,
+        where,
+        orderBy,
+      });
+    },
+    [],
+  );
 
-  const getTableRowsCount = async (
-    idConnection: string,
-    params: Omit<IParamsGetTableData, 'page' | 'limit' | 'orderBy'>,
-  ) => {
-    return await call<number>('@get:table_rows_count', idConnection, params);
-  };
+  const getTableRowsCount = React.useCallback(
+    async (
+      idConnection: string,
+      params: Omit<IParamsGetTableData, 'page' | 'limit' | 'orderBy'>,
+    ) => {
+      return await call<number>('@get:table_rows_count', idConnection, params);
+    },
+    [],
+  );
 
-  const getQueryRowsCount = async (idConnection: string, sql: string) => {
+  const getQueryRowsCount = React.useCallback(async (idConnection: string, sql: string) => {
     return await call<number>('@get:query_rows_count', idConnection, sql);
-  };
+  }, []);
 
-  const getServerOutput = async (idConnection: string) => {
+  const getServerOutput = React.useCallback(async (idConnection: string) => {
     return await call<IServerOutputMessage[]>('@get:server_output', idConnection);
-  };
+  }, []);
 
-  const clearServerOutput = async (idConnection: string) => {
+  const clearServerOutput = React.useCallback(async (idConnection: string) => {
     await call<void>('@delete:server_output', idConnection);
-  };
+  }, []);
 
-  const runSql = async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
-    return await call<RunSqlResult>('@post:run_sql', idConnection, sql, options);
-  };
+  const runSql = React.useCallback(
+    async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
+      return await call<RunSqlResult>('@post:run_sql', idConnection, sql, options);
+    },
+    [],
+  );
 
-  const importTableData = async (idConnection: string, params: IImportTableDataParams) => {
-    return await call<IImportTableDataResult>('@post:import_table_data', idConnection, params);
-  };
+  const importTableData = React.useCallback(
+    async (idConnection: string, params: IImportTableDataParams) => {
+      return await call<IImportTableDataResult>('@post:import_table_data', idConnection, params);
+    },
+    [],
+  );
 
-  const cancelRunSql = async (idConnection: string, queryExecutionId: string) => {
-    return await call<boolean>('@post:cancel_run_sql', idConnection, queryExecutionId);
-  };
+  const cancelRunSql = React.useCallback(
+    async (idConnection: string, queryExecutionId: string) => {
+      return await call<boolean>('@post:cancel_run_sql', idConnection, queryExecutionId);
+    },
+    [],
+  );
+
+  const contextValue = React.useMemo<IStoreContext>(
+    () => ({
+      // projects
+      projects,
+      addProject,
+      removeProject,
+      editProject,
+
+      // connection
+      connections,
+      previewImportConnectionsFromSource,
+      importConnectionsFromSource,
+      addConnection,
+      removeConnection,
+      editConnection,
+
+      connectionTypes,
+
+      connectionsGroupPerProject,
+      connectionsInfo,
+
+      testConnection,
+      loadConnectionInfo,
+      closeConnection,
+      getTableData,
+      getTableRowsCount,
+      getQueryRowsCount,
+
+      getTableColumns,
+      getColumnTypes,
+      getTableReferences,
+      getTableUsedAsReference,
+      getTableRestrictions,
+      getTableDefinition,
+      getTableIndexes,
+      getTableTriggers,
+      getFunctionDefinition,
+      getServerOutput,
+      clearServerOutput,
+      runSql,
+      importTableData,
+      cancelRunSql,
+
+      // scripts
+      scripts,
+      addScript,
+      editScript,
+      removeScript,
+      getScriptContent,
+    }),
+    [
+      addConnection,
+      addProject,
+      addScript,
+      cancelRunSql,
+      clearServerOutput,
+      closeConnection,
+      connectionTypes,
+      connections,
+      connectionsGroupPerProject,
+      connectionsInfo,
+      editConnection,
+      editProject,
+      editScript,
+      getColumnTypes,
+      getFunctionDefinition,
+      getQueryRowsCount,
+      getScriptContent,
+      getServerOutput,
+      getTableColumns,
+      getTableData,
+      getTableDefinition,
+      getTableIndexes,
+      getTableReferences,
+      getTableRestrictions,
+      getTableRowsCount,
+      getTableTriggers,
+      getTableUsedAsReference,
+      importConnectionsFromSource,
+      importTableData,
+      loadConnectionInfo,
+      previewImportConnectionsFromSource,
+      projects,
+      removeConnection,
+      removeProject,
+      removeScript,
+      runSql,
+      scripts,
+      testConnection,
+    ],
+  );
 
   React.useEffect(() => {
     loadConnectionTypes();
     loadConnections();
     loadProjects();
     loadScripts();
-  }, []);
+  }, [loadConnectionTypes, loadConnections, loadProjects, loadScripts]);
 
-  return (
-    <StoreContext.Provider
-      value={{
-        // projects
-        projects,
-        addProject,
-        removeProject,
-        editProject,
-
-        // connection
-        connections,
-        previewImportConnectionsFromSource,
-        importConnectionsFromSource,
-        addConnection,
-        removeConnection,
-        editConnection,
-
-        connectionTypes,
-
-        connectionsGroupPerProject,
-        connectionsInfo,
-
-        testConnection,
-        loadConnectionInfo,
-        closeConnection,
-        getTableData,
-        getTableRowsCount,
-        getQueryRowsCount,
-
-        getTableColumns,
-        getColumnTypes,
-        getTableReferences,
-        getTableUsedAsReference,
-        getTableRestrictions,
-        getTableDefinition,
-        getTableIndexes,
-        getTableTriggers,
-        getFunctionDefinition,
-        getServerOutput,
-        clearServerOutput,
-        runSql,
-        importTableData,
-        cancelRunSql,
-
-        // scripts
-        scripts,
-        addScript,
-        editScript,
-        removeScript,
-        getScriptContent,
-      }}
-    >
-      {children}
-    </StoreContext.Provider>
-  );
+  return <StoreContext.Provider value={contextValue}>{children}</StoreContext.Provider>;
 };
 
 export const useStoreContext = () => {

@@ -7,6 +7,7 @@ import AppTabContext, {
   type IAppTabMovePlacement,
   type IRemoveAppTabOptions,
   type INewAppTab,
+  type ITabContext,
 } from './context';
 import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
 import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
@@ -341,9 +342,11 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     [removeTab, tabs],
   );
 
-  const getTab = (tabId: string) => {
-    return tabs.find((tab) => tab.id === tabId);
-  };
+  const tabsById = React.useMemo(() => new Map(tabs.map((tab) => [tab.id, tab])), [tabs]);
+
+  const getTab = React.useCallback((tabId: string) => {
+    return tabsById.get(tabId);
+  }, [tabsById]);
 
   const updateTab = React.useCallback(
     (id: string, data: Partial<Pick<IAppTab, 'title' | 'subtitle' | 'unsaved'>>) => {
@@ -380,29 +383,46 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTabId, removeTab, reopenClosedTab]);
 
+  const contextValue = React.useMemo<ITabContext>(
+    () => ({
+      tabs,
+      tabGroups,
+      addTab,
+      removeTab,
+      reopenClosedTab,
+      moveTab,
+      createTabGroup,
+      addTabToGroup,
+      removeTabFromGroup,
+      updateTabGroup,
+      ungroupTabGroup,
+      closeTabGroup,
+      activeTabId,
+      setActiveTabId,
+      getTab,
+      updateTab,
+    }),
+    [
+      activeTabId,
+      addTab,
+      addTabToGroup,
+      closeTabGroup,
+      createTabGroup,
+      getTab,
+      moveTab,
+      removeTab,
+      removeTabFromGroup,
+      reopenClosedTab,
+      tabGroups,
+      tabs,
+      ungroupTabGroup,
+      updateTab,
+      updateTabGroup,
+    ],
+  );
+
   return (
-    <AppTabContext.Provider
-      value={{
-        tabs,
-        tabGroups,
-        addTab,
-        removeTab,
-        reopenClosedTab,
-        moveTab,
-        createTabGroup,
-        addTabToGroup,
-        removeTabFromGroup,
-        updateTabGroup,
-        ungroupTabGroup,
-        closeTabGroup,
-        activeTabId,
-        setActiveTabId,
-        getTab,
-        updateTab,
-      }}
-    >
-      {children}
-    </AppTabContext.Provider>
+    <AppTabContext.Provider value={contextValue}>{children}</AppTabContext.Provider>
   );
 };
 
