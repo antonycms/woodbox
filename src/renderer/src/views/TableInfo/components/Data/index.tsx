@@ -8,6 +8,7 @@ import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
+import type { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu, type IContextMenuOption } from '@renderer/components/ContextMenu';
 import {
@@ -216,9 +217,59 @@ const Data = ({
     ? fkMap.get(String(selectedCell.column.attribute))
     : undefined;
 
+  const previewTabs = React.useMemo(
+    () =>
+      [
+        { idTab: 'value', title: t('tabs.value') },
+        !!selectedReference && { idTab: 'reference', title: t('reference.singular') },
+        !!selectedReference && { idTab: 'selection', title: t('tabs.selection') },
+      ].filter(Boolean) as ITab[],
+    [!!selectedReference, t],
+  );
+
   const closeValuePreview = React.useCallback(() => {
     setShowValuePreview(false);
     setActivePreviewTab('value');
+  }, []);
+
+  const toggleValuePreview = React.useCallback(() => {
+    if (showValuePreview) {
+      closeValuePreview();
+      return;
+    }
+
+    setShowValuePreview(true);
+  }, [closeValuePreview, showValuePreview]);
+
+  const handlePreviewResize = React.useCallback((size: { width?: number }) => {
+    if (size.width) setPreviewWidth(size.width);
+  }, []);
+
+  const handleActivePreviewTab = React.useCallback((tab?: ITab) => {
+    setActivePreviewTab(tab?.idTab as PreviewTab);
+  }, []);
+
+  const handleWhereInputChange = React.useCallback(
+    (value: string) => {
+      if (!filterLocked) setWhereInput(value);
+    },
+    [filterLocked],
+  );
+
+  const closeDdlModal = React.useCallback(() => {
+    setShowDdlModal(false);
+  }, []);
+
+  const closeDataErrorModal = React.useCallback(() => {
+    setDataErrorMessage(undefined);
+  }, []);
+
+  const closeNoPkModal = React.useCallback(() => {
+    setShowNoPkModal(false);
+  }, []);
+
+  const closeContextMenuTable = React.useCallback(() => {
+    setContextMenuTable(undefined);
   }, []);
 
   const handleFkCellClick = React.useCallback(
@@ -938,7 +989,7 @@ const Data = ({
           placeholder={t('placeholder.filterResults')}
           value={whereInput}
           columnNames={columnNames}
-          onChange={(value) => !filterLocked && setWhereInput(value)}
+          onChange={handleWhereInputChange}
           onKeyDown={handleFilterKeyDown}
           inputStyle={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
           dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
@@ -978,7 +1029,7 @@ const Data = ({
             direction="horizontal"
             horizontalResizeSide="left"
             className={styles.previewResizable}
-            onResize={(size) => size.width && setPreviewWidth(size.width)}
+            onResize={handlePreviewResize}
           >
             <div className={styles.preview} style={{ backgroundColor: colors.backgroundColor }}>
               <div className={styles.previewHeader}>
@@ -986,17 +1037,13 @@ const Data = ({
                   borderBottom
                   idTabBar={previewTabBarId}
                   activeTabId={activePreviewTab}
-                  onActiveTab={(tab) => setActivePreviewTab(tab?.idTab as PreviewTab)}
+                  onActiveTab={handleActivePreviewTab}
                   ascentColor={tabTheme.ascentColor}
                   backgroundColor={tabTheme.backgroundColor}
                   backgroundColorBar={tabTheme.bar.backgroundColor}
                   borderColor={tabTheme.borderColor}
                   color={tabTheme.color}
-                  tabs={[
-                    { idTab: 'value', title: t('tabs.value') },
-                    selectedReference && { idTab: 'reference', title: t('reference.singular') },
-                    selectedReference && { idTab: 'selection', title: t('tabs.selection') },
-                  ].filter(Boolean)}
+                  tabs={previewTabs}
                 />
 
                 <Button
@@ -1096,14 +1143,7 @@ const Data = ({
           text
           smallIcon
           color={theme.bar.color}
-          onClick={() => {
-            if (showValuePreview) {
-              closeValuePreview();
-              return;
-            }
-
-            setShowValuePreview(true);
-          }}
+          onClick={toggleValuePreview}
         >
           <PanelFile size={16} />
         </Button>
@@ -1136,17 +1176,17 @@ const Data = ({
         show={showDdlModal}
         sql={ddlSql}
         dialect={dialect}
-        onClose={() => setShowDdlModal(false)}
+        onClose={closeDdlModal}
       />
 
-      <ModalDataError message={dataErrorMessage} onClose={() => setDataErrorMessage(undefined)} />
+      <ModalDataError message={dataErrorMessage} onClose={closeDataErrorModal} />
 
       <Modal
         title={t('message.noPrimaryKeyWarningTitle')}
         width="560px"
         show={showNoPkModal}
         closeOutside={!applyingChanges}
-        onClose={applyingChanges ? undefined : () => setShowNoPkModal(false)}
+        onClose={applyingChanges ? undefined : closeNoPkModal}
       >
         <Text color={colors.color || theme.bar.color}>{t('message.noPrimaryKeyWarning')}</Text>
 
@@ -1163,7 +1203,7 @@ const Data = ({
             text
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
-            onClick={() => setShowNoPkModal(false)}
+            onClick={closeNoPkModal}
             disabled={applyingChanges}
             xs={6}
             sm={4}
@@ -1188,7 +1228,7 @@ const Data = ({
 
       <ContextMenu
         position={contextMenuTable?.position}
-        onClose={() => setContextMenuTable(undefined)}
+        onClose={closeContextMenuTable}
         options={contextMenuOptions}
       />
     </div>
