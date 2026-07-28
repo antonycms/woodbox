@@ -10,6 +10,7 @@ import 'monaco-editor/editor/contrib/find/browser/findController';
 import 'monaco-editor/editor/contrib/folding/browser/folding';
 import 'monaco-editor/editor/contrib/hover/browser/hoverContribution';
 import 'monaco-editor/editor/contrib/suggest/browser/suggestController';
+import 'monaco-editor/editor/contrib/wordOperations/browser/wordOperations';
 import 'monaco-editor/editor/contrib/tokenization/browser/tokenization';
 
 export * from 'monaco-editor/editor/editor.api';
