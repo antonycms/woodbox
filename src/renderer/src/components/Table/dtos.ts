@@ -8,6 +8,7 @@ export interface ITableSort {
 export interface IColumn<ColumnType = any> {
   title?: string;
   label: string;
+  info?: string;
   attribute: Extract<keyof ColumnType, string>;
   resizable?: boolean;
   sortable?: boolean;

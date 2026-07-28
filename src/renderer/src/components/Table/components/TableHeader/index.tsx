@@ -38,7 +38,7 @@ export const TableHeader2 = (props: ITableHeader) => {
       const newState = new Map();
 
       columns.forEach((column) => {
-        const size = Math.ceil(calculateTextHtmlWidth(column.label) + 40);
+        const size = Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40);
         newState.set(column.attribute, size);
       });
 
@@ -63,6 +63,7 @@ export const TableHeader2 = (props: ITableHeader) => {
             onDoubleClick={onDoubleClick ? () => onDoubleClick(column) : undefined}
             minWidth={minWidth}
             value={column.label}
+            info={column.info}
           />
         );
       })}

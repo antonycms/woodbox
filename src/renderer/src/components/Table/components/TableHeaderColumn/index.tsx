@@ -76,6 +76,7 @@ const TableHeaderColumn = <Row,>({
       style={style}
       minWidth={minWidth}
       value={getSortLabel(column)}
+      info={column.info}
     />
   );
 };

@@ -845,7 +845,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
       if (!rowsToAnalyze.length) return;
 
       const firstColumnMinSize = Math.ceil(
-        Math.max(0, ...columnsRef.current.map((column) => calculateTextHtmlWidth(column.label))) +
+        Math.max(
+          0,
+          ...columnsRef.current.map((column) =>
+            calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`),
+          ),
+        ) +
           40,
       );
       const rowColumnsMinSize = rowsToAnalyze.map((row) =>
@@ -1132,7 +1137,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
-      return Math.ceil(calculateTextHtmlWidth(column.label) + 40);
+      return Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40);
     });
 
     setColumnsSize((prevState) => {

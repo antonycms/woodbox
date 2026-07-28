@@ -42,6 +42,7 @@ interface ITableColumnProps {
   editInitialValue?: string | number;
   isEdited?: boolean;
   value?: number | string | boolean | null | (string | number)[];
+  info?: string;
   name?: string;
   rowColumnKey?: string;
   width?: number;
@@ -66,6 +67,7 @@ const TableColumn = ({
   isEdited,
   title,
   value,
+  info,
   indexRow,
   columnIndex,
   rowHeight,
@@ -255,6 +257,11 @@ const TableColumn = ({
   const content = isEditing ? null : isLinkClickable ? (
     <span style={linkStyle} title={linkTitle} onClick={handleLinkClick}>
       {serializedValue}
+    </span>
+  ) : info && isHeaderColumn ? (
+    <span className={styles.header_content}>
+      <span className={styles.header_label}>{serializedValue}</span>
+      <span className={styles.header_info}>{info}</span>
     </span>
   ) : (
     serializedValue

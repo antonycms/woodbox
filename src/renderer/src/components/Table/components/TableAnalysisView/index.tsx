@@ -394,8 +394,18 @@ const TableAnalysisView = ({
 
         {columns.map((column, columnIndex) => (
           <React.Fragment key={String(column.attribute)}>
-            <div className={styles.analysis_field} title={column.label}>
-              {column.label}
+            <div
+              className={styles.analysis_field}
+              title={column.info ? `${column.label} ${column.info}` : column.label}
+            >
+              {column.info ? (
+                <span className={styles.header_content}>
+                  <span className={styles.header_label}>{column.label}</span>
+                  <span className={styles.header_info}>{column.info}</span>
+                </span>
+              ) : (
+                column.label
+              )}
             </div>
 
             {rows.map((row: any) => {
