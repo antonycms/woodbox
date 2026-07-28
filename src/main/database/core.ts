@@ -507,9 +507,22 @@ export const runSql = async (
 
     const execution_time_ms = Date.now() - t0;
 
-    return results.flatMap(({ raw, statement }) =>
+    const serializedResults = results.flatMap(({ raw, statement }) =>
       adapter.serializeRunSqlResult(raw, { auto_paginated, execution_time_ms, statement }),
     );
+
+    if (!adapter.resolveRunSqlColumnsInfo) return serializedResults;
+
+    try {
+      return await adapter.resolveRunSqlColumnsInfo({
+        instance,
+        dbConnection,
+        sql: sql_original,
+        results: serializedResults,
+      });
+    } catch {
+      return serializedResults;
+    }
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
     await (instance.client as any).releaseConnection(dbConnection);

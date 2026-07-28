@@ -5,6 +5,7 @@ export interface IQueryResult {
   type: string;
   rows?: any[];
   columns?: string[];
+  columns_info?: IQueryResultColumn[];
   loading?: boolean;
   queryExecutionId?: string;
   message?: string;
@@ -18,6 +19,11 @@ export interface IQueryResult {
   tables_info?: ITableQuery[];
   variableValues?: Record<string, string>;
   capture?: IQueryCaptureState;
+}
+
+export interface IQueryResultColumn {
+  name: string;
+  type?: string;
 }
 
 export interface IPendingQueryExecution {

@@ -133,6 +133,59 @@ const isSelectStatement = (statement?: string) => {
   );
 };
 
+const normalizeSqlIdentifier = (value: string) => {
+  return value
+    ?.split('.')
+    .map((part) =>
+      part
+        .replace(/^[`"\[]|[`"\]]$/g, '')
+        .replace(/``/g, '`')
+        .replace(/""/g, '"'),
+    )
+    .join('.');
+};
+
+const reservedWordsToIgnoreAlias = [
+  'where',
+  'full',
+  'inner',
+  'left',
+  'right',
+  'on',
+  'limit',
+  'order by',
+  'group by',
+  'having',
+].join('|');
+
+const getTablesFromQuerySql = (sql: string) => {
+  const regex = new RegExp(
+    `(?:FROM|JOIN)\\s+([\\w.\`"\\[\\]]+)\\s*(?!${reservedWordsToIgnoreAlias})(?:AS\\s+(\\w+)|(\\w+))?`,
+    'gim',
+  );
+  const tables = new Map<string, { name: string; schema?: string }>();
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(sql))) {
+    const sqlTablePart = normalizeSqlIdentifier(match[1]);
+    const [schema, name] = sqlTablePart.includes('.')
+      ? sqlTablePart.split('.')
+      : [undefined, sqlTablePart];
+
+    if (!name) continue;
+
+    tables.set(`${schema ? schema + '.' : ''}${name}`, { name, schema });
+  }
+
+  return [...tables.values()];
+};
+
+const hasMissingColumnsInfo = (result: SerializedRunSqlResult) => {
+  const columnsInfo = new Map(result.columns_info?.map((column) => [column.name, column.type]));
+
+  return result.columns.some((column) => !columnsInfo.get(column));
+};
+
 const sqlite: DatabaseDialectAdapter = {
   id: 'sqlite',
   client: 'sqlite3',
@@ -161,6 +214,50 @@ const sqlite: DatabaseDialectAdapter = {
         columns,
       } satisfies SerializedRunSqlResult,
     ];
+  },
+  resolveRunSqlColumnsInfo: async ({ instance, dbConnection, sql, results }) => {
+    if (!results.some(hasMissingColumnsInfo)) return results;
+
+    const tables = getTablesFromQuerySql(sql);
+    if (!tables.length) return results;
+
+    try {
+      const tablesColumns = await Promise.all(
+        tables.map(async (table) => {
+          const raw = await instance.raw(queries.getTableColumns({ table: table.name })).connection(
+            dbConnection,
+          );
+
+          return getRows(raw);
+        }),
+      );
+      const typesByColumn = new Map<string, Set<string>>();
+
+      tablesColumns.flat().forEach((column) => {
+        const types = typesByColumn.get(column.column_name) ?? new Set<string>();
+        if (column.data_type) types.add(column.data_type);
+        typesByColumn.set(column.column_name, types);
+      });
+
+      return results.map((result) => {
+        if (!hasMissingColumnsInfo(result)) return result;
+
+        const currentColumnsInfo = new Map(
+          result.columns_info?.map((column) => [column.name, column.type]),
+        );
+        const columns_info = result.columns.map((column) => {
+          const currentType = currentColumnsInfo.get(column);
+          if (currentType) return { name: column, type: currentType };
+
+          const types = typesByColumn.get(column);
+          return { name: column, type: types?.size === 1 ? [...types][0] : undefined };
+        });
+
+        return { ...result, columns_info };
+      });
+    } catch {
+      return results;
+    }
   },
 };
 

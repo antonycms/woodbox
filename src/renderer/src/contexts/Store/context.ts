@@ -316,6 +316,7 @@ export interface IStoreContext {
       type: string;
       rows?: any[];
       columns?: string[];
+      columns_info?: { name: string; type?: string }[];
       affected_rows?: number;
       auto_paginated?: boolean;
       execution_time_ms?: number;

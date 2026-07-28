@@ -115,6 +115,13 @@ const getRows = (raw: any) => {
   return normalizeRows(rows);
 };
 
+const getMysqlTypeName = (field: any) => {
+  if (field.extendedTypeName) return String(field.extendedTypeName).toLowerCase();
+  if (field.typeName) return String(field.typeName).toLowerCase();
+
+  return undefined;
+};
+
 const mysql: DatabaseDialectAdapter = {
   id: 'mysql',
   client: 'mysql2',
@@ -145,6 +152,10 @@ const mysql: DatabaseDialectAdapter = {
         execution_time_ms: context.execution_time_ms,
         rows: JSON.parse(JSON.stringify(rows)),
         columns,
+        columns_info: fields?.map?.((field) => ({
+          name: field.name,
+          type: getMysqlTypeName(field),
+        })),
       } satisfies SerializedRunSqlResult,
     ];
   },

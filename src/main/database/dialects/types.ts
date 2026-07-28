@@ -17,6 +17,11 @@ export interface DatabaseDialectQueries {
   getFunctionDefinition?(params: { schema: string; functionName: string }): string;
 }
 
+export interface SerializedRunSqlColumn {
+  name: string;
+  type?: string;
+}
+
 export interface SerializedRunSqlResult {
   type: string;
   affected_rows?: number;
@@ -24,12 +29,20 @@ export interface SerializedRunSqlResult {
   execution_time_ms?: number;
   rows: any[];
   columns: string[];
+  columns_info?: SerializedRunSqlColumn[];
 }
 
 export interface SerializeRunSqlContext {
   auto_paginated: boolean;
   execution_time_ms: number;
   statement?: string;
+}
+
+export interface ResolveRunSqlColumnsInfoContext {
+  instance: Knex;
+  dbConnection: any;
+  sql: string;
+  results: SerializedRunSqlResult[];
 }
 
 export interface DatabaseDialectAdapter {
@@ -40,6 +53,9 @@ export interface DatabaseDialectAdapter {
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
   getRows(raw: any): any[];
   serializeRunSqlResult(raw: any, context: SerializeRunSqlContext): SerializedRunSqlResult[];
+  resolveRunSqlColumnsInfo?(
+    context: ResolveRunSqlColumnsInfoContext,
+  ): Promise<SerializedRunSqlResult[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
   cancelQuery?(params: { instance: Knex; dbConnection: any }): Promise<boolean>;

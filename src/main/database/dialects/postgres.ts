@@ -6,6 +6,10 @@ pg.types.setTypeParser(1114, (val) => val);
 pg.types.setTypeParser(1184, (val) => val);
 
 const quoteIdentifier = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+const postgresTypesByOid = new Map<number, string>(
+  Object.entries(pg.types.builtins).map(([name, oid]) => [Number(oid), name.toLowerCase()]),
+);
+const getPostgresTypeName = (oid?: number) => (oid ? postgresTypesByOid.get(oid) : undefined);
 
 const postgres: DatabaseDialectAdapter = {
   id: 'postgres',
@@ -35,6 +39,10 @@ const postgres: DatabaseDialectAdapter = {
         execution_time_ms: context.execution_time_ms,
         rows: JSON.parse(JSON.stringify(rows)),
         columns: columns?.map?.((field) => field.name) || [],
+        columns_info: columns?.map?.((field) => ({
+          name: field.name,
+          type: getPostgresTypeName(field.dataTypeID),
+        })),
       };
     });
   },
