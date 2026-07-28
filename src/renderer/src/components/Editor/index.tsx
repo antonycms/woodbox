@@ -67,6 +67,10 @@ const Editor = ({
     editor?.focus?.();
   };
 
+  const layout = () => {
+    editor?.layout?.();
+  };
+
   const setPosition = (position: monaco.IPosition) => {
     editor?.setPosition?.(position);
     editor?.revealPositionInCenter?.(position);
@@ -295,6 +299,7 @@ const Editor = ({
       setMarkers,
       setPosition,
       focus,
+      layout,
       getPositionAt,
       getOffsetAt,
       getWordAtPosition,
@@ -470,6 +475,7 @@ export interface IEditorRef {
   setMarkers(params: IAddMarkerParams[]): void;
   setPosition(position: monaco.IPosition): void;
   focus(): void;
+  layout(): void;
   getPositionAt(offset: number): monaco.IPosition | undefined;
   getOffsetAt(position: monaco.IPosition): number | undefined;
   getWordAtPosition(position: monaco.IPosition): monaco.editor.IWordAtPosition;

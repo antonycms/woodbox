@@ -976,11 +976,21 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   React.useEffect(() => {
     if (!isActiveTab) return;
 
-    const frameId = window.requestAnimationFrame(() => {
-      refEditor.current?.focus?.();
+    let secondFrameId: number | undefined;
+
+    const firstFrameId = window.requestAnimationFrame(() => {
+      refEditor.current?.layout?.();
+
+      secondFrameId = window.requestAnimationFrame(() => {
+        refEditor.current?.layout?.();
+        refEditor.current?.focus?.();
+      });
     });
 
-    return () => window.cancelAnimationFrame(frameId);
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      if (secondFrameId) window.cancelAnimationFrame(secondFrameId);
+    };
   }, [isActiveTab]);
 
   return (
