@@ -30,6 +30,7 @@ const TreeView = (props: ITreeViewProps) => {
   const { activeTheme } = useThemeContext();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
+  const [revealedItemId, setRevealedItemId] = React.useState<string>();
   const openedItemsIdSet = React.useMemo(() => new Set(openedItemsId), [openedItemsId]);
   const defaultColor = activeTheme.sideBar.color;
   const focusBackgroundColor =
@@ -171,7 +172,7 @@ const TreeView = (props: ITreeViewProps) => {
 
       await handleSwitchItem(item, open);
     },
-    reveal: async (id: string, parentIds: string[] = []) => {
+    reveal: async (id: string, parentIds: string[] = [], options?: ITreeViewRevealOptions) => {
       for (const parentId of parentIds) {
         const parent = getItem(parentId);
 
@@ -182,8 +183,9 @@ const TreeView = (props: ITreeViewProps) => {
         requestAnimationFrame(() => {
           const element = document.getElementById(`item_treeview_id_${id}`);
 
-          element?.focus();
-          element?.scrollIntoView({ block: 'nearest' });
+          setRevealedItemId(id);
+          if (options?.focus !== false) element?.focus();
+          element?.scrollIntoView({ block: 'center' });
           resolve(!!element);
         });
       });
@@ -211,6 +213,7 @@ const TreeView = (props: ITreeViewProps) => {
             iconColor={item.iconColor || item.color || defaultColor}
             focusBackgroundColor={focusBackgroundColor}
             openedItemsIdSet={openedItemsIdSet}
+            revealedItemId={revealedItemId}
             onSwitch={handleSwitchItem}
           />
         );
@@ -240,7 +243,11 @@ export interface IItemTreeView extends IItemTreeViewData {
 
 export interface ITreeViewRef {
   switch(id: string, open?: boolean): Promise<void>;
-  reveal(id: string, parentIds?: string[]): Promise<boolean>;
+  reveal(id: string, parentIds?: string[], options?: ITreeViewRevealOptions): Promise<boolean>;
+}
+
+interface ITreeViewRevealOptions {
+  focus?: boolean;
 }
 
 interface ITreeViewProps {

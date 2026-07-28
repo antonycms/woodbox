@@ -21,7 +21,10 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
       <div
         id={`item_treeview_id_${props.id}`}
         tabIndex={0}
-        className={classes(styles.containerItemInfo)}
+        className={classes(
+          styles.containerItemInfo,
+          props.revealedItemId === props.id && styles.revealed,
+        )}
         style={
           {
             '--tree-item-focus-background-color': focusBackgroundColor,
@@ -77,6 +80,7 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
               focusBackgroundColor={focusBackgroundColor}
               onSwitch={props.onSwitch}
               openedItemsIdSet={openedItemsIdSet}
+              revealedItemId={props.revealedItemId}
             />
           );
         })}
@@ -93,5 +97,6 @@ export interface IItemTreeViewProps extends IItemTreeView {
   color?: string;
   focusBackgroundColor?: string;
   openedItemsIdSet?: Set<string>;
+  revealedItemId?: string;
   onSwitch?(item: IItemTreeView): void;
 }

@@ -21,7 +21,8 @@
   border-radius: 4px;
 }
 
-.containerItemInfo:focus {
+.containerItemInfo:focus,
+.containerItemInfo.revealed {
   background-color: var(--tree-item-focus-background-color);
   outline: transparent;
 }

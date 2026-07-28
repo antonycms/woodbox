@@ -113,6 +113,19 @@ const getSidebarRevealPath = (
   return sidebarRevealIndex.get(getSidebarRevealKey(target));
 };
 
+const scheduleSidebarReveal = (callback: () => void) => {
+  let secondFrameId: number | undefined;
+
+  const firstFrameId = window.requestAnimationFrame(() => {
+    secondFrameId = window.requestAnimationFrame(callback);
+  });
+
+  return () => {
+    window.cancelAnimationFrame(firstFrameId);
+    if (secondFrameId) window.cancelAnimationFrame(secondFrameId);
+  };
+};
+
 const ProjectsMenu = () => {
   const {
     activeTheme: { sideBar: colors },
@@ -810,7 +823,10 @@ const ProjectsMenu = () => {
     if (lastRevealKeyRef.current === revealKey) return;
 
     lastRevealKeyRef.current = revealKey;
-    treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds);
+
+    return scheduleSidebarReveal(() => {
+      treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds, { focus: false });
+    });
   }, [activeSidebarRevealTarget, activeTabId, sidebarRevealIndex]);
 
   const closeContextMenu = React.useCallback(() => {
