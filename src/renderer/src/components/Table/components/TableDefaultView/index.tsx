@@ -114,6 +114,10 @@ const TableDefaultView = <Row,>({
     [onSort, sortContextMenu],
   );
 
+  const closeSortContextMenu = React.useCallback(() => {
+    setSortContextMenu(undefined);
+  }, []);
+
   const sortContextMenuOptions = React.useMemo(
     () => [
       {
@@ -211,7 +215,7 @@ const TableDefaultView = <Row,>({
 
       <ContextMenu
         position={sortContextMenu?.position}
-        onClose={() => setSortContextMenu(undefined)}
+        onClose={closeSortContextMenu}
         options={sortContextMenuOptions}
       />
     </div>

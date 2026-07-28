@@ -2,7 +2,7 @@ import React from 'react';
 import type { IColumn } from '../../dtos';
 import styles from '../../styles.module.css';
 import { classes } from '@renderer/styles/theme';
-import ResizableContainer from '@renderer/components/ResizableContainer';
+import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { useI18n } from '@renderer/contexts/I18n';
@@ -55,6 +55,45 @@ const analysisLinkStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+const primaryShortcutKeyLabel = getPrimaryShortcutKeyLabel();
+
+interface ITableAnalysisHeaderProps {
+  columnIndex: number;
+  width?: number;
+  minWidth?: number;
+  rowHeight: number;
+  children: React.ReactNode;
+  onResizeColumn?(index: number, size: number): void;
+}
+
+const TableAnalysisHeader = React.memo(
+  ({
+    columnIndex,
+    width,
+    minWidth,
+    rowHeight,
+    children,
+    onResizeColumn,
+  }: ITableAnalysisHeaderProps) => {
+    const handleResize = React.useCallback<OnResizeCallback>(
+      (size) => onResizeColumn?.(columnIndex, size.width || 0),
+      [columnIndex, onResizeColumn],
+    );
+
+    return (
+      <ResizableContainer
+        className={styles.analysis_header}
+        width={width}
+        minWidth={minWidth}
+        height={rowHeight}
+        onResize={handleResize}
+      >
+        {children}
+      </ResizableContainer>
+    );
+  },
+);
+
 interface ITableAnalysisValueProps {
   rowIndex: number;
   columnIndex: number;
@@ -65,7 +104,7 @@ interface ITableAnalysisValueProps {
   isEdited?: boolean;
   isSelected?: boolean;
   isLinkClickable?: boolean;
-  linkTitle: string;
+  linkTitle?: string;
   linkClickMode: 'ctrl' | 'single';
   onDoubleClick?(rowColumnKey: string): void;
   onSelectCell?(rowIndex: number, colIndex: number): void;
@@ -303,7 +342,6 @@ const TableAnalysisView = ({
   cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
   const { t } = useI18n();
-  const shortcutKey = getPrimaryShortcutKeyLabel();
   const columnsSizeStyle = React.useMemo(() => {
     return columnsSize.map((size) => `${size}px`).join(' ');
   }, [columnsSize]);
@@ -315,31 +353,43 @@ const TableAnalysisView = ({
     () => ({ '--analysisColumnsSize': columnsSizeStyle }) as React.CSSProperties,
     [columnsSizeStyle],
   );
+  const hasLinkColumns = React.useMemo(() => {
+    return columns.some((column) => column.isLink);
+  }, [columns]);
+  const linkTitle = React.useMemo(() => {
+    if (!hasLinkColumns) return undefined;
+
+    if (cellLinkClickMode === 'single') return t('tooltip.clickOpenReferencedRow');
+
+    return onCellLinkPreviewClick
+      ? t('tooltip.previewOrOpenReferencedRow', { shortcut: primaryShortcutKeyLabel })
+      : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: primaryShortcutKeyLabel });
+  }, [cellLinkClickMode, hasLinkColumns, onCellLinkPreviewClick, t]);
 
   return (
     <div className={styles.analysis_container} style={containerStyle}>
       <div className={styles.analysis_grid} style={gridStyle}>
-        <ResizableContainer
-          className={styles.analysis_header}
+        <TableAnalysisHeader
+          columnIndex={0}
           width={columnsSize[0]}
           minWidth={minColumnsSize[0]}
-          height={rowHeight}
-          onResize={(size) => onResizeColumn?.(0, size.width || 0)}
+          rowHeight={rowHeight}
+          onResizeColumn={onResizeColumn}
         >
           {t('table.column')}
-        </ResizableContainer>
+        </TableAnalysisHeader>
 
         {rows.map((row: any, rowIndex) => (
-          <ResizableContainer
-            className={styles.analysis_header}
+          <TableAnalysisHeader
             key={row.__key_row}
+            columnIndex={rowIndex + 1}
             width={columnsSize[rowIndex + 1]}
             minWidth={minColumnsSize[rowIndex + 1]}
-            height={rowHeight}
-            onResize={(size) => onResizeColumn?.(rowIndex + 1, size.width || 0)}
+            rowHeight={rowHeight}
+            onResizeColumn={onResizeColumn}
           >
             {t('table.rowNumber', { number: Number(row.__index_row) + 1 })}
-          </ResizableContainer>
+          </TableAnalysisHeader>
         ))}
 
         {columns.map((column, columnIndex) => (
@@ -364,12 +414,7 @@ const TableAnalysisView = ({
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
               const isLinkClickable = column.isLink && value !== null && value !== undefined;
-              const linkTitle =
-                cellLinkClickMode === 'single'
-                  ? t('tooltip.clickOpenReferencedRow')
-                  : onCellLinkPreviewClick
-                    ? t('tooltip.previewOrOpenReferencedRow', { shortcut: shortcutKey })
-                    : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: shortcutKey });
+              const cellLinkTitle = isLinkClickable ? linkTitle : undefined;
 
               if (isEditing) {
                 return (
@@ -398,7 +443,7 @@ const TableAnalysisView = ({
                   isEdited={isEdited}
                   isSelected={isSelected}
                   isLinkClickable={isLinkClickable}
-                  linkTitle={linkTitle}
+                  linkTitle={cellLinkTitle}
                   linkClickMode={cellLinkClickMode}
                   onDoubleClick={onDoubleClick}
                   onStartCellDrag={onStartCellDrag}

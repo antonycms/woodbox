@@ -13,6 +13,12 @@ const linkStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+const emptyStyle: React.CSSProperties = {};
+const primaryShortcutKeyLabel = getPrimaryShortcutKeyLabel();
+const singleLinkTitle = 'Clique para abrir linha referenciada';
+const previewLinkTitle = `Clique para visualizar referência; ${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
+const openLinkTitle = `${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
+
 interface ITableColumnProps {
   indexRow?: number;
   minWidth?: number;
@@ -74,7 +80,7 @@ const TableColumn = ({
   rowColumnKey,
   width = minWidth || 200,
   name,
-  style: styleExternal = {},
+  style: styleExternal = emptyStyle,
   isLink,
   editInitialValue,
   type,
@@ -89,13 +95,13 @@ const TableColumn = ({
 }: ITableColumnProps) => {
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
-  const shortcutKey = getPrimaryShortcutKeyLabel();
-  const linkTitle =
-    linkClickMode === 'single'
-      ? 'Clique para abrir linha referenciada'
+  const linkTitle = !isLinkClickable
+    ? undefined
+    : linkClickMode === 'single'
+      ? singleLinkTitle
       : onFkCellPreviewClick
-        ? `Clique para visualizar referência; ${shortcutKey}+click para abrir linha referenciada`
-        : `${shortcutKey}+click para abrir linha referenciada`;
+        ? previewLinkTitle
+        : openLinkTitle;
 
   const className = React.useMemo(() => {
     return classes(
