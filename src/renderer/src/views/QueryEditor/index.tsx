@@ -826,11 +826,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     const schemas = connectionInfo.schemas || [];
     const tables = connectionInfo.tables || [];
+    const functions = connectionInfo.functions || [];
 
     const schemasSerialized = schemas.map((schema) => ({ name: schema }));
     const tablesAvailable = tables.map((table) => ({
       name: table.table_name,
       schema: table.table_schema,
+    }));
+    const functionsAvailable = functions.map((fn) => ({
+      name: fn.function_name,
+      schema: fn.function_schema,
     }));
     const tablesUsed = currentQueryTablesInfo;
 
@@ -845,7 +850,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         ?.forEach?.((column) => columns.push({ name: column.column_name, table, schema }));
     });
 
-    return { schemas: schemasSerialized, tablesAvailable, tablesUsed, columns };
+    return {
+      schemas: schemasSerialized,
+      tablesAvailable,
+      tablesUsed,
+      columns,
+      functions: functionsAvailable,
+    };
   }, [connectionsInfo, currentQueryTablesInfo, id_connection, tableColumns]);
 
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(

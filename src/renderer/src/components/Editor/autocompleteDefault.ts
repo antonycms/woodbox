@@ -35,6 +35,7 @@ export interface IDefineSQlAutocompleteParams {
   tablesAvailable?: { name: string; schema?: string }[];
   tablesUsed?: { name: string; schema?: string; alias?: string }[];
   columns?: { name: string; table?: string; schema?: string }[];
+  functions?: { name: string; schema?: string }[];
 }
 
 const triggerCharacters = [' ', '.'];
@@ -50,9 +51,14 @@ const ensureSqlAutocompleteProvider = () => {
     triggerCharacters,
     provideCompletionItems: (model, position) => {
       const params = autocompleteParamsByModelUri.get(model.uri.toString()) || {};
-      const { schemas, columns = [], tablesAvailable = [], tablesUsed = [] } = params;
+      const { schemas, columns = [], functions = [], tablesAvailable = [], tablesUsed = [] } =
+        params;
       const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
-      let availableWords: IItem[] = defaultSugestions;
+      const functionsWords = functions.map(({ name }) =>
+        makeItem('Função', languages.CompletionItemKind.Function, 1)(name),
+      );
+      const defaultAvailableWords = [...functionsWords, ...defaultSugestions];
+      let availableWords: IItem[] = defaultAvailableWords;
 
       const value = model.getValueInRange({
         startColumn: 0,
@@ -129,18 +135,21 @@ const ensureSqlAutocompleteProvider = () => {
         availableWords = columnsWords;
       } //
       else if (isSchema) {
-        // const tablesWords = [];
         const tablesWords = tablesAvailable
           .filter(({ schema }) => currentWord?.split('.')[0] === schema)
           .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
 
-        availableWords = tablesWords;
+        const schemaFunctionsWords = functions
+          .filter(({ schema }) => currentWord?.split('.')[0] === schema)
+          .map(({ name }) => makeItem('Função', languages.CompletionItemKind.Function, 1)(name));
+
+        availableWords = [...schemaFunctionsWords, ...tablesWords];
       } //
       else if (isSelectColumns) {
         const columnsWords = columns.map(({ name }) =>
           makeItem('Column', languages.CompletionItemKind.Variable, 0)(name),
         );
-        availableWords = [...columnsWords, ...defaultSugestions];
+        availableWords = [...columnsWords, ...defaultAvailableWords];
       } //
       else if (isFromOrJoin) {
         if (schemas?.length) {
@@ -182,7 +191,7 @@ const ensureSqlAutocompleteProvider = () => {
             makeItem('Column', languages.CompletionItemKind.Variable, 1)(name),
           );
 
-          availableWords = [...columnsWords, ...aliasAvailable, ...defaultSugestions];
+          availableWords = [...columnsWords, ...aliasAvailable, ...defaultAvailableWords];
         }
       }
 
