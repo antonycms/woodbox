@@ -55,7 +55,7 @@ const ensureSqlAutocompleteProvider = () => {
         params;
       const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
       const functionsWords = functions.map(({ name }) =>
-        makeItem('Função', languages.CompletionItemKind.Function, 1)(name),
+        makeItem('Função', languages.CompletionItemKind.Function, 3)(name),
       );
       const defaultAvailableWords = [...functionsWords, ...defaultSugestions];
       let availableWords: IItem[] = defaultAvailableWords;
@@ -141,7 +141,7 @@ const ensureSqlAutocompleteProvider = () => {
 
         const schemaFunctionsWords = functions
           .filter(({ schema }) => currentWord?.split('.')[0] === schema)
-          .map(({ name }) => makeItem('Função', languages.CompletionItemKind.Function, 1)(name));
+          .map(({ name }) => makeItem('Função', languages.CompletionItemKind.Function, 3)(name));
 
         availableWords = [...schemaFunctionsWords, ...tablesWords];
       } //
@@ -188,7 +188,7 @@ const ensureSqlAutocompleteProvider = () => {
           );
 
           const columnsWords = columns.map(({ name }) =>
-            makeItem('Column', languages.CompletionItemKind.Variable, 1)(name),
+            makeItem('Column', languages.CompletionItemKind.Variable, 0)(name),
           );
 
           availableWords = [...columnsWords, ...aliasAvailable, ...defaultAvailableWords];
