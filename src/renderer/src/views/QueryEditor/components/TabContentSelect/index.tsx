@@ -1055,7 +1055,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         {showValuePreview && (
           <ResizableContainer
             width={previewWidth}
-            minWidth={260}
+            minWidth={356}
             maxWidth={900}
             direction="horizontal"
             horizontalResizeSide="left"
