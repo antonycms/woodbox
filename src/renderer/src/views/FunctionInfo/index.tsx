@@ -74,7 +74,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
       setSavedDefinition(nextDefinition);
       setLastFetchDate(new Date());
 
-      refEditor.current.setValue(nextDefinition);
+      refEditor.current?.setValue?.(nextDefinition);
     } finally {
       setLoading(false);
     }

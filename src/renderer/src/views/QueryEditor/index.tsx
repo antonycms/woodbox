@@ -7,6 +7,7 @@ import {
   TabWindow,
   type IActiveTabContextMenu,
 } from '@renderer/components/Tabs';
+import { useTabContentContext } from '@renderer/components/Tabs/components/TabContentProvider';
 import type { IContextMenuOption } from '@renderer/components/ContextMenu';
 import { generateHash } from '@renderer/utils/string';
 import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
@@ -68,6 +69,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   } = useStoreContext();
 
   const { activeTheme } = useThemeContext();
+  const { isActiveTab } = useTabContentContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const currentConnection = React.useMemo(
     () => connections.find((connection) => connection.id === id_connection),
@@ -794,7 +796,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     const content = await getScriptContent(id_script);
 
-    if (content) refEditor.current.setValue(content);
+    if (content) refEditor.current?.setValue?.(content);
   };
 
   const saveScript = useDebounce(() => {
@@ -971,6 +973,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     loadTableReferences();
   }, [loadTableReferences]);
 
+  React.useEffect(() => {
+    if (!isActiveTab) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      refEditor.current?.focus?.();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isActiveTab]);
+
   return (
     <div className={styles.queryEditorContainer}>
       <div
@@ -985,6 +997,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
         <Editor
           ref={refEditor}
+          autoFocus
           dialect={dialect.editorDialect}
           onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
