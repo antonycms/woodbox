@@ -8,7 +8,24 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
   const { connectionsInfo } = useStoreContext();
   const { addTab, getTab, setActiveTabId } = useAppTabContext();
 
-  return React.useCallback(
+  const canNavigate = React.useCallback(
+    (word: string, schema?: string) => {
+      const info = connectionsInfo.get(id_connection);
+      if (!info) return false;
+
+      return (
+        info.tables.some(
+          (t) => t.table_name === word && (!schema || t.table_schema === schema),
+        ) ||
+        info.functions.some(
+          (f) => f.function_name === word && (!schema || f.function_schema === schema),
+        )
+      );
+    },
+    [id_connection, connectionsInfo],
+  );
+
+  const navigate = React.useCallback(
     (word: string, schema?: string) => {
       const info = connectionsInfo.get(id_connection);
       if (!info) return;
@@ -77,6 +94,8 @@ const useEditorCtrlClickNavigate = (id_connection: string) => {
     },
     [id_connection, connectionsInfo, addTab, getTab, setActiveTabId],
   );
+
+  return React.useMemo(() => Object.assign(navigate, { canNavigate }), [navigate, canNavigate]);
 };
 
 export default useEditorCtrlClickNavigate;

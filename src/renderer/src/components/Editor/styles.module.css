@@ -22,3 +22,8 @@
 .container :global(.monaco-editor .scroll-decoration) {
   box-shadow: unset;
 }
+
+.ctrlClickLink {
+  cursor: pointer !important;
+  text-decoration: underline;
+}

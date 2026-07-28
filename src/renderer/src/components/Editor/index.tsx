@@ -26,6 +26,12 @@ const Editor = ({
     onCtrlClickRef.current = props.onCtrlClick;
   }, [props.onCtrlClick]);
 
+  const stopCtrlClickPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!props.onCtrlClick || !isPrimaryShortcutPressed(event)) return;
+
+    event.stopPropagation();
+  };
+
   const resize = useDebounce(() => editor?.layout?.(), 10);
 
   const emitCurrentValueChange = useDebounce(() => {
@@ -57,10 +63,14 @@ const Editor = ({
     monaco.editor.setModelMarkers(model, null, markers);
   };
 
+  const focus = () => {
+    editor?.focus?.();
+  };
+
   const setPosition = (position: monaco.IPosition) => {
     editor?.setPosition?.(position);
     editor?.revealPositionInCenter?.(position);
-    editor?.focus?.();
+    focus();
   };
 
   const getPositionAt = (offset: number) => {
@@ -168,27 +178,102 @@ const Editor = ({
       run: () => {},
     });
 
-    currentEditor.onMouseDown((e) => {
-      if (!isPrimaryShortcutPressed(e.event.browserEvent)) return;
-      if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
-      const position = e.target.position;
-      if (!position) return;
+    const getCtrlClickTarget = (position: monaco.IPosition) => {
       const model = currentEditor.getModel();
       const word = model?.getWordAtPosition(position);
-      if (!word) return;
+      if (!model || !word) return;
 
-      const lineContent = model?.getLineContent(position.lineNumber) || '';
+      const lineContent = model.getLineContent(position.lineNumber);
       const charBefore = lineContent[word.startColumn - 2];
       let schema: string | undefined;
+
       if (charBefore === '.') {
-        const schemaWord = model?.getWordAtPosition({
+        const schemaWord = model.getWordAtPosition({
           lineNumber: position.lineNumber,
           column: word.startColumn - 1,
         });
         schema = schemaWord?.word;
       }
 
-      onCtrlClickRef.current?.(word.word, schema);
+      return {
+        word: word.word,
+        schema,
+        range: new monaco.Range(
+          position.lineNumber,
+          word.startColumn,
+          position.lineNumber,
+          word.endColumn,
+        ),
+      };
+    };
+
+    const canOpenCtrlClickTarget = (target: NonNullable<ReturnType<typeof getCtrlClickTarget>>) => {
+      const onCtrlClick = onCtrlClickRef.current;
+      if (!onCtrlClick) return false;
+
+      return onCtrlClick.canNavigate?.(target.word, target.schema) ?? true;
+    };
+
+    let ctrlClickHoverDecorations: string[] = [];
+
+    const clearCtrlClickHover = () => {
+      if (!ctrlClickHoverDecorations.length) return;
+
+      ctrlClickHoverDecorations = currentEditor.deltaDecorations(ctrlClickHoverDecorations, []);
+    };
+
+    const updateCtrlClickHover = (e: monaco.editor.IEditorMouseEvent) => {
+      if (!isPrimaryShortcutPressed(e.event.browserEvent)) {
+        clearCtrlClickHover();
+        return;
+      }
+
+      if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT || !e.target.position) {
+        clearCtrlClickHover();
+        return;
+      }
+
+      const target = getCtrlClickTarget(e.target.position);
+      if (!target || !canOpenCtrlClickTarget(target)) {
+        clearCtrlClickHover();
+        return;
+      }
+
+      ctrlClickHoverDecorations = currentEditor.deltaDecorations(ctrlClickHoverDecorations, [
+        {
+          range: target.range,
+          options: { inlineClassName: styles.ctrlClickLink },
+        },
+      ]);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!isPrimaryShortcutPressed(event)) clearCtrlClickHover();
+    };
+
+    currentEditor.onMouseMove(updateCtrlClickHover);
+    currentEditor.onMouseLeave(clearCtrlClickHover);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', clearCtrlClickHover);
+    currentEditor.onDidDispose(() => {
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', clearCtrlClickHover);
+    });
+
+    currentEditor.onMouseUp((e) => {
+      if (!isPrimaryShortcutPressed(e.event.browserEvent)) return;
+      if (e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) return;
+      const position = e.target.position;
+      if (!position) return;
+      const target = getCtrlClickTarget(position);
+      if (!target) return;
+
+      e.event.preventDefault();
+      e.event.stopPropagation();
+      clearCtrlClickHover();
+      currentEditor.focus();
+
+      onCtrlClickRef.current?.(target.word, target.schema);
     });
 
     return currentEditor;
@@ -209,6 +294,7 @@ const Editor = ({
       setValue,
       setMarkers,
       setPosition,
+      focus,
       getPositionAt,
       getOffsetAt,
       getWordAtPosition,
@@ -227,6 +313,7 @@ const Editor = ({
 
       currentEditor = initEditor();
       setEditor(currentEditor);
+      if (props.autoFocus) currentEditor.focus();
     });
 
     return () => {
@@ -316,7 +403,7 @@ const Editor = ({
   }, [editor, props.autocomplete]);
 
   return (
-    <div className={styles.outsideContainer}>
+    <div className={styles.outsideContainer} onClickCapture={stopCtrlClickPropagation}>
       <div className={styles.container} ref={containerRef} />
     </div>
   );
@@ -338,9 +425,10 @@ export interface IEditorProps {
   onDidChangeContent?: () => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
-  onCtrlClick?: (word: string, schema?: string) => void;
+  onCtrlClick?: IEditorCtrlClickHandler;
   readonly?: boolean;
   hidePreview?: boolean;
+  autoFocus?: boolean;
 }
 
 export interface IScroll {
@@ -365,6 +453,10 @@ interface IAddMarkerParams {
   severity: 'Warning' | 'Error' | 'Hint' | 'Info';
 }
 
+type IEditorCtrlClickHandler = ((word: string, schema?: string) => void) & {
+  canNavigate?: (word: string, schema?: string) => boolean;
+};
+
 export interface IEditorRef {
   getCurrentValue(): string;
   getCurrentQueryRange(): { sql: string; start: number; end: number };
@@ -377,6 +469,7 @@ export interface IEditorRef {
   setScroll(scroll: IScroll): void;
   setMarkers(params: IAddMarkerParams[]): void;
   setPosition(position: monaco.IPosition): void;
+  focus(): void;
   getPositionAt(offset: number): monaco.IPosition | undefined;
   getOffsetAt(position: monaco.IPosition): number | undefined;
   getWordAtPosition(position: monaco.IPosition): monaco.editor.IWordAtPosition;
