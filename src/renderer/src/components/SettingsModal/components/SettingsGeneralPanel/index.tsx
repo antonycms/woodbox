@@ -12,7 +12,22 @@ export const SettingsGeneralPanel = React.memo(() => {
     activeTheme: { modal: colors },
   } = useThemeContext();
 
-  const languageOptions = React.useMemo(() => [...availableLanguages], [availableLanguages]);
+  const extractLanguageLabel = React.useCallback(
+    (item: (typeof availableLanguages)[number]) => t(item.labelKey),
+    [t],
+  );
+
+  const extractLanguageValue = React.useCallback(
+    (item: (typeof availableLanguages)[number]) => item.code,
+    [],
+  );
+
+  const handleChangeLanguage = React.useCallback(
+    (event: { value: string | number | null }) => {
+      changeLanguage(event.value as LanguageCode);
+    },
+    [changeLanguage],
+  );
 
   return (
     <>
@@ -26,15 +41,15 @@ export const SettingsGeneralPanel = React.memo(() => {
         <Autocomplete
           required
           clearable={false}
-          data={languageOptions}
+          data={availableLanguages}
           label={t('settings.language.activeLanguage')}
           value={language}
-          extractLabel={(item) => t(item.labelKey)}
-          extractValue={(item) => item.code}
+          extractLabel={extractLanguageLabel}
+          extractValue={extractLanguageValue}
           color={colors.fieldColor}
           backgroundColor={colors.fieldBackgroundColor}
           xs={12}
-          onChange={(event) => changeLanguage(event.value as LanguageCode)}
+          onChange={handleChangeLanguage}
         />
       </Row>
     </>
