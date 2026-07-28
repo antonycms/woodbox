@@ -40,19 +40,19 @@ Legenda:
 - 🟡 **1. `Store`**: actions/loaders e `value` memoizados; agrupamento de conexões otimizado. Ainda falta separar contexts ou migrar para Zustand.
 - 🟡 **2. `AppTab`**: `value` memoizado e `getTab` passou a usar `Map`. Ainda falta separar state/actions ou migrar para Zustand.
 - 🟡 **3. `Table`**: constantes movidas para `constants.ts`, deps corrigidas, `rowsDetails` e `cssVars` memoizados. `useTableLayout` e `useTableColumnResize` extraídos para derivar layout e handlers de resize. Extrações maiores seguem pendentes.
-- 🟡 **4. Células da `Table`**: `TableDefaultView`/`TableColumn` tiveram dados memoizados, cabeçalho extraído, número da linha isolado e callbacks internos/edição da célula estabilizados. `TableAnalysisView` isolou células de leitura em componente memoizado e estabilizou handlers/link style de leitura/edição. Delegação de eventos e comparadores customizados nas células seguem pendentes.
+- 🟡 **4. Células da `Table`**: `TableDefaultView`/`TableColumn` tiveram dados memoizados, cabeçalho extraído, número da linha isolado e callbacks internos/edição da célula e fechamento do menu de sort estabilizados. `TableAnalysisView` isolou células de leitura e headers redimensionáveis em componentes memoizados e estabilizou handlers/link style de leitura/edição. `TableColumn`/`TableAnalysisView` evitam recomputar tooltip/atalho de FK por célula desnecessariamente e pulam esse cálculo quando não há coluna link; `TableColumn` usa fallback estável para style. Delegação de eventos e comparadores customizados nas células seguem pendentes.
 - ✅ **5. `VirtualizeList`**: caminho O(1) para `itemSize` fixo e debounce sem `setTimeout(0)` via `useStateWithDebounce`.
 - 🟡 **6. `ProjectsMenu`**: árvore memoizada, scripts agrupados/reutilizados por conexão, lookups de loading por `Set`, índice plano para revelar itens ativos, itens renderizados memoizados e handlers do TreeView/botões estabilizados. Virtualização de nós segue pendente.
 - ✅ **7. `TreeView`**: lookup por `Map`, navegação limitada ao container, tema centralizado no pai, itens abertos por `Set`, lista plana memoizada de nós visíveis e `ItemTreeView` memoizado.
-- 🟡 **8. `QueryEditor`**: deps do autocomplete corrigidas, loads de colunas/referências usando refs/callbacks, `useQueryCancellation` extraído, helpers puros de resultado/captura movidos para `utils/queryResult.ts` e callbacks/dados calculados de tabs/modais estabilizados. Hooks maiores de execução SQL seguem pendentes.
+- 🟡 **8. `QueryEditor`**: deps do autocomplete corrigidas, loads de colunas/referências usando refs/callbacks, `useQueryCancellation` extraído, helpers puros de resultado/captura/mensagens e marker de erro movidos para `utils/queryResult.ts` e callbacks/dados calculados de tabs/modais estabilizados, incluindo fechamento dos modais de variáveis/produção. Hooks maiores de execução SQL seguem pendentes.
 - ✅ **9. `TabContentSelect`**: colunas, handlers e menu de contexto estabilizados.
 - 🟡 **10. `TableInfo/Data`**: `rowKeyExtractor`, context menu e handlers estabilizados. Unificação com `TabContentSelect` segue pendente.
 - ✅ **11. `CentralSearchModal`**: cálculos pesados evitados quando fechada, `connectionsById` memoizado, loops/offsets otimizados.
 - ✅ **12. `Editor` autocomplete**: provider SQL global único por model e `console.log` removido.
 - 🟡 **13. Autocomplete**: listeners globais só ficam ativos com dropdown aberto e outside-click foi extraído para `useDropdownOutsideClick`. Core completo compartilhado segue pendente.
-- 🟡 **14. Abas de propriedades**: `useFilteredSortedRows`, `useSelectionReconciliation` e `usePropertiesKeyboardShortcuts` extraídos; handlers de menu de contexto estabilizados nas tabs principais; `columns`/`onSort` estabilizados em `Columns`, `Indexes`, `Restrictions`, `ForeingKeys`, `References` e `Triggers`. Componente compartilhado de painel/barra segue pendente.
+- ✅ **14. Abas de propriedades**: `useFilteredSortedRows`, `useSelectionReconciliation` e `usePropertiesKeyboardShortcuts` extraídos; handlers de menu de contexto estabilizados nas tabs principais; `columns`/`onSort` estabilizados em `Columns`, `Indexes`, `Restrictions`, `ForeingKeys`, `References` e `Triggers`. Barras inferiores devem permanecer explícitas salvo pedido explícito.
 - ✅ **15. `useResize`/debounce**: stale closure corrigida, cleanup de timeout e `useStateWithDebounce` sem debounce quando `delay` é indefinido.
-- 🟡 **16. `useMemo` trivial**: constantes principais da `Table` removidas do componente. Revisão geral segue pendente.
+- 🟡 **16. `useMemo` trivial**: constantes principais da `Table` removidas do componente, `useMemo` trivial de idiomas removido e callbacks do autocomplete de idioma estabilizados. Revisão geral segue pendente.
 - ✅ **17. Efeitos mount-only**: efeitos exemplares de carga/inicialização documentados e dependência simples do `Diagram` corrigida.
 
 ## Prioridade alta
@@ -425,10 +425,12 @@ Já corrigido neste ciclo:
 - atalhos Delete/Escape/Ctrl+S centralizados em `usePropertiesKeyboardShortcuts`
 - handlers `onContextMenuTable` estabilizados com `useCallback`
 
-Ainda repetido:
+Decisão registrada:
 
-- menu de contexto
-- barra inferior com refresh/save/cancel
+- não criar componente global genérico para barras inferiores;
+- manter JSX explícito para essas barras, salvo pedido explícito.
+
+A unificação com `BottomActionBar`/`actions/onAction` foi testada e revertida por piorar clareza/API.
 
 **Impacto**
 
@@ -436,10 +438,7 @@ Médio. Não é o maior gargalo de runtime, mas aumenta risco de bugs e inconsis
 
 **Soluções possíveis**
 
-- Reutilizar `useFilteredSortedRows` nas novas tabs de propriedades.
-- Reutilizar `useSelectionReconciliation` em tabs com seleção.
-- Reutilizar `usePropertiesKeyboardShortcuts` em tabs editáveis.
-- Criar componente local `PropertiesTablePanel`.
+Sem ação pendente para este tópico.
 
 ---
 
@@ -474,7 +473,6 @@ Médio. Pode causar updates atrasados, stale closures e setState após unmount e
 
 - `components/Table/index.tsx`: `rowHeight`, `maxColumnSize`, `defaultColumnSize`, `rowNumberColumnWidth`
 - `components/Table/index.tsx`: `columnsSignature` para reset de análise
-- `components/SettingsGeneralPanel/index.tsx`: `languageOptions = [...availableLanguages]`
 - `components/Spacer`, `Divider`, `Button`, `Input`: estilos simples em `useMemo`
 
 **Problema**
@@ -487,6 +485,7 @@ Baixo isoladamente; médio no conjunto por legibilidade.
 
 **Soluções possíveis**
 
+- Já removido: `languageOptions = [...availableLanguages]` do painel geral de configurações; callbacks do autocomplete de idioma foram estabilizados.
 - Manter `useMemo` só em cálculos caros, arrays/objetos passados para componentes memoizados ou context values.
 - Mover constantes para fora do componente.
 - Preferir CSS classes/vars para estilos estáticos.
@@ -528,8 +527,7 @@ Médio para manutenção.
 6. **QueryEditor**: extrair execução SQL e estado de resultados.
 7. **Unificar Data/TabContentSelect**: hooks compartilhados de edição/preview.
 8. **Autocomplete**: criar core compartilhado e listeners sob demanda.
-9. **Properties tabs**: extrair componente compartilhado de painel/barra.
-10. **Revisar novos efeitos mount-only** durante refatorações futuras.
+9. **Revisar novos efeitos mount-only** durante refatorações futuras.
 
 ## Decisão arquitetural recomendada: migrar contexts para Zustand
 
