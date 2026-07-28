@@ -11,6 +11,7 @@ import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { IColumn, ISortDirection, ITableSort } from './dtos';
 import { useTableLayout } from './hooks/useTableLayout';
 import { useTableColumnResize } from './hooks/useTableColumnResize';
+import { useAnalysisColumnsLayout } from './hooks/useAnalysisColumnsLayout';
 
 type TableCellEditValue = string | number | (string | number)[];
 type TableScrollState = { left: number; top: number };
@@ -182,7 +183,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const analysisRowsRef = React.useRef(analysisRows);
   analysisRowsRef.current = analysisRows;
   const analysisColumnsSizeRef = React.useRef(analysisColumnsSize);
-  analysisColumnsSizeRef.current = analysisColumnsSize;
   const analysisModeEnterRef = React.useRef(analysisMode);
   analysisModeEnterRef.current = analysisMode;
 
@@ -206,10 +206,21 @@ function Table<Row = any>(props: ITableProps<Row>) {
     analysisRowsLength: analysisRows.length,
   });
 
+  const {
+    visibleColumnsSize: visibleAnalysisColumnsSize,
+    visibleMinColumnsSize: visibleAnalysisMinColumnsSize,
+  } = useAnalysisColumnsLayout({
+    columnsSize: analysisColumnsSize,
+    minColumnsSize: analysisMinColumnsSize,
+    widthBodyContainer,
+  });
+
+  analysisColumnsSizeRef.current = visibleAnalysisColumnsSize;
+
   const { onResize, onResizeAnalysisColumn } = useTableColumnResize({
     maxColumnSize,
     minColumnsSize,
-    analysisMinColumnsSize,
+    analysisMinColumnsSize: visibleAnalysisMinColumnsSize,
     setColumnsSize,
     setAnalysisColumnsSize,
   });
@@ -1272,8 +1283,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
           columns={columns}
           rows={analysisRows}
           rowHeight={rowHeight}
-          columnsSize={analysisColumnsSize}
-          minColumnsSize={analysisMinColumnsSize}
+          columnsSize={visibleAnalysisColumnsSize}
+          minColumnsSize={visibleAnalysisMinColumnsSize}
           editedRows={editedRows}
           newRows={newRows}
           cellEditingKey={cellEditingKey}
