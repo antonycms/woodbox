@@ -27,8 +27,10 @@ import { ModalConfirmProductionQuery } from './components/ModalConfirmProduction
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
 import {
   formatQueryErrorMessage,
+  formatQueryExecutionErrorMessage,
   getCaptureRowHash,
   getQueryErrorOffset,
+  makeQueryErrorMarker,
   makeCanceledQueryResult,
 } from './utils/queryResult';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
@@ -297,9 +299,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         return;
       }
 
-      const message = markErrors
-        ? error?.message?.split?.(' - ')?.[1] || error?.message
-        : formatQueryErrorMessage(error);
+      const message = formatQueryExecutionErrorMessage(error, markErrors);
 
       updateTabResultData({
         type: 'ERROR',
@@ -320,17 +320,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
       if (!errorPosition || !endPosition) return;
 
-      refEditor.current.setMarkers([
-        {
-          message,
-          startLineNumber: errorPosition.lineNumber,
-          endLineNumber: endPosition.lineNumber,
-          code: `SQL Error`,
-          startColumn: errorPosition.column,
-          endColumn: endPosition.column,
-          severity: 'Error',
-        },
-      ]);
+      refEditor.current.setMarkers([makeQueryErrorMarker(message, errorPosition, endPosition)]);
       refEditor.current.setPosition(errorPosition);
     }
   };
@@ -357,8 +347,13 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     confirmOrExecuteQuery(params);
   };
 
-  const closeVariablesModal = () => setPendingQueryExecution(undefined);
-  const closeProductionConfirmModal = () => setPendingProductionQueryExecution(undefined);
+  const closeVariablesModal = React.useCallback(() => {
+    setPendingQueryExecution(undefined);
+  }, []);
+
+  const closeProductionConfirmModal = React.useCallback(() => {
+    setPendingProductionQueryExecution(undefined);
+  }, []);
 
   const queryVariableInitialValues = React.useMemo(
     () => queryVariableValuesByConnection[id_connection] || {},

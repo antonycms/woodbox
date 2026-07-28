@@ -1,6 +1,10 @@
 import type { IDataUpdateabResult, IQueryResult } from '../dtos';
 
 type QueryExecutionError = Error & { position?: string | number };
+type QueryErrorMarkerPosition = {
+  lineNumber: number;
+  column: number;
+};
 
 export const makeCanceledQueryResult = (
   message: string,
@@ -29,11 +33,33 @@ export const formatQueryErrorMessage = (error: unknown) => {
   return `${errorMessage}\n\n${query}`;
 };
 
+export const formatQueryExecutionErrorMessage = (error: unknown, markErrors?: boolean) => {
+  const queryError = error as QueryExecutionError;
+
+  return markErrors
+    ? queryError?.message?.split?.(' - ')?.[1] || queryError?.message
+    : formatQueryErrorMessage(error);
+};
+
 export const getQueryErrorOffset = (error: unknown) => {
   const position = Number((error as QueryExecutionError)?.position);
 
   return Number.isFinite(position) && position > 0 ? position - 1 : undefined;
 };
+
+export const makeQueryErrorMarker = (
+  message: string,
+  startPosition: QueryErrorMarkerPosition,
+  endPosition: QueryErrorMarkerPosition,
+) => ({
+  message,
+  startLineNumber: startPosition.lineNumber,
+  endLineNumber: endPosition.lineNumber,
+  code: `SQL Error`,
+  startColumn: startPosition.column,
+  endColumn: endPosition.column,
+  severity: 'Error' as const,
+});
 
 const normalizeCaptureValue = (value: unknown): unknown => {
   if (typeof value === 'bigint') return String(value);
