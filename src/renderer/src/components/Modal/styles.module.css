@@ -23,7 +23,8 @@
   left: 50%;
   top: 50%;
   transform: translateX(-50%) translateY(-50%);
-  animation: blowUp 0.5s forwards;
+  z-index: 1;
+  animation: showModal 0.18s ease-out;
 }
 
 .contentContainer {
@@ -33,11 +34,13 @@
   overflow: auto;
 }
 
-@keyframes blowUp {
+@keyframes showModal {
   0% {
-    transform: translateX(-50%) translateY(-50%) scale(0);
+    opacity: 0.85;
+    transform: translateX(-50%) translateY(calc(-50% + 8px)) scale(0.98);
   }
   100% {
+    opacity: 1;
     transform: translateX(-50%) translateY(-50%) scale(1);
   }
 }
