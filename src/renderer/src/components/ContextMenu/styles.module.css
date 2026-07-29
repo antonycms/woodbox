@@ -4,6 +4,7 @@
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
   border-radius: 4px;
+  width: max-content;
   animation: blowUp 0.05s forwards;
 }
 
@@ -17,6 +18,7 @@
   justify-content: space-between;
   gap: 16px;
   width: 100%;
+  white-space: nowrap;
 }
 
 .submenuArrow {
@@ -32,6 +34,11 @@
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
   border-radius: 4px;
+}
+
+.openLeft .submenu {
+  right: 100%;
+  left: auto;
 }
 
 .option:hover > .submenu {
