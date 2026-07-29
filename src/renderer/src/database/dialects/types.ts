@@ -49,11 +49,14 @@ export interface RendererDialectDdlHelpers {
   quoteIdent(value: string): string;
   quoteLiteral(value: string): string;
   getColumnType(column: DdlColumnInfo): string;
+  getDefaultColumnType(column: DdlColumnInfo): string;
   getTableName(schema: string | undefined, table: string): string;
   normalizeOptionalString(value?: string): string | undefined;
 }
 
 export interface RendererDialectDdl {
+  getColumnTypeDdl?(column: DdlColumnInfo, helpers: RendererDialectDdlHelpers): string;
+
   getColumnDefinitionDdl(column: DdlColumnInfo, helpers: RendererDialectDdlHelpers): string;
 
   getConstraintCommentDdl(

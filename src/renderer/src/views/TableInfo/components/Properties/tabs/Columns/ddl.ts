@@ -76,13 +76,19 @@ const getColumnType = (column: IColumnInfo) => {
   return column.data_type;
 };
 
-const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => ({
-  quoteIdent: dialect.quoteIdent,
-  quoteLiteral,
-  getColumnType,
-  getTableName: (schema, table) => getTableName(dialect, schema, table),
-  normalizeOptionalString,
-});
+const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => {
+  const helpers: RendererDialectDdlHelpers = {
+    quoteIdent: dialect.quoteIdent,
+    quoteLiteral,
+    getColumnType: (column) =>
+      dialect.ddl.getColumnTypeDdl?.(column, helpers) || getColumnType(column),
+    getDefaultColumnType: getColumnType,
+    getTableName: (schema, table) => getTableName(dialect, schema, table),
+    normalizeOptionalString,
+  };
+
+  return helpers;
+};
 
 export const generateInsertDdl = (
   dialect: RendererDialect,

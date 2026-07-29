@@ -3,6 +3,8 @@ import { getIndexColumnsDdl } from './utils';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
+const postgresNumericPrecisionTypes = new Set(['decimal', 'numeric']);
+
 const getDefaultSql = (
   value: string | undefined,
   helpers: Parameters<RendererDialectDdl['getColumnDefinitionDdl']>[1],
@@ -12,6 +14,20 @@ const getDefaultSql = (
 };
 
 const postgresDdl: RendererDialectDdl = {
+  getColumnTypeDdl(column, helpers) {
+    const dataType = String(column.data_type || '').toLowerCase();
+
+    if (column.numeric_precision && !postgresNumericPrecisionTypes.has(dataType)) {
+      return helpers.getDefaultColumnType({
+        ...column,
+        numeric_precision: undefined,
+        numeric_scale: undefined,
+      });
+    }
+
+    return helpers.getDefaultColumnType(column);
+  },
+
   getColumnDefinitionDdl(column, helpers) {
     const notNull = column.is_nullable ? '' : ' NOT NULL';
 
