@@ -167,6 +167,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       type,
       columns = [],
       rows = [],
+      columns_info,
       query,
       affected_rows,
       page,
@@ -190,6 +191,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       query,
       page,
       affected_rows,
+      columns_info,
       tables_info: getTablesFromQuerySql(query),
       variableValues,
       queryExecutionId,
@@ -270,8 +272,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     try {
       refEditor.current.setMarkers([]);
 
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, preparedQuery, { queryExecutionId });
+      const [
+        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+      ] = await runSql(id_connection, preparedQuery, { queryExecutionId });
 
       if (wasQueryCanceled(queryExecutionId)) {
         updateTabResultData(
@@ -285,6 +288,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         query,
         variableValues,
         columns,
+        columns_info,
         rows,
         type,
         affected_rows,
@@ -488,8 +492,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, preparedQuery, {
+      const [
+        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+      ] = await runSql(id_connection, preparedQuery, {
           orderBy: tab.orderBy,
           queryExecutionId,
         });
@@ -502,6 +507,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       updateTabResultData({
         page: 1,
         columns,
+        columns_info,
         rows,
         type,
         query: tab.query,
@@ -599,8 +605,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, preparedQuery, {
+      const [
+        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+      ] = await runSql(id_connection, preparedQuery, {
           page: newPage,
           orderBy: lastTabResult.orderBy,
           queryExecutionId,
@@ -619,6 +626,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       updateTabResultData({
         page: newPage,
         columns,
+        columns_info,
         rows: [...lastTabResult.rows, ...rows],
         type,
         query,
@@ -673,8 +681,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     });
 
     try {
-      const [{ type, rows, columns, affected_rows, auto_paginated, execution_time_ms }] =
-        await runSql(id_connection, preparedQuery, {
+      const [
+        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+      ] = await runSql(id_connection, preparedQuery, {
           page: 1,
           orderBy,
           queryExecutionId,
@@ -688,6 +697,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       updateTabResultData({
         page: 1,
         columns,
+        columns_info,
         rows,
         type,
         query: tab.query,

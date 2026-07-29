@@ -154,6 +154,7 @@ const ReferencePreview = ({
             columns.map(
               (column): IColumn => ({
                 label: column.column_name,
+                info: column.data_type,
                 attribute: column.column_name,
                 isLink: fkMap.has(column.column_name),
               }),

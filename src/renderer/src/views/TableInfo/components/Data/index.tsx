@@ -306,6 +306,7 @@ const Data = ({
     () =>
       columns.map<IColumn>((column) => ({
         label: column.column_name,
+        info: column.data_type,
         attribute: column.column_name,
         required: !!column.is_nullable,
         sortable: true,

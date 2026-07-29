@@ -76,6 +76,7 @@ const ReferenceSelection = ({
           setColumns(
             tableColumns.map<IColumn>((column) => ({
               label: column.column_name,
+              info: column.data_type,
               attribute: column.column_name,
               sortable: true,
             })),

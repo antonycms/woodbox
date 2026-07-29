@@ -928,15 +928,26 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     return () => clearInterval(interval);
   }, [data.loading, data.date_run, data.queryExecutionId]);
 
+  const resultColumnsInfo = React.useMemo(
+    () =>
+      new Map(
+        data.columns_info
+          ?.filter((column) => column.type)
+          .map((column) => [column.name, column.type]) || [],
+      ),
+    [data.columns_info],
+  );
+
   const tableColumns = React.useMemo(() => {
     return (data.columns || []).map((column) => ({
       attribute: column,
       label: column,
+      info: resultColumnsInfo.get(column),
       sortable: !readOnly,
       editable: !!editableTable,
       isLink: tabFkMap.has(column),
     }));
-  }, [data.columns, editableTable, readOnly, tabFkMap]);
+  }, [data.columns, editableTable, readOnly, resultColumnsInfo, tabFkMap]);
 
   const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
     return [
