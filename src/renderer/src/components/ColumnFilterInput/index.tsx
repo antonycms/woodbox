@@ -191,8 +191,13 @@ export default function ColumnFilterInput({
   );
 
   React.useEffect(() => {
-    if (!suggestions.length) setActiveIndex(-1);
-  }, [suggestions.length]);
+    if (!isOpen || !suggestions.length) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex((current) => Math.min(Math.max(current, 0), suggestions.length - 1));
+  }, [isOpen, suggestions]);
 
   React.useEffect(() => {
     if (!isOpen || activeIndex < 0) return;
