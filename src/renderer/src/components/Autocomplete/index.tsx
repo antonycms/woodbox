@@ -133,6 +133,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   };
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveIndex(-1);
     setTextInput(e.target.value);
     props.onInput?.(e);
   };
@@ -219,6 +220,20 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     isOpen: isDropdownOpen,
     onClose: closeDropdown,
   });
+
+  React.useEffect(() => {
+    if (!isDropdownOpen || !dataFiltered.length) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex((current) => {
+      if (current >= 0 && current < dataFiltered.length) return current;
+
+      const selectedIndex = !textInput ? getSelectedIndex() : -1;
+      return selectedIndex >= 0 ? selectedIndex : 0;
+    });
+  }, [dataFiltered, getSelectedIndex, isDropdownOpen, textInput]);
 
   // Scrolla para o item selecionado ao abrir o dropdown
   React.useEffect(() => {

@@ -169,6 +169,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
   };
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setActiveIndex(-1);
     setTextInput(e.target.value);
     props.onInput?.(e);
   };
@@ -252,6 +253,20 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     isOpen: isDropdownOpen,
     onClose: () => closeDropdown(true),
   });
+
+  React.useEffect(() => {
+    if (!isDropdownOpen || !dataFiltered.length) {
+      setActiveIndex(-1);
+      return;
+    }
+
+    setActiveIndex((current) => {
+      if (current >= 0 && current < dataFiltered.length) return current;
+
+      const selectedIndex = !textInput ? getNearestSelectedIndex(-1) : -1;
+      return selectedIndex >= 0 ? selectedIndex : 0;
+    });
+  }, [dataFiltered, getNearestSelectedIndex, isDropdownOpen, textInput]);
 
   React.useEffect(() => {
     if (!isDropdownOpen || activeIndex < 0 || !refScrollElement.current) return;
