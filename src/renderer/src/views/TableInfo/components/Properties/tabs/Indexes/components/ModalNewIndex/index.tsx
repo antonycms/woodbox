@@ -13,8 +13,22 @@ import { useForm } from '@renderer/hooks/useForm';
 import { generateHash } from '@renderer/utils/string';
 import styles from './styles.module.css';
 
-const getGeneratedIndexName = (table: string, columns: string[]) => {
-  const columnPart = columns.join('_') || 'columns';
+const getGeneratedIndexName = (
+  table: string,
+  columns: string[],
+  columnOrders: IndexColumnOrder[] = [],
+) => {
+  const hasDescendingColumn = columnOrders.some((order) => order === 'DESC');
+  const columnPart =
+    columns
+      .map((columnName, index) => {
+        if (!hasDescendingColumn) return columnName;
+
+        const order = columnOrders[index] || 'ASC';
+        return `${columnName}_${order.toLowerCase()}`;
+      })
+      .join('_') || 'columns';
+
   return `${table}_${columnPart}_idx`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
@@ -88,7 +102,7 @@ const ModalNewIndex = ({
       const index: IPendingIndexCreate = {
         __pendingId: generateHash(),
         __pendingAction: 'create',
-        index_name: getGeneratedIndexName(table, columnNames),
+        index_name: getGeneratedIndexName(table, columnNames, columnOrders),
         index_method: indexMethod,
         is_unique: false,
         is_primary: false,
