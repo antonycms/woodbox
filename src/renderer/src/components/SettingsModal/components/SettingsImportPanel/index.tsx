@@ -208,7 +208,7 @@ export const SettingsImportPanel = React.memo(() => {
 
       <Divider size={8} />
 
-      <Text small color={__colors.gray}>
+      <Text small color={__colors.gray} userSelect={false}>
         {t('settings.import.instructions')}
       </Text>
 

@@ -456,7 +456,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={12} />
 
-        <Text small color={__colors.gray}>
+        <Text small color={__colors.gray} userSelect={false}>
           {t('settings.customization.currentCustomHelp', {
             themeName: t('settings.customization.currentCustomTheme'),
           })}
