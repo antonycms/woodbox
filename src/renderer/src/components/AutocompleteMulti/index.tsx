@@ -106,6 +106,30 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
     ? selected.map((item) => extractLabelRef.current(item)).join(', ')
     : undefined;
 
+  const getNearestSelectedIndex = React.useCallback(
+    (currentIndex: number) => {
+      if (!selected.length) return -1;
+
+      const selectedValues = new Set(selected.map((item) => extractValueRef.current(item)));
+      const selectedIndexes = dataFiltered.reduce<number[]>((indexes, [, item], index) => {
+        if (selectedValues.has(extractValueRef.current(item))) indexes.push(index);
+
+        return indexes;
+      }, []);
+
+      if (!selectedIndexes.length) return -1;
+      if (currentIndex < 0) return selectedIndexes[0];
+
+      return selectedIndexes.reduce((nearestIndex, index) => {
+        const nearestDistance = Math.abs(nearestIndex - currentIndex);
+        const currentDistance = Math.abs(index - currentIndex);
+
+        return currentDistance < nearestDistance ? index : nearestIndex;
+      });
+    },
+    [dataFiltered, selected],
+  );
+
   const closeDropdown = () => {
     refInput.current?.blur();
     refInput.current!.value = '';
@@ -113,7 +137,14 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
     setTextInput('');
   };
 
-  const onSelect = (item: T | null) => {
+  const openDropdown = React.useCallback(() => {
+    setIsDropdownOpen(true);
+    setActiveIndex((current) => getNearestSelectedIndex(current));
+  }, [getNearestSelectedIndex]);
+
+  const onSelect = (item: T | null, filteredIndex = -1) => {
+    setActiveIndex(filteredIndex);
+
     const newValue = [...(value || [])];
 
     const itemValue = item ? extractValueRef.current(item) : null;
@@ -165,7 +196,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
 
     if (isEnter && activeIndex >= 0) {
       const [, item] = dataFiltered[activeIndex];
-      onSelect(item);
+      onSelect(item, activeIndex);
     }
   };
 
@@ -244,7 +275,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
       placeholderColor={color}
       placeholder={selected.length ? selectedLabel : placeholder}
       ref={refInput}
-      onFocus={() => setIsDropdownOpen(true)}
+      onFocus={openDropdown}
       onChange={onInput}
       onKeyDown={onKeyDown}
       style={{ paddingRight: clearable ? '50px' : '30px', textOverflow: 'ellipsis' }}
@@ -296,7 +327,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
                 return (
                   <div
                     key={real_index}
-                    onClick={() => onSelect(item)}
+                    onClick={() => onSelect(item, index)}
                     title={label}
                     className={classes(
                       styles.row,

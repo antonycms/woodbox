@@ -103,6 +103,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
   const selectedLabel = selected ? extractLabelRef.current(selected) : undefined;
 
+  const getSelectedIndex = React.useCallback(() => {
+    if (!selected) return -1;
+
+    const selectedValue = extractValueRef.current(selected);
+
+    return dataFiltered.findIndex(([, item]) => extractValueRef.current(item) === selectedValue);
+  }, [dataFiltered, selected]);
+
   const closeDropdown = (notifyBlurWithoutChange = false) => {
     refInput.current?.blur();
     setIsDropdownOpen(false);
@@ -112,9 +120,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     if (notifyBlurWithoutChange) onBlurWithoutChangeRef.current?.();
   };
 
-  const onSelect = (item: T | null, index: number) => {
+  const openDropdown = React.useCallback(() => {
+    setIsDropdownOpen(true);
+    setActiveIndex(getSelectedIndex());
+  }, [getSelectedIndex]);
+
+  const onSelect = (item: T | null, index: number, filteredIndex = -1) => {
     closeDropdown();
-    setActiveIndex(index);
+    setActiveIndex(filteredIndex);
     onChange?.({ index, name, item, value: item && extractValueRef.current(item) });
   };
 
@@ -153,7 +166,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
     if (isEnter && activeIndex >= 0) {
       const [realIndex, item] = dataFiltered[activeIndex];
-      onSelect(item, realIndex);
+      onSelect(item, realIndex, activeIndex);
     }
   };
 
@@ -233,7 +246,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         onChange={onInput}
         onKeyDown={onKeyDown}
         style={inputStyle}
-        onFocus={() => setIsDropdownOpen(true)}
+        onFocus={openDropdown}
       />
 
       {!!(isDropdownOpen && dataFiltered.length) && (
@@ -267,7 +280,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
                   onMouseDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onSelect(item, real_index);
+                    onSelect(item, real_index, index);
                   }}
                   title={label}
                   className={classes(

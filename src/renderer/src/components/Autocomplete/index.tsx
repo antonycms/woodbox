@@ -105,6 +105,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
   const selectedLabel = selected ? extractLabelRef.current(selected) : undefined;
 
+  const getSelectedIndex = React.useCallback(() => {
+    if (!selected) return -1;
+
+    const selectedValue = extractValueRef.current(selected);
+
+    return dataFiltered.findIndex(([, item]) => extractValueRef.current(item) === selectedValue);
+  }, [dataFiltered, selected]);
+
   const closeDropdown = () => {
     refInput.current?.blur();
     setIsDropdownOpen(false);
@@ -113,9 +121,14 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     setTextInput('');
   };
 
-  const onSelect = (item: T | null, index: number) => {
+  const openDropdown = React.useCallback(() => {
+    setIsDropdownOpen(true);
+    setActiveIndex(getSelectedIndex());
+  }, [getSelectedIndex]);
+
+  const onSelect = (item: T | null, index: number, filteredIndex = -1) => {
     closeDropdown();
-    setActiveIndex(index);
+    setActiveIndex(filteredIndex);
     onChange?.({ index, name, item, value: item && extractValueRef.current(item) });
   };
 
@@ -151,7 +164,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
     if (isEnter && activeIndex >= 0) {
       const [realIndex, item] = dataFiltered[activeIndex];
-      onSelect(item, realIndex);
+      onSelect(item, realIndex, activeIndex);
     }
   };
 
@@ -233,7 +246,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
       placeholderColor={color}
       placeholder={selected ? selectedLabel : placeholder}
       ref={refInput}
-      onFocus={() => setIsDropdownOpen(true)}
+      onFocus={openDropdown}
       onChange={onInput}
       onKeyDown={onKeyDown}
       icon={() => {
@@ -286,7 +299,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
                 return (
                   <div
                     key={real_index}
-                    onClick={() => onSelect(item, real_index)}
+                    onClick={() => onSelect(item, real_index, index)}
                     title={label}
                     className={classes(
                       styles.row,

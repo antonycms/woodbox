@@ -108,6 +108,30 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     ? selected.map((item) => extractLabelRef.current(item)).join(', ')
     : undefined;
 
+  const getNearestSelectedIndex = React.useCallback(
+    (currentIndex: number) => {
+      if (!selected.length) return -1;
+
+      const selectedValues = new Set(selected.map((item) => extractValueRef.current(item)));
+      const selectedIndexes = dataFiltered.reduce<number[]>((indexes, [, item], index) => {
+        if (selectedValues.has(extractValueRef.current(item))) indexes.push(index);
+
+        return indexes;
+      }, []);
+
+      if (!selectedIndexes.length) return -1;
+      if (currentIndex < 0) return selectedIndexes[0];
+
+      return selectedIndexes.reduce((nearestIndex, index) => {
+        const nearestDistance = Math.abs(nearestIndex - currentIndex);
+        const currentDistance = Math.abs(index - currentIndex);
+
+        return currentDistance < nearestDistance ? index : nearestIndex;
+      });
+    },
+    [dataFiltered, selected],
+  );
+
   const closeDropdown = (notifyBlurWithoutChange = false) => {
     refInput.current?.blur();
     setIsDropdownOpen(false);
@@ -117,7 +141,14 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     if (notifyBlurWithoutChange) onBlurWithoutChangeRef.current?.();
   };
 
-  const onSelect = (item: T | null) => {
+  const openDropdown = React.useCallback(() => {
+    setIsDropdownOpen(true);
+    setActiveIndex((current) => getNearestSelectedIndex(current));
+  }, [getNearestSelectedIndex]);
+
+  const onSelect = (item: T | null, filteredIndex = -1) => {
+    setActiveIndex(filteredIndex);
+
     const newValue = [...(value || [])];
 
     const itemValue = item ? extractValueRef.current(item) : null;
@@ -172,7 +203,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
 
     if (isEnter && activeIndex >= 0) {
       const [, item] = dataFiltered[activeIndex];
-      onSelect(item);
+      onSelect(item, activeIndex);
     }
   };
 
@@ -249,7 +280,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
         onChange={onInput}
         onKeyDown={onKeyDown}
         style={inputStyle}
-        onFocus={() => setIsDropdownOpen(true)}
+        onFocus={openDropdown}
       />
 
       {!!isDropdownOpen && (
@@ -281,7 +312,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
               return (
                 <div
                   key={real_index}
-                  onClick={() => onSelect(item)}
+                  onClick={() => onSelect(item, index)}
                   title={label}
                   className={classes(
                     styles.row,
