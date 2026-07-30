@@ -28,6 +28,8 @@ export const Modal = React.memo((props: IModalProps) => {
     },
   } = useThemeContext();
 
+  const overlayRef = React.useRef<HTMLDivElement>(null);
+
   const styleOverlay = React.useMemo(() => {
     return {
       display: justHide && !show ? 'none' : 'unset',
@@ -48,11 +50,32 @@ export const Modal = React.memo((props: IModalProps) => {
     [onClose],
   );
 
+  React.useEffect(() => {
+    if (!closeOutside || !show) return;
+
+    const emitCloseOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+
+      const closeableModals = document.querySelectorAll('[data-close-outside-modal="true"]');
+      const topModal = closeableModals[closeableModals.length - 1];
+
+      if (topModal !== overlayRef.current) return;
+
+      onClose?.();
+    };
+
+    window.addEventListener('keydown', emitCloseOnEscape);
+
+    return () => window.removeEventListener('keydown', emitCloseOnEscape);
+  }, [closeOutside, onClose, show]);
+
   if (!show && !justHide) return;
 
   return ReactDOM.createPortal(
     <div
+      ref={overlayRef}
       className={classes(styles.overlay, !show && justHide && styles.hidden)}
+      data-close-outside-modal={closeOutside && show}
       onClick={closeOutside ? emitCloseOutside : undefined}
       style={styleOverlay}
     >
