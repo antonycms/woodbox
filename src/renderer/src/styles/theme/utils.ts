@@ -59,6 +59,14 @@ const isLightHexColor = (color?: string) => {
   return (red * 299 + green * 587 + blue * 114) / 1000 > 180;
 };
 
+const withAlpha = (color: string, alpha: string) => {
+  const hex = color.replace('#', '');
+
+  if (!/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(hex)) return color;
+
+  return `#${hex.slice(0, 6)}${alpha}`;
+};
+
 export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
   const { editor: colors } = serializeTheme(theme);
   const { editor: defaultColors } = serializeTheme(defaultTheme);
@@ -90,6 +98,25 @@ export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
       'editorCursor.foreground': getColor('cursorColor'),
       'editorLineNumber.foreground': getColor('lineNumberColor'),
       'editorLineNumber.activeForeground': getColor('currentLineNumberColor'),
+
+      'editorWidget.foreground': getColor('color'),
+      'editorWidget.background': getColor('backgroundColor'),
+      'editorWidget.border': getColor('currentLineBackgroundColor'),
+      'editorWidget.resizeBorder': getColor('selectionColor'),
+      'widget.border': getColor('currentLineBackgroundColor'),
+      'input.foreground': getColor('color'),
+      'input.background': getColor('currentLineBackgroundColor'),
+      'input.border': getColor('currentLineBackgroundColor'),
+      'input.placeholderForeground': getColor('lineNumberColor'),
+      focusBorder: getColor('cursorColor'),
+      disabledForeground: getColor('lineNumberColor'),
+      'toolbar.hoverBackground': getColor('selectionColor'),
+      'editor.findMatchBackground': withAlpha(getColor('identifierColor'), '80'),
+      'editor.findMatchHighlightBackground': withAlpha(getColor('keywordColor'), '55'),
+      'editor.findMatchBorder': getColor('identifierColor'),
+      'editor.findMatchHighlightBorder': withAlpha(getColor('keywordColor'), 'aa'),
+      'editor.findRangeHighlightBackground': withAlpha(getColor('selectionColor'), '40'),
+      'editor.findRangeHighlightBorder': getColor('selectionColor'),
       // 'editorIndentGuide.activeBackground': getColor('orange'),
     },
   });

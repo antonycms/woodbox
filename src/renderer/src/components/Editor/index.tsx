@@ -153,6 +153,7 @@ const Editor = ({
         theme: 'active-theme',
         readOnly: props.readonly,
         minimap: { enabled: !props.hidePreview },
+        fixedOverflowWidgets: true,
       },
       {
         contextMenuService: {
