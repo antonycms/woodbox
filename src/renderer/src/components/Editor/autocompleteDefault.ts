@@ -38,11 +38,54 @@ export interface IDefineSQlAutocompleteParams {
   functions?: { name: string; schema?: string }[];
 }
 
-const triggerCharacters = [' ', '.'];
+const triggerCharacters = [' ', '.', '=', '>', '<', ','];
 const autocompleteParamsByModelUri = new Map<string, IDefineSQlAutocompleteParams>();
 let autocompleteProviderDisposable:
   | ReturnType<typeof languages.registerCompletionItemProvider>
   | undefined;
+
+const tokenizeSqlAutocompleteContent = (content: string) => {
+  const words: string[] = [];
+  let currentWord = '';
+
+  const pushCurrentWord = () => {
+    const trimmedWord = currentWord.trim();
+    if (trimmedWord) words.push(trimmedWord);
+    currentWord = '';
+  };
+
+  for (let index = 0; index < content.length; index++) {
+    const char = content[index];
+
+    if (/\s/.test(char)) {
+      pushCurrentWord();
+      continue;
+    }
+
+    if (/[=<>!,();+\-*\/%|&]/.test(char)) {
+      pushCurrentWord();
+
+      const nextChar = content[index + 1];
+      const twoCharOperator = `${char}${nextChar}`;
+
+      if (['>=', '<=', '<>', '!='].includes(twoCharOperator)) {
+        words.push(twoCharOperator);
+        index++;
+      } //
+      else {
+        words.push(char);
+      }
+
+      continue;
+    }
+
+    currentWord += char;
+  }
+
+  pushCurrentWord();
+
+  return words;
+};
 
 const ensureSqlAutocompleteProvider = () => {
   if (autocompleteProviderDisposable) return;
@@ -69,12 +112,7 @@ const ensureSqlAutocompleteProvider = () => {
 
       const currentContent = getCurrentQuerySqlFromContent(value);
 
-      const words = [];
-
-      for (const word of currentContent.split(/[\n\r ]/)) {
-        const trimmedWord = word?.trim?.();
-        if (trimmedWord) words.push(trimmedWord);
-      }
+      const words = tokenizeSqlAutocompleteContent(currentContent);
 
       const prevWord = words[words.length - 2];
       const currentWord = words[words.length - 1];
