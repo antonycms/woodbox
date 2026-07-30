@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDropdownPlacement } from '@renderer/components/Autocomplete/hooks/useDropdownPlacement';
 import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks/useDropdownOutsideClick';
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
@@ -176,11 +177,17 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
   };
 
   const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
+  const dropdownPlacement = useDropdownPlacement({
+    anchorRef: refInput,
+    dropdownHeight,
+    isOpen: isDropdownOpen,
+  });
   const dropdownStyle = React.useMemo(
     () =>
       ({
         backgroundColor,
         color,
+        maxHeight: dropdownPlacement?.maxHeight,
         ...toCssProperties({ height: `${dropdownHeight}px` }),
         '--autocomplete-hover-background-color': __colors.darkLight,
         '--autocomplete-selected-background-color': __colors.darkLightDeep,
@@ -196,6 +203,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
       backgroundColor,
       color,
       dropdownHeight,
+      dropdownPlacement?.maxHeight,
     ],
   );
 
@@ -245,7 +253,13 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
       />
 
       {!!isDropdownOpen && (
-        <div className={styles.dropdownContainer} style={dropdownStyle}>
+        <div
+          className={classes(
+            styles.dropdownContainer,
+            dropdownPlacement?.placement === 'top' && styles.openUp,
+          )}
+          style={dropdownStyle}
+        >
           <VirtualizeList
             itemSize={itemSize}
             itemCount={dataFiltered.length}

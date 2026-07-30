@@ -33,6 +33,11 @@ input::-webkit-input-placeholder {
   box-shadow: 0 8px 24px var(--autocomplete-shadow-color);
 }
 
+.dropdownContainer.openUp {
+  top: auto;
+  bottom: 36px;
+}
+
 .row {
   display: flex;
   cursor: pointer;

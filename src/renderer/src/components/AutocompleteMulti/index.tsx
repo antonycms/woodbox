@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
+import { useDropdownFixedPosition } from '@renderer/components/Autocomplete/hooks/useDropdownFixedPosition';
 import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks/useDropdownOutsideClick';
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import { Input } from '@renderer/components/Input';
@@ -55,6 +57,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
   const refScrollElement = React.useRef<HTMLDivElement>(null);
   const refInput = React.useRef<HTMLInputElement>(null);
   const [idContainer] = React.useState(generateHash(10));
+  const idDropdown = `${idContainer}-dropdown`;
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
   const [textInput, setTextInput] = useStateWithDebounce('');
@@ -167,9 +170,16 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
   };
 
   const dropdownHeight = (dataFiltered.length || 1) * (itemSize + 2);
+  const dropdownPositionStyle = useDropdownFixedPosition({
+    anchorRef: refInput,
+    dropdownHeight,
+    isOpen: isDropdownOpen,
+    offset: 12,
+  });
   const dropdownStyle = React.useMemo(
     () =>
       ({
+        ...dropdownPositionStyle,
         backgroundColor,
         color,
         ...toCssProperties({ height: `${dropdownHeight}px` }),
@@ -187,6 +197,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
       backgroundColor,
       color,
       dropdownHeight,
+      dropdownPositionStyle,
     ],
   );
 
@@ -201,6 +212,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
 
   useDropdownOutsideClick({
     idContainer,
+    idDropdown,
     isOpen: isDropdownOpen,
     onClose: closeDropdown,
   });
@@ -258,44 +270,48 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
         return <IconMdiKeyboardArrowDown pointerEvents="none" color={color} />;
       }}
     >
-      {!!isDropdownOpen && (
-        <div className={styles.dropdownContainer} style={dropdownStyle}>
-          <VirtualizeList
-            itemSize={itemSize}
-            itemCount={dataFiltered.length}
-            refScrollElement={refScrollElement}
-            childrenStickySize={20}
-            childrenSticky={
-              !dataFiltered.length && <p className={styles.emptyMessage}>{emptyMessage}</p>
-            }
-          >
-            {({ index }) => {
-              const [real_index, item] = dataFiltered[index];
+      {!!(isDropdownOpen && dropdownPositionStyle) &&
+        ReactDOM.createPortal(
+          <div id={idDropdown} className={styles.dropdownContainer} style={dropdownStyle}>
+            <VirtualizeList
+              itemSize={itemSize}
+              itemCount={dataFiltered.length}
+              refScrollElement={refScrollElement}
+              childrenStickySize={20}
+              childrenSticky={
+                !dataFiltered.length && <p className={styles.emptyMessage}>{emptyMessage}</p>
+              }
+            >
+              {({ index }) => {
+                const [real_index, item] = dataFiltered[index];
 
-              const label = extractLabelRef.current(item);
-              const isSelected =
-                selected.length &&
-                selected.find((v) => extractValueRef.current(v) === extractValueRef.current(item));
-              const isActive = activeIndex === index;
+                const label = extractLabelRef.current(item);
+                const isSelected =
+                  selected.length &&
+                  selected.find(
+                    (v) => extractValueRef.current(v) === extractValueRef.current(item),
+                  );
+                const isActive = activeIndex === index;
 
-              return (
-                <div
-                  key={real_index}
-                  onClick={() => onSelect(item)}
-                  title={label}
-                  className={classes(
-                    styles.row,
-                    isSelected && styles.selected,
-                    isActive && styles.active,
-                  )}
-                >
-                  {label}
-                </div>
-              );
-            }}
-          </VirtualizeList>
-        </div>
-      )}
+                return (
+                  <div
+                    key={real_index}
+                    onClick={() => onSelect(item)}
+                    title={label}
+                    className={classes(
+                      styles.row,
+                      isSelected && styles.selected,
+                      isActive && styles.active,
+                    )}
+                  >
+                    {label}
+                  </div>
+                );
+              }}
+            </VirtualizeList>
+          </div>,
+          document.body,
+        )}
     </Input>
   );
 }
