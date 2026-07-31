@@ -9,6 +9,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 
 const ModalConfirmDiscardChanges = ({
   show,
+  message,
   onCancel,
   onConfirm,
 }: IModalConfirmDiscardChangesProps) => {
@@ -25,7 +26,7 @@ const ModalConfirmDiscardChanges = ({
       closeOutside
       onClose={onCancel}
     >
-      <Text color={colors.color}>{t('message.discardPendingChanges')}</Text>
+      <Text color={colors.color}>{message || t('message.discardPendingChanges')}</Text>
 
       <div style={{ height: 16 }} />
 
@@ -64,6 +65,7 @@ const ModalConfirmDiscardChanges = ({
 
 interface IModalConfirmDiscardChangesProps {
   show?: boolean;
+  message?: string;
   onCancel(): void;
   onConfirm(): void;
 }

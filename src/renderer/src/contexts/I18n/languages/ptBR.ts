@@ -262,6 +262,8 @@ export const ptBR: Record<TranslationKey, string> = {
     'Esta conexão está marcada como Produção. Confirme para executar uma operação que pode alterar dados.',
   'message.discardPendingChanges':
     'Esta aba possui alterações pendentes. Ao aplicar o filtro, essas alterações serão perdidas.',
+  'message.closeUnsavedTab':
+    'Esta aba possui alterações não salvas. Se você fechá-la, as alterações serão perdidas.',
   'message.noDiagramLinks': 'Nenhuma ligação encontrada',
   'message.loading': 'Carregando...',
   'message.noServerOutput': 'Nenhuma saída capturada até o momento.',

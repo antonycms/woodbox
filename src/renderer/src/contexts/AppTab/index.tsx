@@ -13,6 +13,7 @@ import { useSaveTabsOnStorage } from './hooks/useSaveTabsOnStorage';
 import { useRestoreTabsFromStorage } from './hooks/useRestoreTabsFromStorage';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import ModalConfirmDiscardChanges from '@renderer/components/ModalConfirmDiscardChanges';
 export type * from './context';
 
 const moveTabInList = (
@@ -50,6 +51,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [tabGroups, setTabGroups] = React.useState<IAppTabGroup[]>([]);
   const [activeTabId, setActiveTabId] = React.useState<string>();
+  const [pendingRemoveTabs, setPendingRemoveTabs] = React.useState<IPendingRemoveTabs>();
   const closedTabsRef = React.useRef<IAppTab[]>([]);
 
   const addTab = React.useCallback(
@@ -107,7 +109,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     [activeTabId],
   );
 
-  const removeTab = React.useCallback(
+  const removeTabWithoutConfirmation = React.useCallback(
     (tabId: string | string[], options?: IRemoveAppTabOptions) => {
       const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
       const remainingTabs = tabs.filter((t) => !tabsIdToRemove.has(t.id));
@@ -163,6 +165,21 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       setTabGroups((prev) => cleanupEmptyGroups(prev, remainingTabs));
     },
     [tabs, tabGroups, activeTabId],
+  );
+
+  const removeTab = React.useCallback(
+    (tabId: string | string[], options?: IRemoveAppTabOptions) => {
+      const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
+      const hasUnsavedTab = tabs.some((tab) => tabsIdToRemove.has(tab.id) && tab.unsaved);
+
+      if (hasUnsavedTab) {
+        setPendingRemoveTabs({ tabId, options });
+        return;
+      }
+
+      removeTabWithoutConfirmation(tabId, options);
+    },
+    [removeTabWithoutConfirmation, tabs],
   );
 
   const reopenClosedTab = React.useCallback(() => {
@@ -355,6 +372,17 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
 
+  const cancelPendingRemoveTabs = React.useCallback(() => {
+    setPendingRemoveTabs(undefined);
+  }, []);
+
+  const confirmPendingRemoveTabs = React.useCallback(() => {
+    if (!pendingRemoveTabs) return;
+
+    removeTabWithoutConfirmation(pendingRemoveTabs.tabId, pendingRemoveTabs.options);
+    setPendingRemoveTabs(undefined);
+  }, [pendingRemoveTabs, removeTabWithoutConfirmation]);
+
   const hasRestoredTabs = useRestoreTabsFromStorage(setActiveTabId, setTabs, setTabGroups);
 
   useSaveTabsOnStorage(activeTabId, tabs, tabGroups, hasRestoredTabs);
@@ -422,9 +450,23 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   return (
-    <AppTabContext.Provider value={contextValue}>{children}</AppTabContext.Provider>
+    <AppTabContext.Provider value={contextValue}>
+      {children}
+
+      <ModalConfirmDiscardChanges
+        show={!!pendingRemoveTabs}
+        message={t('message.closeUnsavedTab')}
+        onCancel={cancelPendingRemoveTabs}
+        onConfirm={confirmPendingRemoveTabs}
+      />
+    </AppTabContext.Provider>
   );
 };
+
+interface IPendingRemoveTabs {
+  tabId: string | string[];
+  options?: IRemoveAppTabOptions;
+}
 
 export const useAppTabContext = () => {
   return React.useContext(AppTabContext);

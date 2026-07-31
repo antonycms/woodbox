@@ -259,6 +259,8 @@ export const en = {
     'This connection is marked as Production. Confirm to run an operation that may change data.',
   'message.discardPendingChanges':
     'This tab has pending changes. Applying the filter will discard them.',
+  'message.closeUnsavedTab':
+    'This tab has unsaved changes. If you close it, unsaved changes will be lost.',
   'message.noDiagramLinks': 'No links found',
   'message.loading': 'Loading...',
   'message.noServerOutput': 'No output captured yet.',
