@@ -6,6 +6,7 @@ import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
+import TableSearchBar from './components/TableSearchBar';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type { IColumn, ISortDirection, ITableSort } from './dtos';
@@ -16,6 +17,16 @@ import { useAnalysisColumnsLayout } from './hooks/useAnalysisColumnsLayout';
 type TableCellEditValue = string | number | (string | number)[];
 type TableScrollState = { left: number; top: number };
 type TableCellPosition = { rowIndex: number; colIndex: number };
+type TableSearchOverlayPosition = { top: number; right: number };
+type TableSearchOptions = { matchCase: boolean; wholeWord: boolean };
+type TableSearchOccurrence = TableCellPosition & { key: string; canReplace: boolean };
+type TableSearchState = TableSearchOptions & {
+  open: boolean;
+  replaceOpen: boolean;
+  query: string;
+  replace: string;
+  activeIndex: number;
+};
 type TableDragSelectionState = {
   mode: 'default' | 'analysis';
   anchor: TableCellPosition;
@@ -80,6 +91,75 @@ const parseClipboardGrid = (text: string) => {
   return normalizedText.split('\n').map((line) => line.split('\t'));
 };
 
+const serializeSearchValue = (value: any, type?: IColumn['type']) => {
+  if (value === undefined || value === null) return '';
+  if (Array.isArray(value) && type === 'autocomplete-multi') return value.join(', ');
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const isSearchWordChar = (char?: string) => {
+  if (!char) return false;
+
+  return /[\p{L}\p{N}_]/u.test(char);
+};
+
+const findSearchIndex = (
+  value: string,
+  query: string,
+  { matchCase, wholeWord }: TableSearchOptions,
+  startIndex = 0,
+) => {
+  if (!query) return -1;
+
+  const searchableValue = matchCase ? value : value.toLocaleLowerCase();
+  const searchableQuery = matchCase ? query : query.toLocaleLowerCase();
+  let index = searchableValue.indexOf(searchableQuery, startIndex);
+
+  while (index !== -1) {
+    const before = value[index - 1];
+    const after = value[index + query.length];
+    const isWholeWord = !isSearchWordChar(before) && !isSearchWordChar(after);
+
+    if (!wholeWord || isWholeWord) return index;
+
+    index = searchableValue.indexOf(searchableQuery, index + query.length);
+  }
+
+  return -1;
+};
+
+const replaceSearchValue = (
+  value: string,
+  query: string,
+  replace: string,
+  options: TableSearchOptions,
+  replaceAll: boolean,
+) => {
+  let nextValue = '';
+  let startIndex = 0;
+
+  while (startIndex <= value.length) {
+    const foundIndex = findSearchIndex(value, query, options, startIndex);
+
+    if (foundIndex === -1) {
+      nextValue += value.slice(startIndex);
+      break;
+    }
+
+    nextValue += value.slice(startIndex, foundIndex) + replace;
+    startIndex = foundIndex + query.length;
+
+    if (!replaceAll) {
+      nextValue += value.slice(startIndex);
+      break;
+    }
+  }
+
+  return nextValue;
+};
+
 function Table<Row = any>(props: ITableProps<Row>) {
   const {
     columns = [],
@@ -106,6 +186,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     activeTheme: { table: theme },
   } = useThemeContext();
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
+  const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
   const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
@@ -116,6 +197,20 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
   const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
+  const [searchState, setSearchState] = React.useState<TableSearchState>({
+    open: false,
+    replaceOpen: false,
+    query: '',
+    replace: '',
+    matchCase: false,
+    wholeWord: false,
+    activeIndex: 0,
+  });
+  const [searchOverlayPosition, setSearchOverlayPosition] =
+    React.useState<TableSearchOverlayPosition>({
+      top: 8,
+      right: 8,
+    });
   const lastSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const lastAnalysisSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(
     null,
@@ -205,6 +300,15 @@ function Table<Row = any>(props: ITableProps<Row>) {
     serializedRowsLength: serializedRows.length,
     analysisRowsLength: analysisRows.length,
   });
+  const containerStyle = React.useMemo(
+    () =>
+      ({
+        ...cssVars,
+        '--tableSearchTop': `${searchOverlayPosition.top}px`,
+        '--tableSearchRight': `${searchOverlayPosition.right}px`,
+      }) as React.CSSProperties,
+    [cssVars, searchOverlayPosition.right, searchOverlayPosition.top],
+  );
 
   const {
     visibleColumnsSize: visibleAnalysisColumnsSize,
@@ -242,6 +346,71 @@ function Table<Row = any>(props: ITableProps<Row>) {
     () => columns.map((column) => String(column.attribute)).join('\0'),
     [columns],
   );
+  const searchOccurrences = React.useMemo<TableSearchOccurrence[]>(() => {
+    const query = searchState.query;
+    if (!query) return [];
+
+    const searchableRows = analysisMode ? analysisRows : serializedRows;
+    const options = {
+      matchCase: searchState.matchCase,
+      wholeWord: searchState.wholeWord,
+    };
+    const occurrences: TableSearchOccurrence[] = [];
+
+    searchableRows.forEach((row: any) => {
+      columns.forEach((column, colIndex) => {
+        const editedRow = editedRows?.get(row.__key_row);
+        const newRow = newRows?.get(row.__key_row);
+        const editedValue = editedRow?.[column.attribute];
+        const newValue = newRow?.[column.attribute];
+        const hasNewValue = newValue !== undefined;
+        const isEdited = editedValue !== undefined;
+        const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+        const serializedValue = serializeSearchValue(value, column.type);
+        const canReplace =
+          !!column.editable &&
+          column.type !== 'autocomplete' &&
+          column.type !== 'autocomplete-multi' &&
+          (row.__is_new_row ? !!onEditNewRow : !!onEditRow);
+
+        if (findSearchIndex(serializedValue, query, options) !== -1) {
+          occurrences.push({
+            rowIndex: row.__index_row,
+            colIndex,
+            key: cellKey(row.__index_row, colIndex),
+            canReplace,
+          });
+        }
+      });
+    });
+
+    return occurrences;
+  }, [
+    analysisMode,
+    analysisRows,
+    columns,
+    editedRows,
+    newRows,
+    onEditNewRow,
+    onEditRow,
+    searchState.matchCase,
+    searchState.query,
+    searchState.wholeWord,
+    serializedRows,
+  ]);
+  const activeSearchIndex =
+    searchOccurrences.length && searchState.activeIndex < searchOccurrences.length
+      ? searchState.activeIndex
+      : 0;
+  const activeSearchOccurrence = searchOccurrences[activeSearchIndex];
+  const activeSearchCellKey = searchState.open ? activeSearchOccurrence?.key : undefined;
+  const canReplaceCurrent = !!activeSearchOccurrence?.canReplace;
+  const canReplaceAll = searchOccurrences.some((occurrence) => occurrence.canReplace);
+  const searchMatchKeys = React.useMemo(() => {
+    if (!searchState.open) return new Set<string>();
+
+    return new Set(searchOccurrences.map((occurrence) => occurrence.key));
+  }, [searchOccurrences, searchState.open]);
   const initialAnalysisModeAppliedRef = React.useRef(false);
 
   const checkScrollEnd = React.useCallback(() => {
@@ -356,19 +525,19 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const scrollAnalysisCellIntoView = React.useCallback(
     (rowIndex: number, colIndex: number) => {
-      const container = refScrollContainer.current?.querySelector(
-        `.${styles.analysis_container}`,
-      ) as HTMLElement;
+      const container = refAnalysisScrollContainer.current;
       if (!container) return;
 
       const cellTop = (colIndex + 1) * rowHeight;
       const cellBottom = cellTop + rowHeight;
+      const visibleTop = container.scrollTop + rowHeight;
+      const visibleBottom = container.scrollTop + container.clientHeight - rowHeight;
       let top = container.scrollTop;
 
-      if (cellTop < container.scrollTop + rowHeight) {
+      if (cellTop < visibleTop) {
         top = Math.max(0, cellTop - rowHeight);
-      } else if (cellBottom > container.scrollTop + container.clientHeight) {
-        top = cellBottom - container.clientHeight;
+      } else if (cellBottom > visibleBottom) {
+        top = cellBottom - container.clientHeight + rowHeight;
       }
 
       const rowPosition = analysisRowsRef.current.findIndex((row) => row.__index_row === rowIndex);
@@ -404,6 +573,93 @@ function Table<Row = any>(props: ITableProps<Row>) {
     },
     [scrollAnalysisCellIntoView, scrollDefaultCellIntoView],
   );
+
+  const updateSearchOverlayPosition = React.useCallback(() => {
+    const container = refScrollContainer.current;
+    const rect = container?.getBoundingClientRect();
+    if (!rect) return;
+
+    setSearchOverlayPosition({
+      top: rect.top + 8,
+      right: window.innerWidth - rect.right + 8,
+    });
+  }, []);
+
+  const handleOpenTableSearch = React.useCallback(() => {
+    updateSearchOverlayPosition();
+    setSearchState((prevState) => ({ ...prevState, open: true }));
+
+    window.requestAnimationFrame(() => {
+      const input = refScrollContainer.current?.querySelector(
+        `.${styles.table_search_input}`,
+      ) as HTMLInputElement | null;
+
+      input?.focus();
+      input?.select();
+    });
+  }, [updateSearchOverlayPosition]);
+
+  const handleCloseTableSearch = React.useCallback(() => {
+    setSearchState({
+      open: false,
+      replaceOpen: false,
+      query: '',
+      replace: '',
+      matchCase: false,
+      wholeWord: false,
+      activeIndex: 0,
+    });
+    refScrollContainer.current?.focus();
+  }, []);
+
+  const handleSearchQueryChange = React.useCallback((query: string) => {
+    setSearchState((prevState) => ({ ...prevState, query, activeIndex: 0 }));
+  }, []);
+
+  const handleReplaceChange = React.useCallback((replace: string) => {
+    setSearchState((prevState) => ({ ...prevState, replace }));
+  }, []);
+
+  const handleReplaceOpenChange = React.useCallback((replaceOpen: boolean) => {
+    setSearchState((prevState) => ({ ...prevState, replaceOpen }));
+  }, []);
+
+  const handleToggleMatchCase = React.useCallback(() => {
+    setSearchState((prevState) => ({
+      ...prevState,
+      matchCase: !prevState.matchCase,
+      activeIndex: 0,
+    }));
+  }, []);
+
+  const handleToggleWholeWord = React.useCallback(() => {
+    setSearchState((prevState) => ({
+      ...prevState,
+      wholeWord: !prevState.wholeWord,
+      activeIndex: 0,
+    }));
+  }, []);
+
+  const handleSearchMove = React.useCallback(
+    (step: number) => {
+      if (!searchOccurrences.length) return;
+
+      setSearchState((prevState) => ({
+        ...prevState,
+        activeIndex:
+          (prevState.activeIndex + step + searchOccurrences.length) % searchOccurrences.length,
+      }));
+    },
+    [searchOccurrences.length],
+  );
+
+  const handleSearchNext = React.useCallback(() => {
+    handleSearchMove(1);
+  }, [handleSearchMove]);
+
+  const handleSearchPrevious = React.useCallback(() => {
+    handleSearchMove(-1);
+  }, [handleSearchMove]);
 
   const onSaveCell = React.useCallback(
     (
@@ -466,6 +722,62 @@ function Table<Row = any>(props: ITableProps<Row>) {
     },
     [onEditNewRow, onEditRow],
   );
+
+  const replaceSearchOccurrence = React.useCallback(
+    (occurrence: TableSearchOccurrence, replaceAll: boolean) => {
+      if (!occurrence.canReplace || !searchState.query) return false;
+
+      const row = serializedRowsRef.current[occurrence.rowIndex];
+      const column = columnsRef.current[occurrence.colIndex];
+      if (!row || !column?.editable) return false;
+      if (column.type === 'autocomplete' || column.type === 'autocomplete-multi') return false;
+
+      const editedRow = editedRows?.get(row.__key_row);
+      const newRow = newRows?.get(row.__key_row);
+      const editedValue = editedRow?.[column.attribute];
+      const newValue = newRow?.[column.attribute];
+      const hasNewValue = newValue !== undefined;
+      const isEdited = editedValue !== undefined;
+      const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+      const serializedValue = serializeSearchValue(value, column.type);
+      const nextValue = replaceSearchValue(
+        serializedValue,
+        searchState.query,
+        searchState.replace,
+        {
+          matchCase: searchState.matchCase,
+          wholeWord: searchState.wholeWord,
+        },
+        replaceAll,
+      );
+
+      if (nextValue === serializedValue) return false;
+
+      onSaveCell(row.__index_row, String(column.attribute), nextValue, true, false);
+
+      return true;
+    },
+    [
+      editedRows,
+      newRows,
+      onSaveCell,
+      searchState.matchCase,
+      searchState.query,
+      searchState.replace,
+      searchState.wholeWord,
+    ],
+  );
+
+  const handleReplaceCurrent = React.useCallback(() => {
+    if (!activeSearchOccurrence) return;
+
+    replaceSearchOccurrence(activeSearchOccurrence, false);
+  }, [activeSearchOccurrence, replaceSearchOccurrence]);
+
+  const handleReplaceAll = React.useCallback(() => {
+    searchOccurrences.forEach((occurrence) => replaceSearchOccurrence(occurrence, true));
+    setSearchState((prevState) => ({ ...prevState, activeIndex: 0 }));
+  }, [replaceSearchOccurrence, searchOccurrences]);
 
   const onBlurCell = React.useCallback(() => {
     setCellEditingKey(null);
@@ -949,6 +1261,38 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, []);
 
   React.useEffect(() => {
+    const nextActiveIndex = searchOccurrences.length
+      ? Math.min(searchState.activeIndex, searchOccurrences.length - 1)
+      : 0;
+
+    if (nextActiveIndex === searchState.activeIndex) return;
+
+    setSearchState((prevState) => ({ ...prevState, activeIndex: nextActiveIndex }));
+  }, [searchOccurrences.length, searchState.activeIndex]);
+
+  React.useEffect(() => {
+    if (!searchState.open) return;
+
+    updateSearchOverlayPosition();
+    window.addEventListener('resize', updateSearchOverlayPosition);
+
+    return () => {
+      window.removeEventListener('resize', updateSearchOverlayPosition);
+    };
+  }, [
+    heightBodyContainer,
+    searchState.open,
+    updateSearchOverlayPosition,
+    widthBodyContainer,
+  ]);
+
+  React.useEffect(() => {
+    if (!searchState.open || !activeSearchOccurrence) return;
+
+    scrollCellIntoView(activeSearchOccurrence.rowIndex, activeSearchOccurrence.colIndex);
+  }, [activeSearchOccurrence, scrollCellIntoView, searchState.open]);
+
+  React.useEffect(() => {
     window.addEventListener('mouseup', handleEndCellDrag);
 
     return () => {
@@ -958,6 +1302,16 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
+      const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
+      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
+
+      const isFind = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'f';
+      if (isFind) {
+        ev.preventDefault();
+        handleOpenTableSearch();
+        return;
+      }
+
       const isSelectAll = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'a';
 
       if (isSelectAll && !cellEditingKeyRef.current && handleSelectAllCells()) {
@@ -1066,10 +1420,19 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [analysisMode, enterAnalysisMode, handleSelectAllCells, scrollCellIntoView]);
+  }, [
+    analysisMode,
+    enterAnalysisMode,
+    handleOpenTableSearch,
+    handleSelectAllCells,
+    scrollCellIntoView,
+  ]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
+      const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
+      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
+
       const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key);
 
       if (analysisModeRef.current) {
@@ -1112,30 +1475,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         }
 
         notifySelectedCell(target.rowIndex, target.colIndex);
-
-        const container = refScrollContainer.current?.querySelector(
-          `.${styles.analysis_container}`,
-        ) as HTMLElement;
-        if (!container) return;
-
-        const cellTop = (fieldIndex + 1) * rowHeight;
-        const cellBottom = cellTop + rowHeight;
-        if (cellTop < container.scrollTop) {
-          container.scrollTop = cellTop;
-        } else if (cellBottom > container.scrollTop + container.clientHeight) {
-          container.scrollTop = cellBottom - container.clientHeight;
-        }
-
-        const sizes = analysisColumnsSizeRef.current;
-        let cellLeft = sizes[0] || 0;
-        for (let i = 1; i <= rowPosition; i++) cellLeft += sizes[i] || 0;
-        const cellWidth = sizes[rowPosition + 1] || 0;
-        const cellRight = cellLeft + cellWidth;
-        if (cellLeft < container.scrollLeft) {
-          container.scrollLeft = cellLeft;
-        } else if (cellRight > container.scrollLeft + container.clientWidth) {
-          container.scrollLeft = cellRight - container.clientWidth;
-        }
+        scrollAnalysisCellIntoView(target.rowIndex, target.colIndex);
 
         return;
       }
@@ -1194,7 +1534,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [notifySelectedCell, rowNumberColumnWidth, selectAnalysisRange, selectDefaultRange]);
+  }, [
+    notifySelectedCell,
+    rowNumberColumnWidth,
+    scrollAnalysisCellIntoView,
+    selectAnalysisRange,
+    selectDefaultRange,
+  ]);
 
   React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
@@ -1222,6 +1568,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
     const container = refScrollContainer.current;
 
     const handlePaste = (event: ClipboardEvent) => {
+      const targetElement = event.target instanceof HTMLElement ? event.target : null;
+      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
       if (cellEditingKeyRef.current) return;
 
       const cells = analysisModeRef.current
@@ -1323,10 +1671,34 @@ function Table<Row = any>(props: ITableProps<Row>) {
       onScroll={analysisMode ? undefined : onScroll}
       className={styles.table_outside_container}
       onContextMenu={handleContextMenu}
-      style={cssVars}
+      style={containerStyle}
       tabIndex={0}
     >
       {!!loading && <MultiplesBarLoading zIndex={7} />}
+
+      {searchState.open && (
+        <TableSearchBar
+          query={searchState.query}
+          replace={searchState.replace}
+          replaceOpen={searchState.replaceOpen}
+          matchCase={searchState.matchCase}
+          wholeWord={searchState.wholeWord}
+          activeIndex={activeSearchIndex}
+          total={searchOccurrences.length}
+          canReplaceCurrent={canReplaceCurrent}
+          canReplaceAll={canReplaceAll}
+          onQueryChange={handleSearchQueryChange}
+          onReplaceChange={handleReplaceChange}
+          onReplaceOpenChange={handleReplaceOpenChange}
+          onToggleMatchCase={handleToggleMatchCase}
+          onToggleWholeWord={handleToggleWholeWord}
+          onReplaceCurrent={handleReplaceCurrent}
+          onReplaceAll={handleReplaceAll}
+          onNext={handleSearchNext}
+          onPrevious={handleSearchPrevious}
+          onClose={handleCloseTableSearch}
+        />
+      )}
 
       {analysisMode ? (
         <TableAnalysisView
@@ -1339,7 +1711,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
           newRows={newRows}
           cellEditingKey={cellEditingKey}
           cellEditInitialValue={cellEditInitialValue}
+          scrollContainerRef={refAnalysisScrollContainer}
           selectedCells={analysisSelectedCells}
+          searchMatches={searchMatchKeys}
+          activeSearchCellKey={activeSearchCellKey}
           onResizeColumn={onResizeAnalysisColumn}
           onDoubleClick={handleDoubleClickCell}
           onEditCell={onSaveCell}
@@ -1363,6 +1738,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
           cellEditingKey={cellEditingKey}
           cellEditInitialValue={cellEditInitialValue}
           selectedCells={selectedCells}
+          searchMatches={searchMatchKeys}
+          activeSearchCellKey={activeSearchCellKey}
           selectedRows={selectedRows}
           columnsIndexToRender={columnsDetails.columnsIndexToRender}
           firstRowIndex={rowsDetails.first}

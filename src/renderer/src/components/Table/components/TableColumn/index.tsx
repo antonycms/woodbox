@@ -53,6 +53,8 @@ interface ITableColumnProps {
   onFkCellPreviewClick?(name: string, value: any): void;
   linkClickMode?: 'ctrl' | 'single';
   isSelectedCell?: boolean;
+  isSearchMatch?: boolean;
+  isActiveSearchMatch?: boolean;
   onSelectCell?(rowIndex: number, colIndex: number): void;
   onStartCellDrag?(
     rowIndex: number,
@@ -91,6 +93,8 @@ const TableColumn = ({
   onFkCellPreviewClick,
   linkClickMode = 'ctrl',
   isSelectedCell,
+  isSearchMatch,
+  isActiveSearchMatch,
   onSelectCell,
   onStartCellDrag,
   onMoveCellDrag,
@@ -112,9 +116,19 @@ const TableColumn = ({
       resizable && styles.resizable,
       isEdited && styles.edited,
       isHeaderColumn && styles.disableSelection,
+      isSearchMatch && !resizable && styles.search_match,
+      isActiveSearchMatch && !resizable && styles.search_active_match,
       isSelectedCell && !resizable && styles.cell_selected,
     );
-  }, [indexRow, isEdited, isHeaderColumn, isSelectedCell, resizable]);
+  }, [
+    indexRow,
+    isActiveSearchMatch,
+    isEdited,
+    isHeaderColumn,
+    isSearchMatch,
+    isSelectedCell,
+    resizable,
+  ]);
 
   // minify string lenght in cell to improve performance
   const serializedValue = React.useMemo(() => {

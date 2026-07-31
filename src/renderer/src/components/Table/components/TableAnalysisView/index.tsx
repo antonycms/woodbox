@@ -20,7 +20,10 @@ interface ITableAnalysisViewProps<Row = any> {
   newRows?: Map<React.Key, any>;
   cellEditingKey?: string;
   cellEditInitialValue?: string | number;
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   selectedCells?: Set<string>;
+  searchMatches?: Set<string>;
+  activeSearchCellKey?: string;
   onResizeColumn?(index: number, size: number): void;
   onDoubleClick?(rowColumnKey: string): void;
   onBlurCell?(): void;
@@ -103,6 +106,8 @@ interface ITableAnalysisValueProps {
   serializedValue: string;
   isEdited?: boolean;
   isSelected?: boolean;
+  isSearchMatch?: boolean;
+  isActiveSearchMatch?: boolean;
   isLinkClickable?: boolean;
   linkTitle?: string;
   linkClickMode: 'ctrl' | 'single';
@@ -128,6 +133,8 @@ const TableAnalysisValue = React.memo(
     serializedValue,
     isEdited,
     isSelected,
+    isSearchMatch,
+    isActiveSearchMatch,
     isLinkClickable,
     linkTitle,
     linkClickMode,
@@ -142,9 +149,11 @@ const TableAnalysisValue = React.memo(
       return classes(
         styles.analysis_value,
         isEdited && styles.edited,
+        isSearchMatch && styles.search_match,
+        isActiveSearchMatch && styles.search_active_match,
         isSelected && styles.cell_selected,
       );
-    }, [isEdited, isSelected]);
+    }, [isActiveSearchMatch, isEdited, isSearchMatch, isSelected]);
 
     const handleDoubleClick = React.useCallback(() => {
       onDoubleClick?.(rowColumnKey);
@@ -329,7 +338,10 @@ const TableAnalysisView = ({
   newRows,
   cellEditingKey,
   cellEditInitialValue,
+  scrollContainerRef,
   selectedCells,
+  searchMatches,
+  activeSearchCellKey,
   onResizeColumn,
   onDoubleClick,
   onBlurCell,
@@ -367,7 +379,7 @@ const TableAnalysisView = ({
   }, [cellLinkClickMode, hasLinkColumns, onCellLinkPreviewClick, t]);
 
   return (
-    <div className={styles.analysis_container} style={containerStyle}>
+    <div ref={scrollContainerRef} className={styles.analysis_container} style={containerStyle}>
       <div className={styles.analysis_grid} style={gridStyle}>
         <TableAnalysisHeader
           columnIndex={0}
@@ -423,6 +435,8 @@ const TableAnalysisView = ({
               const serializedValue = serializeTableValue(value, column.type);
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
+              const isSearchMatch = searchMatches?.has(selectedCellKey);
+              const isActiveSearchMatch = activeSearchCellKey === selectedCellKey;
               const isLinkClickable = column.isLink && value !== null && value !== undefined;
               const cellLinkTitle = isLinkClickable ? linkTitle : undefined;
 
@@ -452,6 +466,8 @@ const TableAnalysisView = ({
                   serializedValue={serializedValue}
                   isEdited={isEdited}
                   isSelected={isSelected}
+                  isSearchMatch={isSearchMatch}
+                  isActiveSearchMatch={isActiveSearchMatch}
                   isLinkClickable={isLinkClickable}
                   linkTitle={cellLinkTitle}
                   linkClickMode={cellLinkClickMode}

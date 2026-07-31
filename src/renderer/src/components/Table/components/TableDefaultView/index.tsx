@@ -21,6 +21,8 @@ interface ITableDefaultViewProps<Row = any> {
   cellEditingKey?: string;
   cellEditInitialValue?: string | number;
   selectedCells?: Set<string>;
+  searchMatches?: Set<string>;
+  activeSearchCellKey?: string;
   selectedRows: Map<React.Key, any>;
   columnsIndexToRender: number[];
   firstRowIndex: number;
@@ -62,6 +64,8 @@ const TableDefaultView = <Row,>({
   cellEditingKey,
   cellEditInitialValue,
   selectedCells,
+  searchMatches,
+  activeSearchCellKey,
   selectedRows,
   columnsIndexToRender,
   firstRowIndex,
@@ -203,6 +207,8 @@ const TableDefaultView = <Row,>({
                   onFkCellPreviewClick={onCellLinkPreviewClick}
                   linkClickMode={cellLinkClickMode}
                   isSelectedCell={selectedCells?.has(cellKey(indexRow, columnIndex))}
+                  isSearchMatch={searchMatches?.has(cellKey(indexRow, columnIndex))}
+                  isActiveSearchMatch={activeSearchCellKey === cellKey(indexRow, columnIndex)}
                   onSelectCell={onSelectCell}
                   onStartCellDrag={onStartCellDrag}
                   onMoveCellDrag={onMoveCellDrag}

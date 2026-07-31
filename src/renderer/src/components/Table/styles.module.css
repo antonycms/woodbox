@@ -233,3 +233,121 @@ input.analysis_value {
   cursor: text;
   user-select: text;
 }
+
+.table_search_bar {
+  position: fixed;
+  top: var(--tableSearchTop, 8px);
+  right: var(--tableSearchRight, 8px);
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-height: 32px;
+  margin: 0;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid color-mix(in srgb, var(--colorHeader) 18%, transparent);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--backgroundColorHeader) 92%, black);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  color: var(--colorHeader);
+}
+
+.table_search_bar_expanded {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.table_search_row {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  gap: 6px;
+}
+
+.table_search_input {
+  width: 220px;
+  border: 1px solid color-mix(in srgb, var(--colorHeader) 42%, transparent);
+  border-radius: 3px;
+  padding: 3px 6px;
+  background: transparent;
+  color: var(--colorHeader);
+  font-size: 13px;
+  outline: transparent;
+}
+
+.table_search_input:focus {
+  border-color: var(--selectedBorderColor);
+}
+
+.table_search_counter {
+  min-width: 48px;
+  color: color-mix(in srgb, var(--colorHeader) 72%, var(--backgroundColorHeader));
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table_search_button {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--colorHeader);
+  cursor: pointer;
+}
+
+.table_search_button svg,
+.table_search_replace_button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.table_search_replace_button {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--colorHeader);
+  cursor: pointer;
+}
+
+.table_search_button:hover:not(:disabled),
+.table_search_replace_button:hover:not(:disabled),
+.table_search_toggle_active {
+  background-color: color-mix(in srgb, var(--colorHeader) 12%, transparent);
+}
+
+.table_search_toggle_active {
+  color: var(--selectedBorderColor);
+}
+
+.table_search_button:disabled,
+.table_search_replace_button:disabled {
+  color: color-mix(in srgb, var(--colorHeader) 32%, transparent);
+  cursor: default;
+}
+
+.table_search_replace_spacer {
+  width: 22px;
+}
+
+.table_column.search_match,
+.analysis_value.search_match {
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--selectedBorderColor) 76%, transparent);
+}
+
+.table_column.search_active_match,
+.analysis_value.search_active_match {
+  outline: 2px solid var(--selectedBorderColor) !important;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--selectedBorderColor) 18%, transparent);
+}
