@@ -19,6 +19,7 @@ import IconBiFileEarmarkPlayFill from '~icons/bi/file-earmark-play-fill';
 import IconGgTrash from '~icons/gg/trash';
 import IconGgExport from '~icons/gg/export';
 import IconMdiImport from '~icons/mdi/import';
+import IconMdiHistory from '~icons/mdi/history';
 import IconBxListPlus from '~icons/bx/list-plus';
 import IconIonMdPlay from '~icons/ion/md-play';
 
@@ -47,6 +48,7 @@ export const RunSelectionIcon = makeIconWithSize(IconMdiPlaylistPlay);
 export const DuplicateIcon = makeIconWithSize(IconBxListPlus);
 export const ExportIcon = makeIconWithSize(IconGgExport);
 export const ImportIcon = makeIconWithSize(IconMdiImport);
+export const HistoryIcon = makeIconWithSize(IconMdiHistory);
 export const RecordIcon = makeIconWithSize(IconMdiRecordCircleOutline);
 export const IconDatabase = makeIconWithSize(IconFaSolidDatabase);
 export const IconSettings = makeIconWithSize(IconFaSolidCog);

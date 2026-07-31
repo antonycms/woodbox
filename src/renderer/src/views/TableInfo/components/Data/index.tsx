@@ -47,6 +47,7 @@ import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import useFilterHistory from '@renderer/hooks/useFilterHistory';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -133,6 +134,7 @@ const Data = ({
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
+  const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
@@ -796,12 +798,13 @@ const Data = ({
     [id_connection, schema, table, appliedWhere, sort, loading, serializeRows, handleDataError],
   );
 
-  const handleFilterKeyDown = React.useCallback(
-    async (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== 'Enter' || loading) return;
+  const applyFilter = React.useCallback(
+    async (nextWhereInput: string) => {
+      if (loading) return;
 
-      const newWhere = whereInput || undefined;
+      const newWhere = nextWhereInput || undefined;
       setLoading(true);
+      setWhereInput(nextWhereInput);
 
       try {
         const { data } = await getTableData(id_connection, {
@@ -812,7 +815,8 @@ const Data = ({
           orderBy: sort,
         });
 
-        setAppliedWhere(whereInput);
+        setAppliedWhere(nextWhereInput);
+        addFilterHistory(nextWhereInput);
         setRowsCount(undefined);
         setNewRows(new Map());
         setEditedFieldsRows(new Map());
@@ -827,7 +831,26 @@ const Data = ({
         setLoading(false);
       }
     },
-    [id_connection, whereInput, loading, schema, table, sort, serializeRows, handleDataError],
+    [
+      addFilterHistory,
+      getTableData,
+      handleDataError,
+      id_connection,
+      loading,
+      schema,
+      serializeRows,
+      sort,
+      table,
+    ],
+  );
+
+  const handleFilterKeyDown = React.useCallback(
+    async (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter') return;
+
+      await applyFilter(whereInput);
+    },
+    [applyFilter, whereInput],
   );
 
   const handleKeyDown = React.useCallback(
@@ -991,6 +1014,8 @@ const Data = ({
           value={whereInput}
           columnNames={columnNames}
           onChange={handleWhereInputChange}
+          historyItems={filterHistory}
+          onHistorySelect={applyFilter}
           onKeyDown={handleFilterKeyDown}
           inputStyle={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
           dropdownBackgroundColor={theme.bar.fieldBackgroundColor}

@@ -5,6 +5,38 @@
   min-width: 0;
 }
 
+.input {
+  flex: 1;
+  min-width: 0;
+}
+
+.historyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.65;
+  padding: 0;
+}
+
+.historyButton:hover,
+.historyButtonActive {
+  background: var(--column-filter-hover-background-color);
+  opacity: 1;
+}
+
+.historyButton:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
 .dropdown {
   position: absolute;
   z-index: 20;
@@ -45,4 +77,11 @@
 .option:hover,
 .optionActive {
   background: var(--column-filter-hover-background-color);
+}
+
+.emptyHistory {
+  padding: 8px 6px;
+  color: inherit;
+  font-size: 12px;
+  opacity: 0.6;
 }

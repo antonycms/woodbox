@@ -1,6 +1,7 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { HistoryIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
 
 interface IColumnFilterInputProps {
@@ -14,7 +15,11 @@ interface IColumnFilterInputProps {
   dropdownBackgroundColor?: string;
   dropdownBorderColor?: string;
   dropdownColor?: string;
+  historyItems?: string[];
+  historyTitle?: string;
+  historyEmptyLabel?: string;
   onChange(value: string): void;
+  onHistorySelect?(value: string): void;
   onKeyDown?(event: React.KeyboardEvent<HTMLInputElement>): void;
 }
 
@@ -59,15 +64,22 @@ export default function ColumnFilterInput({
   dropdownBackgroundColor,
   dropdownBorderColor,
   dropdownColor,
+  historyItems,
+  historyTitle = 'Histórico de filtros',
+  historyEmptyLabel = 'Nenhum filtro recente',
   onChange,
+  onHistorySelect,
   onKeyDown,
 }: IColumnFilterInputProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const optionRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
   const [cursorPosition, setCursorPosition] = React.useState(value.length);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [showAll, setShowAll] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
+  const hasHistoryButton = !!historyItems;
 
   const tokenInfo = React.useMemo(
     () => getTokenInfo(value, cursorPosition),
@@ -99,6 +111,23 @@ export default function ColumnFilterInput({
     setActiveIndex(-1);
   }, []);
 
+  const toggleHistory = React.useCallback(() => {
+    if (disabled) return;
+
+    closeSuggestions();
+    setIsHistoryOpen((current) => !current);
+  }, [closeSuggestions, disabled]);
+
+  const selectHistory = React.useCallback(
+    (filter: string) => {
+      setIsHistoryOpen(false);
+
+      if (onHistorySelect) onHistorySelect(filter);
+      else onChange(filter);
+    },
+    [onChange, onHistorySelect],
+  );
+
   const insertSuggestion = React.useCallback(
     (columnName: string) => {
       const nextValue = `${value.slice(0, tokenInfo.start)}${columnName}${value.slice(
@@ -125,6 +154,7 @@ export default function ColumnFilterInput({
   const handleChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       updateCursorPosition(event.target);
+      setIsHistoryOpen(false);
       setIsOpen(true);
       setShowAll(false);
       setActiveIndex(-1);
@@ -149,6 +179,12 @@ export default function ColumnFilterInput({
       if (event.key === 'Escape' && isOpen) {
         event.preventDefault();
         closeSuggestions();
+        return;
+      }
+
+      if (event.key === 'Escape' && isHistoryOpen) {
+        event.preventDefault();
+        setIsHistoryOpen(false);
         return;
       }
 
@@ -184,6 +220,7 @@ export default function ColumnFilterInput({
       closeSuggestions,
       insertSuggestion,
       isOpen,
+      isHistoryOpen,
       onKeyDown,
       suggestions,
       updateCursorPosition,
@@ -205,27 +242,66 @@ export default function ColumnFilterInput({
     optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex, isOpen]);
 
+  React.useEffect(() => {
+    if (!isHistoryOpen) return;
+
+    const closeHistoryOnOutsideClick = (event: MouseEvent) => {
+      if (containerRef.current?.contains(event.target as Node)) return;
+
+      setIsHistoryOpen(false);
+    };
+
+    document.addEventListener('mousedown', closeHistoryOnOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', closeHistoryOnOutsideClick);
+    };
+  }, [isHistoryOpen]);
+
   return (
-    <div className={styles.container}>
+    <div ref={containerRef} className={styles.container}>
       <input
         ref={inputRef}
         autoFocus={autoFocus}
-        className={inputClassName}
+        className={classes(styles.input, inputClassName)}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onClick={(event) => updateCursorPosition(event.currentTarget)}
+        onClick={(event) => {
+          updateCursorPosition(event.currentTarget);
+          setIsHistoryOpen(false);
+        }}
         onKeyUp={(event) => updateCursorPosition(event.currentTarget)}
         onFocus={(event) => {
           updateCursorPosition(event.currentTarget);
+          setIsHistoryOpen(false);
           setIsOpen(true);
         }}
         onBlur={closeSuggestions}
         style={inputStyle}
         spellCheck={false}
       />
+
+      {hasHistoryButton && (
+        <button
+          type="button"
+          className={classes(styles.historyButton, isHistoryOpen && styles.historyButtonActive)}
+          title={historyTitle}
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={toggleHistory}
+          style={
+            {
+              color: dropdownColor ?? inputStyle?.color,
+              '--column-filter-hover-background-color': dropdownBorderColor,
+            } as React.CSSProperties
+          }
+        >
+          <HistoryIcon size={16} />
+        </button>
+      )}
 
       {!!(isOpen && suggestions.length) && (
         <div
@@ -257,6 +333,38 @@ export default function ColumnFilterInput({
               {columnName}
             </button>
           ))}
+        </div>
+      )}
+
+      {!!(hasHistoryButton && isHistoryOpen) && (
+        <div
+          className={styles.dropdown}
+          style={
+            {
+              backgroundColor: dropdownBackgroundColor,
+              borderColor: dropdownBorderColor,
+              color: dropdownColor,
+              '--column-filter-shadow-color': dropdownBorderColor,
+              '--column-filter-hover-background-color': dropdownBorderColor,
+            } as React.CSSProperties
+          }
+        >
+          {historyItems?.length ? (
+            historyItems.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                className={styles.option}
+                title={filter}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectHistory(filter)}
+              >
+                {filter}
+              </button>
+            ))
+          ) : (
+            <div className={styles.emptyHistory}>{historyEmptyLabel}</div>
+          )}
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/T
 import { getNextSort } from '@renderer/utils/tableSort';
 import { generateHash } from '@renderer/utils/string';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import styles from './styles.module.css';
 
 interface IReferenceSelectionProps {
@@ -47,6 +48,11 @@ const ReferenceSelection = ({
   const [appliedWhere, setAppliedWhere] = React.useState('');
   const [hasLoaded, setHasLoaded] = React.useState(false);
   const lastPageSearch = React.useRef(0);
+  const [filterHistory, addFilterHistory] = useFilterHistory([
+    idConnection,
+    reference?.reference_table_schema || '',
+    reference?.reference_table_name || '',
+  ]);
 
   const referenceKey = React.useMemo(() => {
     if (!reference) return '';
@@ -62,7 +68,7 @@ const ReferenceSelection = ({
 
   const loadPage = React.useCallback(
     async (nextPage: number, nextWhere = appliedWhere, nextSort = sort, replace = false) => {
-      if (!reference || loading) return;
+      if (!reference || loading) return false;
 
       setLoading(true);
 
@@ -97,9 +103,11 @@ const ReferenceSelection = ({
           replace ? serializeRows(data) : [...prevState, ...serializeRows(data)],
         );
         setHasLoaded(true);
+        return true;
       } catch (error: unknown) {
         setHasLoaded(true);
         onDataError(error);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -139,17 +147,29 @@ const ReferenceSelection = ({
     [appliedWhere, loadPage, loading, sort],
   );
 
-  const handleFilterKeyDown = React.useCallback(
-    async (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key !== 'Enter' || loading) return;
+  const applyFilter = React.useCallback(
+    async (nextWhereInput: string) => {
+      if (loading) return;
 
-      setAppliedWhere(whereInput);
+      setWhereInput(nextWhereInput);
+      setAppliedWhere(nextWhereInput);
       setItems([]);
       setPage(0);
       lastPageSearch.current = 0;
-      await loadPage(1, whereInput, sort, true);
+
+      const loaded = await loadPage(1, nextWhereInput, sort, true);
+      if (loaded) addFilterHistory(nextWhereInput);
     },
-    [loadPage, loading, sort, whereInput],
+    [addFilterHistory, loadPage, loading, sort],
+  );
+
+  const handleFilterKeyDown = React.useCallback(
+    async (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== 'Enter') return;
+
+      await applyFilter(whereInput);
+    },
+    [applyFilter, whereInput],
   );
 
   const handleSelectCell = React.useCallback(
@@ -203,6 +223,8 @@ const ReferenceSelection = ({
           value={whereInput}
           columnNames={columnNames}
           onChange={setWhereInput}
+          historyItems={filterHistory}
+          onHistorySelect={applyFilter}
           onKeyDown={handleFilterKeyDown}
           inputStyle={{ color: theme.bar.color }}
           dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
