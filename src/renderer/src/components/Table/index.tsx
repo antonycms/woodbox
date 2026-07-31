@@ -757,6 +757,49 @@ function Table<Row = any>(props: ITableProps<Row>) {
     dragSelectionRef.current = null;
   }, []);
 
+  const handleSelectAllCells = React.useCallback(() => {
+    const totalColumns = columnsRef.current.length;
+    if (!totalColumns) return false;
+
+    if (analysisModeRef.current) {
+      const rowsToAnalyze = analysisRowsRef.current;
+      if (!rowsToAnalyze.length) return false;
+
+      const next = new Set<string>();
+      rowsToAnalyze.forEach((row) => {
+        for (let colIndex = 0; colIndex < totalColumns; colIndex++) {
+          next.add(cellKey(row.__index_row, colIndex));
+        }
+      });
+
+      const firstCell = { rowIndex: rowsToAnalyze[0].__index_row, colIndex: 0 };
+      lastAnalysisSelectedCellRef.current = firstCell;
+      analysisArrowCursorRef.current = firstCell;
+      setAnalysisSelectedCells(next);
+      notifySelectedCell(firstCell.rowIndex, firstCell.colIndex);
+
+      return true;
+    }
+
+    const rows = serializedRowsRef.current;
+    if (!rows.length) return false;
+
+    const next = new Set<string>();
+    rows.forEach((_, rowIndex) => {
+      for (let colIndex = 0; colIndex < totalColumns; colIndex++) {
+        next.add(cellKey(rowIndex, colIndex));
+      }
+    });
+
+    const firstCell = { rowIndex: 0, colIndex: 0 };
+    lastSelectedCellRef.current = firstCell;
+    arrowCursorRef.current = firstCell;
+    setSelectedCells(next);
+    notifySelectedCell(firstCell.rowIndex, firstCell.colIndex);
+
+    return true;
+  }, [notifySelectedCell]);
+
   const handleContextMenu = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (!onContextMenu) return;
 
@@ -915,6 +958,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
+      const isSelectAll = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'a';
+
+      if (isSelectAll && !cellEditingKeyRef.current && handleSelectAllCells()) {
+        ev.preventDefault();
+        return;
+      }
+
       if (ev.key === 'Tab' && !cellEditingKeyRef.current) {
         const hasSelectedRows = selectedRowsRef.current.size > 0;
         if (analysisMode) {
@@ -1016,7 +1066,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     return () => {
       refScrollContainer.current?.removeEventListener?.('keydown', cb);
     };
-  }, [analysisMode, enterAnalysisMode, scrollCellIntoView]);
+  }, [analysisMode, enterAnalysisMode, handleSelectAllCells, scrollCellIntoView]);
 
   React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
