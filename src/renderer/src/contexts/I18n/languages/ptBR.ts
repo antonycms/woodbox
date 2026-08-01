@@ -147,6 +147,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'common.cancelChanges': 'Cancelar alterações',
   'common.cancelQuery': 'Cancelar query',
   'common.filter': 'Filtrar',
+  'filterHistory.title': 'Histórico de filtros',
+  'filterHistory.empty': 'Nenhum filtro recente',
   'common.exactWord': 'Palavra exata',
   'common.yes': 'Sim',
   'common.no': 'Não',

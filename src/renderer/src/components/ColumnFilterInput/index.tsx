@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '@renderer/contexts/I18n';
 import { classes } from '@renderer/styles/theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { HistoryIcon } from '@renderer/styles/icons';
@@ -65,12 +66,13 @@ export default function ColumnFilterInput({
   dropdownBorderColor,
   dropdownColor,
   historyItems,
-  historyTitle = 'Histórico de filtros',
-  historyEmptyLabel = 'Nenhum filtro recente',
+  historyTitle,
+  historyEmptyLabel,
   onChange,
   onHistorySelect,
   onKeyDown,
 }: IColumnFilterInputProps) {
+  const { t } = useI18n();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const optionRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
@@ -79,6 +81,8 @@ export default function ColumnFilterInput({
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [showAll, setShowAll] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
+  const historyTitleText = historyTitle ?? t('filterHistory.title');
+  const historyEmptyLabelText = historyEmptyLabel ?? t('filterHistory.empty');
   const hasHistoryButton = !!historyItems;
 
   const tokenInfo = React.useMemo(
@@ -288,7 +292,7 @@ export default function ColumnFilterInput({
         <button
           type="button"
           className={classes(styles.historyButton, isHistoryOpen && styles.historyButtonActive)}
-          title={historyTitle}
+          title={historyTitleText}
           disabled={disabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={toggleHistory}
@@ -363,7 +367,7 @@ export default function ColumnFilterInput({
               </button>
             ))
           ) : (
-            <div className={styles.emptyHistory}>{historyEmptyLabel}</div>
+            <div className={styles.emptyHistory}>{historyEmptyLabelText}</div>
           )}
         </div>
       )}

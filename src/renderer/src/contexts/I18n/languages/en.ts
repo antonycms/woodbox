@@ -144,6 +144,8 @@ export const en = {
   'common.cancelChanges': 'Cancel changes',
   'common.cancelQuery': 'Cancel query',
   'common.filter': 'Filter',
+  'filterHistory.title': 'Filter history',
+  'filterHistory.empty': 'No recent filters',
   'common.exactWord': 'Exact word',
   'common.yes': 'Yes',
   'common.no': 'No',
