@@ -1355,6 +1355,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
       const isTypingEditKey =
         ev.key.length === 1 &&
+        ev.key !== ' ' &&
         !isPrimaryShortcutPressed(ev) &&
         !ev.altKey &&
         !ev.isComposing &&
