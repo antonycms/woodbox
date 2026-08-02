@@ -35,15 +35,15 @@ export const ModalServerOutput = React.memo(
       setMessages(messages);
     };
 
-    const handleClearServerOutput = async () => {
+    const handleClearServerOutput = React.useCallback(async () => {
       await clearServerOutput(id_connection);
       setMessages([]);
-    };
+    }, [clearServerOutput, id_connection]);
 
-    const handleClose = () => {
+    const handleClose = React.useCallback(() => {
       setShowLocal(false);
       onClose?.();
-    };
+    }, [onClose]);
 
     React.useEffect(() => {
       if (!show) return;
@@ -126,7 +126,7 @@ export const ModalServerOutput = React.memo(
             xs={6}
             sm={4}
             md={3}
-            onClick={onClose}
+            onClick={handleClose}
             color={colors.cancelButtonColor}
             backgroundColor={colors.cancelButtonBackgroundColor}
           >
