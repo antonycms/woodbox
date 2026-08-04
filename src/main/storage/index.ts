@@ -24,3 +24,9 @@ addListener('@get:script_content', store.getScriptContent);
 addListener('@add:scripts', store.addScript);
 addListener('@remove:scripts', store.removeScript);
 addListener('@patch:scripts', store.patchScript);
+
+// snippets
+addListener('@get:snippets', store.getSnippets);
+addListener('@add:snippets', store.addSnippet);
+addListener('@remove:snippets', store.removeSnippet);
+addListener('@edit:snippets', store.editSnippet);

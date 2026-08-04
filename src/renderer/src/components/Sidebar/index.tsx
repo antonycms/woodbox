@@ -2,7 +2,7 @@ import React from 'react';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { IconDatabase, IconSettings } from '@renderer/styles/icons';
+import { IconDatabase, IconSettings, IconSnippet } from '@renderer/styles/icons';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
@@ -12,8 +12,9 @@ import { MenuBar } from './components/MenuBar';
 import { SidebarActiveContent } from './components/SidebaActiveContent';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
+import SnippetsMenu from './components/menus/SnippetsMenu';
 
-type Menu = 'projects';
+type Menu = 'projects' | 'snippets';
 
 export const Sidebar = React.memo(() => {
   const { t } = useI18n();
@@ -61,7 +62,10 @@ export const Sidebar = React.memo(() => {
       <MenuBar
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
-        items={[{ id: 'projects', title: t('sidebar.projects'), icon: () => <IconDatabase /> }]}
+        items={[
+          { id: 'projects', title: t('sidebar.projects'), icon: () => <IconDatabase /> },
+          { id: 'snippets', title: t('sidebar.snippets'), icon: () => <IconSnippet /> },
+        ]}
         footerItems={[{ id: 'settings', title: t('settings.title'), icon: () => <IconSettings /> }]}
         onFooterItemClick={() => setShowSettingsModal(true)}
       />
@@ -75,6 +79,10 @@ export const Sidebar = React.memo(() => {
       >
         <SidebarActiveContent active={selectedMenu === 'projects'}>
           <ProjectsMenu />
+        </SidebarActiveContent>
+
+        <SidebarActiveContent active={selectedMenu === 'snippets'}>
+          <SnippetsMenu />
         </SidebarActiveContent>
       </ResizableContainer>
 

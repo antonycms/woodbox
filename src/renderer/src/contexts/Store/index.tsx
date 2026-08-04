@@ -5,6 +5,7 @@ import StoreContext, {
   type IProject,
   type IConnection,
   type IScript,
+  type ISnippet,
   type IConnectionInfo,
   type IConnectionsGroupPerProject,
   type IOptionsRunSql,
@@ -37,6 +38,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const [connections, setConnections] = React.useState<IConnection[]>([]);
   const [connectionsInfo, setConnectionsInfo] = React.useState(new Map<string, IConnectionInfo>());
   const [scripts, setScripts] = React.useState<IScript[]>([]);
+  const [snippets, setSnippets] = React.useState<ISnippet[]>([]);
 
   const connectionsGroupPerProject = React.useMemo<IConnectionsGroupPerProject[]>(() => {
     const groupedConnections = new Map<string, IConnection[]>();
@@ -82,6 +84,11 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     setScripts(meta || []);
   }, []);
 
+  const loadSnippets = React.useCallback(async () => {
+    const storedSnippets = await call<ISnippet[]>('@get:snippets');
+    setSnippets(storedSnippets || []);
+  }, []);
+
   const getScriptContent = React.useCallback(async (id: string) => {
     return (await call<string>('@get:script_content', id)) ?? '';
   }, []);
@@ -111,6 +118,27 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const removeScript = React.useCallback(async (id: string) => {
     await call<void>('@remove:scripts', id);
     setScripts((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const addSnippet = React.useCallback(async (data: Omit<ISnippet, 'id'>) => {
+    const snippet: ISnippet = { ...data, id: generateHash() };
+
+    await call<void>('@add:snippets', snippet);
+    setSnippets((prev) => [...prev, snippet]);
+
+    return snippet;
+  }, []);
+
+  const editSnippet = React.useCallback(async (id: string, data: Omit<ISnippet, 'id'>) => {
+    const snippet: ISnippet = { ...data, id };
+
+    await call<void>('@edit:snippets', id, snippet);
+    setSnippets((prev) => prev.map((item) => (item.id === id ? snippet : item)));
+  }, []);
+
+  const removeSnippet = React.useCallback(async (id: string) => {
+    await call<void>('@remove:snippets', id);
+    setSnippets((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   const addProject = React.useCallback(async (data: IProjectCreate) => {
@@ -434,11 +462,18 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       editScript,
       removeScript,
       getScriptContent,
+
+      // snippets
+      snippets,
+      addSnippet,
+      editSnippet,
+      removeSnippet,
     }),
     [
       addConnection,
       addProject,
       addScript,
+      addSnippet,
       cancelRunSql,
       clearServerOutput,
       closeConnection,
@@ -449,6 +484,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       editConnection,
       editProject,
       editScript,
+      editSnippet,
       getColumnTypes,
       getFunctionDefinition,
       getQueryRowsCount,
@@ -471,8 +507,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       removeConnection,
       removeProject,
       removeScript,
+      removeSnippet,
       runSql,
       scripts,
+      snippets,
       testConnection,
     ],
   );
@@ -482,7 +520,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     loadConnections();
     loadProjects();
     loadScripts();
-  }, [loadConnectionTypes, loadConnections, loadProjects, loadScripts]);
+    loadSnippets();
+  }, [loadConnectionTypes, loadConnections, loadProjects, loadScripts, loadSnippets]);
 
   return <StoreContext.Provider value={contextValue}>{children}</StoreContext.Provider>;
 };

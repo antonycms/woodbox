@@ -5,6 +5,7 @@ import {
   getModule as getModuleSavedConnections,
 } from './modules/saved_connections';
 import { initialValue as scripts_meta, getModule as getModuleScripts } from './modules/scripts';
+import { initialValue as snippets, getModule as getModuleSnippets } from './modules/snippets';
 import {
   parseDbeaverExport,
   toStoredDbeaverConnection,
@@ -18,6 +19,7 @@ const store = new Store<Record<string, unknown>>({
     projects,
     saved_connections,
     scripts_meta,
+    snippets,
     window_state: {
       type: ['object', 'null'],
       default: null,
@@ -53,6 +55,13 @@ export const {
   getContent: getScriptContent,
   patch: patchScript,
 } = getModuleScripts(store);
+
+export const {
+  add: addSnippet,
+  get: getSnippets,
+  remove: removeSnippet,
+  edit: editSnippet,
+} = getModuleSnippets(store);
 
 const getStoredProjects = () => (store.get('projects') as IProject[] | undefined) ?? [];
 const getStoredConnections = () =>

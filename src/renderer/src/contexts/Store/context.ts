@@ -10,6 +10,17 @@ export interface IScript {
   updated_at: string;
 }
 
+export interface ISnippet {
+  id: string;
+  name: string;
+  scope?: string;
+  prefix: string | string[];
+  body: string | string[];
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface IProjectCreate {
   description: string;
 }
@@ -246,6 +257,11 @@ export interface IStoreContext {
   editScript(id: string, data: Partial<IScript>): Promise<void>;
   removeScript(id: string): Promise<void>;
   getScriptContent(id: string): Promise<string>;
+
+  snippets: ISnippet[];
+  addSnippet(data: Omit<ISnippet, 'id'>): Promise<ISnippet>;
+  editSnippet(id: string, data: Omit<ISnippet, 'id'>): Promise<void>;
+  removeSnippet(id: string): Promise<void>;
 
   connectionsGroupPerProject: IConnectionsGroupPerProject[];
 

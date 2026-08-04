@@ -1,5 +1,6 @@
 /* eslint-disable prefer-const */
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
+import { getSnippetBodyText, getSnippetPrefixes } from '@renderer/utils/snippets';
 import { editor, languages } from './monaco';
 import { language as sqlLanguage } from 'monaco-editor/languages/definitions/sql/sql';
 
@@ -36,6 +37,7 @@ export interface IDefineSQlAutocompleteParams {
   tablesUsed?: { name: string; schema?: string; alias?: string }[];
   columns?: { name: string; table?: string; schema?: string }[];
   functions?: { name: string; schema?: string }[];
+  snippets?: ISqlSnippetSuggestion[];
 }
 
 const triggerCharacters = [' ', '.', '=', '>', '<', ','];
@@ -94,8 +96,14 @@ const ensureSqlAutocompleteProvider = () => {
     triggerCharacters,
     provideCompletionItems: (model, position) => {
       const params = autocompleteParamsByModelUri.get(model.uri.toString()) || {};
-      const { schemas, columns = [], functions = [], tablesAvailable = [], tablesUsed = [] } =
-        params;
+      const {
+        schemas,
+        columns = [],
+        functions = [],
+        snippets = [],
+        tablesAvailable = [],
+        tablesUsed = [],
+      } = params;
       const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
       const functionsWords = functions.map(({ name }) =>
         makeItem('Função', languages.CompletionItemKind.Function, 3)(name),
@@ -243,7 +251,22 @@ const ensureSqlAutocompleteProvider = () => {
         endColumn,
       };
 
-      const suggestions = availableWords.map((item) => ({ ...item, range }));
+      const snippetsSuggestions = snippets.flatMap((snippet) =>
+        getSnippetPrefixes(snippet.prefix).map((prefix) => ({
+          label: prefix,
+          detail: snippet.name,
+          documentation: snippet.description || snippet.name,
+          insertText: getSnippetBodyText(snippet.body),
+          insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          kind: languages.CompletionItemKind.Snippet,
+          sortText: '0',
+          range,
+        })),
+      );
+      const suggestions = [
+        ...snippetsSuggestions,
+        ...availableWords.map((item) => ({ ...item, range })),
+      ];
 
       return { suggestions };
     },
@@ -283,4 +306,11 @@ interface IItem {
   insertText: string;
   kind: languages.CompletionItemKind;
   sortText: string;
+}
+
+interface ISqlSnippetSuggestion {
+  name: string;
+  prefix: string | string[];
+  body: string | string[];
+  description?: string;
 }

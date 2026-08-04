@@ -32,6 +32,17 @@ declare global {
     updated_at: string;
   }
 
+  export interface ISnippet {
+    id: string;
+    name: string;
+    scope?: string;
+    prefix: string | string[];
+    body: string | string[];
+    description?: string;
+    created_at: string;
+    updated_at: string;
+  }
+
   export interface IProject {
     id: string;
     description: string;

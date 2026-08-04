@@ -18,6 +18,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
+import { isSnippetAvailableForDialect } from '@renderer/utils/snippets';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { arrayIsEquals } from '@renderer/utils/array';
 import { executePromisesBatch } from '@renderer/utils/promise';
@@ -66,6 +67,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     getTableReferences,
     editScript,
     getScriptContent,
+    snippets,
   } = useStoreContext();
 
   const { activeTheme } = useThemeContext();
@@ -832,9 +834,12 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   }, []);
 
   const autocomplete = React.useMemo<IDefineSQlAutocompleteParams>(() => {
+    const snippetsAvailable = snippets.filter((snippet) =>
+      isSnippetAvailableForDialect(snippet, currentConnection?.dialect),
+    );
     const connectionInfo = connectionsInfo.get(id_connection);
 
-    if (!connectionInfo) return;
+    if (!connectionInfo) return { snippets: snippetsAvailable };
 
     const schemas = connectionInfo.schemas || [];
     const tables = connectionInfo.tables || [];
@@ -868,8 +873,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       tablesUsed,
       columns,
       functions: functionsAvailable,
+      snippets: snippetsAvailable,
     };
-  }, [connectionsInfo, currentQueryTablesInfo, id_connection, tableColumns]);
+  }, [
+    connectionsInfo,
+    currentConnection?.dialect,
+    currentQueryTablesInfo,
+    id_connection,
+    snippets,
+    tableColumns,
+  ]);
 
   const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
     () => [
