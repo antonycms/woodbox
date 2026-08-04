@@ -95,6 +95,7 @@ src/
 ### UI e estilo
 
 - Preserve a identidade atual: interface escura, focada, técnica, com destaque neon/suave para ações e estados.
+- Textos não interativos devem desabilitar seleção: use `userSelect={false}` no componente `Text`; se não usar `Text`, aplique via CSS.
 - Antes de criar novas cores, consulte `src/renderer/src/styles/theme/default.ts`.
 - Prefira tokens do tema atual (`__colors`) e variáveis CSS geradas pelo `ThemeProvider`.
 - Não hardcode cores repetidas quando já houver valor equivalente no tema.
@@ -104,6 +105,7 @@ src/
 ### Estado, eventos e feedback
 
 - Reutilize contexts existentes: `Store`, `Theme`, `Toast`, `AppTab` e outros antes de criar estado global novo.
+- Todo texto visível ao usuário no renderer deve usar `useI18n` com chaves em `src/renderer/src/contexts/I18n`; não deixe labels, placeholders, tooltips, títulos de modal ou toasts hardcoded.
 - Use hooks existentes como `useForm`, `useStorage`, `useDebounce`, `useResize` e `useLatestFunc` quando aplicável.
 - Para mensagens ao usuário, use o padrão de Toast existente.
 - Mensagens de erro e confirmação devem ser claras e em português brasileiro.
