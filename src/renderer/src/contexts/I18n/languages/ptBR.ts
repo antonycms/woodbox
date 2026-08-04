@@ -491,5 +491,5 @@ export const ptBR: Record<TranslationKey, string> = {
   'snippet.empty': 'Nenhum snippet encontrado.',
   'snippet.global': 'Global',
   'snippet.globalAll': 'Global (todos)',
-  'snippet.bodyHelp': 'Corpo do snippet. Use $1, $2, $0 e placeholders.',
+  'snippet.bodyHelp': 'Corpo do snippet',
 };

@@ -158,6 +158,8 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
           {t('snippet.bodyHelp')}
         </Text>
 
+        <Divider size={2} />
+
         <div className={styles.editorContainer}>
           <Editor
             ref={editorRef}

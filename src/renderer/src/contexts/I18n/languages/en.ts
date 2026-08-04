@@ -487,7 +487,7 @@ export const en = {
   'snippet.empty': 'No snippets found.',
   'snippet.global': 'Global',
   'snippet.globalAll': 'Global (all)',
-  'snippet.bodyHelp': 'Snippet body. Use $1, $2, $0 and placeholders.',
+  'snippet.bodyHelp': 'Snippet body',
 } as const;
 
 export type TranslationKey = keyof typeof en;
