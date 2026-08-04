@@ -26,6 +26,7 @@ interface SideBar<Colors> {
   fieldColor?: Colors;
   fieldPlaceholderColor?: Colors;
   fieldBackgroundColor?: Colors;
+  cardBackgroundColor?: Colors;
   fieldLabelColor?: Colors;
   menuBar?: MenuBar<Colors>;
   borderColor?: Colors;

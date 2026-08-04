@@ -56,6 +56,7 @@ const defaultTheme: ITheme<Color> = {
     fieldColor: '__colors.white',
     fieldPlaceholderColor: '__colors.white',
     fieldBackgroundColor: '__colors.darkLightDeep',
+    cardBackgroundColor: '__colors.darkLightDeep',
     fieldLabelColor: '__colors.white',
     borderColor: '__colors.border',
     selectedBackgroundColor: '__colors.sideBarSelectedBackground',
