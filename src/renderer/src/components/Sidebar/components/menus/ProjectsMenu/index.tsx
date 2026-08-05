@@ -961,14 +961,22 @@ const ProjectsMenu = () => {
       <Divider />
 
       <div className={styles.containerTreeViewProjects}>
-        <TreeView
-          ref={treeViewRef}
-          onContextMenu={onContextMenuTreeView}
-          onSwitchItem={handleOpemItemTreeView}
-          onDoubleClick={handleDoubleClickItemThreeView}
-          onClick={handleClickItemThreeView}
-          items={treeViewItems}
-        />
+        {!treeViewItems.length && (
+          <Text small color={colors.color} userSelect={false}>
+            {t('project.empty')}
+          </Text>
+        )}
+
+        {!!treeViewItems.length && (
+          <TreeView
+            ref={treeViewRef}
+            onContextMenu={onContextMenuTreeView}
+            onSwitchItem={handleOpemItemTreeView}
+            onDoubleClick={handleDoubleClickItemThreeView}
+            onClick={handleClickItemThreeView}
+            items={treeViewItems}
+          />
+        )}
 
         <ContextMenu
           position={contextMenuPosition}
