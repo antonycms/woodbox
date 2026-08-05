@@ -145,13 +145,17 @@ const TabsBar = (props: ITabsBarProps) => {
   const classesTabBar = classes(
     styles.tabBar,
     noHasContent && styles.noContent,
-    borderTop && styles.borderTop,
-    borderBottom && styles.borderBottom,
     borderLeft && styles.borderLeft,
     borderRight && styles.borderRight,
     vertical && styles.vertical,
     reverse && styles.reverse,
   );
+
+  const classesOutsideBar = classes(
+    styles.outsideBar,
+    borderTop && styles.borderTop,
+    borderBottom && styles.borderBottom,
+  )
 
   const styleOutsideContainer = React.useMemo(() => {
     const cssProperties = toCssProperties({
@@ -331,7 +335,7 @@ const TabsBar = (props: ITabsBarProps) => {
   return (
     <div
       ref={scrollContainerRef}
-      className={styles.outsideBar}
+      className={classesOutsideBar}
       data-tab-bar-id={idTabBar}
       style={styleOutsideContainer}
     >

@@ -53,13 +53,13 @@
   border: 0;
 }
 
-.tabBar.borderBottom {
+/* .tabBar.borderBottom {
   border-bottom: var(--borderTab);
 }
 
 .tabBar.borderTop {
   border-top: var(--borderTab);
-}
+} */
 
 .tabBar.borderLeft {
   border-left: var(--borderTab);
