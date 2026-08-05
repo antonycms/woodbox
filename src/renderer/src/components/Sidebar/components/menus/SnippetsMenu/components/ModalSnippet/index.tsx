@@ -99,7 +99,7 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
   return (
     <Modal
       title={snippet ? t('snippet.edit') : t('snippet.new')}
-      width="720px"
+      width="800px"
       show={show}
       closeOutside
       onClose={close}
@@ -130,7 +130,7 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
           />
 
           <Input
-            md={12}
+            md={6}
             label={t('field.description')}
             value={form.description}
             onChange={(event) => updateField('description', event.target.value)}
@@ -140,7 +140,7 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
           />
 
           <AutocompleteMulti
-            md={12}
+            md={6}
             label={t('field.dialects')}
             value={form.scopes}
             data={dialectOptions}
