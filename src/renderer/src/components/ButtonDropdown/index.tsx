@@ -12,8 +12,10 @@ export interface IButtonDropdownProps extends Omit<IButtonProps, 'onClick'> {
   options: IButtonDropdownOption[];
   onSelect?(option: IButtonDropdownOption): void;
   direction?: 'up' | 'down';
+  align?: 'left' | 'right';
   dropdownBackground?: string;
   dropdownColor?: string;
+  dropdownHoverBackground?: string;
 }
 
 export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
@@ -21,8 +23,10 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
     options,
     onSelect,
     direction = 'down',
+    align = 'left',
     dropdownBackground = props.backgroundColor,
     dropdownColor = props.color,
+    dropdownHoverBackground,
     ...buttonProps
   } = props;
   const {
@@ -54,11 +58,14 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
       <Button {...buttonProps} onClick={() => setOpen((prev) => !prev)} />
       {open && (
         <div
-          className={`${styles.dropdown} ${direction === 'up' ? styles.up : styles.down}`}
+          className={`${styles.dropdown} ${direction === 'up' ? styles.up : styles.down} ${
+            align === 'right' ? styles.right : styles.left
+          }`}
           style={
             {
               backgroundColor: dropdownBackground,
-              '--dropdown-option-hover-background-color': __colors.darkLightDeep,
+              '--dropdown-option-hover-background-color':
+                dropdownHoverBackground || __colors.darkLightDeep,
             } as React.CSSProperties
           }
         >
