@@ -483,7 +483,7 @@ const ProjectsMenu = () => {
             await treeViewRef.current?.switch(contextMenuItemSelected?.id, false);
           },
         },
-        {
+        checkHasConnection(contextMenuItemSelected?.id) && {
           text: t('context.reload'),
           onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id, true),
         },
