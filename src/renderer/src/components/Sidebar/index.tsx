@@ -71,7 +71,7 @@ export const Sidebar = React.memo(() => {
       />
 
       <ResizableContainer
-        minWidth={160}
+        minWidth={200}
         maxWidth={800}
         width={width}
         style={{ display: selectedMenu ? 'flex' : 'none' }}
