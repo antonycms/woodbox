@@ -25,3 +25,10 @@
   cursor: pointer !important;
   text-decoration: underline;
 }
+
+.overflowWidgetsPortal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 120;
+}

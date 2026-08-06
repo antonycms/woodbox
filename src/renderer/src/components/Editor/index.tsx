@@ -143,6 +143,15 @@ const Editor = ({
   };
 
   const initEditor = () => {
+    const overflowWidgetsPortal = props.overflowWidgetsPortal
+      ? document.createElement('div')
+      : undefined;
+
+    if (overflowWidgetsPortal) {
+      overflowWidgetsPortal.classList.add('monaco-editor', styles.overflowWidgetsPortal);
+      document.body.appendChild(overflowWidgetsPortal);
+    }
+
     const currentEditor = monaco.editor.create(
       containerRef.current,
       {
@@ -154,6 +163,7 @@ const Editor = ({
         readOnly: props.readonly,
         minimap: { enabled: !props.hidePreview },
         fixedOverflowWidgets: true,
+        overflowWidgetsDomNode: overflowWidgetsPortal,
       },
       {
         contextMenuService: {
@@ -263,6 +273,7 @@ const Editor = ({
     currentEditor.onDidDispose(() => {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', clearCtrlClickHover);
+      overflowWidgetsPortal?.remove();
     });
 
     currentEditor.onMouseUp((e) => {
@@ -435,6 +446,7 @@ export interface IEditorProps {
   readonly?: boolean;
   hidePreview?: boolean;
   autoFocus?: boolean;
+  overflowWidgetsPortal?: boolean;
 }
 
 export interface IScroll {

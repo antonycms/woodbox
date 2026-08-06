@@ -164,6 +164,7 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
           <Editor
             ref={editorRef}
             hidePreview
+            overflowWidgetsPortal
             value={form.body}
             onChange={(value) => updateField('body', value)}
           />
