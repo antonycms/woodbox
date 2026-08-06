@@ -481,6 +481,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'snippet.edit': 'Editar snippet',
   'snippet.add': 'Adicionar snippet',
   'snippet.import': 'Importar snippets',
+  'snippet.exportAll': 'Exportar todos os snippets',
+  'snippet.options': 'Opções de snippets',
   'snippet.imported': 'Snippets importados',
   'snippet.importedDescription': '{{count}} snippet(s) adicionado(s).',
   'snippet.importFailed': 'Falha ao importar snippets',

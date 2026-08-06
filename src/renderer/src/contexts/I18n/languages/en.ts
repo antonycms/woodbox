@@ -477,6 +477,8 @@ export const en = {
   'snippet.edit': 'Edit snippet',
   'snippet.add': 'Add snippet',
   'snippet.import': 'Import snippets',
+  'snippet.exportAll': 'Export all snippets',
+  'snippet.options': 'Snippet options',
   'snippet.imported': 'Snippets imported',
   'snippet.importedDescription': '{{count}} snippet(s) added.',
   'snippet.importFailed': 'Failed to import snippets',

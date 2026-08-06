@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@renderer/components/Button';
+import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { Card } from '@renderer/components/Card';
 import { Chip } from '@renderer/components/Chip';
 import { Divider } from '@renderer/components/Divider';
@@ -12,8 +13,9 @@ import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext, type ISnippet } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { AddIcon, ImportIcon, RemoveIcon } from '@renderer/styles/icons';
+import { AddIcon, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import {
+  downloadSnippetsFile,
   getSnippetPrefixes,
   getSnippetScopes,
   parseSnippetsFileContent,
@@ -85,14 +87,17 @@ const SnippetsMenu = () => {
 
   const handleImport = React.useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
+      const files = Array.from(event.target.files || []);
       event.target.value = '';
 
-      if (!file) return;
+      if (!files.length) return;
 
       try {
-        const content = await readFileText(file);
-        const importedSnippets = parseSnippetsFileContent(content);
+        const importedSnippets = (
+          await Promise.all(
+            files.map(async (file) => parseSnippetsFileContent(await readFileText(file))),
+          )
+        ).flat();
         const now = new Date().toISOString();
 
         await Promise.all(
@@ -117,6 +122,14 @@ const SnippetsMenu = () => {
     [addSnippet, showToast, t],
   );
 
+  const handleExportAll = React.useCallback(() => {
+    downloadSnippetsFile(snippets);
+  }, [snippets]);
+
+  const openImportFiles = React.useCallback(() => {
+    inputFileRef.current?.click();
+  }, []);
+
   const confirmRemoveSnippet = React.useCallback(async () => {
     if (!snippetToRemove) return;
 
@@ -135,6 +148,22 @@ const SnippetsMenu = () => {
       setEditingSnippet(snippet);
     },
     [],
+  );
+
+  const optionsMenu = React.useMemo(
+    () => [
+      { id: 'import', label: t('snippet.import') },
+      { id: 'export-all', label: t('snippet.exportAll') },
+    ],
+    [t],
+  );
+
+  const handleSelectOption = React.useCallback(
+    (option: IButtonDropdownOption) => {
+      if (option.id === 'import') openImportFiles();
+      if (option.id === 'export-all') handleExportAll();
+    },
+    [handleExportAll, openImportFiles],
   );
 
   return (
@@ -191,25 +220,31 @@ const SnippetsMenu = () => {
         <Button
           smallIcon
           text
-          title={t('snippet.import')}
-          color={colors.color}
-          icon={() => <ImportIcon size={14} />}
-          onClick={() => inputFileRef.current?.click()}
-        />
-
-        <Button
-          smallIcon
-          text
           title={t('snippet.add')}
           color={colors.color}
           icon={() => <AddIcon size={12} />}
           onClick={openNewSnippet}
         />
 
+        <ButtonDropdown
+          smallIcon
+          text
+          title={t('snippet.options')}
+          color={colors.color}
+          icon={() => <OptionsIcon size={18} />}
+          options={optionsMenu}
+          onSelect={handleSelectOption}
+          align="right"
+          dropdownBackground={colors.cardBackgroundColor || colors.fieldBackgroundColor}
+          dropdownColor={colors.color}
+          dropdownHoverBackground={colors.selectedBackgroundColor}
+        />
+
         <input
           ref={inputFileRef}
           type="file"
           accept="application/json,.json,.code-snippets"
+          multiple
           className={styles.hiddenInput}
           onChange={handleImport}
         />

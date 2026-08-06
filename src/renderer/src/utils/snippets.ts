@@ -53,11 +53,37 @@ export const toSnippetExportObject = (
   };
 };
 
-export const downloadSnippetFile = (snippet: ISnippet) => {
-  const content = JSON.stringify(toSnippetExportObject(snippet), null, 2);
+export const toSnippetsExportObject = (
+  snippets: Pick<ISnippet, 'name' | 'scope' | 'prefix' | 'body' | 'description'>[],
+) => {
+  return snippets.reduce<Record<string, VsCodeSnippetPayload>>((result, snippet) => {
+    let name = snippet.name;
+    let counter = 2;
+
+    while (result[name]) {
+      name = `${snippet.name} ${counter}`;
+      counter++;
+    }
+
+    result[name] = toSnippetExportObject(snippet)[snippet.name];
+
+    return result;
+  }, {});
+};
+
+const downloadSnippetContent = (content: string, filename: string) => {
   const blob = new Blob([content], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
+
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+export const downloadSnippetFile = (snippet: ISnippet) => {
+  const content = JSON.stringify(toSnippetExportObject(snippet), null, 2);
   const filename = snippet.name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -65,10 +91,13 @@ export const downloadSnippetFile = (snippet: ISnippet) => {
     .replace(/^-+|-+$/g, '')
     .toLowerCase();
 
-  anchor.href = url;
-  anchor.download = `${filename || 'snippet'}.code-snippets`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  downloadSnippetContent(content, `${filename || 'snippet'}.code-snippets`);
+};
+
+export const downloadSnippetsFile = (snippets: ISnippet[]) => {
+  const content = JSON.stringify(toSnippetsExportObject(snippets), null, 2);
+
+  downloadSnippetContent(content, 'snippets.code-snippets');
 };
 
 const stripJsonComments = (content: string) => {
