@@ -6,8 +6,6 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.menu.general.description': 'Preferências do app',
   'settings.menu.customization.label': 'Personalização',
   'settings.menu.customization.description': 'Temas e cores',
-  'settings.menu.import.label': 'Importação',
-  'settings.menu.import.description': 'Origens externas',
 
   'settings.general.title': 'Geral',
   'settings.language.activeLanguage': 'Idioma',
@@ -450,6 +448,9 @@ export const ptBR: Record<TranslationKey, string> = {
   'sidebar.projects': 'Projetos',
   'sidebar.snippets': 'Snippets',
   'project.empty': 'Nenhum projeto encontrado.',
+  'project.add': 'Adicionar projeto',
+  'project.import': 'Importar projetos',
+  'project.options': 'Opções de projetos',
   'common.test': 'Testar',
   'query.executionErrorTitle': 'Erro ao executar a query',
   'query.executedAt': 'Executado em {{date}}',

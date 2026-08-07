@@ -4,8 +4,6 @@ export const en = {
   'settings.menu.general.description': 'App preferences',
   'settings.menu.customization.label': 'Customization',
   'settings.menu.customization.description': 'Themes and colors',
-  'settings.menu.import.label': 'Import',
-  'settings.menu.import.description': 'External sources',
 
   'settings.general.title': 'General',
   'settings.language.activeLanguage': 'Language',
@@ -446,6 +444,9 @@ export const en = {
   'sidebar.projects': 'Projects',
   'sidebar.snippets': 'Snippets',
   'project.empty': 'No projects found.',
+  'project.add': 'Add project',
+  'project.import': 'Import projects',
+  'project.options': 'Project options',
   'common.test': 'Test',
   'query.executionErrorTitle': 'Error executing query',
   'query.executedAt': 'Executed at {{date}}',

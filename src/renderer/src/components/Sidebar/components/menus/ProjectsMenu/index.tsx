@@ -3,9 +3,10 @@ import { Divider } from '@renderer/components/Divider';
 import { Input } from '@renderer/components/Input';
 import { Text } from '@renderer/components/Text';
 import { Button } from '@renderer/components/Button';
+import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import { AddIcon, FileSqlIcon } from '@renderer/styles/icons';
+import { FileSqlIcon, OptionsIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
   IContextMenuOption,
@@ -37,6 +38,7 @@ import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { ModalImportProjects } from './components/ModalImportProjects';
 import styles from './styles.module.css';
 
 type SidebarRevealTarget = {
@@ -160,6 +162,7 @@ const ProjectsMenu = () => {
 
   const [isNewProject, setIsNewProject] = React.useState(false);
   const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
+  const [showImportProjects, setShowImportProjects] = React.useState(false);
 
   const [isNewConnection, setIsNewConnection] = React.useState(false);
   const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
@@ -837,6 +840,26 @@ const ProjectsMenu = () => {
     setIsNewProject(true);
   }, []);
 
+  const closeImportProjectsModal = React.useCallback(() => {
+    setShowImportProjects(false);
+  }, []);
+
+  const projectOptions = React.useMemo(
+    () => [
+      { id: 'add', label: t('project.add') },
+      { id: 'import-projects', label: t('project.import') },
+    ],
+    [t],
+  );
+
+  const handleSelectProjectOption = React.useCallback(
+    (option: IButtonDropdownOption) => {
+      if (option.id === 'add') openNewProject();
+      if (option.id === 'import-projects') setShowImportProjects(true);
+    },
+    [openNewProject],
+  );
+
   const toggleWholeWordFilter = React.useCallback(() => {
     setIsWholeWordFilter((prevState) => !prevState);
   }, []);
@@ -908,6 +931,8 @@ const ProjectsMenu = () => {
         onClose={closeImportTableModal}
       />
 
+      <ModalImportProjects show={showImportProjects} onClose={closeImportProjectsModal} />
+
       <Row>
         <Text bold color={colors.color} userSelect={false}>
           {t('sidebar.projects')}
@@ -926,13 +951,18 @@ const ProjectsMenu = () => {
           />
         )}
 
-        <Button
+        <ButtonDropdown
           smallIcon
           text
-          title="Adicionar Novo Projeto"
+          title={t('project.options')}
           color={colors.color}
-          icon={() => <AddIcon size={12} />}
-          onClick={openNewProject}
+          icon={() => <OptionsIcon size={18} />}
+          options={projectOptions}
+          onSelect={handleSelectProjectOption}
+          align="right"
+          dropdownBackground={colors.cardBackgroundColor || colors.fieldBackgroundColor}
+          dropdownColor={colors.color}
+          dropdownHoverBackground={colors.selectedBackgroundColor}
         />
       </Row>
 

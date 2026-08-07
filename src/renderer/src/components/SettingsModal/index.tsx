@@ -5,10 +5,9 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes } from '@renderer/styles/theme';
 import { SettingsCustomizationPanel } from './components/SettingsCustomizationPanel';
 import { SettingsGeneralPanel } from './components/SettingsGeneralPanel';
-import { SettingsImportPanel } from './components/SettingsImportPanel';
 import styles from './styles.module.css';
 
-type SettingsMenu = 'general' | 'customization' | 'import';
+type SettingsMenu = 'general' | 'customization';
 
 const appVersion = typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__;
 
@@ -23,11 +22,6 @@ const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: T
       id: 'customization',
       labelKey: 'settings.menu.customization.label',
       descriptionKey: 'settings.menu.customization.description',
-    },
-    {
-      id: 'import',
-      labelKey: 'settings.menu.import.label',
-      descriptionKey: 'settings.menu.import.description',
     },
   ];
 
@@ -82,7 +76,6 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
 
         <section className={styles.content}>
           {activeMenu === 'general' && <SettingsGeneralPanel />}
-          {activeMenu === 'import' && <SettingsImportPanel />}
           {activeMenu === 'customization' && <SettingsCustomizationPanel />}
         </section>
       </div>

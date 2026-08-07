@@ -3,6 +3,7 @@ import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
 import { Input } from '@renderer/components/Input';
+import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
@@ -23,7 +24,8 @@ const originOptions: { label: string; value: ImportConnectionsSource }[] = [
 
 const makeSelectionKey = (sourceName: string, sourceId: string) => `${sourceName}:${sourceId}`;
 
-export const SettingsImportPanel = React.memo(() => {
+export const ModalImportProjects = React.memo((props: IModalImportProjectsProps) => {
+  const { show, onClose } = props;
   const { previewImportConnectionsFromSource, importConnectionsFromSource } = useStoreContext();
   const { t } = useI18n();
   const { showToast } = useToast();
@@ -183,13 +185,13 @@ export const SettingsImportPanel = React.memo(() => {
   ]);
 
   return (
-    <>
-      <Text bold color={colors.color} userSelect={false}>
-        {t('settings.import.title')}
-      </Text>
-
-      <Divider size={8} />
-
+    <Modal
+      title={t('settings.import.title')}
+      width="720px"
+      show={show}
+      closeOutside
+      onClose={onClose}
+    >
       <Row>
         <Autocomplete
           required
@@ -343,8 +345,9 @@ export const SettingsImportPanel = React.memo(() => {
 
       <Row>
         <Button
-          xs={12}
+          xs={6}
           sm={4}
+          md={3}
           onClick={handleSelectFile}
           loading={loadingPreview}
           color={colors.testButtonColor}
@@ -356,8 +359,20 @@ export const SettingsImportPanel = React.memo(() => {
         <Spacer />
 
         <Button
-          xs={12}
+          xs={6}
           sm={4}
+          md={3}
+          onClick={onClose}
+          color={colors.cancelButtonColor}
+          backgroundColor={colors.cancelButtonBackgroundColor}
+        >
+          {t('common.cancel')}
+        </Button>
+
+        <Button
+          xs={6}
+          sm={4}
+          md={3}
           onClick={handleConfirmImport}
           loading={loadingImport}
           disabled={!selectedConnectionsCount}
@@ -367,8 +382,13 @@ export const SettingsImportPanel = React.memo(() => {
           {t('settings.import.confirmImport')}
         </Button>
       </Row>
-    </>
+    </Modal>
   );
 });
 
-SettingsImportPanel.displayName = 'SettingsImportPanel';
+ModalImportProjects.displayName = 'ModalImportProjects';
+
+export interface IModalImportProjectsProps {
+  show?: boolean;
+  onClose?: () => void;
+}
