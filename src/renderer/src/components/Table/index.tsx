@@ -1305,6 +1305,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
       if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
 
+      if (ev.key === 'Escape' && searchState.open && !cellEditingKeyRef.current) {
+        ev.preventDefault();
+        handleCloseTableSearch();
+        return;
+      }
+
       const isFind = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'f';
       if (isFind) {
         ev.preventDefault();
@@ -1424,9 +1430,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, [
     analysisMode,
     enterAnalysisMode,
+    handleCloseTableSearch,
     handleOpenTableSearch,
     handleSelectAllCells,
     scrollCellIntoView,
+    searchState.open,
   ]);
 
   React.useEffect(() => {
