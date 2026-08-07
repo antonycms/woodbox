@@ -112,7 +112,8 @@
 }
 
 .table_row.selected .table_row_number {
-  background-color: var(--selectedBackgroundColor) !important;
+  background: linear-gradient(var(--selectedBackgroundColor), var(--selectedBackgroundColor)),
+    var(--backgroundColorHeader) !important;
 }
 
 .header.table_row .table_column {
