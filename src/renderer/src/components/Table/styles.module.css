@@ -282,7 +282,7 @@ input.analysis_value {
   background: transparent;
   color: var(--colorHeader);
   font-size: 13px;
-  outline: transparent;
+  outline: transparent !important;
 }
 
 .table_search_input:focus {
