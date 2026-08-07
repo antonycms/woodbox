@@ -1,5 +1,6 @@
 import React from 'react';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { useI18n } from '@renderer/contexts/I18n';
 import ArrowDownIcon from '@renderer/assets/icons/arrow-down.svg?react';
 import ChevronDownIcon from '@renderer/assets/icons/chevron-down-compact.svg?react';
 import ChevronRightIcon from '@renderer/assets/icons/chevron-right-compact.svg?react';
@@ -57,6 +58,7 @@ const TableSearchBar = ({
   onPrevious,
   onClose,
 }: ITableSearchBarProps) => {
+  const { t } = useI18n();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const counter = total ? `${activeIndex + 1} de ${total}` : '0 de 0';
   const barClassName = replaceOpen
@@ -122,7 +124,7 @@ const TableSearchBar = ({
         <button
           type="button"
           className={styles.table_search_button}
-          title={replaceOpen ? 'Ocultar substituir' : 'Mostrar substituir'}
+          title={replaceOpen ? t('tooltip.hideReplace') : t('tooltip.showReplace')}
           onClick={handleToggleReplace}
         >
           {replaceOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
@@ -131,14 +133,14 @@ const TableSearchBar = ({
           ref={inputRef}
           className={styles.table_search_input}
           value={query}
-          placeholder="Buscar na tabela"
+          placeholder={t('placeholder.searchTable')}
           spellCheck={false}
           onChange={handleChange}
         />
         <button
           type="button"
           className={matchCaseClassName}
-          title="Diferenciar maiúsculas/minúsculas"
+          title={t('tooltip.matchCase')}
           onClick={onToggleMatchCase}
         >
           <CaseSensitiveIcon />
@@ -146,7 +148,7 @@ const TableSearchBar = ({
         <button
           type="button"
           className={wholeWordClassName}
-          title="Buscar palavra inteira"
+          title={t('tooltip.wholeWord')}
           onClick={onToggleWholeWord}
         >
           <WholeWordIcon />
@@ -156,7 +158,7 @@ const TableSearchBar = ({
           type="button"
           className={styles.table_search_button}
           disabled={!total}
-          title="Ocorrência anterior"
+          title={t('tooltip.previousOccurrence')}
           onClick={onPrevious}
         >
           <ArrowUpIcon />
@@ -165,7 +167,7 @@ const TableSearchBar = ({
           type="button"
           className={styles.table_search_button}
           disabled={!total}
-          title="Próxima ocorrência"
+          title={t('tooltip.nextOccurrence')}
           onClick={onNext}
         >
           <ArrowDownIcon />
@@ -173,7 +175,7 @@ const TableSearchBar = ({
         <button
           type="button"
           className={styles.table_search_button}
-          title="Fechar busca"
+          title={t('tooltip.closeSearch')}
           onClick={onClose}
         >
           <CloseIcon />
@@ -186,7 +188,7 @@ const TableSearchBar = ({
           <input
             className={styles.table_search_input}
             value={replace}
-            placeholder="Substituir"
+            placeholder={t('placeholder.replace')}
             spellCheck={false}
             onChange={handleReplaceChange}
           />
@@ -194,7 +196,7 @@ const TableSearchBar = ({
             type="button"
             className={styles.table_search_replace_button}
             disabled={!canReplaceCurrent}
-            title="Substituir ocorrência atual"
+            title={t('tooltip.replaceCurrentOccurrence')}
             onClick={onReplaceCurrent}
           >
             <ReplaceIcon />
@@ -203,7 +205,7 @@ const TableSearchBar = ({
             type="button"
             className={styles.table_search_replace_button}
             disabled={!canReplaceAll}
-            title="Substituir todas as ocorrências editáveis"
+            title={t('tooltip.replaceAllEditableOccurrences')}
             onClick={onReplaceAll}
           >
             <ReplaceAllIcon />
