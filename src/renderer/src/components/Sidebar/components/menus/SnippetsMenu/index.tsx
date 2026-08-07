@@ -13,7 +13,7 @@ import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext, type ISnippet } from '@renderer/contexts/Store';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
-import { AddIcon, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
+import { OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import {
   downloadSnippetsFile,
   getSnippetPrefixes,
@@ -152,6 +152,7 @@ const SnippetsMenu = () => {
 
   const optionsMenu = React.useMemo(
     () => [
+      { id: 'add', label: t('snippet.add') },
       { id: 'import', label: t('snippet.import') },
       { id: 'export-all', label: t('snippet.exportAll') },
     ],
@@ -160,10 +161,11 @@ const SnippetsMenu = () => {
 
   const handleSelectOption = React.useCallback(
     (option: IButtonDropdownOption) => {
+      if (option.id === 'add') openNewSnippet();
       if (option.id === 'import') openImportFiles();
       if (option.id === 'export-all') handleExportAll();
     },
-    [handleExportAll, openImportFiles],
+    [handleExportAll, openImportFiles, openNewSnippet],
   );
 
   return (
@@ -216,15 +218,6 @@ const SnippetsMenu = () => {
         </Text>
 
         <Spacer />
-
-        <Button
-          smallIcon
-          text
-          title={t('snippet.add')}
-          color={colors.color}
-          icon={() => <AddIcon size={12} />}
-          onClick={openNewSnippet}
-        />
 
         <ButtonDropdown
           smallIcon
