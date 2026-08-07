@@ -84,6 +84,7 @@ export default function ColumnFilterInput({
   const historyTitleText = historyTitle ?? t('filterHistory.title');
   const historyEmptyLabelText = historyEmptyLabel ?? t('filterHistory.empty');
   const hasHistoryButton = !!historyItems;
+  const hasHistoryItems = !!historyItems?.length;
 
   const tokenInfo = React.useMemo(
     () => getTokenInfo(value, cursorPosition),
@@ -114,6 +115,26 @@ export default function ColumnFilterInput({
     setShowAll(false);
     setActiveIndex(-1);
   }, []);
+
+  const updateCursorPosition = React.useCallback((input: HTMLInputElement) => {
+    setCursorPosition(input.selectionStart ?? input.value.length);
+  }, []);
+
+  const openInputDropdown = React.useCallback(
+    (input: HTMLInputElement) => {
+      updateCursorPosition(input);
+
+      if (hasHistoryItems && !input.value.trim()) {
+        closeSuggestions();
+        setIsHistoryOpen(true);
+        return;
+      }
+
+      setIsHistoryOpen(false);
+      setIsOpen(true);
+    },
+    [closeSuggestions, hasHistoryItems, updateCursorPosition],
+  );
 
   const toggleHistory = React.useCallback(() => {
     if (disabled) return;
@@ -151,20 +172,18 @@ export default function ColumnFilterInput({
     [closeSuggestions, onChange, tokenInfo.end, tokenInfo.start, value],
   );
 
-  const updateCursorPosition = React.useCallback((input: HTMLInputElement) => {
-    setCursorPosition(input.selectionStart ?? input.value.length);
-  }, []);
-
   const handleChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
+      const nextValue = event.target.value;
+
       updateCursorPosition(event.target);
-      setIsHistoryOpen(false);
-      setIsOpen(true);
+      setIsHistoryOpen(hasHistoryItems && !nextValue.trim());
+      setIsOpen(!!nextValue.trim());
       setShowAll(false);
       setActiveIndex(-1);
-      onChange(event.target.value);
+      onChange(nextValue);
     },
-    [onChange, updateCursorPosition],
+    [hasHistoryItems, onChange, updateCursorPosition],
   );
 
   const handleKeyDown = React.useCallback(
@@ -176,6 +195,7 @@ export default function ColumnFilterInput({
         updateCursorPosition(event.currentTarget);
         setShowAll(true);
         setIsOpen(true);
+        setIsHistoryOpen(false);
         setActiveIndex(-1);
         return;
       }
@@ -274,16 +294,16 @@ export default function ColumnFilterInput({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onClick={(event) => {
-          updateCursorPosition(event.currentTarget);
-          setIsHistoryOpen(false);
+          openInputDropdown(event.currentTarget);
         }}
         onKeyUp={(event) => updateCursorPosition(event.currentTarget)}
         onFocus={(event) => {
-          updateCursorPosition(event.currentTarget);
-          setIsHistoryOpen(false);
-          setIsOpen(true);
+          openInputDropdown(event.currentTarget);
         }}
-        onBlur={closeSuggestions}
+        onBlur={() => {
+          closeSuggestions();
+          setIsHistoryOpen(false);
+        }}
         style={inputStyle}
         spellCheck={false}
       />
