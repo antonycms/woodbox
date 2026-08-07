@@ -33,6 +33,8 @@ type TableDragSelectionState = {
   hasMoved: boolean;
 };
 
+const TABLE_SEARCH_CLOSE_ANIMATION_MS = 120;
+
 export interface ITableContextMenuCellData<Row = any> {
   row: Row;
   column: IColumn<Row>;
@@ -197,6 +199,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
   const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
+  const [searchClosing, setSearchClosing] = React.useState(false);
   const [searchState, setSearchState] = React.useState<TableSearchState>({
     open: false,
     replaceOpen: false,
@@ -217,6 +220,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
   const dragSelectionRef = React.useRef<TableDragSelectionState | null>(null);
   const ignoreNextClickRef = React.useRef(false);
+  const searchCloseTimeoutRef = React.useRef<number | undefined>(undefined);
   const analysisArrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const [scroll, setScroll] = React.useState<TableScrollState>({ left: 0, top: 0 });
@@ -586,7 +590,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, []);
 
   const handleOpenTableSearch = React.useCallback(() => {
+    if (searchCloseTimeoutRef.current) {
+      window.clearTimeout(searchCloseTimeoutRef.current);
+      searchCloseTimeoutRef.current = undefined;
+    }
+
     updateSearchOverlayPosition();
+    setSearchClosing(false);
     setSearchState((prevState) => ({ ...prevState, open: true }));
 
     window.requestAnimationFrame(() => {
@@ -600,16 +610,26 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, [updateSearchOverlayPosition]);
 
   const handleCloseTableSearch = React.useCallback(() => {
-    setSearchState({
-      open: false,
-      replaceOpen: false,
-      query: '',
-      replace: '',
-      matchCase: false,
-      wholeWord: false,
-      activeIndex: 0,
-    });
+    if (searchCloseTimeoutRef.current) {
+      window.clearTimeout(searchCloseTimeoutRef.current);
+    }
+
+    setSearchClosing(true);
     refScrollContainer.current?.focus();
+
+    searchCloseTimeoutRef.current = window.setTimeout(() => {
+      setSearchState({
+        open: false,
+        replaceOpen: false,
+        query: '',
+        replace: '',
+        matchCase: false,
+        wholeWord: false,
+        activeIndex: 0,
+      });
+      setSearchClosing(false);
+      searchCloseTimeoutRef.current = undefined;
+    }, TABLE_SEARCH_CLOSE_ANIMATION_MS);
   }, []);
 
   const handleSearchQueryChange = React.useCallback((query: string) => {
@@ -1301,6 +1321,14 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, [handleEndCellDrag]);
 
   React.useEffect(() => {
+    return () => {
+      if (searchCloseTimeoutRef.current) {
+        window.clearTimeout(searchCloseTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
     const cb = (ev: KeyboardEvent) => {
       const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
       if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
@@ -1696,6 +1724,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           total={searchOccurrences.length}
           canReplaceCurrent={canReplaceCurrent}
           canReplaceAll={canReplaceAll}
+          closing={searchClosing}
           onQueryChange={handleSearchQueryChange}
           onReplaceChange={handleReplaceChange}
           onReplaceOpenChange={handleReplaceOpenChange}

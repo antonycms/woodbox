@@ -25,6 +25,7 @@ interface ITableSearchBarProps {
   total: number;
   canReplaceCurrent: boolean;
   canReplaceAll: boolean;
+  closing: boolean;
   onQueryChange(query: string): void;
   onReplaceChange(replace: string): void;
   onReplaceOpenChange(open: boolean): void;
@@ -47,6 +48,7 @@ const TableSearchBar = ({
   total,
   canReplaceCurrent,
   canReplaceAll,
+  closing,
   onQueryChange,
   onReplaceChange,
   onReplaceOpenChange,
@@ -61,9 +63,13 @@ const TableSearchBar = ({
   const { t } = useI18n();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const counter = total ? `${activeIndex + 1} de ${total}` : '0 de 0';
-  const barClassName = replaceOpen
-    ? `${styles.table_search_bar} ${styles.table_search_bar_expanded}`
-    : styles.table_search_bar;
+  const barClassName = [
+    styles.table_search_bar,
+    replaceOpen && styles.table_search_bar_expanded,
+    closing && styles.table_search_bar_closing,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const matchCaseClassName = matchCase
     ? `${styles.table_search_button} ${styles.table_search_toggle_active}`
     : styles.table_search_button;
