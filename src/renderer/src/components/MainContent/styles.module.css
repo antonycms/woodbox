@@ -15,7 +15,7 @@
 .splitPane {
   display: flex;
   position: relative;
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   flex-direction: column;
 }
@@ -45,4 +45,16 @@
 .splitPane.dropRight::after {
   display: block;
   right: 0;
+}
+
+.splitResizeHandle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  z-index: 20;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
 }
