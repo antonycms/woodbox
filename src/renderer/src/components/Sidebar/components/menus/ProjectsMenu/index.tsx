@@ -303,7 +303,13 @@ const ProjectsMenu = () => {
       const connectionIdSet = new Set(connectionIds);
       const tabsToRemove = tabs
         .filter((tab) => {
-          if (tab.data?.id_connection && connectionIdSet.has(tab.data.id_connection)) return true;
+          if (
+            tab.data &&
+            'id_connection' in tab.data &&
+            connectionIdSet.has(tab.data.id_connection)
+          ) {
+            return true;
+          }
 
           return connectionIds.some((connectionId) =>
             tab.id.startsWith(`new_table_${connectionId}_`),

@@ -37,6 +37,7 @@ export interface IAppTabGroup {
 
 export type IAppTabData =
   | { type: 'query-editor'; id_connection: string; id_script: string; name: string }
+  | { type: 'ai-chat'; id_chat: string }
   | {
       type: 'table-info';
       id_connection: string;

@@ -46,8 +46,9 @@ export const ModalDeleteSchema = React.memo(
               const { data } = tab;
 
               return (
-                data?.id_connection === idConnection &&
+                data &&
                 (data.type === 'table-info' || data.type === 'function-info') &&
+                data.id_connection === idConnection &&
                 data.schema === schema
               );
             })

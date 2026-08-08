@@ -7,7 +7,7 @@ import {
   TAB_DRAG_DATA_TYPE,
 } from '@renderer/components/Tabs';
 import { Welcolme } from '@renderer/components/Welcome';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useAppTabContext, type IAppTabData } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
@@ -19,6 +19,10 @@ import styles from './styles.module.css';
 const MAIN_SPLIT_PANE_ID = 'main';
 
 const createSplitPaneId = () => `split_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+const getTabConnectionId = (data?: IAppTabData) => {
+  return data && 'id_connection' in data ? data.id_connection : undefined;
+};
 
 const normalizeSplitPane = (pane: ISplitPane): ISplitPane => ({
   ...pane,
@@ -198,7 +202,7 @@ export const MainContent = () => {
         groupId,
         unsaved,
         title,
-        subtitle: subtitle || connectionNameById.get(data?.id_connection),
+        subtitle: subtitle || connectionNameById.get(getTabConnectionId(data)),
       })),
     [connectionNameById],
   );

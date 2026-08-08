@@ -56,8 +56,9 @@ export const ModalRenameSchema = React.memo(
           const { data: tabData } = tab;
 
           return (
-            tabData?.id_connection === idConnection &&
+            tabData &&
             (tabData.type === 'table-info' || tabData.type === 'function-info') &&
+            tabData.id_connection === idConnection &&
             tabData.schema === schema
           );
         });
