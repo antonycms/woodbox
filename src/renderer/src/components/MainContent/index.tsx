@@ -17,6 +17,8 @@ import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
 const MAIN_SPLIT_PANE_ID = 'main';
+const MIN_SPLIT_PANE_PERCENT = 20;
+const MAX_SPLIT_PANE_PERCENT = 80;
 
 const createSplitPaneId = () => `split_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
@@ -42,6 +44,8 @@ export const MainContent = () => {
   ]);
   const [activeSplitPaneId, setActiveSplitPaneId] = React.useState(MAIN_SPLIT_PANE_ID);
   const [splitDropTarget, setSplitDropTarget] = React.useState<ISplitDropTarget>();
+  const [splitFirstPanePercent, setSplitFirstPanePercent] = React.useState(50);
+  const splitLayoutRef = React.useRef<HTMLDivElement>(null);
   const {
     tabs,
     tabGroups,
@@ -298,11 +302,47 @@ export const MainContent = () => {
     moveTabToSplitPane(tabId, paneId, getSplitDropSide(event, event.currentTarget));
   };
 
+  const handleSplitResizeStart = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.buttons !== 1) return;
+
+    const layout = splitLayoutRef.current;
+    if (!layout) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const { currentTarget, pointerId } = event;
+    const rect = layout.getBoundingClientRect();
+
+    const updateSplitSize = (clientX: number) => {
+      const nextPercent = ((clientX - rect.left) / rect.width) * 100;
+
+      setSplitFirstPanePercent(
+        Math.min(MAX_SPLIT_PANE_PERCENT, Math.max(MIN_SPLIT_PANE_PERCENT, nextPercent)),
+      );
+    };
+
+    function onPointerMove(event: PointerEvent) {
+      updateSplitSize(event.clientX);
+    }
+
+    function onLostPointerCapture() {
+      currentTarget.removeEventListener('pointermove', onPointerMove);
+      currentTarget.removeEventListener('lostpointercapture', onLostPointerCapture);
+    }
+
+    currentTarget.setPointerCapture(pointerId);
+    currentTarget.addEventListener('pointermove', onPointerMove);
+    currentTarget.addEventListener('lostpointercapture', onLostPointerCapture);
+    updateSplitSize(event.clientX);
+  }, []);
+
   if (!tabs.length) return <Welcolme />;
 
   return (
     <div className={styles.container}>
       <div
+        ref={splitLayoutRef}
         className={styles.splitLayout}
         style={
           {
@@ -311,7 +351,7 @@ export const MainContent = () => {
           } as React.CSSProperties
         }
       >
-        {splitPanes.map((pane) => {
+        {splitPanes.map((pane, paneIndex) => {
           const paneTabs = tabs.filter((tab) => pane.tabIds.includes(tab.id));
           const visiblePaneTabs = paneTabs.filter(
             (tab) => !tab.groupId || !collapsedGroupIds.has(tab.groupId),
@@ -323,6 +363,15 @@ export const MainContent = () => {
 
           if (!paneTabs.length) return null;
 
+          const splitPaneStyle =
+            splitPanes.length === 2
+              ? ({
+                  flex: `0 0 ${
+                    paneIndex === 0 ? splitFirstPanePercent : 100 - splitFirstPanePercent
+                  }%`,
+                } as React.CSSProperties)
+              : undefined;
+
           return (
             <div
               key={pane.id}
@@ -331,6 +380,7 @@ export const MainContent = () => {
                 splitDropTarget?.paneId === pane.id &&
                   (splitDropTarget.side === 'left' ? styles.dropLeft : styles.dropRight),
               )}
+              style={splitPaneStyle}
               onDragOver={(event) => handleSplitPaneDragOver(event, pane.id)}
               onDragLeave={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node)) {
@@ -398,6 +448,16 @@ export const MainContent = () => {
                     </TabContent>
                   ))}
                 </TabWindow>
+              )}
+              {paneIndex === 0 && splitPanes.length === 2 && (
+                <div
+                  className={styles.splitResizeHandle}
+                  role="separator"
+                  aria-orientation="vertical"
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={() => setSplitFirstPanePercent(50)}
+                  onPointerDown={handleSplitResizeStart}
+                />
               )}
             </div>
           );
