@@ -30,3 +30,16 @@ addListener('@get:snippets', store.getSnippets);
 addListener('@add:snippets', store.addSnippet);
 addListener('@remove:snippets', store.removeSnippet);
 addListener('@edit:snippets', store.editSnippet);
+
+// ai providers
+addListener('@get:ai_providers', store.getAIProviders);
+addListener('@add:ai_providers', store.addAIProvider);
+addListener('@remove:ai_providers', store.removeAIProvider);
+addListener('@edit:ai_providers', store.editAIProvider);
+
+// ai chats
+addListener('@get:ai_chats', store.getAIChats);
+addListener('@add:ai_chats', store.addAIChat);
+addListener('@remove:ai_chats', store.removeAIChat);
+addListener('@edit:ai_chats', store.editAIChat);
+addListener('@post:append_ai_chat_messages', store.appendAIChatMessages);

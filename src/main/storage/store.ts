@@ -7,6 +7,14 @@ import {
 import { initialValue as scripts_meta, getModule as getModuleScripts } from './modules/scripts';
 import { initialValue as snippets, getModule as getModuleSnippets } from './modules/snippets';
 import {
+  initialValue as ai_providers,
+  getModule as getModuleAIProviders,
+} from './modules/ai_providers';
+import {
+  initialValue as ai_chats,
+  getModule as getModuleAIChats,
+} from './modules/ai_chats';
+import {
   parseDbeaverExport,
   toStoredDbeaverConnection,
   toStoredDbeaverProject,
@@ -20,6 +28,8 @@ const store = new Store<Record<string, unknown>>({
     saved_connections,
     scripts_meta,
     snippets,
+    ai_providers,
+    ai_chats,
     window_state: {
       type: ['object', 'null'],
       default: null,
@@ -62,6 +72,22 @@ export const {
   remove: removeSnippet,
   edit: editSnippet,
 } = getModuleSnippets(store);
+
+export const {
+  add: addAIProvider,
+  get: getAIProviders,
+  getInternal: getInternalAIProvider,
+  remove: removeAIProvider,
+  edit: editAIProvider,
+} = getModuleAIProviders(store);
+
+export const {
+  add: addAIChat,
+  get: getAIChats,
+  remove: removeAIChat,
+  edit: editAIChat,
+  appendMessages: appendAIChatMessages,
+} = getModuleAIChats(store);
 
 const getStoredProjects = () => (store.get('projects') as IProject[] | undefined) ?? [];
 const getStoredConnections = () =>

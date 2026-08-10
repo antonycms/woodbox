@@ -21,6 +21,114 @@ export interface ISnippet {
   updated_at: string;
 }
 
+export type AIProviderType =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'openai-compatible'
+  | 'codex-chatgpt';
+
+export interface IAIProvider {
+  id: string;
+  name: string;
+  type: AIProviderType;
+  model: string;
+  baseURL?: string;
+  isDefault?: boolean;
+  hasApiKey: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IAIProviderCreate {
+  id?: string;
+  name: string;
+  type: AIProviderType;
+  model: string;
+  apiKey?: string;
+  baseURL?: string;
+  isDefault?: boolean;
+}
+
+export interface IAIChatMessageInput {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface IAIQueryApproval {
+  id: string;
+  connectionId: string;
+  connectionName: string;
+  dialect: Dialect;
+  database: string;
+  sql: string;
+  limit: number;
+  status?: 'pending' | 'approved' | 'rejected';
+}
+
+export interface IAIQueryResult {
+  rows: Record<string, unknown>[];
+  columns?: string[];
+}
+
+export interface IAIChatMessage extends IAIChatMessageInput {
+  id: string;
+  created_at: string;
+  queryApprovals?: IAIQueryApproval[];
+  queryResult?: IAIQueryResult;
+}
+
+export interface IAIChat {
+  id: string;
+  title: string;
+  summary: string;
+  messages: IAIChatMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IAIChatCreate {
+  id?: string;
+  title: string;
+  summary?: string;
+  messages?: IAIChatMessage[];
+}
+
+export interface IAIChatPatch {
+  title?: string;
+  summary?: string;
+  messages?: IAIChatMessage[];
+}
+
+export interface IAIChatAppendMessages {
+  title?: string;
+  summary?: string;
+  messages: IAIChatMessage[];
+}
+
+export interface IAIChatRequest {
+  providerId?: string;
+  mentionedConnectionIds?: string[];
+  messages: IAIChatMessageInput[];
+}
+
+export interface IAIChatResponse {
+  content: string;
+}
+
+export interface ICodexChatGPTAccount {
+  authenticated: boolean;
+  email?: string | null;
+  planType?: string | null;
+  authMode?: string | null;
+}
+
+export interface ICodexChatGPTLoginStart {
+  loginId: string;
+  verificationUrl: string;
+  userCode: string;
+}
+
 export interface IProjectCreate {
   description: string;
 }
@@ -262,6 +370,21 @@ export interface IStoreContext {
   addSnippet(data: Omit<ISnippet, 'id'>): Promise<ISnippet>;
   editSnippet(id: string, data: Omit<ISnippet, 'id'>): Promise<void>;
   removeSnippet(id: string): Promise<void>;
+
+  aiProviders: IAIProvider[];
+  addAIProvider(data: IAIProviderCreate): Promise<void>;
+  editAIProvider(id: string, data: IAIProviderCreate): Promise<void>;
+  removeAIProvider(id: string): Promise<void>;
+  testAIProvider(data: IAIProviderCreate): Promise<boolean>;
+  sendAIChatMessage(data: IAIChatRequest): Promise<IAIChatResponse>;
+  aiChats: IAIChat[];
+  addAIChat(data: IAIChatCreate): Promise<IAIChat>;
+  editAIChat(id: string, data: IAIChatPatch): Promise<void>;
+  removeAIChat(id: string): Promise<void>;
+  appendAIChatMessages(id: string, data: IAIChatAppendMessages): Promise<void>;
+  getCodexChatGPTAccount(): Promise<ICodexChatGPTAccount>;
+  startCodexChatGPTLogin(): Promise<ICodexChatGPTLoginStart>;
+  logoutCodexChatGPT(): Promise<void>;
 
   connectionsGroupPerProject: IConnectionsGroupPerProject[];
 

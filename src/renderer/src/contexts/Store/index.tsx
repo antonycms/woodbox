@@ -25,6 +25,16 @@ import StoreContext, {
   type IImportConnectionsResult,
   type IImportTableDataParams,
   type IImportTableDataResult,
+  type IAIProvider,
+  type IAIProviderCreate,
+  type IAIChatRequest,
+  type IAIChatResponse,
+  type IAIChat,
+  type IAIChatCreate,
+  type IAIChatPatch,
+  type IAIChatAppendMessages,
+  type ICodexChatGPTAccount,
+  type ICodexChatGPTLoginStart,
 } from './context';
 
 export type * from './context';
@@ -39,6 +49,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const [connectionsInfo, setConnectionsInfo] = React.useState(new Map<string, IConnectionInfo>());
   const [scripts, setScripts] = React.useState<IScript[]>([]);
   const [snippets, setSnippets] = React.useState<ISnippet[]>([]);
+  const [aiProviders, setAIProviders] = React.useState<IAIProvider[]>([]);
+  const [aiChats, setAIChats] = React.useState<IAIChat[]>([]);
 
   const connectionsGroupPerProject = React.useMemo<IConnectionsGroupPerProject[]>(() => {
     const groupedConnections = new Map<string, IConnection[]>();
@@ -87,6 +99,16 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const loadSnippets = React.useCallback(async () => {
     const storedSnippets = await call<ISnippet[]>('@get:snippets');
     setSnippets(storedSnippets || []);
+  }, []);
+
+  const loadAIProviders = React.useCallback(async () => {
+    const storedProviders = await call<IAIProvider[]>('@get:ai_providers');
+    setAIProviders(storedProviders || []);
+  }, []);
+
+  const loadAIChats = React.useCallback(async () => {
+    const storedChats = await call<IAIChat[]>('@get:ai_chats');
+    setAIChats(storedChats || []);
   }, []);
 
   const getScriptContent = React.useCallback(async (id: string) => {
@@ -139,6 +161,67 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const removeSnippet = React.useCallback(async (id: string) => {
     await call<void>('@remove:snippets', id);
     setSnippets((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const addAIProvider = React.useCallback(async (data: IAIProviderCreate) => {
+    await call<void>('@add:ai_providers', data);
+    await loadAIProviders();
+  }, [loadAIProviders]);
+
+  const editAIProvider = React.useCallback(async (id: string, data: IAIProviderCreate) => {
+    await call<void>('@edit:ai_providers', id, data);
+    await loadAIProviders();
+  }, [loadAIProviders]);
+
+  const removeAIProvider = React.useCallback(async (id: string) => {
+    await call<void>('@remove:ai_providers', id);
+    await loadAIProviders();
+  }, [loadAIProviders]);
+
+  const testAIProvider = React.useCallback(async (data: IAIProviderCreate) => {
+    return await call<boolean>('@post:test_ai_provider', data);
+  }, []);
+
+  const sendAIChatMessage = React.useCallback(async (data: IAIChatRequest) => {
+    return await call<IAIChatResponse>('@post:ai_chat_message', data);
+  }, []);
+
+  const addAIChat = React.useCallback(async (data: IAIChatCreate) => {
+    const chat = await call<IAIChat>('@add:ai_chats', data);
+
+    setAIChats((prevState) => [chat, ...prevState]);
+
+    return chat;
+  }, []);
+
+  const editAIChat = React.useCallback(async (id: string, data: IAIChatPatch) => {
+    await call<void>('@edit:ai_chats', id, data);
+    await loadAIChats();
+  }, [loadAIChats]);
+
+  const removeAIChat = React.useCallback(async (id: string) => {
+    await call<void>('@remove:ai_chats', id);
+    setAIChats((prevState) => prevState.filter((chat) => chat.id !== id));
+  }, []);
+
+  const appendAIChatMessages = React.useCallback(
+    async (id: string, data: IAIChatAppendMessages) => {
+      await call<void>('@post:append_ai_chat_messages', id, data);
+      await loadAIChats();
+    },
+    [loadAIChats],
+  );
+
+  const getCodexChatGPTAccount = React.useCallback(async () => {
+    return await call<ICodexChatGPTAccount>('@get:codex_chatgpt_account');
+  }, []);
+
+  const startCodexChatGPTLogin = React.useCallback(async () => {
+    return await call<ICodexChatGPTLoginStart>('@post:codex_chatgpt_login');
+  }, []);
+
+  const logoutCodexChatGPT = React.useCallback(async () => {
+    await call<void>('@post:codex_chatgpt_logout');
   }, []);
 
   const addProject = React.useCallback(async (data: IProjectCreate) => {
@@ -468,9 +551,27 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       addSnippet,
       editSnippet,
       removeSnippet,
+
+      // ai
+      aiProviders,
+      addAIProvider,
+      editAIProvider,
+      removeAIProvider,
+      testAIProvider,
+      sendAIChatMessage,
+      aiChats,
+      addAIChat,
+      editAIChat,
+      removeAIChat,
+      appendAIChatMessages,
+      getCodexChatGPTAccount,
+      startCodexChatGPTLogin,
+      logoutCodexChatGPT,
     }),
     [
       addConnection,
+      addAIProvider,
+      addAIChat,
       addProject,
       addScript,
       addSnippet,
@@ -482,10 +583,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       connectionsGroupPerProject,
       connectionsInfo,
       editConnection,
+      editAIProvider,
+      editAIChat,
       editProject,
       editScript,
       editSnippet,
       getColumnTypes,
+      getCodexChatGPTAccount,
       getFunctionDefinition,
       getQueryRowsCount,
       getScriptContent,
@@ -502,16 +606,25 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       importConnectionsFromSource,
       importTableData,
       loadConnectionInfo,
+      logoutCodexChatGPT,
       previewImportConnectionsFromSource,
       projects,
+      aiProviders,
+      aiChats,
       removeConnection,
+      removeAIProvider,
+      removeAIChat,
       removeProject,
       removeScript,
       removeSnippet,
       runSql,
       scripts,
+      sendAIChatMessage,
       snippets,
+      startCodexChatGPTLogin,
+      testAIProvider,
       testConnection,
+      appendAIChatMessages,
     ],
   );
 
@@ -521,7 +634,17 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     loadProjects();
     loadScripts();
     loadSnippets();
-  }, [loadConnectionTypes, loadConnections, loadProjects, loadScripts, loadSnippets]);
+    loadAIProviders();
+    loadAIChats();
+  }, [
+    loadConnectionTypes,
+    loadConnections,
+    loadProjects,
+    loadScripts,
+    loadSnippets,
+    loadAIProviders,
+    loadAIChats,
+  ]);
 
   return <StoreContext.Provider value={contextValue}>{children}</StoreContext.Provider>;
 };
