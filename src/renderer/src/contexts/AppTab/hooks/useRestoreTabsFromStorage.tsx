@@ -7,9 +7,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
-import AIChat from '@renderer/views/AIChat';
 import { APP_TABS_SESSION_STORAGE_KEY, IAppTabsSession } from '../context';
-import { getAIChatById } from '@renderer/utils/aiChats';
 
 export const useRestoreTabsFromStorage = (
   setActiveTabId: React.Dispatch<React.SetStateAction<string | undefined>>,
@@ -89,16 +87,6 @@ export const useRestoreTabsFromStorage = (
           });
         }
 
-        if (tab.data?.type === 'ai-chat') {
-          const { id_chat } = tab.data;
-          const chat = getAIChatById(id_chat);
-
-          restoredTabs.push({
-            ...tab,
-            title: chat ? chat.title : t('aiChat.unknownTitle'),
-            component: () => <AIChat id_chat={id_chat} />,
-          });
-        }
       }
 
       const groupIdsWithTabs = [

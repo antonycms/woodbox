@@ -40,3 +40,35 @@
   font-size: 12px;
   opacity: 0.7;
 }
+
+.codexCard {
+  width: 100%;
+  margin: 6px 0;
+}
+
+.codexLoginInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.codexLoginInfo strong {
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 18px;
+  letter-spacing: 2px;
+  user-select: all;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.codexLoginInfo button {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  color: currentColor;
+  cursor: pointer;
+  text-decoration: underline;
+  background: transparent;
+}

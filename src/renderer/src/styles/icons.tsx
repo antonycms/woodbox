@@ -5,6 +5,8 @@ import IconMdiPlaylistPlay from '~icons/mdi/playlist-play';
 import IconMdiBookOpenOutline from '~icons/mdi/book-open-outline';
 import IconMdiCloseCircleOutline from '~icons/mdi/close-circle-outline';
 import IconMdiDotsHorizontal from '~icons/mdi/dots-horizontal';
+import IconMdiArrowLeft from '~icons/mdi/arrow-left';
+import IconMdiSquareEditOutline from '~icons/mdi/square-edit-outline';
 import IconMdiRefresh from '~icons/mdi/refresh';
 import IconMdiCounter from '~icons/mdi/counter';
 import IconMdiRecordCircleOutline from '~icons/mdi/record-circle-outline';
@@ -22,10 +24,13 @@ import IconGgTrash from '~icons/gg/trash';
 import IconGgExport from '~icons/gg/export';
 import IconMdiImport from '~icons/mdi/import';
 import IconMdiHistory from '~icons/mdi/history';
+import IconMdiFormatListBulleted from '~icons/mdi/format-list-bulleted';
 import IconMdiRobotOutline from '~icons/mdi/robot-outline';
 import IconMdiSend from '~icons/mdi/send';
 import IconBxListPlus from '~icons/bx/list-plus';
 import IconIonMdPlay from '~icons/ion/md-play';
+import IconTablerArrowUp from '~icons/tabler/arrow-up';
+import IconTablerHandStop from '~icons/tabler/hand-stop';
 
 function makeIconWithSize(
   Icon: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>,
@@ -41,6 +46,7 @@ function makeIconWithSize(
 }
 
 export const AddIcon = makeIconWithSize(IconFaSolidPlus);
+export const BackIcon = makeIconWithSize(IconMdiArrowLeft);
 export const CancelIcon = makeIconWithSize(IconMdiCloseCircleOutline);
 export const CountIcon = makeIconWithSize(IconMdiCounter);
 export const FileSqlIcon = makeIconWithSize(IconBiFiletypeSql);
@@ -54,6 +60,7 @@ export const ExportIcon = makeIconWithSize(IconGgExport);
 export const ImportIcon = makeIconWithSize(IconMdiImport);
 export const OptionsIcon = makeIconWithSize(IconMdiDotsHorizontal);
 export const HistoryIcon = makeIconWithSize(IconMdiHistory);
+export const ListIcon = makeIconWithSize(IconMdiFormatListBulleted);
 export const RecordIcon = makeIconWithSize(IconMdiRecordCircleOutline);
 export const IconDatabase = makeIconWithSize(IconFaSolidDatabase);
 export const IconSnippet = makeIconWithSize(IconFaSolidFileCode);
@@ -66,3 +73,6 @@ export const PanelFile = makeIconWithSize(IconMdiBookOpenOutline);
 export const IconFileWrited = makeIconWithSize(IconMdiFileDocumentOutline);
 export const IconRefresh = makeIconWithSize(IconMdiRefresh);
 export const IconSend = makeIconWithSize(IconMdiSend);
+export const IconNewChat = makeIconWithSize(IconMdiSquareEditOutline);
+export const IconArrowUp = makeIconWithSize(IconTablerArrowUp);
+export const IconApproval = makeIconWithSize(IconTablerHandStop);

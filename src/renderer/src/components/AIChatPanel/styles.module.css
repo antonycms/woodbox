@@ -1,0 +1,283 @@
+.container {
+  flex: 0 1 var(--aiChatPanelWidth, 430px);
+  width: min(var(--aiChatPanelWidth, 430px), calc(100vw - 72px));
+  max-width: calc(100vw - 72px);
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-left: 2px solid var(--borderColor);
+  background-color: var(--backgroundColor);
+}
+
+.toggleButton {
+  position: fixed;
+  top: 1px;
+  right: 0;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--borderColor);
+  border-right: 0;
+  border-radius: 9px 0 0 9px;
+  color: var(--color);
+  cursor: pointer;
+  background-color: color-mix(in srgb, var(--backgroundColor) 94%, black);
+}
+
+.toggleButton:hover {
+  color: var(--ascentColor);
+  background-color: color-mix(in srgb, var(--ascentColor) 14%, var(--backgroundColor));
+}
+
+.toggleButton > * {
+  user-select: none;
+  pointer-events: none;
+}
+
+.container > div:first-of-type {
+  width: min(var(--aiChatPanelWidth, 430px), calc(100vw - 72px)) !important;
+  max-width: calc(100vw - 72px);
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.panelContent {
+  display: flex;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chatArea {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.historyMenu {
+  position: absolute;
+  top: 31px;
+  right: 10px;
+  left: 10px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  max-height: min(306px, calc(100% - 44px));
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--borderColor) 70%, transparent);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--backgroundColor) 88%, var(--cardBackgroundColor));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color) 8%, transparent),
+    0 22px 48px color-mix(in srgb, var(--backgroundColor) 68%, black);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.historyScope {
+  width: max-content;
+  margin: 10px 4px 6px;
+  padding: 0;
+  border: 0;
+  color: color-mix(in srgb, var(--color) 66%, transparent);
+  cursor: pointer;
+  font-size: 12px;
+  background: transparent;
+}
+
+.historyScope::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 0 2px 7px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.historyItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 4px 0 6px;
+  border-radius: 8px;
+}
+
+.chatItemMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--color);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.historyItem:hover,
+.activeItem {
+  background-color: color-mix(in srgb, var(--color) 9%, transparent);
+}
+
+.chatItemMain span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.chatItemMain time {
+  color: color-mix(in srgb, var(--color) 58%, transparent);
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.chatItemMain:focus-visible,
+.deleteChatButton:focus-visible {
+  outline: 1px solid var(--color);
+}
+
+.deleteChatButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--color) 52%, transparent);
+  cursor: pointer;
+  opacity: 0;
+  background: transparent;
+}
+
+.recentItem:hover .deleteChatButton,
+.historyItem:hover .deleteChatButton,
+.deleteChatButton:focus-visible {
+  opacity: 1;
+}
+
+.deleteChatButton:hover {
+  color: var(--queryRejectedColor, var(--color));
+  background-color: color-mix(in srgb, var(--color) 9%, transparent);
+}
+
+.emptyState {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.recentHeader {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  min-width: 0;
+  padding: 0 6px;
+  /* border-bottom: 2px solid var(--borderColor); */
+  background-color: var(--barBackgroundColor);
+}
+
+.recentHeader > p {
+  flex: 1;
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  padding: 0 16px;
+}
+
+.recentItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 31px;
+  padding: 0 2px;
+}
+
+.recentItem:hover .chatItemMain {
+  color: var(--ascentColor, var(--color));
+}
+
+.showAll {
+  width: max-content;
+  padding: 2px 0 0;
+  border: 0;
+  color: color-mix(in srgb, var(--color) 44%, transparent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+}
+
+.showAll:hover {
+  color: var(--color);
+}
+
+.emptyMark {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  color: color-mix(in srgb, var(--color) 18%, transparent);
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--color);
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: color-mix(in srgb, var(--borderColor) 46%, transparent);
+}
+
+.closePanelButton {
+  width: 30px;
+  font-size: 18px;
+  line-height: 1;
+}

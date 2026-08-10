@@ -6,7 +6,9 @@ import { ContainerApp } from '@renderer/components/ContainerApp';
 import { Sidebar } from '@renderer/components/Sidebar';
 import { MainContent } from '@renderer/components/MainContent';
 import { CentralSearchModal } from '@renderer/components/CentralSearchModal';
+import { AIChatPanel } from '@renderer/components/AIChatPanel';
 
+import AIChatPanelProvider from '@renderer/contexts/AIChatPanel';
 import AppTabProvider from '@renderer/contexts/AppTab';
 import StoreContextProvider from '@renderer/contexts/Store';
 import ToastProvider from '@renderer/contexts/Toast';
@@ -21,11 +23,15 @@ const App = () => {
           <ContainerApp>
             <ToastProvider>
               <AppTabProvider>
-                <Sidebar />
+                <AIChatPanelProvider>
+                  <Sidebar />
 
-                <MainContent />
+                  <MainContent />
 
-                <CentralSearchModal />
+                  <AIChatPanel />
+
+                  <CentralSearchModal />
+                </AIChatPanelProvider>
               </AppTabProvider>
             </ToastProvider>
           </ContainerApp>

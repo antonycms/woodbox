@@ -2,7 +2,7 @@ import React from 'react';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { IconAI, IconDatabase, IconSettings, IconSnippet } from '@renderer/styles/icons';
+import { IconDatabase, IconSettings, IconSnippet } from '@renderer/styles/icons';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
 import { SettingsModal } from '@renderer/components/SettingsModal';
@@ -12,9 +12,8 @@ import { SidebarActiveContent } from './components/SidebaActiveContent';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 import SnippetsMenu from './components/menus/SnippetsMenu';
-import AIMenu from './components/menus/AIMenu';
 
-type Menu = 'projects' | 'snippets' | 'ai';
+type Menu = 'projects' | 'snippets';
 
 export const Sidebar = React.memo(() => {
   const { t } = useI18n();
@@ -53,7 +52,6 @@ export const Sidebar = React.memo(() => {
         items={[
           { id: 'projects', title: t('sidebar.projects'), icon: () => <IconDatabase /> },
           { id: 'snippets', title: t('sidebar.snippets'), icon: () => <IconSnippet /> },
-          { id: 'ai', title: t('sidebar.ai'), icon: () => <IconAI /> },
         ]}
         footerItems={[{ id: 'settings', title: t('settings.title'), icon: () => <IconSettings /> }]}
         onFooterItemClick={() => setShowSettingsModal(true)}
@@ -72,10 +70,6 @@ export const Sidebar = React.memo(() => {
 
         <SidebarActiveContent active={selectedMenu === 'snippets'}>
           <SnippetsMenu />
-        </SidebarActiveContent>
-
-        <SidebarActiveContent active={selectedMenu === 'ai'}>
-          <AIMenu />
         </SidebarActiveContent>
       </ResizableContainer>
 
