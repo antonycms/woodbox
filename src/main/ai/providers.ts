@@ -5,7 +5,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { decodeAIProviderSecret } from '@main/storage/modules/ai_providers';
 
-export const resolveAIModel = (provider: IAIProviderConfig): LanguageModel => {
+export const resolveAIModel = (provider: IAIProviderConfig, model: string): LanguageModel => {
   const apiKey = decodeAIProviderSecret(provider.apiKey);
   const baseURL = provider.baseURL || undefined;
 
@@ -14,15 +14,15 @@ export const resolveAIModel = (provider: IAIProviderConfig): LanguageModel => {
   }
 
   if (provider.type === 'openai') {
-    return createOpenAI({ apiKey, baseURL })(provider.model);
+    return createOpenAI({ apiKey, baseURL })(model);
   }
 
   if (provider.type === 'anthropic') {
-    return createAnthropic({ apiKey, baseURL })(provider.model);
+    return createAnthropic({ apiKey, baseURL })(model);
   }
 
   if (provider.type === 'google') {
-    return createGoogle({ apiKey, baseURL })(provider.model);
+    return createGoogle({ apiKey, baseURL })(model);
   }
 
   if (provider.type === 'codex-chatgpt') {
@@ -38,5 +38,5 @@ export const resolveAIModel = (provider: IAIProviderConfig): LanguageModel => {
     apiKey,
     baseURL,
     includeUsage: true,
-  })(provider.model);
+  })(model);
 };

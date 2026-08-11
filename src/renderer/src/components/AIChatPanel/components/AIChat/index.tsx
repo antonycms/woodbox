@@ -12,8 +12,6 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import {
   BackIcon,
-  IconNewChat,
-  IconSettings,
   OptionsIcon,
 } from '@renderer/styles/icons';
 import { generateHash } from '@renderer/utils/string';
@@ -36,20 +34,16 @@ import {
   getQueryResultForTable,
   serializeQueryResultForAI,
 } from './utils/messages';
-import { Divider } from '@renderer/components/Divider';
-import { Row } from '@renderer/components/Grid';
-import { Text } from '@renderer/components/Text';
 
 const AIChat = ({
   id_chat,
   initialMessage,
   menuOptions,
-  onConfigureProviders,
+  modelSelection,
   onClose,
   onInitialMessageHandled,
   onNewChat,
   onSelectMenuOption,
-  onToggleList,
 }: IAIChatProps) => {
   const { t } = useI18n();
   const {
@@ -73,19 +67,21 @@ const AIChat = ({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const handledInitialMessageRef = React.useRef<string | undefined>(undefined);
   const loadingMentionConnectionsRef = React.useRef(new Set<string>());
-
   const chat = React.useMemo(() => aiChats.find((item) => item.id === id_chat), [aiChats, id_chat]);
 
   const title = chat ? chat.title : t('aiChat.unknownTitle');
-
-  const summary = chat ? chat.summary : t('aiChat.unknownSummary');
 
   const messages = React.useMemo(
     () => [...(chat?.messages || []), ...localMessages],
     [chat, localMessages],
   );
 
-  const canSendMessage = !!chat && !!draftMessage.trim() && !loadingMessage;
+  const canSendMessage =
+    !!chat &&
+    !!draftMessage.trim() &&
+    !loadingMessage &&
+    !!modelSelection.selectedProviderId &&
+    !!modelSelection.selectedModel;
 
   const formatWorkDuration = React.useCallback(
     (startedAt?: string, finishedAt?: string) => {
@@ -184,6 +180,8 @@ const AIChat = ({
         setLoadingMessage(true);
 
         const response = await sendAIChatMessage({
+          providerId: modelSelection.selectedProviderId,
+          model: modelSelection.selectedModel,
           mentionedConnectionIds,
           messages: nextMessages.map((message) => ({
             role: message.role,
@@ -249,6 +247,8 @@ const AIChat = ({
       mentionedConnectionIds,
       messages,
       resetSelectedMentions,
+      modelSelection.selectedModel,
+      modelSelection.selectedProviderId,
       sendAIChatMessage,
       selectedMentionConnections,
       showToast,
@@ -354,6 +354,8 @@ const AIChat = ({
         };
 
         const response = await sendAIChatMessage({
+          providerId: modelSelection.selectedProviderId,
+          model: modelSelection.selectedModel,
           mentionedConnectionIds: [approval.connectionId],
           messages: [
             ...modelMessages.map((message) => ({
@@ -416,6 +418,8 @@ const AIChat = ({
       connections,
       id_chat,
       runSql,
+      modelSelection.selectedModel,
+      modelSelection.selectedProviderId,
       sendAIChatMessage,
       showToast,
       t,
@@ -627,6 +631,10 @@ const AIChat = ({
             textareaRef={textareaRef}
             value={draftMessage}
             canSubmit={canSendMessage}
+            modelGroups={modelSelection.modelGroups}
+            selectedProviderId={modelSelection.selectedProviderId}
+            selectedModel={modelSelection.selectedModel}
+            onModelChange={modelSelection.onModelChange}
             onSubmit={handleSubmitMessage}
             onChange={handleComposerChange}
             onPaste={handleComposerPaste}

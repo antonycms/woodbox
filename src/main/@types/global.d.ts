@@ -54,10 +54,9 @@ declare global {
     id: string;
     name: string;
     type: AIProviderType;
-    model: string;
+    models: string[];
     apiKey?: string;
     baseURL?: string;
-    isDefault?: boolean;
     created_at: string;
     updated_at: string;
   }
@@ -71,10 +70,9 @@ declare global {
     id?: string;
     name: string;
     type: AIProviderType;
-    model: string;
+    models: string[];
     apiKey?: string;
     baseURL?: string;
-    isDefault?: boolean;
   }
 
   export interface IAIChatMessageInput {
@@ -110,6 +108,8 @@ declare global {
     title: string;
     summary: string;
     messages: IAIChatMessage[];
+    providerId?: string;
+    model?: string;
     created_at: string;
     updated_at: string;
   }
@@ -119,12 +119,16 @@ declare global {
     title: string;
     summary?: string;
     messages?: IAIChatMessage[];
+    providerId?: string;
+    model?: string;
   }
 
   export interface IAIChatPatch {
     title?: string;
     summary?: string;
     messages?: IAIChatMessage[];
+    providerId?: string;
+    model?: string;
   }
 
   export interface IAIChatAppendMessagesInput {
@@ -135,6 +139,7 @@ declare global {
 
   export interface IAIChatRequest {
     providerId?: string;
+    model?: string;
     mentionedConnectionIds?: string[];
     messages: IAIChatMessageInput[];
   }

@@ -2,7 +2,6 @@ import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Card } from '@renderer/components/Card';
-import { Checkbox } from '@renderer/components/Checkbox';
 import { Divider } from '@renderer/components/Divider';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
@@ -27,31 +26,29 @@ type ProviderForm = IAIProviderCreate & {
   hasApiKey?: boolean;
 };
 
-const providerOptions: { labelKey: TranslationKey; value: AIProviderType; defaultModel: string }[] = [
-  { labelKey: 'aiProvider.type.openai', value: 'openai', defaultModel: 'gpt-5-mini' },
-  { labelKey: 'aiProvider.type.anthropic', value: 'anthropic', defaultModel: 'claude-sonnet-4-6' },
-  { labelKey: 'aiProvider.type.google', value: 'google', defaultModel: 'gemini-2.5-flash' },
-  { labelKey: 'aiProvider.type.openaiCompatible', value: 'openai-compatible', defaultModel: '' },
-  { labelKey: 'aiProvider.type.codexChatGPT', value: 'codex-chatgpt', defaultModel: 'gpt-5.6' },
+const providerOptions: { labelKey: TranslationKey; value: AIProviderType; suggestedModel: string }[] = [
+  { labelKey: 'aiProvider.type.openai', value: 'openai', suggestedModel: 'gpt-5-mini' },
+  { labelKey: 'aiProvider.type.anthropic', value: 'anthropic', suggestedModel: 'claude-sonnet-4-6' },
+  { labelKey: 'aiProvider.type.google', value: 'google', suggestedModel: 'gemini-2.5-flash' },
+  { labelKey: 'aiProvider.type.openaiCompatible', value: 'openai-compatible', suggestedModel: '' },
+  { labelKey: 'aiProvider.type.codexChatGPT', value: 'codex-chatgpt', suggestedModel: 'gpt-5.6' },
 ];
 
 const emptyProvider = (): ProviderForm => ({
   name: '',
   type: 'openai',
-  model: 'gpt-5-mini',
+  models: ['gpt-5-mini'],
   apiKey: '',
   baseURL: '',
-  isDefault: false,
 });
 
 const toProviderForm = (provider: IAIProvider): ProviderForm => ({
   id: provider.id,
   name: provider.name,
   type: provider.type,
-  model: provider.model,
+  models: provider.models,
   apiKey: '',
   baseURL: provider.baseURL || '',
-  isDefault: !!provider.isDefault,
   hasApiKey: provider.hasApiKey,
 });
 
@@ -90,6 +87,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
   const showBaseURL = editingProvider?.type === 'openai-compatible';
   const isCodexProvider = editingProvider?.type === 'codex-chatgpt';
   const apiKeyHelp = editingProvider?.hasApiKey ? t('aiProvider.apiKeyKeepHelp') : undefined;
+  const editingProviderModels = editingProvider?.models?.length ? editingProvider.models : [''];
 
   const close = React.useCallback(() => {
     setEditingProvider(undefined);
@@ -117,7 +115,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
           ? {
               ...prevState,
               type,
-              model: option?.defaultModel || prevState.model,
+              models: [option?.suggestedModel || ''],
               baseURL: type === 'openai-compatible' ? prevState.baseURL : '',
               apiKey: type === 'codex-chatgpt' ? '' : prevState.apiKey,
             }
@@ -127,12 +125,50 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     [],
   );
 
+  const updateProviderModels = React.useCallback((models: string[]) => {
+    const nextModels = models.length ? models : [''];
+
+    setEditingProvider((prevState) =>
+      prevState
+        ? {
+            ...prevState,
+            models: nextModels,
+          }
+        : prevState,
+    );
+  }, []);
+
+  const handleModelChange = React.useCallback(
+    (index: number, value: string) => {
+      updateProviderModels(
+        editingProviderModels.map((model, modelIndex) => (modelIndex === index ? value : model)),
+      );
+    },
+    [editingProviderModels, updateProviderModels],
+  );
+
+  const addModel = React.useCallback(() => {
+    updateProviderModels([...editingProviderModels, '']);
+  }, [editingProviderModels, updateProviderModels]);
+
+  const removeModel = React.useCallback(
+    (index: number) => {
+      updateProviderModels(editingProviderModels.filter((_, modelIndex) => modelIndex !== index));
+    },
+    [editingProviderModels, updateProviderModels],
+  );
+
   const getProviderTypeLabel = React.useCallback(
     (type: AIProviderType) => {
       const option = providerOptions.find((item) => item.value === type);
 
       return option ? t(option.labelKey) : type;
     },
+    [t],
+  );
+
+  const getModelCountLabel = React.useCallback(
+    (count: number) => t(count === 1 ? 'aiProvider.modelCountOne' : 'aiProvider.modelCountMany', { count }),
     [t],
   );
 
@@ -298,7 +334,8 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       <Modal
         show={show}
         closeOutside
-        width="680px"
+        width="440px"
+        maxHeight="500px"
         title={t(isEditingProvider ? 'aiProvider.editTitle' : 'aiProvider.title')}
         onClose={close}
       >
@@ -337,7 +374,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   tabIndex={0}
                   className={styles.providerCard}
                   color={colors.color}
-                  borderColor={provider.isDefault ? colors.saveButtonBackgroundColor : __colors.lightGray}
+                  borderColor={__colors.lightGray}
                   backgroundColor={__colors.darkLightDeep}
                   onClick={() => setEditingProvider(toProviderForm(provider))}
                   onKeyDown={(event) => {
@@ -346,12 +383,13 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                 >
                   <div className={styles.providerCardHeader}>
                     <div className={styles.providerCardTitle}>
-                      <strong>
-                        {provider.name}
-                        {provider.isDefault ? ` · ${t('aiProvider.defaultBadge')}` : ''}
-                      </strong>
+                      <strong>{provider.name}</strong>
                       <span>
-                        {[getProviderTypeLabel(provider.type), provider.model, provider.baseURL]
+                        {[
+                          getProviderTypeLabel(provider.type),
+                          getModelCountLabel(provider.models.length),
+                          provider.baseURL,
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
@@ -383,8 +421,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                 autoFocus
                 label={t('field.name')}
                 value={editingProvider.name}
-                xs={12}
-                md={12}
+                md={6}
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
                 labelColor={colors.fieldLabelColor}
@@ -401,24 +438,8 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                 extractValue={(item) => item.value}
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
-                xs={12}
-                sm={6}
                 md={6}
                 onChange={handleTypeChange}
-              />
-
-              <Input
-                required
-                label={t('aiProvider.field.model')}
-                value={editingProvider.model}
-                placeholder={selectedProviderOption?.defaultModel}
-                xs={12}
-                sm={6}
-                md={6}
-                color={colors.fieldColor}
-                backgroundColor={colors.fieldBackgroundColor}
-                labelColor={colors.fieldLabelColor}
-                onChange={(event) => handleProviderChange('model', event.target.value)}
               />
 
               {isCodexProvider && (
@@ -496,7 +517,6 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   label={t('aiProvider.field.baseURL')}
                   value={editingProvider.baseURL}
                   placeholder="http://localhost:11434/v1"
-                  xs={12}
                   md={12}
                   color={colors.fieldColor}
                   backgroundColor={colors.fieldBackgroundColor}
@@ -512,7 +532,6 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   value={editingProvider.apiKey}
                   placeholder={apiKeyHelp}
                   required={!editingProvider.hasApiKey && editingProvider.type !== 'openai-compatible'}
-                  xs={12}
                   md={12}
                   color={colors.fieldColor}
                   backgroundColor={colors.fieldBackgroundColor}
@@ -521,14 +540,48 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                 />
               )}
 
-              <Checkbox
-                label={t('aiProvider.field.default')}
-                checked={!!editingProvider.isDefault}
-                color={colors.fieldColor}
-                backgroundColor={colors.fieldBackgroundColor}
-                labelColor={colors.fieldLabelColor}
-                onChecked={(checked) => handleProviderChange('isDefault', checked)}
-              />
+                {/* <Text small color={colors.color} userSelect={false}>
+                  {t('aiProvider.field.models')}
+                </Text> */}
+
+                {editingProviderModels.map((model, index) => (
+                  <Row key={index}>
+                    <Input
+                      required
+                      label={t('aiProvider.field.model') + (index ? ` ${index + 1}` : '')}
+                      value={model}
+                      md={12}
+                      color={colors.fieldColor}
+                      backgroundColor={colors.fieldBackgroundColor}
+                      labelColor={colors.fieldLabelColor}
+                      onChange={(event) => handleModelChange(index, event.target.value)}
+                      icon={
+                        index > 0
+                          ? () => (
+                              <RemoveIcon
+                                size={13}
+                                cursor="pointer"
+                                color={colors.color}
+                                title={t('aiProvider.removeModel')}
+                                onClick={() => removeModel(index)}
+                              />
+                            )
+                          : undefined
+                      }
+                    />
+
+                  </Row>
+                ))}
+
+                <Button
+                  text
+                  color={colors.color}
+                  width="fit-content"
+                  icon={() => <AddIcon size={13} />}
+                  onClick={addModel}
+                >
+                  {t('aiProvider.addModel')}
+                </Button>
             </Row>
 
             <Divider size={4} />

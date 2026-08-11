@@ -1,0 +1,17 @@
+export interface IAIChatModelGroup {
+  providerId: string;
+  providerName: string;
+  models: string[];
+}
+
+export interface IAIChatModelSelection {
+  providerId?: string;
+  model?: string;
+}
+
+export interface IAIChatModelSelectionProps {
+  modelGroups: IAIChatModelGroup[];
+  selectedProviderId?: string;
+  selectedModel?: string;
+  onModelChange(providerId: string, model: string): void;
+}

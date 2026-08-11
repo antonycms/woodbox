@@ -49,57 +49,49 @@ const toPublicProvider = (provider: IAIProviderConfig): IAIProviderPublic => {
   };
 };
 
+const normalizeProviderModels = (data: IAIProviderInput) =>
+  data.models
+    .map((model) => model.trim())
+    .filter((model, index, allModels) => !!model && allModels.indexOf(model) === index);
+
 const normalizeProvider = (
   data: IAIProviderInput,
   previous?: IAIProviderConfig,
 ): IAIProviderConfig => {
   const now = new Date().toISOString();
   const apiKey = encodeSecret(data.apiKey) ?? previous?.apiKey;
+  const models = normalizeProviderModels(data);
+
+  if (!models.length) {
+    throw new Error('Informe ao menos um modelo de IA.');
+  }
 
   return {
     id: data.id || previous?.id || generateHash(12),
     name: data.name.trim(),
     type: data.type,
-    model: data.model.trim(),
+    models,
     apiKey,
     baseURL: data.baseURL?.trim() || undefined,
-    isDefault: !!data.isDefault,
     created_at: previous?.created_at || now,
     updated_at: now,
   };
-};
-
-const normalizeDefaultProvider = (providers: IAIProviderConfig[], defaultId?: string) => {
-  const defaultProvider =
-    providers.find((provider) => provider.id === defaultId) ||
-    providers.find((provider) => provider.isDefault) ||
-    providers[0];
-
-  return providers.map((provider) => ({
-    ...provider,
-    isDefault: provider.id === defaultProvider?.id,
-  }));
 };
 
 export const getModule = (store: Store<Record<string, unknown>>) => {
   const get = () => getProviders(store).map(toPublicProvider);
 
   const getInternal = (id?: string) => {
-    const providers = getProviders(store);
+    if (!id) return undefined;
 
-    if (!id) return providers.find((provider) => provider.isDefault) || providers[0];
-
-    return providers.find((provider) => provider.id === id);
+    return getProviders(store).find((provider) => provider.id === id);
   };
 
   const add = (data: IAIProviderInput) => {
     const providers = getProviders(store);
-    const provider = normalizeProvider({ ...data, isDefault: data.isDefault || !providers.length });
+    const provider = normalizeProvider(data);
 
-    store.set(
-      STORE_KEY,
-      normalizeDefaultProvider([...providers, provider], provider.isDefault ? provider.id : undefined),
-    );
+    store.set(STORE_KEY, [...providers, provider]);
   };
 
   const edit = (id: string, data: IAIProviderInput) => {
@@ -111,13 +103,13 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
     }
 
     providers[index] = normalizeProvider({ ...data, id }, providers[index]);
-    store.set(STORE_KEY, normalizeDefaultProvider(providers, providers[index].isDefault ? id : undefined));
+    store.set(STORE_KEY, providers);
   };
 
   const remove = (id: string) => {
     const providers = getProviders(store).filter((provider) => provider.id !== id);
 
-    store.set(STORE_KEY, normalizeDefaultProvider(providers));
+    store.set(STORE_KEY, providers);
   };
 
   return { get, getInternal, add, edit, remove };

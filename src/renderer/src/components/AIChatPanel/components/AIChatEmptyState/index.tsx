@@ -1,42 +1,55 @@
 import React from 'react';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { useI18n } from '@renderer/contexts/I18n';
-import type { IAIChat } from '@renderer/contexts/Store';
+import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import { AIChatComposer } from '../AIChatComposer';
+import type { IAIChatModelSelectionProps } from '../../types';
 import styles from '../../styles.module.css';
 
 interface IAIChatEmptyStateProps {
   value: string;
   menuOptions: IButtonDropdownOption[];
-  recentChats: IAIChat[];
-  formatChatAge(date: string): string;
+  modelSelection: IAIChatModelSelectionProps;
   onChange(value: string): void;
-  onClosePanel(): void;
+  onClose(): void;
   onDeleteChat(chat: IAIChat): void;
   onSelectChat(chat: IAIChat): void;
   onSelectMenuOption(option: IButtonDropdownOption): void;
-  onSubmit(event: React.FormEvent<HTMLFormElement>): void;
+  onSubmit(event: React.SubmitEvent<HTMLFormElement>): void;
 }
 
 export const AIChatEmptyState = React.memo(
   ({
     value,
     menuOptions,
-    recentChats,
-    formatChatAge,
+    modelSelection,
     onChange,
-    onClosePanel,
+    onClose,
     onDeleteChat,
     onSelectChat,
     onSelectMenuOption,
     onSubmit,
   }: IAIChatEmptyStateProps) => {
     const { t } = useI18n();
+    const { aiChats } = useStoreContext();
     const {
       activeTheme: { __colors, mainTab: theme },
     } = useThemeContext();
+
+    const recentChats = React.useMemo(() => aiChats.slice(0, 4), [aiChats]);
+
+    const formatChatAge = React.useCallback((date: string) => {
+      const diffInMinutes = Math.max(1, Math.round((Date.now() - new Date(date).getTime()) / 60000));
+
+      if (diffInMinutes < 60) return `${diffInMinutes} min`;
+
+      const diffInHours = Math.round(diffInMinutes / 60);
+      if (diffInHours < 24) return `${diffInHours} h`;
+
+      return `${Math.round(diffInHours / 24)} d`;
+    }, []);
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -70,7 +83,7 @@ export const AIChatEmptyState = React.memo(
             type="button"
             title={t('aiChat.closePanel')}
             aria-label={t('aiChat.closePanel')}
-            onClick={onClosePanel}
+            onClick={onClose}
           >
             ×
           </button>
@@ -103,7 +116,13 @@ export const AIChatEmptyState = React.memo(
 
         <AIChatComposer
           value={value}
-          canSubmit={!!value.trim()}
+          canSubmit={
+            !!value.trim() && !!modelSelection.selectedProviderId && !!modelSelection.selectedModel
+          }
+          modelGroups={modelSelection.modelGroups}
+          selectedProviderId={modelSelection.selectedProviderId}
+          selectedModel={modelSelection.selectedModel}
+          onModelChange={modelSelection.onModelChange}
           onSubmit={onSubmit}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}

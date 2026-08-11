@@ -1,13 +1,13 @@
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
+import type { IAIChatModelSelectionProps } from '../../types';
 
 export interface IAIChatProps {
   id_chat: string;
   initialMessage?: string;
-  onConfigureProviders?(): void;
+  modelSelection: IAIChatModelSelectionProps;
   onInitialMessageHandled?(): void;
   onNewChat?(): void;
   onClose?(): void;
-  onToggleList?(): void;
   menuOptions?: IButtonDropdownOption[];
   onSelectMenuOption?(option: IButtonDropdownOption): void;
 }

@@ -31,6 +31,8 @@ const normalizeChat = (data: IAIChatInput): IAIChat => {
     title: data.title.trim(),
     summary: data.summary?.trim() || '',
     messages: (data.messages || []).map(normalizeMessage),
+    providerId: data.providerId,
+    model: data.model,
     created_at: now,
     updated_at: now,
   };
@@ -60,6 +62,8 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
       title: data.title?.trim() || chats[index].title,
       summary: data.summary?.trim() ?? chats[index].summary,
       messages: data.messages ? data.messages.map(normalizeMessage) : chats[index].messages,
+      providerId: data.providerId ?? chats[index].providerId,
+      model: data.model ?? chats[index].model,
       updated_at: new Date().toISOString(),
     };
 

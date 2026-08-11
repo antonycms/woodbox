@@ -18,6 +18,7 @@ export const Modal = React.memo((props: IModalProps) => {
     children,
     closeOutside = false,
     height,
+    maxHeight,
     width = '800px',
   } = props;
 
@@ -38,8 +39,8 @@ export const Modal = React.memo((props: IModalProps) => {
   }, [__colors.overlay, show, justHide]);
 
   const styleContainer = React.useMemo(() => {
-    return { backgroundColor, height, maxWidth: width };
-  }, [backgroundColor, height, width]);
+    return { backgroundColor, height, maxHeight, maxWidth: width };
+  }, [backgroundColor, height, maxHeight, width]);
 
   const emitCloseOutside = React.useCallback(
     ({ target, currentTarget }) => {
@@ -107,6 +108,7 @@ export interface IModalProps {
   closeOutside?: boolean;
   onClose?(): void;
   height?: string;
+  maxHeight?: string;
   width?: string;
   justHide?: boolean;
   title?: string;

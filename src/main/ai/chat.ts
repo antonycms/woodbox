@@ -28,20 +28,25 @@ const normalizeMessages = (messages: IAIChatMessageInput[]) => {
 
 export const sendAIChatMessage = async ({
   providerId,
+  model: selectedModel,
   mentionedConnectionIds,
   messages,
 }: IAIChatRequest): Promise<IAIChatResponse> => {
   const provider = getInternalAIProvider(providerId);
 
   if (!provider) {
-    throw new Error('Configure um provedor de IA antes de enviar mensagens.');
+    throw new Error('Selecione um provedor de IA antes de enviar mensagens.');
+  }
+
+  if (!selectedModel) {
+    throw new Error('Selecione um modelo de IA antes de enviar mensagens.');
   }
 
   if (provider.type === 'codex-chatgpt') {
-    return await sendCodexChatGPTMessage(provider, { providerId, messages });
+    return await sendCodexChatGPTMessage(provider, { providerId, model: selectedModel, messages });
   }
 
-  const model = resolveAIModel(provider);
+  const model = resolveAIModel(provider, selectedModel);
   const normalizedMessages = normalizeMessages(messages);
 
   if (!normalizedMessages.length) {
@@ -78,6 +83,12 @@ export const sendAIChatMessage = async ({
 };
 
 export const testAIProvider = async (providerInput: IAIProviderInput) => {
+  const firstModel = providerInput.models.map((model) => model.trim()).find(Boolean);
+
+  if (!firstModel) {
+    throw new Error('Informe ao menos um modelo de IA.');
+  }
+
   if (providerInput.type === 'codex-chatgpt') {
     const account = await getCodexChatGPTAccount();
 
@@ -90,17 +101,19 @@ export const testAIProvider = async (providerInput: IAIProviderInput) => {
 
   const storedProvider = providerInput.id ? getInternalAIProvider(providerInput.id) : undefined;
 
-  const model = resolveAIModel({
-    id: providerInput.id || 'test-provider',
-    name: providerInput.name,
-    type: providerInput.type,
-    model: providerInput.model,
-    apiKey: providerInput.apiKey || storedProvider?.apiKey,
-    baseURL: providerInput.baseURL || storedProvider?.baseURL,
-    isDefault: providerInput.isDefault,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  });
+  const model = resolveAIModel(
+    {
+      id: providerInput.id || 'test-provider',
+      name: providerInput.name,
+      type: providerInput.type,
+      models: providerInput.models,
+      apiKey: providerInput.apiKey || storedProvider?.apiKey,
+      baseURL: providerInput.baseURL || storedProvider?.baseURL,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    firstModel,
+  );
 
   await generateText({
     model,

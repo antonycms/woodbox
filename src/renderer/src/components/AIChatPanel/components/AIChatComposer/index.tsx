@@ -1,7 +1,8 @@
 import React from 'react';
 import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
 import { AddIcon, IconApproval, IconArrowUp } from '@renderer/styles/icons';
+import type { IAIChatModelGroup } from '../../types';
+import { getAIModelLabel } from '../../utils/aiModels';
 import styles from './styles.module.css';
 
 interface IAIChatComposerProps {
@@ -10,6 +11,10 @@ interface IAIChatComposerProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   mentionChips?: React.ReactNode;
   mentionDropdown?: React.ReactNode;
+  modelGroups?: IAIChatModelGroup[];
+  selectedProviderId?: string;
+  selectedModel?: string;
+  onModelChange?(providerId: string, model: string): void;
   onSubmit(event: React.FormEvent<HTMLFormElement>): void;
   onChange(event: React.ChangeEvent<HTMLTextAreaElement>): void;
   onPaste?: React.ClipboardEventHandler<HTMLTextAreaElement>;
@@ -25,6 +30,10 @@ export const AIChatComposer = React.memo(
     textareaRef,
     mentionChips,
     mentionDropdown,
+    modelGroups = [],
+    selectedProviderId,
+    selectedModel,
+    onModelChange,
     onSubmit,
     onChange,
     onPaste,
@@ -33,26 +42,37 @@ export const AIChatComposer = React.memo(
     onKeyDown,
   }: IAIChatComposerProps) => {
     const { t } = useI18n();
-    const { aiProviders } = useStoreContext();
+    const [openModels, setOpenModels] = React.useState(false);
+    const modelMenuRef = React.useRef<HTMLDivElement>(null);
 
-    const activeAIProvider = React.useMemo(
-      () => aiProviders.find((provider) => provider.isDefault) || aiProviders[0],
-      [aiProviders],
-    );
+    const activeAIModelLabel = React.useMemo(() => getAIModelLabel(selectedModel), [selectedModel]);
 
-    const activeAIModelLabel = React.useMemo(() => {
-      const model = activeAIProvider?.model.trim();
-
-      if (!model) return undefined;
-
-      return model
-        .replace(/^(gpt|claude|gemini)[-_]/i, '')
-        .replace(/[-_]/g, ' ');
-    }, [activeAIProvider?.model]);
+    const hasModelOptions = modelGroups.some((group) => group.models.length);
 
     const focusTextarea = React.useCallback(() => {
       textareaRef?.current?.focus();
     }, [textareaRef]);
+
+    const selectModel = React.useCallback(
+      (providerId: string, model: string) => {
+        onModelChange?.(providerId, model);
+        setOpenModels(false);
+      },
+      [onModelChange],
+    );
+
+    React.useEffect(() => {
+      if (!openModels) return;
+
+      const closeOnOutsideClick = (event: MouseEvent) => {
+        if (!modelMenuRef.current?.contains(event.target as Node)) {
+          setOpenModels(false);
+        }
+      };
+
+      window.addEventListener('mousedown', closeOnOutsideClick);
+      return () => window.removeEventListener('mousedown', closeOnOutsideClick);
+    }, [openModels]);
 
     return (
       <div className={styles.composer}>
@@ -94,9 +114,42 @@ export const AIChatComposer = React.memo(
 
                 <div className={styles.composerMeta}>
                   {!!activeAIModelLabel && (
-                    <span className={styles.modelBadge} title={activeAIProvider?.model}>
-                      {activeAIModelLabel}
-                    </span>
+                    <div ref={modelMenuRef} className={styles.modelMenuWrap}>
+                      <button
+                        className={styles.modelBadgeButton}
+                        type="button"
+                        title={t('aiProvider.selectModel')}
+                        disabled={!hasModelOptions}
+                        onClick={() => setOpenModels((prevState) => !prevState)}
+                      >
+                        {activeAIModelLabel}
+                      </button>
+
+                      {openModels && (
+                        <div className={styles.modelDropdown}>
+                          {modelGroups.map((group) => (
+                            <div key={group.providerId} className={styles.modelGroup}>
+                              <span className={styles.modelProviderName}>{group.providerName}</span>
+
+                              {group.models.map((model) => {
+                                const active = group.providerId === selectedProviderId && model === selectedModel;
+
+                                return (
+                                  <button
+                                    key={`${group.providerId}:${model}`}
+                                    type="button"
+                                    className={active ? styles.modelOptionActive : styles.modelOption}
+                                    onClick={() => selectModel(group.providerId, model)}
+                                  >
+                                    {getAIModelLabel(model)}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <button
@@ -119,3 +172,5 @@ export const AIChatComposer = React.memo(
     );
   },
 );
+
+AIChatComposer.displayName = 'AIChatComposer';

@@ -32,9 +32,8 @@ export interface IAIProvider {
   id: string;
   name: string;
   type: AIProviderType;
-  model: string;
+  models: string[];
   baseURL?: string;
-  isDefault?: boolean;
   hasApiKey: boolean;
   created_at: string;
   updated_at: string;
@@ -44,10 +43,9 @@ export interface IAIProviderCreate {
   id?: string;
   name: string;
   type: AIProviderType;
-  model: string;
+  models: string[];
   apiKey?: string;
   baseURL?: string;
-  isDefault?: boolean;
 }
 
 export interface IAIChatMessageInput {
@@ -83,6 +81,8 @@ export interface IAIChat {
   title: string;
   summary: string;
   messages: IAIChatMessage[];
+  providerId?: string;
+  model?: string;
   created_at: string;
   updated_at: string;
 }
@@ -92,12 +92,16 @@ export interface IAIChatCreate {
   title: string;
   summary?: string;
   messages?: IAIChatMessage[];
+  providerId?: string;
+  model?: string;
 }
 
 export interface IAIChatPatch {
   title?: string;
   summary?: string;
   messages?: IAIChatMessage[];
+  providerId?: string;
+  model?: string;
 }
 
 export interface IAIChatAppendMessages {
@@ -108,6 +112,7 @@ export interface IAIChatAppendMessages {
 
 export interface IAIChatRequest {
   providerId?: string;
+  model?: string;
   mentionedConnectionIds?: string[];
   messages: IAIChatMessageInput[];
 }

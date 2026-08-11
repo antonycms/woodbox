@@ -94,7 +94,7 @@ const waitForTurn = (threadId: string, turnId: string) => {
 };
 
 export const sendCodexChatGPTMessage = async (
-  provider: IAIProviderConfig,
+  _provider: IAIProviderConfig,
   request: IAIChatRequest,
 ): Promise<IAIChatResponse> => {
   const account = await getCodexChatGPTAccount();
@@ -104,7 +104,7 @@ export const sendCodexChatGPTMessage = async (
   }
 
   const thread = await codexRpc.request<ThreadStartResponse>('thread/start', {
-    model: provider.model || null,
+    model: request.model || null,
     cwd: app.getPath('userData'),
     approvalPolicy: 'never',
     sandbox: 'read-only',

@@ -13,13 +13,15 @@ import AIChat from './components/AIChat';
 import { AIChatEmptyState } from './components/AIChatEmptyState';
 import { ModalAIProviders } from './components/ModalAIProviders';
 import { ModalDeleteAIChat } from './components/ModalDeleteAIChat';
+import { useAIModelSelection } from './hooks/useAIModelSelection';
+import type { IAIChatModelSelection } from './types';
 import styles from './styles.module.css';
 
 export const AIChatPanel = React.memo(() => {
   const { t } = useI18n();
   const { activeChatId, closeChatPanel, openChatPanel, toggleChatPanel, visible } =
     useAIChatPanelContext();
-  const { aiChats, addAIChat, removeAIChat } = useStoreContext();
+  const { aiChats, aiProviders, addAIChat, editAIChat, removeAIChat } = useStoreContext();
   const { showToast } = useToast();
   const {
     activeTheme: { __colors, mainTab: theme },
@@ -30,6 +32,7 @@ export const AIChatPanel = React.memo(() => {
   const [draftNewChat, setDraftNewChat] = React.useState(false);
   const [showProvidersModal, setShowProvidersModal] = React.useState(false);
   const [chatToRemove, setChatToRemove] = React.useState<IAIChat>();
+  const [emptyAISelection, setEmptyAISelection] = React.useState<IAIChatModelSelection>();
   const setWidth = useDebounce(_setWidth);
 
   const activeChat = React.useMemo(
@@ -38,7 +41,39 @@ export const AIChatPanel = React.memo(() => {
   );
   const visibleChat = draftNewChat ? undefined : activeChat;
 
-  const recentChats = React.useMemo(() => aiChats.slice(0, 4), [aiChats]);
+  const handleChatModelChange = React.useCallback(
+    async (providerId: string, model: string) => {
+      if (!visibleChat) return;
+
+      try {
+        await editAIChat(visibleChat.id, { providerId, model });
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: t('aiProvider.selectModelFailed'),
+          description: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [editAIChat, showToast, t, visibleChat],
+  );
+
+  const handleEmptyChatModelChange = React.useCallback((providerId: string, model: string) => {
+    setEmptyAISelection({ providerId, model });
+  }, []);
+
+  const activeChatModelSelection = useAIModelSelection({
+    aiProviders,
+    chat: visibleChat,
+    onModelChange: handleChatModelChange,
+  });
+
+  const emptyChatModelSelection = useAIModelSelection({
+    aiProviders,
+    chats: aiChats,
+    selection: emptyAISelection,
+    onModelChange: handleEmptyChatModelChange,
+  });
 
   const optionsMenu = React.useMemo(
     () => [
@@ -61,8 +96,11 @@ export const AIChatPanel = React.memo(() => {
       const chat = await addAIChat({
         title: t('aiChat.newTitle'),
         summary: t('aiChat.newSummary'),
+        providerId: emptyChatModelSelection.selectedProviderId,
+        model: emptyChatModelSelection.selectedModel,
       });
 
+      setEmptyAISelection(undefined);
       selectChat(chat);
     } catch (error) {
       showToast({
@@ -71,13 +109,21 @@ export const AIChatPanel = React.memo(() => {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [addAIChat, selectChat, showToast, t]);
+  }, [
+    addAIChat,
+    emptyChatModelSelection.selectedModel,
+    emptyChatModelSelection.selectedProviderId,
+    selectChat,
+    showToast,
+    t,
+  ]);
 
   const handleSelectOption = React.useCallback(
     (option: IButtonDropdownOption) => {
       if (option.id === 'new-chat') {
         setDraftNewChat(true);
         setInitialMessage('');
+        setEmptyAISelection(undefined);
       }
       if (option.id === 'providers') setShowProvidersModal(true);
     },
@@ -91,13 +137,24 @@ export const AIChatPanel = React.memo(() => {
   const handleEmptySubmit = React.useCallback(
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (!emptyDraft.trim()) return;
+      if (
+        !emptyDraft.trim() ||
+        !emptyChatModelSelection.selectedProviderId ||
+        !emptyChatModelSelection.selectedModel
+      ) {
+        return;
+      }
 
       setInitialMessage(emptyDraft.trim());
       await createChat();
       setEmptyDraft('');
     },
-    [createChat, emptyDraft],
+    [
+      createChat,
+      emptyChatModelSelection.selectedModel,
+      emptyChatModelSelection.selectedProviderId,
+      emptyDraft,
+    ],
   );
 
   const confirmRemoveChat = React.useCallback(async () => {
@@ -107,17 +164,6 @@ export const AIChatPanel = React.memo(() => {
     if (chatToRemove.id === activeChatId) setDraftNewChat(true);
     setChatToRemove(undefined);
   }, [activeChatId, chatToRemove, removeAIChat]);
-
-  const formatChatAge = React.useCallback((date: string) => {
-    const diffInMinutes = Math.max(1, Math.round((Date.now() - new Date(date).getTime()) / 60000));
-
-    if (diffInMinutes < 60) return `${diffInMinutes} min`;
-
-    const diffInHours = Math.round(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} h`;
-
-    return `${Math.round(diffInHours / 24)} d`;
-  }, []);
 
   return (
     <>
@@ -187,12 +233,13 @@ export const AIChatPanel = React.memo(() => {
                     id_chat={visibleChat.id}
                     initialMessage={initialMessage}
                     menuOptions={optionsMenu}
-                    onConfigureProviders={() => setShowProvidersModal(true)}
+                    modelSelection={activeChatModelSelection}
                     onClose={closeChatPanel}
                     onInitialMessageHandled={() => setInitialMessage('')}
                     onNewChat={() => {
                       setDraftNewChat(true);
                       setInitialMessage('');
+                      setEmptyAISelection(undefined);
                     }}
                     onSelectMenuOption={handleSelectOption}
                   />
@@ -200,10 +247,9 @@ export const AIChatPanel = React.memo(() => {
                   <AIChatEmptyState
                     value={emptyDraft}
                     menuOptions={optionsMenu}
-                    recentChats={recentChats}
-                    formatChatAge={formatChatAge}
+                    modelSelection={emptyChatModelSelection}
                     onChange={setEmptyDraft}
-                    onClosePanel={closeChatPanel}
+                    onClose={closeChatPanel}
                     onDeleteChat={setChatToRemove}
                     onSelectChat={selectChat}
                     onSelectMenuOption={handleSelectOption}
