@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { decodeAIProviderSecret } from '@main/storage/modules/ai_providers';
 
 export const resolveAIModel = (provider: IAIProviderConfig, model: string): LanguageModel => {
@@ -23,6 +24,10 @@ export const resolveAIModel = (provider: IAIProviderConfig, model: string): Lang
 
   if (provider.type === 'google') {
     return createGoogle({ apiKey, baseURL })(model);
+  }
+
+  if (provider.type === 'openrouter') {
+    return createOpenRouter({ apiKey, baseURL })(model);
   }
 
   if (provider.type === 'codex-chatgpt') {

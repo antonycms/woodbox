@@ -47,6 +47,7 @@ declare global {
     | 'openai'
     | 'anthropic'
     | 'google'
+    | 'openrouter'
     | 'openai-compatible'
     | 'codex-chatgpt';
 

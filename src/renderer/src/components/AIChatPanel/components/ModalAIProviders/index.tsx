@@ -30,6 +30,7 @@ const providerOptions: { labelKey: TranslationKey; value: AIProviderType; sugges
   { labelKey: 'aiProvider.type.openai', value: 'openai', suggestedModel: 'gpt-5-mini' },
   { labelKey: 'aiProvider.type.anthropic', value: 'anthropic', suggestedModel: 'claude-sonnet-4-6' },
   { labelKey: 'aiProvider.type.google', value: 'google', suggestedModel: 'gemini-2.5-flash' },
+  { labelKey: 'aiProvider.type.openrouter', value: 'openrouter', suggestedModel: 'openai/gpt-4o' },
   { labelKey: 'aiProvider.type.openaiCompatible', value: 'openai-compatible', suggestedModel: '' },
   { labelKey: 'aiProvider.type.codexChatGPT', value: 'codex-chatgpt', suggestedModel: 'gpt-5.6' },
 ];

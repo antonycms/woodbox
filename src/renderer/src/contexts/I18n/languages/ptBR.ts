@@ -597,6 +597,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiProvider.type.openai': 'OpenAI',
   'aiProvider.type.anthropic': 'Anthropic',
   'aiProvider.type.google': 'Google Gemini',
+  'aiProvider.type.openrouter': 'OpenRouter',
   'aiProvider.type.openaiCompatible': 'OpenAI compatível',
   'aiProvider.type.codexChatGPT': 'Codex via plano ChatGPT',
   'aiProvider.apiKeyKeepHelp': 'Deixe vazio para manter a chave salva',

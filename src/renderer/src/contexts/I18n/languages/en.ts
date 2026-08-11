@@ -593,6 +593,7 @@ export const en = {
   'aiProvider.type.openai': 'OpenAI',
   'aiProvider.type.anthropic': 'Anthropic',
   'aiProvider.type.google': 'Google Gemini',
+  'aiProvider.type.openrouter': 'OpenRouter',
   'aiProvider.type.openaiCompatible': 'OpenAI compatible',
   'aiProvider.type.codexChatGPT': 'Codex via ChatGPT plan',
   'aiProvider.apiKeyKeepHelp': 'Leave blank to keep the saved key',

@@ -25,6 +25,7 @@ export type AIProviderType =
   | 'openai'
   | 'anthropic'
   | 'google'
+  | 'openrouter'
   | 'openai-compatible'
   | 'codex-chatgpt';
 
