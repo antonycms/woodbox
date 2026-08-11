@@ -55,6 +55,7 @@ import { TabContentSelect } from './components/TabContentSelect';
 import { ModalServerOutput } from './components/ModalServerOutput';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { useQueryCancellation } from './hooks/useQueryCancellation';
+import { TabContentExplain } from './components/TabContentExplain';
 
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const { t } = useI18n();
@@ -67,6 +68,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     getTableReferences,
     editScript,
     getScriptContent,
+    runExplainSql,
     snippets,
   } = useStoreContext();
 
@@ -333,7 +335,80 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     }
   };
 
+  const executeExplainQuery = async (params: IExecuteQueryParams) => {
+    const { query, variableValues } = params;
+    const preparedQuery = prepareQueryVariables(query, variableValues);
+    const dialectId = currentConnection?.dialect || 'postgres';
+    const queryExecutionId = generateHash();
+
+    const updateTabResultData = makeNewTabResult({
+      query,
+      variableValues,
+      type: 'EXPLAIN',
+      title: t('query.explainTabTitle'),
+      date_run: new Date().toISOString(),
+      explain: {
+        dialect: dialectId,
+        originalQuery: query,
+      },
+    });
+
+    updateTabResultData({
+      type: 'EXPLAIN',
+      loading: true,
+      queryExecutionId,
+      date_run: new Date().toISOString(),
+    });
+
+    try {
+      const [result] = await runExplainSql(id_connection, preparedQuery, {
+        queryExecutionId,
+      });
+
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData(
+          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
+        );
+        return;
+      }
+
+      updateTabResultData({
+        ...result,
+        type: 'EXPLAIN',
+        query,
+        variableValues,
+        loading: false,
+        queryExecutionId: undefined,
+        explain: {
+          dialect: dialectId,
+          originalQuery: query,
+        },
+      });
+    } catch (error) {
+      if (wasQueryCanceled(queryExecutionId)) {
+        updateTabResultData(
+          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
+        );
+        return;
+      }
+
+      updateTabResultData({
+        type: 'ERROR',
+        query,
+        variableValues,
+        message: formatQueryExecutionErrorMessage(error),
+        loading: false,
+        queryExecutionId: undefined,
+      });
+    }
+  };
+
   const confirmOrExecuteQuery = (params: IExecuteQueryParams) => {
+    if (params.mode === 'explain') {
+      executeExplainQuery(params);
+      return;
+    }
+
     const preparedQuery = prepareQueryVariables(params.query, params.variableValues);
 
     if (isProductionConnection && hasUnsafeSqlMutation(preparedQuery)) {
@@ -562,6 +637,40 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     if (!query) return;
 
     requestQueryExecution({ query, editorOffset: currentQuery.start, openNewTab });
+  };
+
+  const explainCurrentSQL = async () => {
+    const selections = refEditor.current?.getSelections?.() || [];
+    const selectionsValue = getSelectionsValues();
+    const firstSelectionPosition = selections
+      .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
+      ?.getStartPosition?.();
+    const selectionOffset = firstSelectionPosition
+      ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
+      : undefined;
+
+    if (selectionsValue.length) {
+      const query = selectionsValue.join('\n');
+      requestQueryExecution({
+        query,
+        editorOffset: selectionOffset,
+        forceNewTab: true,
+        mode: 'explain',
+      });
+      return;
+    }
+
+    const currentQuery = refEditor.current?.getCurrentQueryRange?.();
+    const query = currentQuery?.sql;
+
+    if (!query) return;
+
+    requestQueryExecution({
+      query,
+      editorOffset: currentQuery.start,
+      forceNewTab: true,
+      mode: 'explain',
+    });
   };
 
   const runSelectionsSQL = async () => {
@@ -946,6 +1055,9 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const runCurrentSQLRef = React.useRef(runCurrentSQL);
   runCurrentSQLRef.current = runCurrentSQL;
 
+  const explainCurrentSQLRef = React.useRef(explainCurrentSQL);
+  explainCurrentSQLRef.current = explainCurrentSQL;
+
   React.useEffect(() => {
     if (!refEditor.current?.element) return;
 
@@ -972,6 +1084,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
       if (isPrimaryShortcutPressed(e) && e.key.toLocaleLowerCase() === '\\') {
         return runCurrentSQLRef.current(true);
+      }
+
+      if (isPrimaryShortcutPressed(e) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        return explainCurrentSQLRef.current();
       }
     };
 
@@ -1025,6 +1142,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           runAllSQL={runAllSQL}
           runSelectionsSQL={runSelectionsSQL}
           runCurrentSQL={runCurrentSQL}
+          explainCurrentSQL={explainCurrentSQL}
           showServerOutput={showServerOutput}
         />
 
@@ -1095,12 +1213,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
                 if (!data) return null;
 
                 const isErrorResult = data.type === 'ERROR';
+                const isExplainResult = data.type === 'EXPLAIN';
                 const isSelectResult =
-                  !isErrorResult && (data.type === 'SELECT' || !!data.columns?.length);
+                  !isErrorResult &&
+                  !isExplainResult &&
+                  (data.type === 'SELECT' || !!data.columns?.length);
                 const isDeleteResult = !isSelectResult && data.type === 'DELETE';
                 const isAlterResult = !isSelectResult && data.type === 'ALTER';
                 const isGenericResult =
-                  !isSelectResult && !['SELECT', 'DELETE', 'ALTER', 'ERROR'].includes(data.type);
+                  !isSelectResult &&
+                  !['SELECT', 'DELETE', 'ALTER', 'ERROR', 'EXPLAIN'].includes(data.type);
                 const isReadOnlyResult = data.type !== 'SELECT';
 
                 return (
@@ -1131,6 +1253,15 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
                     {isDeleteResult && <TabContentDelete data={data} />}
                     {isAlterResult && <TabContentAlter data={data} />}
+                    {isExplainResult && (
+                      <TabContentExplain
+                        data={data}
+                        onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
+                        cancelingQuery={
+                          !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
+                        }
+                      />
+                    )}
                     {isErrorResult && <TabcontentError data={data} />}
                     {isGenericResult && <TabContentGeneric data={data} />}
                   </TabContent>

@@ -1,4 +1,5 @@
 import type { ITableSort } from '@renderer/components/Table/dtos';
+import type { Dialect } from '@renderer/database/dialects';
 import type { ITableQuery } from '@renderer/utils/sql';
 
 export interface IQueryResult {
@@ -19,6 +20,7 @@ export interface IQueryResult {
   tables_info?: ITableQuery[];
   variableValues?: Record<string, string>;
   capture?: IQueryCaptureState;
+  explain?: IQueryExplainResult;
 }
 
 export interface IQueryResultColumn {
@@ -32,6 +34,7 @@ export interface IPendingQueryExecution {
   openNewTab?: boolean;
   forceNewTab?: boolean;
   markErrors?: boolean;
+  mode?: 'run' | 'explain';
 }
 
 export interface IExecuteQueryParams extends IPendingQueryExecution {
@@ -51,6 +54,11 @@ export interface IQueryCaptureState {
   stopped_at?: string;
   rows: IQueryCapturedRow[];
   rowHashes: string[];
+}
+
+export interface IQueryExplainResult {
+  dialect: Dialect;
+  originalQuery: string;
 }
 
 export type IDataUpdateabResult = Partial<IDataMakeTabResult> & { captureRows?: boolean };
