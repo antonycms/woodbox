@@ -125,6 +125,7 @@ export const en = {
   'message.confirmProductionQuery':
     'This connection is marked as Production. Confirm to run an operation that may change data or structure.',
   'tooltip.viewJson': 'View JSON',
+  'tooltip.viewMap': 'View map',
   'tooltip.viewTable': 'View table',
   'common.close': 'Close',
   'common.unselect': 'Unselect',

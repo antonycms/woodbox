@@ -6,10 +6,10 @@ import {
   type IContextMenuOption,
   type IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import Editor from '@renderer/components/Editor';
 import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
+import ReferenceValuePreview from '@renderer/components/ReferenceValuePreview';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
@@ -341,22 +341,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     return row[attribute];
   }, [editedFieldsRows, newRows, selectedCell]);
-
-  const previewValue = React.useMemo(() => {
-    const value = selectedCellValue;
-
-    if (value === undefined || value === null) return '';
-
-    if (typeof value === 'string') {
-      try {
-        return JSON.stringify(JSON.parse(value), null, 2);
-      } catch {
-        return value;
-      }
-    }
-
-    return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-  }, [selectedCellValue]);
 
   const tabFkMap = React.useMemo(() => {
     const map = new Map<string, IColumnReferenceInfo>();
@@ -1089,12 +1073,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
               <TabWindow activeTabId={activePreviewTab}>
                 <TabContent idTab="value">
-                  <Editor
+                  <ReferenceValuePreview
+                    key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
+                    column={selectedCell?.column}
                     dialect={dialect.editorDialect}
-                    language="json"
                     readonly={!selectedCell?.column.editable}
-                    hidePreview
-                    value={previewValue}
+                    value={selectedCellValue}
                     onChange={handleApplySelectedPreviewValue}
                   />
                 </TabContent>

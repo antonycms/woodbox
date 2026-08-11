@@ -128,6 +128,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'message.confirmProductionQuery':
     'Esta conexão está marcada como Produção. Confirme para executar uma operação que pode alterar dados ou estrutura.',
   'tooltip.viewJson': 'Visualizar JSON',
+  'tooltip.viewMap': 'Visualizar mapa',
   'tooltip.viewTable': 'Visualizar tabela',
   'common.close': 'Fechar',
   'common.unselect': 'Desmarcar',

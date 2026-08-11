@@ -1,0 +1,75 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--reference-border-color);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: monospace;
+  font-size: 12px;
+  opacity: 0.82;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background:
+    linear-gradient(color-mix(in srgb, var(--reference-map-color) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--reference-map-color) 8%, transparent) 1px, transparent 1px),
+    var(--reference-map-background);
+  background-size: 32px 32px;
+}
+
+.map :global(.leaflet-control-zoom a) {
+  color: var(--reference-map-color);
+  background: var(--reference-map-background);
+  border-color: var(--reference-map-border-color);
+}
+
+.pointMarker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+}
+
+.pointMarker span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: #ff1744;
+  border: 4px solid #ffffff;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 0 14px rgba(255, 23, 68, 0.85);
+}

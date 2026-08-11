@@ -3,8 +3,8 @@ import Table, {
   type ITableContextMenuData,
   type ITableSelectedCellData,
 } from '@renderer/components/Table';
-import Editor from '@renderer/components/Editor';
 import ReferencePreview from '@renderer/components/ReferencePreview';
+import ReferenceValuePreview from '@renderer/components/ReferenceValuePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
@@ -184,22 +184,6 @@ const Data = ({
 
     return row[attribute];
   }, [editedFieldsRows, newRows, selectedCell]);
-
-  const previewValue = React.useMemo(() => {
-    const value = selectedCellValue;
-
-    if (value === undefined || value === null) return '';
-
-    if (typeof value === 'string') {
-      try {
-        return JSON.stringify(JSON.parse(value), null, 2);
-      } catch {
-        return value;
-      }
-    }
-
-    return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-  }, [selectedCellValue]);
 
   const serializeRows = React.useCallback(
     (rows: any[]) =>
@@ -1084,12 +1068,12 @@ const Data = ({
 
               <TabWindow activeTabId={activePreviewTab}>
                 <TabContent idTab="value">
-                  <Editor
+                  <ReferenceValuePreview
+                    key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
+                    column={selectedCell?.column}
                     dialect={dialect.editorDialect}
-                    language="json"
                     readonly={!selectedCell?.column.editable}
-                    hidePreview
-                    value={previewValue}
+                    value={selectedCellValue}
                     onChange={handleApplySelectedPreviewValue}
                   />
                 </TabContent>
