@@ -31,7 +31,7 @@ export const QueryResultTable = React.memo(({ result }: IQueryResultTableProps) 
       <p style={{ margin: '4px 0 14px 0' }}>Resultado da query:</p>
 
       <div className={styles.queryResultTable}>
-        <Table rows={rows} columns={columns} rowKeyExtractor={(_, index) => index} />
+        <Table initialAnalysisMode={rows.length === 1} rows={rows} columns={columns} rowKeyExtractor={(_, index) => index} />
       </div>
       </>
   );
