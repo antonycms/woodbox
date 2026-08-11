@@ -4,3 +4,4 @@ out
 *.log*
 .claude
 .codex
+tsconfig.node.tsbuildinfo
