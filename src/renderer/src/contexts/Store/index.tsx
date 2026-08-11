@@ -482,6 +482,17 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     [],
   );
 
+  const runExplainSql = React.useCallback(
+    async (
+      idConnection: string,
+      sql: string,
+      options?: Pick<IOptionsRunSql, 'queryExecutionId'>,
+    ) => {
+      return await call<RunSqlResult>('@post:run_explain_sql', idConnection, sql, options);
+    },
+    [],
+  );
+
   const importTableData = React.useCallback(
     async (idConnection: string, params: IImportTableDataParams) => {
       return await call<IImportTableDataResult>('@post:import_table_data', idConnection, params);
@@ -536,6 +547,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getServerOutput,
       clearServerOutput,
       runSql,
+      runExplainSql,
       importTableData,
       cancelRunSql,
 
@@ -618,6 +630,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       removeScript,
       removeSnippet,
       runSql,
+      runExplainSql,
       scripts,
       sendAIChatMessage,
       snippets,

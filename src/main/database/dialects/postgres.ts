@@ -26,6 +26,7 @@ const postgres: DatabaseDialectAdapter = {
     application_name: `Woodbox (${description})`,
   }),
   getRows: (raw) => raw?.rows || [],
+  getExplainSql: (sql) => `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql};`,
   serializeRunSqlResult: (raw, context) => {
     const rawArray = Array.isArray(raw) ? raw : [raw];
 

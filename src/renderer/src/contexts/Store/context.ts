@@ -466,6 +466,21 @@ export interface IStoreContext {
       execution_time_ms?: number;
     }[]
   >;
+  runExplainSql(
+    idConnection: string,
+    sql: string,
+    options?: Pick<IOptionsRunSql, 'queryExecutionId'>,
+  ): Promise<
+    {
+      type: string;
+      rows?: any[];
+      columns?: string[];
+      columns_info?: { name: string; type?: string }[];
+      affected_rows?: number;
+      auto_paginated?: boolean;
+      execution_time_ms?: number;
+    }[]
+  >;
   cancelRunSql(idConnection: string, queryExecutionId: string): Promise<boolean>;
   importTableData(
     idConnection: string,

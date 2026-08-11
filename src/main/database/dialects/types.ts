@@ -53,6 +53,7 @@ export interface DatabaseDialectAdapter {
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
   getRows(raw: any): any[];
   serializeRunSqlResult(raw: any, context: SerializeRunSqlContext): SerializedRunSqlResult[];
+  getExplainSql(sql: string): string;
   resolveRunSqlColumnsInfo?(
     context: ResolveRunSqlColumnsInfoContext,
   ): Promise<SerializedRunSqlResult[]>;

@@ -200,6 +200,7 @@ const sqlite: DatabaseDialectAdapter = {
   }),
   getRows,
   splitStatements,
+  getExplainSql: (sql) => `EXPLAIN QUERY PLAN ${sql};`,
   serializeRunSqlResult: (raw, context) => {
     const rows = getRows(raw);
     const type = isSelectStatement(context.statement) ? 'SELECT' : 'OK';

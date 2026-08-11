@@ -73,6 +73,30 @@ export const isReadOnlySelectQuery = (sql: string) => {
   return withInfo.finalKeyword === 'select' && !withInfo.hasDataModifyingCte;
 };
 
+export const hasSqlStatementSeparator = (sql: string) => {
+  let index = 0;
+
+  while (index < sql.length) {
+    const ignoredEndIndex = skipSqlIgnorable(sql, index);
+    if (ignoredEndIndex !== index) {
+      index = ignoredEndIndex;
+      continue;
+    }
+
+    const quotedEndIndex = skipSqlQuotedValue(sql, index);
+    if (quotedEndIndex !== index) {
+      index = quotedEndIndex;
+      continue;
+    }
+
+    if (sql[index] === ';') return true;
+
+    index += 1;
+  }
+
+  return false;
+};
+
 const readWithQueryInfo = (sql: string, startIndex: number) => {
   let index = startIndex;
   let hasDataModifyingCte = false;

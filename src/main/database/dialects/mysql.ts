@@ -137,6 +137,7 @@ const mysql: DatabaseDialectAdapter = {
   }),
   getRows,
   splitStatements,
+  getExplainSql: (sql) => `EXPLAIN ANALYZE ${sql};`,
   serializeRunSqlResult: (raw, context) => {
     const rows = getRows(raw);
     const fields = Array.isArray(raw) ? raw[1] : undefined;

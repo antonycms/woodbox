@@ -3,7 +3,12 @@ import { getConnectionsSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
 import { getDialectAdapter, getDialectIds } from './dialects';
 import { serializeOrderBy, type IOrderBy } from './utils/orderBy';
-import { isReadOnlySelectQuery, normalizeSqlForKeywordSearch, sanitizeAutoPaginatedError } from './utils/sql';
+import {
+  hasSqlStatementSeparator,
+  isReadOnlySelectQuery,
+  normalizeSqlForKeywordSearch,
+  sanitizeAutoPaginatedError,
+} from './utils/sql';
 
 const activeConnections: IConnection[] = [];
 const pendingConnections = new Map<string, Promise<IConnection>>();
@@ -529,6 +534,26 @@ export const runSql = async (
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
     await (instance.client as any).releaseConnection(dbConnection);
   }
+};
+
+export const runExplainSql = async (
+  connectionId: string,
+  sql: string,
+  options?: { queryExecutionId?: string },
+) => {
+  const connection = await getConnection(connectionId);
+  const adapter = getDialectAdapter(connection.dialect);
+  const sqlFinal = sql.trim().replace(/;+\s*$/, '');
+
+  if (!isReadOnlySelectQuery(sqlFinal)) {
+    throw new Error('EXPLAIN só está disponível para consultas SELECT.');
+  }
+
+  if (hasSqlStatementSeparator(sqlFinal)) {
+    throw new Error('EXPLAIN analisa uma instrução SQL por vez.');
+  }
+
+  return runSql(connectionId, adapter.getExplainSql(sqlFinal), options);
 };
 
 export const importTableData = async (
