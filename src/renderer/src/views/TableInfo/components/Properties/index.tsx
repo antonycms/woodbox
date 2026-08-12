@@ -26,6 +26,9 @@ interface IPropertiesProps extends ITableInfoProps {
 const Properties = (props: IPropertiesProps) => {
   const { table } = props;
   const isCreateMode = props.mode === 'create';
+  const isReadOnlyObject = props.objectType === 'view' || props.objectType === 'materialized_view';
+  const supportsIndexes = props.supportsIndexes ?? !isReadOnlyObject;
+  const supportsTriggers = props.supportsTriggers ?? !isReadOnlyObject;
   const {
     activeTheme: {
       tableInfo: { properties: theme },
@@ -88,24 +91,37 @@ const Properties = (props: IPropertiesProps) => {
   }, [props.onRegisterRefresh, handleRefreshActiveTab]);
 
   const tabs = React.useMemo(() => {
-    const allowedTabs = [
-      { idTab: '1', title: t('tabs.columns') },
-      { idTab: '8', title: t('tabs.indexes') },
-      { idTab: '2', title: t('tabs.constraints') },
-      { idTab: '3', title: t('tabs.foreignKeys') },
-    ];
+    const allowedTabs = [{ idTab: '1', title: t('tabs.columns') }];
 
-    if (!isCreateMode) {
+    if (supportsIndexes) {
+      allowedTabs.push({ idTab: '8', title: t('tabs.indexes') });
+    }
+
+    if (!isReadOnlyObject) {
       allowedTabs.push(
-        { idTab: '4', title: t('tabs.references') },
-        { idTab: '6', title: t('tabs.triggers') },
-        { idTab: '7', title: t('tabs.diagram') },
-        { idTab: '5', title: t('tabs.definition') },
+        { idTab: '2', title: t('tabs.constraints') },
+        { idTab: '3', title: t('tabs.foreignKeys') },
       );
     }
 
+    if (!isCreateMode) {
+      if (!isReadOnlyObject) {
+        allowedTabs.push({ idTab: '4', title: t('tabs.references') });
+      }
+
+      if (supportsTriggers) {
+        allowedTabs.push({ idTab: '6', title: t('tabs.triggers') });
+      }
+
+      if (!isReadOnlyObject) {
+        allowedTabs.push({ idTab: '7', title: t('tabs.diagram') });
+      }
+
+      allowedTabs.push({ idTab: '5', title: t('tabs.definition') });
+    }
+
     return allowedTabs;
-  }, [isCreateMode, t]);
+  }, [isCreateMode, isReadOnlyObject, supportsIndexes, supportsTriggers, t]);
 
   return (
     <div className={styles.propertiesContainer}>
@@ -120,6 +136,7 @@ const Properties = (props: IPropertiesProps) => {
             label={t('field.table')}
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
+            disabled={isReadOnlyObject}
             {...register('table')}
           />
           <Input
@@ -127,6 +144,7 @@ const Properties = (props: IPropertiesProps) => {
             label={t('field.comment')}
             backgroundColor={theme.header.fieldBackgroundColor}
             color={theme.header.fieldColor}
+            disabled={isReadOnlyObject}
             {...register('comment')}
           />
         </Row>
@@ -159,25 +177,31 @@ const Properties = (props: IPropertiesProps) => {
             <Columns {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
-          <TabContent idTab="8">
-            <Indexes {...props} table={tableName} tableComment={state.comment} />
-          </TabContent>
+          {supportsIndexes && (
+            <TabContent idTab="8">
+              <Indexes {...props} table={tableName} tableComment={state.comment} />
+            </TabContent>
+          )}
 
-          <TabContent idTab="2">
-            <Restrictios {...props} table={tableName} tableComment={state.comment} />
-          </TabContent>
+          {!isReadOnlyObject && (
+            <TabContent idTab="2">
+              <Restrictios {...props} table={tableName} tableComment={state.comment} />
+            </TabContent>
+          )}
 
-          <TabContent idTab="3">
-            <ForeingKeys {...props} table={tableName} tableComment={state.comment} />
-          </TabContent>
+          {!isReadOnlyObject && (
+            <TabContent idTab="3">
+              <ForeingKeys {...props} table={tableName} tableComment={state.comment} />
+            </TabContent>
+          )}
 
-          {!isCreateMode && (
+          {!isCreateMode && !isReadOnlyObject && (
             <TabContent idTab="4">
               <References {...props} />
             </TabContent>
           )}
 
-          {!isCreateMode && (
+          {!isCreateMode && !isReadOnlyObject && (
             <TabContent idTab="7">
               <Diagram active={activeTabId === '7'} {...props} />
             </TabContent>
@@ -189,7 +213,7 @@ const Properties = (props: IPropertiesProps) => {
             </TabContent>
           )}
 
-          {!isCreateMode && (
+          {!isCreateMode && supportsTriggers && (
             <TabContent idTab="6">
               <Triggers {...props} />
             </TabContent>

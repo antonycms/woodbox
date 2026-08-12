@@ -77,6 +77,7 @@ const Data = ({
   onOpenTable,
   onRegisterRefresh,
   onPendingRowsChangesChange,
+  objectType = 'table',
 }: IDataProps) => {
   const {
     activeTheme: {
@@ -135,6 +136,7 @@ const Data = ({
   const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
   const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
+  const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
@@ -296,10 +298,10 @@ const Data = ({
         attribute: column.column_name,
         required: !!column.is_nullable,
         sortable: true,
-        editable: true,
+        editable: !isReadOnlyObject,
         isLink: fkMap.has(column.column_name),
       })),
-    [columns, fkMap],
+    [columns, fkMap, isReadOnlyObject],
   );
 
   const columnNames = React.useMemo(() => columns.map((column) => column.column_name), [columns]);
@@ -935,11 +937,11 @@ const Data = ({
         onClick: handleSetSelectedCellsNull,
         show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
       },
-      {
+      !isReadOnlyObject && {
         text: t('context.deleteSelectedItems'),
         onClick: handleRemoveSelectedRows,
       },
-      {
+      !isReadOnlyObject && {
         text: t('context.insertDdlRow'),
         onClick: () => {
           setDdlSql(
@@ -954,7 +956,7 @@ const Data = ({
           setShowDdlModal(true);
         },
       },
-      {
+      !isReadOnlyObject && {
         text: t('context.insertDdlSelectedCells'),
         onClick: () => {
           setDdlSql(
@@ -969,13 +971,14 @@ const Data = ({
           setShowDdlModal(true);
         },
       },
-    ];
+    ].filter(Boolean) as IContextMenuOption[];
   }, [
     columnNames,
     contextMenuTable,
     dialect,
     handleRemoveSelectedRows,
     handleSetSelectedCellsNull,
+    isReadOnlyObject,
     schema,
     table,
     t,
@@ -984,7 +987,7 @@ const Data = ({
   return (
     <div
       className={styles.container}
-      onKeyDown={handleKeyDown}
+      onKeyDown={isReadOnlyObject ? undefined : handleKeyDown}
       style={
         {
           '--data-border-color': theme.bar.borderColor,
@@ -1026,8 +1029,8 @@ const Data = ({
             newRows={newRows}
             onCellLinkClick={handleFkCellClick}
             onCellLinkPreviewClick={handleFkPreviewClick}
-            onEditNewRow={handleEditNewRow}
-            onEditRow={handleEditRow}
+            onEditNewRow={isReadOnlyObject ? undefined : handleEditNewRow}
+            onEditRow={isReadOnlyObject ? undefined : handleEditRow}
           />
         </div>
 
@@ -1107,46 +1110,50 @@ const Data = ({
       </div>
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button
-          title={t('common.save')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleSaveItems}
-          loading={applyingChanges}
-        >
-          <SaveIcon size={16} />
-        </Button>
+        {!isReadOnlyObject && (
+          <>
+            <Button
+              title={t('common.save')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleSaveItems}
+              loading={applyingChanges}
+            >
+              <SaveIcon size={16} />
+            </Button>
 
-        <Button
-          title={t('common.add')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleAddItem}
-        >
-          <AddIcon size={14} />
-        </Button>
+            <Button
+              title={t('common.add')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleAddItem}
+            >
+              <AddIcon size={14} />
+            </Button>
 
-        <Button
-          title={t('common.duplicateSelectedItems')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleDuplicateSelectedRows}
-        >
-          <DuplicateIcon size={20} />
-        </Button>
+            <Button
+              title={t('common.duplicateSelectedItems')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleDuplicateSelectedRows}
+            >
+              <DuplicateIcon size={20} />
+            </Button>
 
-        <Button
-          title={t('common.removeSelectedItems')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleRemoveSelectedRows}
-        >
-          <RemoveIcon size={16} />
-        </Button>
+            <Button
+              title={t('common.removeSelectedItems')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleRemoveSelectedRows}
+            >
+              <RemoveIcon size={16} />
+            </Button>
+          </>
+        )}
 
         <Button
           title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}

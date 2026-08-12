@@ -1,3 +1,5 @@
+import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
+
 export interface ITableInfoProps {
   id_connection: string;
   table: string;
@@ -10,4 +12,7 @@ export interface ITableInfoProps {
   initialWhere?: string;
   filterLocked?: boolean;
   initialTab?: string;
+  objectType?: DatabaseObjectType;
+  supportsIndexes?: boolean;
+  supportsTriggers?: boolean;
 }

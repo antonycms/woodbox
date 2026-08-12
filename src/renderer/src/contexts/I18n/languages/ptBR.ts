@@ -174,6 +174,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'tabs.openTabs': 'Abas abertas',
   'tabs.scripts': 'Scripts',
   'tabs.tables': 'Tabelas',
+  'tabs.views': 'Views',
+  'tabs.materializedViews': 'Views materializadas',
   'tabs.functions': 'Funções',
   'modal.dataLoadError': 'Erro ao carregar dados',
   'modal.pendingChanges': 'Alterações pendentes',

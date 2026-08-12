@@ -171,6 +171,8 @@ export const en = {
   'tabs.openTabs': 'Open tabs',
   'tabs.scripts': 'Scripts',
   'tabs.tables': 'Tables',
+  'tabs.views': 'Views',
+  'tabs.materializedViews': 'Materialized views',
   'tabs.functions': 'Functions',
   'modal.dataLoadError': 'Error loading data',
   'modal.pendingChanges': 'Pending changes',

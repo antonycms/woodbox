@@ -402,6 +402,9 @@ const ProjectsMenu = () => {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;
       const title = `${schema ? `${schema}.` : ''}${table}`;
+      const objectType = item.data.object_type || 'table';
+      const supportsIndexes = item.data.supports_indexes;
+      const supportsTriggers = item.data.supports_triggers;
 
       const tab = getTab(tabId);
 
@@ -416,6 +419,9 @@ const ProjectsMenu = () => {
             id_connection,
             schema,
             table,
+            objectType,
+            supportsIndexes,
+            supportsTriggers,
           },
           component: () => (
             <TableInfo
@@ -423,6 +429,9 @@ const ProjectsMenu = () => {
               schema={schema}
               table={table}
               appTabId={tabId}
+              objectType={objectType}
+              supportsIndexes={supportsIndexes}
+              supportsTriggers={supportsTriggers}
             />
           ),
         });
@@ -533,18 +542,21 @@ const ProjectsMenu = () => {
             copyToClipboard([data.table_schema, data.table_name].filter(Boolean).join('.'));
           },
         },
-        {
-          text: t('modal.importData'),
-          onClick: () => setTableToImport(contextMenuItemSelected),
-        },
-        {
-          text: t('modal.renameTable'),
-          onClick: () => setTableToRename(contextMenuItemSelected),
-        },
-        {
-          text: t('modal.deleteTable'),
-          onClick: () => setTableToDelete(contextMenuItemSelected),
-        },
+        contextMenuItemSelected?.data?.object_type !== 'view' &&
+          contextMenuItemSelected?.data?.object_type !== 'materialized_view' && {
+            text: t('modal.importData'),
+            onClick: () => setTableToImport(contextMenuItemSelected),
+          },
+        contextMenuItemSelected?.data?.object_type !== 'view' &&
+          contextMenuItemSelected?.data?.object_type !== 'materialized_view' && {
+            text: t('modal.renameTable'),
+            onClick: () => setTableToRename(contextMenuItemSelected),
+          },
+        contextMenuItemSelected?.data?.object_type !== 'view' &&
+          contextMenuItemSelected?.data?.object_type !== 'materialized_view' && {
+            text: t('modal.deleteTable'),
+            onClick: () => setTableToDelete(contextMenuItemSelected),
+          },
       ],
 
       tables: [
@@ -634,9 +646,9 @@ const ProjectsMenu = () => {
             description_connection: connection.description,
           };
 
-          let tablesThreeView: IItemTreeView[] =
+          let databaseObjectsThreeView: IItemTreeView[] =
             connectionInfo?.tables?.map((table) => {
-              const { table_name, table_schema, total_size } = table;
+              const { table_name, table_schema, total_size, object_type = 'table' } = table;
 
               return {
                 id: table_schema
@@ -646,7 +658,7 @@ const ProjectsMenu = () => {
                 labelInfo: formatSizeFromBytes(total_size),
                 icon: 'table' as const,
                 type: 'table' as const,
-                data: { ...table, ...dataConnection },
+                data: { ...table, object_type, ...dataConnection },
               };
             }) || [];
 
@@ -677,7 +689,7 @@ const ProjectsMenu = () => {
           }));
 
           if (filterTextSerialized) {
-            tablesThreeView = tablesThreeView.filter((table) =>
+            databaseObjectsThreeView = databaseObjectsThreeView.filter((table) =>
               checkFilterText(table?.label, table?.data?.table_schema),
             );
             functionsThreeView = functionsThreeView.filter((fn) =>
@@ -685,9 +697,25 @@ const ProjectsMenu = () => {
             );
           }
 
+          const tablesThreeView = databaseObjectsThreeView.filter(
+            ({ data }) => data.object_type === 'table',
+          );
+          const viewsThreeView = databaseObjectsThreeView.filter(
+            ({ data }) => data.object_type === 'view',
+          );
+          const materializedViewsThreeView = databaseObjectsThreeView.filter(
+            ({ data }) => data.object_type === 'materialized_view',
+          );
+
           let schemasThreeView: IItemTreeView[] = dialect.supportsSchemas
             ? connectionInfo?.schemas?.map?.((schema) => {
                 const tablesSchema = tablesThreeView.filter(
+                  ({ data }) => data.table_schema === schema,
+                );
+                const viewsSchema = viewsThreeView.filter(
+                  ({ data }) => data.table_schema === schema,
+                );
+                const materializedViewsSchema = materializedViewsThreeView.filter(
                   ({ data }) => data.table_schema === schema,
                 );
                 const functionsSchema = functionsThreeView.filter(
@@ -709,13 +737,29 @@ const ProjectsMenu = () => {
                       type: 'tables' as const,
                       data: { schema_name: schema, ...dataConnection },
                     },
+                    !!viewsSchema.length && {
+                      id: `views_${connection.id}:${schema}`,
+                      label: t('tabs.views'),
+                      icon: 'multi',
+                      childs: viewsSchema,
+                      type: 'views' as const,
+                      data: { schema_name: schema, ...dataConnection },
+                    },
+                    !!materializedViewsSchema.length && {
+                      id: `mat_views_${connection.id}:${schema}`,
+                      label: t('tabs.materializedViews'),
+                      icon: 'multi',
+                      childs: materializedViewsSchema,
+                      type: 'materializedViews' as const,
+                      data: { schema_name: schema, ...dataConnection },
+                    },
                     {
                       id: `fns_${connection.id}:${schema}`,
                       label: t('tabs.functions'),
                       childs: functionsSchema,
                       icon: 'functions',
                     },
-                  ],
+                  ].filter(Boolean) as IItemTreeView[],
                 };
               }) || []
             : [];
@@ -727,7 +771,9 @@ const ProjectsMenu = () => {
           }
 
           hasContentWithFilterText =
-            hasContentWithFilterText || !!tablesThreeView.length || !!functionsThreeView.length;
+            hasContentWithFilterText ||
+            !!databaseObjectsThreeView.length ||
+            !!functionsThreeView.length;
 
           return {
             id: connection.id,
@@ -756,6 +802,22 @@ const ProjectsMenu = () => {
                 childs: tablesThreeView,
                 data: dataConnection,
               },
+              !dialect.supportsSchemas &&
+                !!viewsThreeView.length && {
+                  id: `views_${connection.id}`,
+                  type: 'views',
+                  label: t('tabs.views'),
+                  childs: viewsThreeView,
+                  data: dataConnection,
+                },
+              !dialect.supportsSchemas &&
+                !!materializedViewsThreeView.length && {
+                  id: `mat_views_${connection.id}`,
+                  type: 'materializedViews',
+                  label: t('tabs.materializedViews'),
+                  childs: materializedViewsThreeView,
+                  data: dataConnection,
+                },
               {
                 id: `scripts_${connection.id}`,
                 type: 'scripts',

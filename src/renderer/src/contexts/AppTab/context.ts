@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
 
 export interface ITabContext {
   readonly tabs: IAppTab[];
@@ -45,6 +46,9 @@ export type IAppTabData =
       initialWhere?: string;
       filterLocked?: boolean;
       initialTab?: string;
+      objectType?: DatabaseObjectType;
+      supportsIndexes?: boolean;
+      supportsTriggers?: boolean;
     }
   | { type: 'function-info'; id_connection: string; schema: string; function_name: string };
 

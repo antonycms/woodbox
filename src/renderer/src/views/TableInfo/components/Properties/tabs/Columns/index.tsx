@@ -103,6 +103,7 @@ const Columns = ({
   mode,
   tableComment,
   onCreateApplied,
+  objectType = 'table',
 }: ITableInfoProps) => {
   const {
     activeTheme: {
@@ -158,6 +159,7 @@ const Columns = ({
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showNewColumnModal, setShowNewColumnModal] = React.useState(false);
+  const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
   const connectionInfo = connectionsInfo.get(id_connection);
@@ -225,13 +227,13 @@ const Columns = ({
       {
         label: t('column.columnName'),
         attribute: 'column_name',
-        editable: true,
+        editable: !isReadOnlyObject,
         sortable: true,
       },
       {
         label: t('field.type'),
         attribute: 'data_type',
-        editable: true,
+        editable: !isReadOnlyObject,
         sortable: true,
         type: 'autocomplete',
         dataAutocomplete: columnTypes,
@@ -239,7 +241,7 @@ const Columns = ({
       {
         label: t('field.nullable'),
         attribute: 'is_nullable_label',
-        editable: true,
+        editable: !isReadOnlyObject,
         sortable: true,
         type: 'autocomplete',
         dataAutocomplete: booleanLabelOptions,
@@ -249,7 +251,7 @@ const Columns = ({
             {
               label: t('column.autoInc'),
               attribute: 'is_auto_increment_label' as const,
-              editable: true,
+              editable: !isReadOnlyObject,
               sortable: true,
               type: 'autocomplete' as const,
               dataAutocomplete: booleanLabelOptions,
@@ -259,17 +261,17 @@ const Columns = ({
       {
         label: t('field.default'),
         attribute: 'column_default',
-        editable: true,
+        editable: !isReadOnlyObject,
         sortable: true,
       },
       {
         label: t('field.comment'),
         attribute: 'description',
-        editable: true,
+        editable: !isReadOnlyObject,
         sortable: true,
       },
     ],
-    [columnTypes, dialect.supportsAutoIncrement, t],
+    [columnTypes, dialect.supportsAutoIncrement, isReadOnlyObject, t],
   );
 
   const handleOpenNewColumnModal = React.useCallback(() => {
@@ -550,6 +552,8 @@ const Columns = ({
   ]);
 
   const contextMenuOptions = React.useMemo(() => {
+    if (isReadOnlyObject) return [];
+
     return [
       {
         text: t('column.newColumn'),
@@ -586,6 +590,7 @@ const Columns = ({
     dialect,
     handleOpenNewColumnModal,
     handleRemoveSelectedColumns,
+    isReadOnlyObject,
     t,
   ]);
 
@@ -627,7 +632,7 @@ const Columns = ({
   });
 
   return (
-    <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
+    <div style={{ display: 'contents' }} onKeyDown={isReadOnlyObject ? undefined : handleKeyDown}>
       <ContextMenu
         position={contextMenuPosition}
         options={contextMenuOptions}
@@ -674,55 +679,59 @@ const Columns = ({
       <Table
         loading={loading.columns}
         rowKeyExtractor={getColumnSelectionKey}
-        onContextMenu={onContextMenuTable}
+        onContextMenu={isReadOnlyObject ? undefined : onContextMenuTable}
         onSelectRow={setSelectedColumns}
         rows={filteredColumnsAndSortedColumns}
-        onEditRow={handleEditColumn}
+        onEditRow={isReadOnlyObject ? undefined : handleEditColumn}
         sort={sort}
         onSort={handleSortColumns}
         columns={tableColumns}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        <Button
-          title={t('common.save')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleSavePendingChanges}
-        >
-          <SaveIcon size={16} />
-        </Button>
+        {!isReadOnlyObject && (
+          <>
+            <Button
+              title={t('common.save')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleSavePendingChanges}
+            >
+              <SaveIcon size={16} />
+            </Button>
 
-        <Button
-          title={t('common.cancelChanges')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleClearPendingChanges}
-        >
-          <CancelIcon size={16} />
-        </Button>
+            <Button
+              title={t('common.cancelChanges')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleClearPendingChanges}
+            >
+              <CancelIcon size={16} />
+            </Button>
 
-        <Button
-          title={t('common.add')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleOpenNewColumnModal}
-        >
-          <AddIcon size={14} />
-        </Button>
+            <Button
+              title={t('common.add')}
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleOpenNewColumnModal}
+            >
+              <AddIcon size={14} />
+            </Button>
 
-        <Button
-          title="Remover itens selecionados"
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={handleRemoveSelectedColumns}
-        >
-          <RemoveIcon size={16} />
-        </Button>
+            <Button
+              title="Remover itens selecionados"
+              text
+              smallIcon
+              color={theme.bar.color}
+              onClick={handleRemoveSelectedColumns}
+            >
+              <RemoveIcon size={16} />
+            </Button>
+          </>
+        )}
 
         {mode !== 'create' && (
           <RefreshButton
