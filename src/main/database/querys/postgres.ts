@@ -17,10 +17,17 @@ const getTables = () => /* sql */ `
   SELECT
     c.relname AS table_name,
     n.nspname AS table_schema,
+    CASE c.relkind
+      WHEN 'v' THEN 'view'
+      WHEN 'm' THEN 'materialized_view'
+      ELSE 'table'
+    END AS object_type,
+    (c.relkind IN ('r', 'p', 'm')) AS supports_indexes,
+    (c.relkind IN ('r', 'p', 'v')) AS supports_triggers,
     pg_total_relation_size(c.oid) AS total_size
   FROM pg_catalog.pg_class c
   JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-  WHERE c.relkind IN ('r', 'p')
+  WHERE c.relkind IN ('r', 'p', 'v', 'm')
   AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
   AND n.nspname NOT LIKE 'pg_temp_%'
   AND n.nspname NOT LIKE 'pg_toast_temp_%'
@@ -30,7 +37,8 @@ const getTables = () => /* sql */ `
 `;
 
 const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
-  SELECT
+  WITH info_columns AS (
+    SELECT
       c.column_name,
       COALESCE(t.typname, c.data_type) AS data_type,
       c.udt_name,
@@ -41,18 +49,44 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
       c.column_default,
       pgd.description,
       (c.is_nullable = 'YES') AS is_nullable
-  FROM information_schema.columns c
-  LEFT JOIN pg_catalog.pg_namespace tn ON tn.nspname = c.udt_schema
-  LEFT JOIN pg_catalog.pg_type t ON t.typname = c.udt_name AND t.typnamespace = tn.oid
-  LEFT JOIN pg_catalog.pg_statio_all_tables AS st ON (
-    c.table_schema = st.schemaname AND
-    c.table_name = st.relname
+    FROM information_schema.columns c
+    LEFT JOIN pg_catalog.pg_namespace tn ON tn.nspname = c.udt_schema
+    LEFT JOIN pg_catalog.pg_type t ON t.typname = c.udt_name AND t.typnamespace = tn.oid
+    LEFT JOIN pg_catalog.pg_statio_all_tables AS st ON (
+      c.table_schema = st.schemaname AND
+      c.table_name = st.relname
+    )
+    LEFT JOIN pg_catalog.pg_description pgd ON (
+      pgd.objoid = st.relid AND
+      pgd.objsubid = c.ordinal_position
+    )
+    WHERE c.table_name = '${table}' AND c.table_schema = '${schema}'
   )
+  SELECT * FROM info_columns
+  UNION ALL
+  SELECT
+    a.attname AS column_name,
+    pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+    t.typname AS udt_name,
+    NULL::integer AS character_maximum_length,
+    NULL::integer AS numeric_precision,
+    NULL::integer AS numeric_scale,
+    NULL::integer AS datetime_precision,
+    NULL::text AS column_default,
+    pgd.description,
+    NOT a.attnotnull AS is_nullable
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+  JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
   LEFT JOIN pg_catalog.pg_description pgd ON (
-    pgd.objoid = st.relid AND
-    pgd.objsubid = c.ordinal_position
+    pgd.objoid = c.oid AND
+    pgd.objsubid = a.attnum
   )
-  WHERE c.table_name = '${table}' AND c.table_schema = '${schema}';
+  WHERE c.relname = '${table}'
+  AND n.nspname = '${schema}'
+  AND c.relkind = 'm'
+  AND NOT EXISTS (SELECT 1 FROM info_columns);
 `;
 
 const getColumnTypes = () => /* sql */ `
@@ -198,10 +232,10 @@ const selectWithOffset = ({
 
 const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
   WITH table_info AS (
-    SELECT c.oid, n.nspname AS schema_name, c.relname AS table_name
+    SELECT c.oid, c.relkind, n.nspname AS schema_name, c.relname AS table_name
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE c.relname = '${table}' AND n.nspname = '${schema}' AND c.relkind = 'r'
+    WHERE c.relname = '${table}' AND n.nspname = '${schema}' AND c.relkind IN ('r', 'p', 'v', 'm')
   ),
   columns AS (
     SELECT
@@ -236,12 +270,21 @@ const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
     WHERE con.contype IN ('p', 'u', 'c', 'f')
   )
   SELECT
-    'CREATE TABLE ' || quote_ident(ti.schema_name) || '.' || quote_ident(ti.table_name) || ' (' || E'\\n' ||
-    (
-      SELECT string_agg(part, ',' || E'\\n' ORDER BY sort_order)
-      FROM (SELECT * FROM columns UNION ALL SELECT * FROM constraints) all_parts
-    ) ||
-    E'\\n)' AS definition
+    CASE ti.relkind
+      WHEN 'v' THEN
+        'CREATE VIEW ' || quote_ident(ti.schema_name) || '.' || quote_ident(ti.table_name) ||
+        ' AS' || E'\\n' || pg_catalog.pg_get_viewdef(ti.oid, true)
+      WHEN 'm' THEN
+        'CREATE MATERIALIZED VIEW ' || quote_ident(ti.schema_name) || '.' || quote_ident(ti.table_name) ||
+        ' AS' || E'\\n' || pg_catalog.pg_get_viewdef(ti.oid, true)
+      ELSE
+        'CREATE TABLE ' || quote_ident(ti.schema_name) || '.' || quote_ident(ti.table_name) || ' (' || E'\\n' ||
+        (
+          SELECT string_agg(part, ',' || E'\\n' ORDER BY sort_order)
+          FROM (SELECT * FROM columns UNION ALL SELECT * FROM constraints) all_parts
+        ) ||
+        E'\\n)'
+    END AS definition
   FROM table_info ti
 `;
 

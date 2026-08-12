@@ -143,9 +143,14 @@ export interface IProject extends IProjectCreate {
   id: string;
 }
 
+export type DatabaseObjectType = 'table' | 'view' | 'materialized_view';
+
 export interface ITable {
   table_name: string;
   table_schema?: string;
+  object_type?: DatabaseObjectType;
+  supports_indexes?: boolean;
+  supports_triggers?: boolean;
   total_size?: number;
 }
 

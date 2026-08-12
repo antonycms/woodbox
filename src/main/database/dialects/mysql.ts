@@ -103,6 +103,10 @@ const normalizeRows = (rows: any[]) => {
       normalized.definition = normalized['Create Table'];
     }
 
+    if (normalized['Create View'] && !normalized.definition) {
+      normalized.definition = normalized['Create View'];
+    }
+
     return normalized;
   });
 };

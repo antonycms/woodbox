@@ -14,12 +14,15 @@ const getTables = () => /* sql */ `
   SELECT
     m.name AS table_name,
     NULL AS table_schema,
+    CASE WHEN m.type = 'view' THEN 'view' ELSE 'table' END AS object_type,
+    (m.type = 'table') AS supports_indexes,
+    true AS supports_triggers,
     COALESCE(SUM(s.pgsize), 0) AS total_size
   FROM sqlite_schema m
   LEFT JOIN dbstat s ON s.name = m.name
-  WHERE m.type = 'table'
+  WHERE m.type IN ('table', 'view')
   AND m.name NOT LIKE 'sqlite_%'
-  GROUP BY m.name
+  GROUP BY m.name, m.type
   ORDER BY m.name;
 `;
 
@@ -155,7 +158,7 @@ const selectWithOffset = ({
 const getTableDefinition = ({ table }: ITableWithSchema) => /* sql */ `
   SELECT sql AS definition
   FROM sqlite_schema
-  WHERE type = 'table'
+  WHERE type IN ('table', 'view')
   AND name = ${quoteLiteral(table)};
 `;
 

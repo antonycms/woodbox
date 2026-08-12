@@ -14,10 +14,13 @@ const getTables = () => /* sql */ `
   SELECT
     TABLE_NAME AS table_name,
     NULL AS table_schema,
+    CASE WHEN table_type = 'VIEW' THEN 'view' ELSE 'table' END AS object_type,
+    (table_type = 'BASE TABLE') AS supports_indexes,
+    (table_type = 'BASE TABLE') AS supports_triggers,
     COALESCE(data_length, 0) + COALESCE(index_length, 0) AS total_size
   FROM information_schema.tables
   WHERE table_schema = DATABASE()
-  AND table_type = 'BASE TABLE'
+  AND table_type IN ('BASE TABLE', 'VIEW')
   ORDER BY table_name;
 `;
 
