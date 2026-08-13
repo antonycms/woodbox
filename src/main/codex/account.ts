@@ -1,65 +1,60 @@
-import { codexRpc } from './rpc';
+import {
+  clearStoredCodexCredential,
+  getEnvCodexCredential,
+  getStoredCodexCredential,
+  isCredentialExpired,
+  pollDeviceAuthorization,
+  refreshStoredCodexCredential,
+  startDeviceAuthorization,
+  type CodexCredential,
+} from './oauth';
 
-type CodexAccountReadResponse = {
-  account: null | { type: string; email?: string | null; planType?: string | null };
+let pendingLogin: Promise<void> | undefined;
+
+export const getValidCodexCredential = async (): Promise<CodexCredential | undefined> => {
+  const envCredential = getEnvCodexCredential();
+
+  if (envCredential) {
+    if (isCredentialExpired(envCredential)) return undefined;
+
+    return envCredential;
+  }
+
+  const storedCredential = getStoredCodexCredential();
+
+  if (!storedCredential) return undefined;
+
+  if (!isCredentialExpired(storedCredential)) return storedCredential;
+
+  return await refreshStoredCodexCredential(storedCredential);
 };
-
-type CodexLoginStartResponse =
-  {
-    type: string;
-    loginId?: string;
-    verificationUrl?: string;
-    userCode?: string;
-  };
-
-type CodexAccountUpdated = {
-  authMode?: string | null;
-  planType?: string | null;
-};
-
-let lastAccountUpdate: CodexAccountUpdated = {};
-
-codexRpc.onNotification('account/updated', (params) => {
-  lastAccountUpdate = (params || {}) as CodexAccountUpdated;
-});
 
 export const getCodexChatGPTAccount = async (): Promise<ICodexChatGPTAccount> => {
-  const response = await codexRpc.request<CodexAccountReadResponse>('account/read', {
-    refreshToken: false,
-  });
-  const account = response.account;
+  const credential = await getValidCodexCredential();
 
   return {
-    authenticated: account?.type === 'chatgpt',
-    email: account?.email ?? null,
-    planType: account?.planType ?? lastAccountUpdate.planType ?? null,
-    authMode: account?.type ?? lastAccountUpdate.authMode ?? null,
+    authenticated: !!credential,
+    email: credential?.email ?? null,
+    planType: null,
+    authMode: credential ? 'chatgpt' : null,
   };
 };
 
 export const startCodexChatGPTLogin = async (): Promise<ICodexChatGPTLoginStart> => {
-  const response = await codexRpc.request<CodexLoginStartResponse>('account/login/start', {
-    type: 'chatgptDeviceCode',
-  });
+  const authorization = await startDeviceAuthorization();
 
-  if (
-    response.type !== 'chatgptDeviceCode' ||
-    !response.loginId ||
-    !response.verificationUrl ||
-    !response.userCode
-  ) {
-    throw new Error('Fluxo de login do Codex não retornou código de dispositivo.');
-  }
+  pendingLogin = pollDeviceAuthorization(authorization).finally(() => {
+    pendingLogin = undefined;
+  });
+  pendingLogin.catch(() => undefined);
 
   return {
-    loginId: response.loginId,
-    verificationUrl: response.verificationUrl,
-    userCode: response.userCode,
+    loginId: authorization.deviceAuthId,
+    verificationUrl: authorization.verificationUrl,
+    userCode: authorization.userCode,
   };
 };
 
 export const logoutCodexChatGPT = async () => {
-  await codexRpc.request('account/logout', undefined, 30_000);
-
-  lastAccountUpdate = {};
+  clearStoredCodexCredential();
 };

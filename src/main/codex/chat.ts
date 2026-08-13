@@ -1,28 +1,20 @@
-import { app } from 'electron';
-import { codexRpc } from './rpc';
-import { getCodexChatGPTAccount } from './account';
+import { getValidCodexCredential } from './account';
 
-type ThreadStartResponse = {
-  thread: { id: string };
-};
-
-type TurnStartResponse = {
-  turn: { id: string };
-};
-
-type AgentMessageDelta = {
-  threadId: string;
-  turnId: string;
-  delta: string;
-};
-
-type TurnCompleted = {
-  threadId: string;
-  turn: {
-    id: string;
-    status: string;
-    error?: { message?: string } | null;
-    items?: { type: string; text?: string }[];
+type CodexResponseEvent = {
+  type?: string;
+  delta?: string;
+  item?: {
+    type?: string;
+    content?: { type?: string; text?: string }[];
+  };
+  response?: {
+    output?: {
+      type?: string;
+      content?: { type?: string; text?: string }[];
+    }[];
+  };
+  error?: {
+    message?: string;
   };
 };
 
@@ -44,92 +36,123 @@ const toPrompt = (messages: IAIChatMessageInput[]) =>
     })
     .join('\n\n');
 
-const waitForTurn = (threadId: string, turnId: string) => {
-  let content = '';
+const CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses';
+const CODEX_CLIENT_VERSION = '0.144.1';
 
-  return new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('Tempo esgotado aguardando resposta do Codex.'));
-    }, 180_000);
+const extractTextFromResponse = (event: CodexResponseEvent) => {
+  return event.response?.output
+    ?.flatMap((item) => item.content || [])
+    .map((content) => content.text)
+    .filter(Boolean)
+    .join('');
+};
 
-    const cleanupDelta = codexRpc.onNotification('item/agentMessage/delta', (params) => {
-      const delta = params as AgentMessageDelta;
+const extractTextFromItem = (event: CodexResponseEvent) => {
+  if (event.item?.type !== 'message') return '';
 
-      if (delta.threadId !== threadId || delta.turnId !== turnId) return;
+  return event.item.content
+    ?.map((content) => content.text)
+    .filter(Boolean)
+    .join('') || '';
+};
 
-      content += delta.delta;
-    });
+const readCodexSseResponse = async (response: Response) => {
+  if (!response.body) {
+    throw new Error('Codex não retornou corpo de resposta.');
+  }
 
-    const cleanupCompleted = codexRpc.onNotification('turn/completed', (params) => {
-      const completed = params as TurnCompleted;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let deltaContent = '';
+  let finalContent = '';
 
-      if (completed.threadId !== threadId || completed.turn.id !== turnId) return;
+  const handleBlock = (block: string) => {
+    const data = block
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trim())
+      .join('\n');
 
-      cleanup();
+    if (!data || data === '[DONE]') return;
 
-      if (completed.turn.status === 'failed') {
-        reject(new Error(completed.turn.error?.message || 'Codex falhou ao responder.'));
-        return;
-      }
+    const event = JSON.parse(data) as CodexResponseEvent;
 
-      const finalMessage =
-        content ||
-        completed.turn.items
-          ?.filter((item) => item.type === 'agentMessage')
-          .map((item) => item.text)
-          .filter(Boolean)
-          .join('\n\n') ||
-        '';
+    if (event.error) {
+      throw new Error(event.error.message || 'Codex falhou ao responder.');
+    }
 
-      resolve(finalMessage.trim());
-    });
+    if (event.type?.includes('delta') && event.delta) {
+      deltaContent += event.delta;
+    }
 
-    const cleanup = () => {
-      clearTimeout(timeout);
-      cleanupDelta();
-      cleanupCompleted();
-    };
-  });
+    finalContent ||= extractTextFromItem(event);
+    finalContent ||= extractTextFromResponse(event) || '';
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    const blocks = buffer.split(/\r?\n\r?\n/);
+    buffer = blocks.pop() || '';
+    blocks.forEach(handleBlock);
+  }
+
+  if (buffer.trim()) handleBlock(buffer);
+
+  return (deltaContent || finalContent).trim();
 };
 
 export const sendCodexChatGPTMessage = async (
   _provider: IAIProviderConfig,
   request: IAIChatRequest,
 ): Promise<IAIChatResponse> => {
-  const account = await getCodexChatGPTAccount();
+  const credential = await getValidCodexCredential();
 
-  if (!account.authenticated) {
+  if (!credential) {
     throw new Error('Entre com ChatGPT no provedor Codex antes de enviar mensagens.');
   }
 
-  const thread = await codexRpc.request<ThreadStartResponse>('thread/start', {
-    model: request.model || null,
-    cwd: app.getPath('userData'),
-    approvalPolicy: 'never',
-    sandbox: 'read-only',
-    baseInstructions: WOODBOX_CODEX_INSTRUCTIONS,
-    ephemeral: true,
-    threadSource: 'woodbox',
+  const sessionId = request.requestId || crypto.randomUUID();
+  const headers = new Headers({
+    accept: 'text/event-stream',
+    authorization: `Bearer ${credential.accessToken}`,
+    'content-type': 'application/json',
+    'OpenAI-Beta': 'responses=experimental',
+    originator: 'woodbox',
+    version: CODEX_CLIENT_VERSION,
+    conversation_id: sessionId,
+    session_id: sessionId,
+    'session-id': sessionId,
   });
 
-  const turn = await codexRpc.request<TurnStartResponse>('turn/start', {
-    threadId: thread.thread.id,
-    input: [
-      {
-        type: 'text',
-        text: toPrompt(request.messages),
-        text_elements: [],
-      },
-    ],
-    approvalPolicy: 'never',
-    sandboxPolicy: {
-      type: 'readOnly',
-      networkAccess: false,
-    },
+  if (credential.accountId) {
+    headers.set('chatgpt-account-id', credential.accountId);
+  }
+
+  const response = await fetch(CODEX_API_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: request.model,
+      instructions: WOODBOX_CODEX_INSTRUCTIONS,
+      input: [{ role: 'user', content: toPrompt(request.messages) }],
+      store: false,
+      stream: true,
+    }),
   });
 
-  const content = await waitForTurn(thread.thread.id, turn.turn.id);
+  if (!response.ok) {
+    const error = await response.text();
+
+    throw new Error(`Codex falhou (${response.status}): ${error || response.statusText}`);
+  }
+
+  const content = await readCodexSseResponse(response);
 
   return { content };
 };
