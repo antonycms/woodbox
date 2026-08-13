@@ -26,8 +26,6 @@ type AIConnectionContext = {
   host: string;
   port: number;
   environment?: ConnectionEnvironment;
-  mention: string;
-  aliases: string[];
 };
 
 type AITableToolInput = {
@@ -60,22 +58,15 @@ const normalizeMention = (value: string) =>
 const compactMention = (value: string) => normalizeMention(value).replace(/-/g, '');
 
 const getPublicConnections = (): AIConnectionContext[] =>
-  getConnectionsSaved().map((connection) => {
-    const slug = normalizeMention(connection.description || connection.database || connection.id);
-    const compact = compactMention(connection.description || connection.database || connection.id);
-
-    return {
-      id: connection.id,
-      description: connection.description,
-      dialect: connection.dialect,
-      database: connection.database,
-      host: connection.host,
-      port: connection.port,
-      environment: connection.environment,
-      mention: `@${slug}`,
-      aliases: [...new Set([`@${slug}`, `@${compact}`])],
-    };
-  });
+  getConnectionsSaved().map((connection) => ({
+    id: connection.id,
+    description: connection.description,
+    dialect: connection.dialect,
+    database: connection.database,
+    host: connection.host,
+    port: connection.port,
+    environment: connection.environment,
+  }));
 
 const serializeConnectionForAI = (connection: AIConnectionContext) => ({
   id: connection.id,
@@ -85,8 +76,6 @@ const serializeConnectionForAI = (connection: AIConnectionContext) => ({
   host: connection.host,
   port: connection.port,
   environment: connection.environment,
-  mention: connection.mention,
-  aliases: connection.aliases,
 });
 
 const getAllowedConnectionIds = (mentionedConnectionIds?: string[]) =>
@@ -95,14 +84,15 @@ const getAllowedConnectionIds = (mentionedConnectionIds?: string[]) =>
 const resolveConnection = (value: string, mentionedConnectionIds?: string[]) => {
   const connections = getPublicConnections();
   const allowedConnectionIds = getAllowedConnectionIds(mentionedConnectionIds);
-  const normalizedValue = normalizeMention(value.replace(/^@/, ''));
-  const compactValue = compactMention(value.replace(/^@/, ''));
+  const normalizedValue = normalizeMention(value);
+  const compactValue = compactMention(value);
 
   const connection = connections.find((item) => {
     if (item.id === value) return true;
     if (normalizeMention(item.description) === normalizedValue) return true;
     if (compactMention(item.description) === compactValue) return true;
-    if (item.aliases.includes(value.startsWith('@') ? value : `@${normalizedValue}`)) return true;
+    if (normalizeMention(item.database) === normalizedValue) return true;
+    if (compactMention(item.database) === compactValue) return true;
 
     return false;
   });
@@ -113,7 +103,7 @@ const resolveConnection = (value: string, mentionedConnectionIds?: string[]) => 
 
   if (allowedConnectionIds.size && !allowedConnectionIds.has(connection.id)) {
     throw new Error(
-      `A conexão "${connection.description}" não foi mencionada pelo usuário nesta mensagem.`,
+      `A conexão "${connection.description}" não foi selecionada pelo usuário nesta mensagem.`,
     );
   }
 
@@ -218,24 +208,24 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     ? connections
         .map(
           (connection) =>
-            `- ${connection.mention} (${connection.aliases.join(', ')}): id=${connection.id}; nome="${connection.description}"; dialect=${connection.dialect}; database=${connection.database}; host=${connection.host}; port=${connection.port}; env=${connection.environment || 'n/a'}`,
+            `- id=${connection.id}; nome="${connection.description}"; dialect=${connection.dialect}; database=${connection.database}; host=${connection.host}; port=${connection.port}; env=${connection.environment || 'n/a'}`,
         )
         .join('\n')
     : '- nenhuma conexão configurada';
   const mentionedLines = mentionedConnections.length
     ? mentionedConnections
-        .map((connection) => `- ${connection.mention}: id=${connection.id}`)
+        .map((connection) => `- id=${connection.id}; nome="${connection.description}"`)
         .join('\n')
-    : '- nenhuma conexão mencionada nesta mensagem';
+    : '- nenhuma conexão selecionada nesta mensagem';
 
   return [
     'Conexões disponíveis para ferramentas read-only:',
     connectionLines,
     '',
-    'Conexões mencionadas pelo usuário nesta mensagem:',
+    'Conexão selecionada pelo usuário para esta mensagem:',
     mentionedLines,
     '',
-    'Quando o usuário usar @nome, use a conexão correspondente.',
+    'Use a conexão selecionada como contexto padrão para ferramentas de banco.',
     'Antes de responder sobre tabelas, schemas, funções ou dados, use as ferramentas disponíveis.',
     'Não invente metadados. Se a conexão/tabela/função não existir, diga isso.',
     'Você não tem ferramenta para executar query. Quando precisar consultar dados, escreva a query em um único bloco ```sql``` e aguarde a confirmação por botões da interface.',
