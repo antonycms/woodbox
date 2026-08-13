@@ -84,6 +84,7 @@ export interface IAIChat {
   messages: IAIChatMessage[];
   providerId?: string;
   model?: string;
+  connectionId?: string;
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +96,7 @@ export interface IAIChatCreate {
   messages?: IAIChatMessage[];
   providerId?: string;
   model?: string;
+  connectionId?: string;
 }
 
 export interface IAIChatPatch {
@@ -103,6 +105,7 @@ export interface IAIChatPatch {
   messages?: IAIChatMessage[];
   providerId?: string;
   model?: string;
+  connectionId?: string;
 }
 
 export interface IAIChatAppendMessages {
@@ -112,6 +115,7 @@ export interface IAIChatAppendMessages {
 }
 
 export interface IAIChatRequest {
+  requestId?: string;
   providerId?: string;
   model?: string;
   mentionedConnectionIds?: string[];
@@ -388,6 +392,7 @@ export interface IStoreContext {
   removeAIProvider(id: string): Promise<void>;
   testAIProvider(data: IAIProviderCreate): Promise<boolean>;
   sendAIChatMessage(data: IAIChatRequest): Promise<IAIChatResponse>;
+  cancelAIChatMessage(requestId: string): Promise<boolean>;
   aiChats: IAIChat[];
   addAIChat(data: IAIChatCreate): Promise<IAIChat>;
   editAIChat(id: string, data: IAIChatPatch): Promise<void>;

@@ -26,7 +26,21 @@ const normalizeMessages = (messages: IAIChatMessageInput[]) => {
     }));
 };
 
+const aiChatAbortControllers = new Map<string, AbortController>();
+
+export const cancelAIChatMessage = (requestId: string) => {
+  const controller = aiChatAbortControllers.get(requestId);
+
+  if (!controller) return false;
+
+  controller.abort();
+  aiChatAbortControllers.delete(requestId);
+
+  return true;
+};
+
 export const sendAIChatMessage = async ({
+  requestId,
   providerId,
   model: selectedModel,
   mentionedConnectionIds,
@@ -53,33 +67,50 @@ export const sendAIChatMessage = async ({
     throw new Error('Informe uma mensagem para enviar ao assistente.');
   }
 
-  const response = await generateText({
-    model,
-    instructions: [
-      WOODBOX_AI_INSTRUCTIONS,
-      buildAIDatabaseInstructions(mentionedConnectionIds),
-    ].join('\n\n'),
-    messages: normalizedMessages,
-    tools: createAIDatabaseTools(mentionedConnectionIds),
-    stopWhen: AI_TOOL_STOP_CONDITION,
-    maxRetries: 1,
+  const abortController = requestId ? new AbortController() : undefined;
 
-    onStepFinish: ({ toolResults }) => {
-      for (let i = 0; i < toolResults?.length || 0; i++) {
-        const { toolName, input, output } = toolResults[i];
-        console.log({ toolName, input, output: JSON.stringify(output) });
-      }
-    },
+  if (requestId && abortController) {
+    aiChatAbortControllers.set(requestId, abortController);
+  }
 
-    onFinish: ({ toolResults, usage, steps }) => {
-      console.log(`[tools] ${toolResults.map(toolResult => toolResult.toolName)}`)
-      console.log(`✅ Tokens — input: ${usage.inputTokens}, output: ${usage.outputTokens}`);
-      console.log(`✅ Cache - cached: ${(usage.inputTokenDetails?.cacheReadTokens || 0) + (usage.inputTokenDetails?.cacheWriteTokens || 0)}, no-cached: ${usage.inputTokenDetails?.noCacheTokens || 0}`)
-      console.log(`📊 Steps: ${steps.length}`);
-    },
-  });
+  try {
+    const response = await generateText({
+      model,
+      instructions: [
+        WOODBOX_AI_INSTRUCTIONS,
+        buildAIDatabaseInstructions(mentionedConnectionIds),
+      ].join('\n\n'),
+      messages: normalizedMessages,
+      tools: createAIDatabaseTools(mentionedConnectionIds),
+      stopWhen: AI_TOOL_STOP_CONDITION,
+      maxRetries: 1,
+      abortSignal: abortController?.signal,
 
-  return { content: response.text };
+      onStepFinish: ({ toolResults }) => {
+        for (let i = 0; i < toolResults?.length || 0; i++) {
+          const { toolName, input, output } = toolResults[i];
+          console.log({ toolName, input, output: JSON.stringify(output) });
+        }
+      },
+
+      onFinish: ({ toolResults, usage, steps }) => {
+        console.log(`[tools] ${toolResults.map(toolResult => toolResult.toolName)}`)
+        console.log(`✅ Tokens — input: ${usage.inputTokens}, output: ${usage.outputTokens}`);
+        console.log(`✅ Cache - cached: ${(usage.inputTokenDetails?.cacheReadTokens || 0) + (usage.inputTokenDetails?.cacheWriteTokens || 0)}, no-cached: ${usage.inputTokenDetails?.noCacheTokens || 0}`)
+        console.log(`📊 Steps: ${steps.length}`);
+      },
+    });
+
+    return { content: response.text };
+  } catch (error) {
+    if (abortController?.signal.aborted) {
+      return { content: '' };
+    }
+
+    throw error;
+  } finally {
+    if (requestId) aiChatAbortControllers.delete(requestId);
+  }
 };
 
 export const testAIProvider = async (providerInput: IAIProviderInput) => {

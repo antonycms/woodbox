@@ -28,10 +28,10 @@ import IconMdiHistory from '~icons/mdi/history';
 import IconMdiFormatListBulleted from '~icons/mdi/format-list-bulleted';
 import IconMdiRobotOutline from '~icons/mdi/robot-outline';
 import IconMdiSend from '~icons/mdi/send';
+import IconMdiStop from '~icons/mdi/stop';
 import IconBxListPlus from '~icons/bx/list-plus';
 import IconIonMdPlay from '~icons/ion/md-play';
 import IconTablerArrowUp from '~icons/tabler/arrow-up';
-import IconTablerHandStop from '~icons/tabler/hand-stop';
 
 function makeIconWithSize(
   Icon: React.ForwardRefExoticComponent<React.SVGProps<SVGSVGElement>>,
@@ -77,4 +77,4 @@ export const IconRefresh = makeIconWithSize(IconMdiRefresh);
 export const IconSend = makeIconWithSize(IconMdiSend);
 export const IconNewChat = makeIconWithSize(IconMdiSquareEditOutline);
 export const IconArrowUp = makeIconWithSize(IconTablerArrowUp);
-export const IconApproval = makeIconWithSize(IconTablerHandStop);
+export const IconStop = makeIconWithSize(IconMdiStop);

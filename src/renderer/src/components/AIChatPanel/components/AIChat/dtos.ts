@@ -1,10 +1,15 @@
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
-import type { IAIChatConnectionOption, IAIChatModelSelectionProps } from '../../types';
+import type {
+  IAIChatConnectionOption,
+  IAIChatModelSelectionProps,
+  IAIChatTableMentionOption,
+} from '../../types';
 
 export interface IAIChatProps {
   id_chat: string;
   initialMessage?: string;
   connectionOptions: IAIChatConnectionOption[];
+  tableMentionOptions: IAIChatTableMentionOption[];
   modelSelection: IAIChatModelSelectionProps;
   selectedConnectionId?: string;
   onConnectionChange(connectionId: string): void;

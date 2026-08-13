@@ -5,12 +5,17 @@ import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import { AIChatComposer } from '../AIChatComposer';
-import type { IAIChatConnectionOption, IAIChatModelSelectionProps } from '../../types';
+import type {
+  IAIChatConnectionOption,
+  IAIChatModelSelectionProps,
+  IAIChatTableMentionOption,
+} from '../../types';
 import styles from '../../styles.module.css';
 
 interface IAIChatEmptyStateProps {
   value: string;
   connectionOptions: IAIChatConnectionOption[];
+  tableMentionOptions: IAIChatTableMentionOption[];
   menuOptions: IButtonDropdownOption[];
   modelSelection: IAIChatModelSelectionProps;
   selectedConnectionId?: string;
@@ -27,6 +32,7 @@ export const AIChatEmptyState = React.memo(
   ({
     value,
     connectionOptions,
+    tableMentionOptions,
     menuOptions,
     modelSelection,
     selectedConnectionId,
@@ -129,6 +135,7 @@ export const AIChatEmptyState = React.memo(
             !!selectedConnectionId
           }
           connectionOptions={connectionOptions}
+          tableMentionOptions={tableMentionOptions}
           modelGroups={modelSelection.modelGroups}
           selectedConnectionId={selectedConnectionId}
           selectedProviderId={modelSelection.selectedProviderId}

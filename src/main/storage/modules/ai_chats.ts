@@ -33,6 +33,7 @@ const normalizeChat = (data: IAIChatInput): IAIChat => {
     messages: (data.messages || []).map(normalizeMessage),
     providerId: data.providerId,
     model: data.model,
+    connectionId: data.connectionId,
     created_at: now,
     updated_at: now,
   };
@@ -64,6 +65,7 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
       messages: data.messages ? data.messages.map(normalizeMessage) : chats[index].messages,
       providerId: data.providerId ?? chats[index].providerId,
       model: data.model ?? chats[index].model,
+      connectionId: data.connectionId ?? chats[index].connectionId,
       updated_at: new Date().toISOString(),
     };
 

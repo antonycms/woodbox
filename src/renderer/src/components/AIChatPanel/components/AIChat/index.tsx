@@ -34,6 +34,7 @@ const AIChat = ({
   id_chat,
   initialMessage,
   connectionOptions,
+  tableMentionOptions,
   menuOptions,
   modelSelection,
   selectedConnectionId,
@@ -47,10 +48,9 @@ const AIChat = ({
   const {
     aiChats,
     appendAIChatMessages,
+    cancelAIChatMessage,
     connections,
-    connectionsInfo,
     editAIChat,
-    loadConnectionInfo,
     runSql,
     sendAIChatMessage,
   } = useStoreContext();
@@ -64,7 +64,9 @@ const AIChat = ({
   const messagesScrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const handledInitialMessageRef = React.useRef<string | undefined>(undefined);
-  const loadingConnectionRef = React.useRef(new Set<string>());
+  const stopGenerationRef = React.useRef(false);
+  const activeAssistantMessageIdRef = React.useRef<string | undefined>(undefined);
+  const activeRequestIdRef = React.useRef<string | undefined>(undefined);
   const chat = React.useMemo(() => aiChats.find((item) => item.id === id_chat), [aiChats, id_chat]);
 
   const title = chat ? chat.title : t('aiChat.unknownTitle');
@@ -144,7 +146,12 @@ const AIChat = ({
         created_at: new Date().toISOString(),
       };
       const nextMessages = [...messages, userMessage];
+      const assistantMessageId = assistantMessage.id;
+      const requestId = generateHash();
 
+      stopGenerationRef.current = false;
+      activeAssistantMessageIdRef.current = assistantMessageId;
+      activeRequestIdRef.current = requestId;
       setLocalMessages((prevState) => [...prevState, userMessage, assistantMessage]);
       setDraftMessage('');
 
@@ -152,6 +159,7 @@ const AIChat = ({
         setLoadingMessage(true);
 
         const response = await sendAIChatMessage({
+          requestId,
           providerId: modelSelection.selectedProviderId,
           model: modelSelection.selectedModel,
           mentionedConnectionIds: selectedConnectionIds,
@@ -160,6 +168,8 @@ const AIChat = ({
             content: message.content,
           })),
         });
+
+        if (stopGenerationRef.current) return;
 
         const queryApprovals = buildFallbackQueryApprovals(
           response.content,
@@ -176,6 +186,8 @@ const AIChat = ({
         const nextTitle = isFirstMessage ? getExcerpt(content, 64) : undefined;
 
         const completedAt = new Date().toISOString();
+
+        if (stopGenerationRef.current) return;
 
         await appendAIChatMessages(id_chat, {
           title: nextTitle,
@@ -197,6 +209,8 @@ const AIChat = ({
           ),
         );
       } catch (error) {
+        if (stopGenerationRef.current) return;
+
         setLocalMessages((prevState) =>
           prevState.filter((message) => message.id !== assistantMessage.id),
         );
@@ -206,7 +220,11 @@ const AIChat = ({
           description: getErrorMessage(error),
         });
       } finally {
-        setLoadingMessage(false);
+        if (activeAssistantMessageIdRef.current === assistantMessageId) {
+          setLoadingMessage(false);
+          activeAssistantMessageIdRef.current = undefined;
+          activeRequestIdRef.current = undefined;
+        }
       }
     },
     [
@@ -234,6 +252,27 @@ const AIChat = ({
     },
     [draftMessage, submitMessageContent],
   );
+
+  const stopGeneration = React.useCallback(() => {
+    stopGenerationRef.current = true;
+    setLoadingMessage(false);
+
+    const requestId = activeRequestIdRef.current;
+    if (requestId) {
+      cancelAIChatMessage(requestId).catch((error) => {
+        console.error(error);
+      });
+    }
+    activeRequestIdRef.current = undefined;
+
+    const assistantMessageId = activeAssistantMessageIdRef.current;
+    if (!assistantMessageId) return;
+
+    setLocalMessages((prevState) =>
+      prevState.filter((message) => message.id !== assistantMessageId),
+    );
+    activeAssistantMessageIdRef.current = undefined;
+  }, [cancelAIChatMessage]);
 
   const updateApprovalStatus = React.useCallback(
     async (approval: IAIQueryApproval, status: NonNullable<IAIQueryApproval['status']>) => {
@@ -443,42 +482,6 @@ const AIChat = ({
   }, [initialMessage, loadingMessage, onInitialMessageHandled, submitMessageContent]);
 
   React.useEffect(() => {
-    const connectionIdsToLoad = selectedConnectionIds.filter(
-      (id) => !connectionsInfo.has(id) && !loadingConnectionRef.current.has(id),
-    );
-
-    if (!connectionIdsToLoad.length) return;
-
-    connectionIdsToLoad.forEach((id) => loadingConnectionRef.current.add(id));
-
-    Promise.allSettled(
-      connectionIdsToLoad.map(async (id) => {
-        try {
-          await loadConnectionInfo(id);
-        } finally {
-          loadingConnectionRef.current.delete(id);
-        }
-      }),
-    ).then((results) => {
-      const rejected = results.find((result) => result.status === 'rejected');
-
-      if (!rejected) return;
-
-      showToast({
-        type: 'error',
-        title: t('toast.connectionError'),
-        description: getErrorMessage(rejected.reason),
-      });
-    });
-  }, [
-    connectionsInfo,
-    loadConnectionInfo,
-    selectedConnectionIds,
-    showToast,
-    t,
-  ]);
-
-  React.useEffect(() => {
     window.requestAnimationFrame(() => {
       const scrollElement = messagesScrollRef.current;
 
@@ -619,7 +622,9 @@ const AIChat = ({
             textareaRef={textareaRef}
             value={draftMessage}
             canSubmit={canSendMessage}
+            loading={loadingMessage}
             connectionOptions={connectionOptions}
+            tableMentionOptions={tableMentionOptions}
             modelGroups={modelSelection.modelGroups}
             selectedConnectionId={selectedConnectionId}
             selectedProviderId={modelSelection.selectedProviderId}
@@ -628,6 +633,7 @@ const AIChat = ({
             onModelChange={modelSelection.onModelChange}
             onSubmit={handleSubmitMessage}
             onChange={handleComposerChange}
+            onStop={stopGeneration}
             onPaste={handleComposerPaste}
             onKeyDown={handleComposerKeyDown}
           />

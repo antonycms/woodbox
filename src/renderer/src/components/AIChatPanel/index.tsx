@@ -31,6 +31,7 @@ export const AIChatPanel = React.memo(() => {
     connectionsGroupPerProject,
     connectionsInfo,
     editAIChat,
+    loadConnectionInfo,
     removeAIChat,
   } = useStoreContext();
   const { showToast } = useToast();
@@ -46,6 +47,7 @@ export const AIChatPanel = React.memo(() => {
   const [emptyAISelection, setEmptyAISelection] = React.useState<IAIChatModelSelection>();
   const [selectedConnectionId, setSelectedConnectionId] = React.useState<string>();
   const manualConnectionSelectionRef = React.useRef(false);
+  const loadingConnectionRef = React.useRef(new Set<string>());
   const setWidth = useDebounce(_setWidth);
 
   const activeChat = React.useMemo(
@@ -64,7 +66,16 @@ export const AIChatPanel = React.memo(() => {
     () => new Set(connections.map((connection) => connection.id)),
     [connections],
   );
+  const savedChatConnectionId = React.useMemo(() => {
+    if (!visibleChat?.connectionId || !connectionIds.has(visibleChat.connectionId)) {
+      return undefined;
+    }
+
+    return visibleChat.connectionId;
+  }, [connectionIds, visibleChat?.connectionId]);
   const preferredConnectionId = React.useMemo(() => {
+    if (savedChatConnectionId) return savedChatConnectionId;
+
     if (activeTabConnectionId && connectionIds.has(activeTabConnectionId)) {
       return activeTabConnectionId;
     }
@@ -82,6 +93,7 @@ export const AIChatPanel = React.memo(() => {
     connections,
     connectionsGroupPerProject,
     connectionsInfo,
+    savedChatConnectionId,
   ]);
   const connectionOptions = React.useMemo(
     () =>
@@ -92,6 +104,21 @@ export const AIChatPanel = React.memo(() => {
       })),
     [connections],
   );
+  const tableMentionOptions = React.useMemo(() => {
+    const connectionInfo = selectedConnectionId
+      ? connectionsInfo.get(selectedConnectionId)
+      : undefined;
+
+    return (connectionInfo?.tables || []).map((table) => {
+      const tableName = [table.table_schema, table.table_name].filter(Boolean).join('.');
+
+      return {
+        id: tableName,
+        label: `@${tableName}`,
+        meta: table.object_type || 'table',
+      };
+    });
+  }, [connectionsInfo, selectedConnectionId]);
 
   const handleChatModelChange = React.useCallback(
     async (providerId: string, model: string) => {
@@ -114,10 +141,25 @@ export const AIChatPanel = React.memo(() => {
     setEmptyAISelection({ providerId, model });
   }, []);
 
-  const handleConnectionChange = React.useCallback((connectionId: string) => {
-    manualConnectionSelectionRef.current = true;
-    setSelectedConnectionId(connectionId);
-  }, []);
+  const handleConnectionChange = React.useCallback(
+    async (connectionId: string) => {
+      manualConnectionSelectionRef.current = true;
+      setSelectedConnectionId(connectionId);
+
+      if (!visibleChat || visibleChat.connectionId === connectionId) return;
+
+      try {
+        await editAIChat(visibleChat.id, { connectionId });
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: t('aiChat.saveConnectionFailed'),
+          description: error instanceof Error ? error.message : String(error),
+        });
+      }
+    },
+    [editAIChat, showToast, t, visibleChat],
+  );
 
   const activeChatModelSelection = useAIModelSelection({
     aiProviders,
@@ -155,6 +197,7 @@ export const AIChatPanel = React.memo(() => {
         summary: t('aiChat.newSummary'),
         providerId: emptyChatModelSelection.selectedProviderId,
         model: emptyChatModelSelection.selectedModel,
+        connectionId: selectedConnectionId,
       });
 
       setEmptyAISelection(undefined);
@@ -171,6 +214,7 @@ export const AIChatPanel = React.memo(() => {
     emptyChatModelSelection.selectedModel,
     emptyChatModelSelection.selectedProviderId,
     selectChat,
+    selectedConnectionId,
     showToast,
     t,
   ]);
@@ -225,6 +269,10 @@ export const AIChatPanel = React.memo(() => {
   }, [activeChatId, chatToRemove, removeAIChat]);
 
   React.useEffect(() => {
+    manualConnectionSelectionRef.current = false;
+  }, [visibleChat?.id]);
+
+  React.useEffect(() => {
     if (!visible) {
       manualConnectionSelectionRef.current = false;
       return;
@@ -240,6 +288,25 @@ export const AIChatPanel = React.memo(() => {
       setSelectedConnectionId(preferredConnectionId);
     }
   }, [connectionIds, preferredConnectionId, selectedConnectionId, visible]);
+
+  React.useEffect(() => {
+    if (!visible || !selectedConnectionId || connectionsInfo.has(selectedConnectionId)) return;
+    if (loadingConnectionRef.current.has(selectedConnectionId)) return;
+
+    loadingConnectionRef.current.add(selectedConnectionId);
+
+    loadConnectionInfo(selectedConnectionId)
+      .catch((error) => {
+        showToast({
+          type: 'error',
+          title: t('toast.connectionError'),
+          description: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        loadingConnectionRef.current.delete(selectedConnectionId);
+      });
+  }, [connectionsInfo, loadConnectionInfo, selectedConnectionId, showToast, t, visible]);
 
   return (
     <>
@@ -309,6 +376,7 @@ export const AIChatPanel = React.memo(() => {
                     id_chat={visibleChat.id}
                     initialMessage={initialMessage}
                     connectionOptions={connectionOptions}
+                    tableMentionOptions={tableMentionOptions}
                     menuOptions={optionsMenu}
                     modelSelection={activeChatModelSelection}
                     selectedConnectionId={selectedConnectionId}
@@ -326,6 +394,7 @@ export const AIChatPanel = React.memo(() => {
                   <AIChatEmptyState
                     value={emptyDraft}
                     connectionOptions={connectionOptions}
+                    tableMentionOptions={tableMentionOptions}
                     menuOptions={optionsMenu}
                     modelSelection={emptyChatModelSelection}
                     selectedConnectionId={selectedConnectionId}

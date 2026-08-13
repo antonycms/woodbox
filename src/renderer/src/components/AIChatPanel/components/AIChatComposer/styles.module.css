@@ -41,24 +41,62 @@
   background-color: color-mix(in srgb, var(--cardBackgroundColor) 94%, var(--backgroundColor));
 }
 
+.composerTextareaWrap {
+  display: grid;
+  flex: 1;
+  min-width: 60px;
+  min-height: 42px;
+}
+
+.composerTextareaMirror,
 .composer textarea {
+  grid-area: 1 / 1;
   flex: 1;
   width: 100%;
   height: 42px;
   min-width: 60px;
   min-height: 42px;
   max-height: 140px;
-  resize: none;
   padding: 0 1px;
+  box-sizing: border-box;
+  font: inherit;
+  line-height: 18px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  scrollbar-gutter: stable;
+}
+
+.composerTextareaMirror {
+  overflow: auto;
+  color: var(--color);
+  pointer-events: none;
+}
+
+.composerTextareaMirrorInner {
+  min-height: 100%;
+}
+
+.composer textarea {
+  position: relative;
+  resize: none;
   border: 0;
   border-radius: 0;
-  color: var(--color);
+  color: transparent;
+  caret-color: var(--color);
   outline: none;
   background-color: transparent;
 }
 
 .composer textarea::placeholder {
   color: color-mix(in srgb, var(--ascentColor) 42%, var(--mutedColor));
+}
+
+.tableMentionChip {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 6px;
+  color: var(--ascentColor);
+  background-color: color-mix(in srgb, var(--ascentColor) 12%, var(--cardBackgroundColor));
 }
 
 .composerToolbar {
@@ -132,6 +170,55 @@
 
 .connectionDropdown {
   left: 0;
+  padding-bottom: 0;
+}
+
+.connectionFilterInput {
+  width: calc(100% - 20px);
+  margin: 0 10px 8px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--borderColor) 48%, transparent);
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--color);
+  outline: none !important;
+  font-size: 12px;
+  background-color: color-mix(in srgb, var(--backgroundColor) 72%, transparent);
+}
+
+.connectionFilterInput:focus {
+  border-color: color-mix(in srgb, var(--ascentColor) 52%, var(--borderColor));
+}
+
+.connectionFilterInput::placeholder {
+  color: color-mix(in srgb, var(--color) 46%, transparent);
+}
+
+.connectionOptionsList {
+  max-height: 248px;
+  overflow: auto;
+  padding-bottom: 10px;
+}
+
+.connectionEmpty {
+  padding: 8px 12px 2px;
+  color: color-mix(in srgb, var(--color) 54%, transparent);
+  font-size: 12px;
+  user-select: none;
+}
+
+.tableMentionDropdown {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 21;
+  overflow: auto;
+  max-height: 238px;
+  border: 1px solid var(--borderColor);
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--cardBackgroundColor) 96%, var(--backgroundColor));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--backgroundColor) 55%, transparent);
 }
 
 .modelGroup + .modelGroup {
@@ -151,7 +238,9 @@
 .modelOption,
 .modelOptionActive,
 .connectionOption,
-.connectionOptionActive {
+.connectionOptionActive,
+.tableMentionOption,
+.tableMentionOptionActive {
   display: block;
   width: 100%;
   padding: 7px 12px;
@@ -166,26 +255,34 @@
 .modelOption:hover,
 .modelOptionActive,
 .connectionOption:hover,
-.connectionOptionActive {
+.connectionOptionActive,
+.tableMentionOption:hover,
+.tableMentionOptionActive {
   background-color: color-mix(in srgb, var(--borderColor) 34%, transparent);
 }
 
 .connectionOption,
-.connectionOptionActive {
+.connectionOptionActive,
+.tableMentionOption,
+.tableMentionOptionActive {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
 .connectionOption strong,
-.connectionOptionActive strong {
+.connectionOptionActive strong,
+.tableMentionOption strong,
+.tableMentionOptionActive strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .connectionOption span,
-.connectionOptionActive span {
+.connectionOptionActive span,
+.tableMentionOption span,
+.tableMentionOptionActive span {
   overflow: hidden;
   color: color-mix(in srgb, var(--color) 54%, transparent);
   font-size: 11px;
@@ -193,7 +290,8 @@
   white-space: nowrap;
 }
 
-.sendButton {
+.sendButton,
+.stopButton {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -212,9 +310,15 @@
     background-color 160ms ease;
 }
 
-.sendButton svg {
+.sendButton svg,
+.stopButton svg {
   width: 19px;
   height: 19px;
+}
+
+.stopButton {
+  color: var(--sendColor);
+  background-color: var(--sendBackgroundColor);
 }
 
 .sendButton[disabled] {
@@ -227,6 +331,14 @@
   opacity: 0.9;
 }
 
+.stopButton:hover {
+  opacity: 0.88;
+}
+
 .sendButton:active:not([disabled]) {
+  transform: scale(0.98);
+}
+
+.stopButton:active {
   transform: scale(0.98);
 }

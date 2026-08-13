@@ -226,6 +226,7 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     mentionedLines,
     '',
     'Use a conexão selecionada como contexto padrão para ferramentas de banco.',
+    'O usuário pode referenciar tabelas com @tabela ou @schema.tabela; trate isso como tabela da conexão selecionada.',
     'Antes de responder sobre tabelas, schemas, funções ou dados, use as ferramentas disponíveis.',
     'Não invente metadados. Se a conexão/tabela/função não existir, diga isso.',
     'Você não tem ferramenta para executar query. Quando precisar consultar dados, escreva a query em um único bloco ```sql``` e aguarde a confirmação por botões da interface.',

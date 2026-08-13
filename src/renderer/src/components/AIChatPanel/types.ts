@@ -21,3 +21,9 @@ export interface IAIChatConnectionOption {
   label: string;
   meta: string;
 }
+
+export interface IAIChatTableMentionOption {
+  id: string;
+  label: string;
+  meta: string;
+}

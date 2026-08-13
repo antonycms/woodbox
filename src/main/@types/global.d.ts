@@ -111,6 +111,7 @@ declare global {
     messages: IAIChatMessage[];
     providerId?: string;
     model?: string;
+    connectionId?: string;
     created_at: string;
     updated_at: string;
   }
@@ -122,6 +123,7 @@ declare global {
     messages?: IAIChatMessage[];
     providerId?: string;
     model?: string;
+    connectionId?: string;
   }
 
   export interface IAIChatPatch {
@@ -130,6 +132,7 @@ declare global {
     messages?: IAIChatMessage[];
     providerId?: string;
     model?: string;
+    connectionId?: string;
   }
 
   export interface IAIChatAppendMessagesInput {
@@ -139,6 +142,7 @@ declare global {
   }
 
   export interface IAIChatRequest {
+    requestId?: string;
     providerId?: string;
     model?: string;
     mentionedConnectionIds?: string[];

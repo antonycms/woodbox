@@ -186,6 +186,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     return await call<IAIChatResponse>('@post:ai_chat_message', data);
   }, []);
 
+  const cancelAIChatMessage = React.useCallback(async (requestId: string) => {
+    return await call<boolean>('@post:cancel_ai_chat_message', requestId);
+  }, []);
+
   const addAIChat = React.useCallback(async (data: IAIChatCreate) => {
     const chat = await call<IAIChat>('@add:ai_chats', data);
 
@@ -571,6 +575,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       removeAIProvider,
       testAIProvider,
       sendAIChatMessage,
+      cancelAIChatMessage,
       aiChats,
       addAIChat,
       editAIChat,
@@ -588,6 +593,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       addScript,
       addSnippet,
       cancelRunSql,
+      cancelAIChatMessage,
       clearServerOutput,
       closeConnection,
       connectionTypes,
