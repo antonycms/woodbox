@@ -52,7 +52,17 @@ export const useRestoreTabsFromStorage = (
         }
 
         if (tab.data?.type === 'table-info') {
-          const { id_connection, schema, table, initialWhere, filterLocked, initialTab } = tab.data;
+          const {
+            id_connection,
+            schema,
+            table,
+            initialWhere,
+            filterLocked,
+            initialTab,
+            objectType,
+            supportsIndexes,
+            supportsTriggers,
+          } = tab.data;
 
           restoredTabs.push({
             ...tab,
@@ -66,6 +76,9 @@ export const useRestoreTabsFromStorage = (
                 initialWhere={initialWhere}
                 filterLocked={filterLocked}
                 initialTab={initialTab}
+                objectType={objectType}
+                supportsIndexes={supportsIndexes}
+                supportsTriggers={supportsTriggers}
               />
             ),
           });

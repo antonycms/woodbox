@@ -13,6 +13,7 @@ import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
 import * as constants from './constants';
@@ -72,7 +73,15 @@ export const CentralSearchModal = React.memo(() => {
   );
 
   const openTableTab = React.useCallback(
-    (idConnection: string, schema: string | undefined, table: string, initialWhere?: string) => {
+    (
+      idConnection: string,
+      schema: string | undefined,
+      table: string,
+      initialWhere?: string,
+      objectType: DatabaseObjectType = 'table',
+      supportsIndexes?: boolean,
+      supportsTriggers?: boolean,
+    ) => {
       const tabId = constants.getTableTabId(idConnection, schema, table);
       const tab = getTab(tabId);
 
@@ -101,6 +110,9 @@ export const CentralSearchModal = React.memo(() => {
             table,
             initialWhere,
             initialTab: 'tabData',
+            objectType,
+            supportsIndexes,
+            supportsTriggers,
           },
           component: () => (
             <TableInfo
@@ -110,6 +122,9 @@ export const CentralSearchModal = React.memo(() => {
               appTabId={tabId}
               initialWhere={initialWhere}
               initialTab="tabData"
+              objectType={objectType}
+              supportsIndexes={supportsIndexes}
+              supportsTriggers={supportsTriggers}
             />
           ),
         });
@@ -127,9 +142,20 @@ export const CentralSearchModal = React.memo(() => {
           id_connection: idConnection,
           schema,
           table,
+          objectType,
+          supportsIndexes,
+          supportsTriggers,
         },
         component: () => (
-          <TableInfo id_connection={idConnection} schema={schema} table={table} appTabId={tabId} />
+          <TableInfo
+            id_connection={idConnection}
+            schema={schema}
+            table={table}
+            appTabId={tabId}
+            objectType={objectType}
+            supportsIndexes={supportsIndexes}
+            supportsTriggers={supportsTriggers}
+          />
         ),
       });
     },
@@ -315,7 +341,15 @@ export const CentralSearchModal = React.memo(() => {
               table: table.table_name,
             },
             onOpen: (initialWhere) =>
-              openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
+              openTableTab(
+                idConnection,
+                table.table_schema,
+                table.table_name,
+                initialWhere,
+                table.object_type,
+                table.supports_indexes,
+                table.supports_triggers,
+              ),
           }),
         );
       }
