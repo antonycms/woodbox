@@ -553,6 +553,7 @@ export const en = {
   'aiChat.send': 'Send',
   'aiChat.addContext': 'Add context',
   'aiChat.requestApproval': 'Request approval',
+  'aiChat.selectConnection': 'Select connection',
   'aiChat.panelTitle': 'Agent chat',
   'aiChat.selectChatDescription': 'Use the list in the right side panel.',
   'aiChat.searchRecent': 'Search recent chats',

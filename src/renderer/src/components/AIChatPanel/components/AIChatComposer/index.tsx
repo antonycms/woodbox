@@ -1,7 +1,7 @@
 import React from 'react';
 import { useI18n } from '@renderer/contexts/I18n';
-import { AddIcon, IconApproval, IconArrowUp } from '@renderer/styles/icons';
-import type { IAIChatModelGroup } from '../../types';
+import { IconArrowUp } from '@renderer/styles/icons';
+import type { IAIChatConnectionOption, IAIChatModelGroup } from '../../types';
 import { getAIModelLabel } from '../../utils/aiModels';
 import styles from './styles.module.css';
 
@@ -9,11 +9,12 @@ interface IAIChatComposerProps {
   value: string;
   canSubmit: boolean;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
-  mentionChips?: React.ReactNode;
-  mentionDropdown?: React.ReactNode;
+  connectionOptions?: IAIChatConnectionOption[];
   modelGroups?: IAIChatModelGroup[];
+  selectedConnectionId?: string;
   selectedProviderId?: string;
   selectedModel?: string;
+  onConnectionChange?(connectionId: string): void;
   onModelChange?(providerId: string, model: string): void;
   onSubmit(event: React.FormEvent<HTMLFormElement>): void;
   onChange(event: React.ChangeEvent<HTMLTextAreaElement>): void;
@@ -28,11 +29,12 @@ export const AIChatComposer = React.memo(
     value,
     canSubmit,
     textareaRef,
-    mentionChips,
-    mentionDropdown,
+    connectionOptions = [],
     modelGroups = [],
+    selectedConnectionId,
     selectedProviderId,
     selectedModel,
+    onConnectionChange,
     onModelChange,
     onSubmit,
     onChange,
@@ -42,16 +44,29 @@ export const AIChatComposer = React.memo(
     onKeyDown,
   }: IAIChatComposerProps) => {
     const { t } = useI18n();
+    const [openConnections, setOpenConnections] = React.useState(false);
     const [openModels, setOpenModels] = React.useState(false);
+    const connectionMenuRef = React.useRef<HTMLDivElement>(null);
     const modelMenuRef = React.useRef<HTMLDivElement>(null);
+    const selectedConnectionOptionRef = React.useRef<HTMLButtonElement>(null);
+    const selectedModelOptionRef = React.useRef<HTMLButtonElement>(null);
 
     const activeAIModelLabel = React.useMemo(() => getAIModelLabel(selectedModel), [selectedModel]);
+    const activeConnection = React.useMemo(
+      () => connectionOptions.find((connection) => connection.id === selectedConnectionId),
+      [connectionOptions, selectedConnectionId],
+    );
 
     const hasModelOptions = modelGroups.some((group) => group.models.length);
+    const hasConnectionOptions = !!connectionOptions.length;
 
-    const focusTextarea = React.useCallback(() => {
-      textareaRef?.current?.focus();
-    }, [textareaRef]);
+    const selectConnection = React.useCallback(
+      (connectionId: string) => {
+        onConnectionChange?.(connectionId);
+        setOpenConnections(false);
+      },
+      [onConnectionChange],
+    );
 
     const selectModel = React.useCallback(
       (providerId: string, model: string) => {
@@ -62,17 +77,29 @@ export const AIChatComposer = React.memo(
     );
 
     React.useEffect(() => {
-      if (!openModels) return;
+      if (!openConnections && !openModels) return;
 
       const closeOnOutsideClick = (event: MouseEvent) => {
-        if (!modelMenuRef.current?.contains(event.target as Node)) {
-          setOpenModels(false);
-        }
+        if (connectionMenuRef.current?.contains(event.target as Node)) return;
+        if (modelMenuRef.current?.contains(event.target as Node)) return;
+
+        setOpenConnections(false);
+        setOpenModels(false);
       };
 
       window.addEventListener('mousedown', closeOnOutsideClick);
       return () => window.removeEventListener('mousedown', closeOnOutsideClick);
-    }, [openModels]);
+    }, [openConnections, openModels]);
+
+    React.useEffect(() => {
+      if (openConnections) {
+        selectedConnectionOptionRef.current?.scrollIntoView({ block: 'nearest' });
+      }
+
+      if (openModels) {
+        selectedModelOptionRef.current?.scrollIntoView({ block: 'nearest' });
+      }
+    }, [openConnections, openModels, selectedConnectionId, selectedModel, selectedProviderId]);
 
     return (
       <div className={styles.composer}>
@@ -92,24 +119,42 @@ export const AIChatComposer = React.memo(
                 onKeyDown={onKeyDown}
               />
 
-              {mentionChips}
-
               <div className={styles.composerToolbar}>
                 <div className={styles.composerActions}>
-                  <button
-                    className={styles.composerIconButton}
-                    type="button"
-                    title={t('aiChat.addContext')}
-                    aria-label={t('aiChat.addContext')}
-                    onClick={focusTextarea}
-                  >
-                    <AddIcon size={13} />
-                  </button>
+                  <div ref={connectionMenuRef} className={styles.connectionMenuWrap}>
+                    <button
+                      className={styles.connectionBadgeButton}
+                      type="button"
+                      title={t('aiChat.selectConnection')}
+                      disabled={!hasConnectionOptions}
+                      onClick={() => setOpenConnections((prevState) => !prevState)}
+                    >
+                      {activeConnection?.label || t('aiChat.selectConnection')}
+                    </button>
 
-                  <span className={styles.approvalHint}>
-                    <IconApproval size={14} />
-                    <span>{t('aiChat.requestApproval')}</span>
-                  </span>
+                    {openConnections && (
+                      <div className={styles.connectionDropdown}>
+                        {connectionOptions.map((connection) => {
+                          const active = connection.id === selectedConnectionId;
+
+                          return (
+                            <button
+                              key={connection.id}
+                              ref={active ? selectedConnectionOptionRef : undefined}
+                              type="button"
+                              className={
+                                active ? styles.connectionOptionActive : styles.connectionOption
+                              }
+                              onClick={() => selectConnection(connection.id)}
+                            >
+                              <strong>{connection.label}</strong>
+                              {!!connection.meta && <span>{connection.meta}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className={styles.composerMeta}>
@@ -137,6 +182,7 @@ export const AIChatComposer = React.memo(
                                 return (
                                   <button
                                     key={`${group.providerId}:${model}`}
+                                    ref={active ? selectedModelOptionRef : undefined}
                                     type="button"
                                     className={active ? styles.modelOptionActive : styles.modelOption}
                                     onClick={() => selectModel(group.providerId, model)}
@@ -164,8 +210,6 @@ export const AIChatComposer = React.memo(
                 </div>
               </div>
             </div>
-
-            {mentionDropdown}
           </div>
         </form>
       </div>

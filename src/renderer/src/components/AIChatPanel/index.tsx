@@ -2,6 +2,7 @@ import React from 'react';
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useI18n } from '@renderer/contexts/I18n';
 import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -21,7 +22,17 @@ export const AIChatPanel = React.memo(() => {
   const { t } = useI18n();
   const { activeChatId, closeChatPanel, openChatPanel, toggleChatPanel, visible } =
     useAIChatPanelContext();
-  const { aiChats, aiProviders, addAIChat, editAIChat, removeAIChat } = useStoreContext();
+  const { activeTabId, tabs } = useAppTabContext();
+  const {
+    aiChats,
+    aiProviders,
+    addAIChat,
+    connections,
+    connectionsGroupPerProject,
+    connectionsInfo,
+    editAIChat,
+    removeAIChat,
+  } = useStoreContext();
   const { showToast } = useToast();
   const {
     activeTheme: { __colors, mainTab: theme },
@@ -33,6 +44,8 @@ export const AIChatPanel = React.memo(() => {
   const [showProvidersModal, setShowProvidersModal] = React.useState(false);
   const [chatToRemove, setChatToRemove] = React.useState<IAIChat>();
   const [emptyAISelection, setEmptyAISelection] = React.useState<IAIChatModelSelection>();
+  const [selectedConnectionId, setSelectedConnectionId] = React.useState<string>();
+  const manualConnectionSelectionRef = React.useRef(false);
   const setWidth = useDebounce(_setWidth);
 
   const activeChat = React.useMemo(
@@ -40,6 +53,45 @@ export const AIChatPanel = React.memo(() => {
     [activeChatId, aiChats],
   );
   const visibleChat = draftNewChat ? undefined : activeChat;
+  const activeTabConnectionId = React.useMemo(() => {
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+
+    if (!activeTab?.data || !('id_connection' in activeTab.data)) return undefined;
+
+    return activeTab.data.id_connection;
+  }, [activeTabId, tabs]);
+  const connectionIds = React.useMemo(
+    () => new Set(connections.map((connection) => connection.id)),
+    [connections],
+  );
+  const preferredConnectionId = React.useMemo(() => {
+    if (activeTabConnectionId && connectionIds.has(activeTabConnectionId)) {
+      return activeTabConnectionId;
+    }
+
+    const sidebarActiveConnection = connectionsGroupPerProject
+      .flatMap((project) => project.connections)
+      .find((connection) => connectionsInfo.has(connection.id));
+
+    if (sidebarActiveConnection) return sidebarActiveConnection.id;
+
+    return connections.find((connection) => connectionsInfo.has(connection.id))?.id;
+  }, [
+    activeTabConnectionId,
+    connectionIds,
+    connections,
+    connectionsGroupPerProject,
+    connectionsInfo,
+  ]);
+  const connectionOptions = React.useMemo(
+    () =>
+      connections.map((connection) => ({
+        id: connection.id,
+        label: connection.description || connection.database || connection.host || connection.id,
+        meta: [connection.database, connection.dialect, connection.host].filter(Boolean).join(' · '),
+      })),
+    [connections],
+  );
 
   const handleChatModelChange = React.useCallback(
     async (providerId: string, model: string) => {
@@ -60,6 +112,11 @@ export const AIChatPanel = React.memo(() => {
 
   const handleEmptyChatModelChange = React.useCallback((providerId: string, model: string) => {
     setEmptyAISelection({ providerId, model });
+  }, []);
+
+  const handleConnectionChange = React.useCallback((connectionId: string) => {
+    manualConnectionSelectionRef.current = true;
+    setSelectedConnectionId(connectionId);
   }, []);
 
   const activeChatModelSelection = useAIModelSelection({
@@ -140,7 +197,8 @@ export const AIChatPanel = React.memo(() => {
       if (
         !emptyDraft.trim() ||
         !emptyChatModelSelection.selectedProviderId ||
-        !emptyChatModelSelection.selectedModel
+        !emptyChatModelSelection.selectedModel ||
+        !selectedConnectionId
       ) {
         return;
       }
@@ -154,6 +212,7 @@ export const AIChatPanel = React.memo(() => {
       emptyChatModelSelection.selectedModel,
       emptyChatModelSelection.selectedProviderId,
       emptyDraft,
+      selectedConnectionId,
     ],
   );
 
@@ -164,6 +223,23 @@ export const AIChatPanel = React.memo(() => {
     if (chatToRemove.id === activeChatId) setDraftNewChat(true);
     setChatToRemove(undefined);
   }, [activeChatId, chatToRemove, removeAIChat]);
+
+  React.useEffect(() => {
+    if (!visible) {
+      manualConnectionSelectionRef.current = false;
+      return;
+    }
+
+    if (selectedConnectionId && !connectionIds.has(selectedConnectionId)) {
+      manualConnectionSelectionRef.current = false;
+      setSelectedConnectionId(preferredConnectionId);
+      return;
+    }
+
+    if (!manualConnectionSelectionRef.current && selectedConnectionId !== preferredConnectionId) {
+      setSelectedConnectionId(preferredConnectionId);
+    }
+  }, [connectionIds, preferredConnectionId, selectedConnectionId, visible]);
 
   return (
     <>
@@ -232,9 +308,12 @@ export const AIChatPanel = React.memo(() => {
                   <AIChat
                     id_chat={visibleChat.id}
                     initialMessage={initialMessage}
+                    connectionOptions={connectionOptions}
                     menuOptions={optionsMenu}
                     modelSelection={activeChatModelSelection}
+                    selectedConnectionId={selectedConnectionId}
                     onClose={closeChatPanel}
+                    onConnectionChange={handleConnectionChange}
                     onInitialMessageHandled={() => setInitialMessage('')}
                     onNewChat={() => {
                       setDraftNewChat(true);
@@ -246,10 +325,13 @@ export const AIChatPanel = React.memo(() => {
                 ) : (
                   <AIChatEmptyState
                     value={emptyDraft}
+                    connectionOptions={connectionOptions}
                     menuOptions={optionsMenu}
                     modelSelection={emptyChatModelSelection}
+                    selectedConnectionId={selectedConnectionId}
                     onChange={setEmptyDraft}
                     onClose={closeChatPanel}
+                    onConnectionChange={handleConnectionChange}
                     onDeleteChat={setChatToRemove}
                     onSelectChat={selectChat}
                     onSelectMenuOption={handleSelectOption}

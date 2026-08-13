@@ -557,6 +557,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiChat.send': 'Enviar',
   'aiChat.addContext': 'Adicionar contexto',
   'aiChat.requestApproval': 'Pedir aprovação',
+  'aiChat.selectConnection': 'Selecionar conexão',
   'aiChat.panelTitle': 'Chat do agente',
   'aiChat.selectChatDescription': 'Use a lista no painel lateral direito.',
   'aiChat.searchRecent': 'Pesquisar chats recentes',

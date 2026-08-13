@@ -15,3 +15,9 @@ export interface IAIChatModelSelectionProps {
   selectedModel?: string;
   onModelChange(providerId: string, model: string): void;
 }
+
+export interface IAIChatConnectionOption {
+  id: string;
+  label: string;
+  meta: string;
+}

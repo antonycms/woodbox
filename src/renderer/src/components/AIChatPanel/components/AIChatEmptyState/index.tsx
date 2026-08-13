@@ -5,15 +5,18 @@ import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import { AIChatComposer } from '../AIChatComposer';
-import type { IAIChatModelSelectionProps } from '../../types';
+import type { IAIChatConnectionOption, IAIChatModelSelectionProps } from '../../types';
 import styles from '../../styles.module.css';
 
 interface IAIChatEmptyStateProps {
   value: string;
+  connectionOptions: IAIChatConnectionOption[];
   menuOptions: IButtonDropdownOption[];
   modelSelection: IAIChatModelSelectionProps;
+  selectedConnectionId?: string;
   onChange(value: string): void;
   onClose(): void;
+  onConnectionChange(connectionId: string): void;
   onDeleteChat(chat: IAIChat): void;
   onSelectChat(chat: IAIChat): void;
   onSelectMenuOption(option: IButtonDropdownOption): void;
@@ -23,10 +26,13 @@ interface IAIChatEmptyStateProps {
 export const AIChatEmptyState = React.memo(
   ({
     value,
+    connectionOptions,
     menuOptions,
     modelSelection,
+    selectedConnectionId,
     onChange,
     onClose,
+    onConnectionChange,
     onDeleteChat,
     onSelectChat,
     onSelectMenuOption,
@@ -117,11 +123,17 @@ export const AIChatEmptyState = React.memo(
         <AIChatComposer
           value={value}
           canSubmit={
-            !!value.trim() && !!modelSelection.selectedProviderId && !!modelSelection.selectedModel
+            !!value.trim() &&
+            !!modelSelection.selectedProviderId &&
+            !!modelSelection.selectedModel &&
+            !!selectedConnectionId
           }
+          connectionOptions={connectionOptions}
           modelGroups={modelSelection.modelGroups}
+          selectedConnectionId={selectedConnectionId}
           selectedProviderId={modelSelection.selectedProviderId}
           selectedModel={modelSelection.selectedModel}
+          onConnectionChange={onConnectionChange}
           onModelChange={modelSelection.onModelChange}
           onSubmit={onSubmit}
           onChange={(event) => onChange(event.target.value)}

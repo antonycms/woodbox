@@ -77,61 +77,14 @@
   gap: 8px;
 }
 
-.composerIconButton {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 7px;
-  color: color-mix(in srgb, var(--color) 74%, transparent);
-  cursor: pointer;
-  background-color: transparent;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-.composerIconButton:hover {
-  color: var(--color);
-  background-color: color-mix(in srgb, var(--borderColor) 34%, transparent);
-}
-
-.composerIconButton:active {
-  transform: scale(0.96);
-}
-
-.approvalHint {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  color: color-mix(in srgb, var(--color) 72%, transparent);
-  font-size: 12px;
-  line-height: 1;
-  user-select: none;
-}
-
-.approvalHint svg {
-  flex: none;
-}
-
-.approvalHint span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+.connectionMenuWrap,
 .modelMenuWrap {
   position: relative;
   flex: none;
   min-width: 0;
 }
 
+.connectionBadgeButton,
 .modelBadgeButton {
   max-width: 126px;
   padding: 0;
@@ -146,13 +99,19 @@
   background: transparent;
 }
 
+.connectionBadgeButton {
+  max-width: 170px;
+}
+
+.connectionBadgeButton:disabled,
 .modelBadgeButton:disabled {
   cursor: default;
 }
 
+.connectionDropdown,
 .modelDropdown {
   position: absolute;
-  right: 0;
+  right: auto;
   bottom: calc(100% + 8px);
   z-index: 20;
   min-width: 220px;
@@ -165,6 +124,14 @@
   color: var(--color);
   background-color: color-mix(in srgb, var(--cardBackgroundColor) 96%, var(--backgroundColor));
   box-shadow: 0 18px 44px color-mix(in srgb, var(--backgroundColor) 52%, transparent);
+}
+
+.modelDropdown {
+  right: 0;
+}
+
+.connectionDropdown {
+  left: 0;
 }
 
 .modelGroup + .modelGroup {
@@ -182,7 +149,9 @@
 }
 
 .modelOption,
-.modelOptionActive {
+.modelOptionActive,
+.connectionOption,
+.connectionOptionActive {
   display: block;
   width: 100%;
   padding: 7px 12px;
@@ -195,8 +164,33 @@
 }
 
 .modelOption:hover,
-.modelOptionActive {
+.modelOptionActive,
+.connectionOption:hover,
+.connectionOptionActive {
   background-color: color-mix(in srgb, var(--borderColor) 34%, transparent);
+}
+
+.connectionOption,
+.connectionOptionActive {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.connectionOption strong,
+.connectionOptionActive strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connectionOption span,
+.connectionOptionActive span {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--color) 54%, transparent);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sendButton {
