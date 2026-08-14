@@ -221,18 +221,24 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     }
   }, [editingProvider, showToast, t, testAIProvider]);
 
-  const loadCodexAccount = React.useCallback(async () => {
+  const loadCodexAccount = React.useCallback(async (silent = false) => {
     try {
-      setLoadingCodexAccount(true);
-      setCodexAccount(await getCodexChatGPTAccount());
+      if (!silent) setLoadingCodexAccount(true);
+
+      const account = await getCodexChatGPTAccount();
+
+      setCodexAccount(account);
+      if (account.authenticated) setCodexLogin(undefined);
     } catch (error) {
-      showToast({
-        type: 'error',
-        title: t('aiProvider.codexStatusFailed'),
-        description: error.message,
-      });
+      if (!silent) {
+        showToast({
+          type: 'error',
+          title: t('aiProvider.codexStatusFailed'),
+          description: error.message,
+        });
+      }
     } finally {
-      setLoadingCodexAccount(false);
+      if (!silent) setLoadingCodexAccount(false);
     }
   }, [getCodexChatGPTAccount, showToast, t]);
 
@@ -293,6 +299,14 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       loadCodexAccount();
     }
   }, [editingProvider?.type, loadCodexAccount, show]);
+
+  React.useEffect(() => {
+    if (!show || !isCodexProvider || !codexLogin || codexAccount?.authenticated) return;
+
+    const interval = setInterval(() => loadCodexAccount(true), 3000);
+
+    return () => clearInterval(interval);
+  }, [codexAccount?.authenticated, codexLogin, isCodexProvider, loadCodexAccount, show]);
 
   return (
     <>
@@ -446,20 +460,34 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
               {isCodexProvider && (
                 <Card
                   color={colors.color}
-                  borderColor={__colors.lightGray}
+                  borderColor="transparent"
+                  style={{ padding: '0 0 0 8px' }}
                   backgroundColor={__colors.darkLightDeep}
                   className={styles.codexCard}
                 >
-                  <Text small color={colors.color} userSelect={false}>
-                    {codexAccount?.authenticated
-                      ? t('aiProvider.codexConnected', {
-                          email: codexAccount.email || t('aiProvider.codexUnknownEmail'),
-                          plan: codexAccount.planType || t('aiProvider.codexUnknownPlan'),
-                        })
-                      : t('aiProvider.codexDisconnected')}
-                  </Text>
+                  <div className={styles.codexStatusRow}>
+                    <Text small color={colors.color} userSelect={false}>
+                      {codexAccount?.authenticated
+                        ? t('aiProvider.codexConnected', {
+                            email: codexAccount.email || t('aiProvider.codexUnknownEmail'),
+                          })
+                        : t('aiProvider.codexDisconnected')}
+                    </Text>
 
-                  {!!codexLogin && (
+                    {codexAccount?.authenticated && (
+                      <Button
+                        text
+                        width="52px"
+                        loading={loadingCodexAccount}
+                        color={colors.cancelButtonBackgroundColor}
+                        onClick={logoutCodex}
+                      >
+                        {t('aiProvider.codexLogout')}
+                      </Button>
+                    )}
+                  </div>
+
+                  {!!codexLogin && !codexAccount?.authenticated && (
                     <div className={styles.codexLoginInfo}>
                       <Text small color={colors.color} userSelect={false}>
                         {t('aiProvider.codexDeviceCode')}
@@ -471,44 +499,23 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                     </div>
                   )}
 
-                  <Divider size={8} />
+                  {!codexAccount?.authenticated && !codexLogin && (
+                    <>
+                      <Divider size={8} />
 
-                  <Row>
-                    <Button
-                      xs={12}
-                      sm={4}
-                      loading={loadingCodexLogin}
-                      disabled={!!codexAccount?.authenticated}
-                      color={colors.testButtonColor}
-                      backgroundColor={colors.testButtonBackgroundColor}
-                      onClick={startCodexLogin}
-                    >
-                      {t('aiProvider.codexLogin')}
-                    </Button>
-
-                    <Button
-                      xs={12}
-                      sm={4}
-                      loading={loadingCodexAccount}
-                      color={colors.testButtonColor}
-                      backgroundColor={colors.testButtonBackgroundColor}
-                      onClick={loadCodexAccount}
-                    >
-                      {t('aiProvider.codexRefresh')}
-                    </Button>
-
-                    <Button
-                      xs={12}
-                      sm={4}
-                      disabled={!codexAccount?.authenticated}
-                      loading={loadingCodexAccount}
-                      color={colors.cancelButtonColor}
-                      backgroundColor={colors.cancelButtonBackgroundColor}
-                      onClick={logoutCodex}
-                    >
-                      {t('aiProvider.codexLogout')}
-                    </Button>
-                  </Row>
+                      <Row>
+                        <Button
+                          xs={12}
+                          loading={loadingCodexLogin}
+                          color={colors.testButtonColor}
+                          backgroundColor={colors.testButtonBackgroundColor}
+                          onClick={startCodexLogin}
+                        >
+                          {t('aiProvider.codexLogin')}
+                        </Button>
+                      </Row>
+                    </>
+                  )}
                 </Card>
               )}
 

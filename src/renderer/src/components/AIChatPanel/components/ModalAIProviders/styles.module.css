@@ -43,7 +43,14 @@
 
 .codexCard {
   width: 100%;
-  margin: 6px 0;
+  margin: 6px 4px;
+}
+
+.codexStatusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .codexLoginInfo {

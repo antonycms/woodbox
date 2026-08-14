@@ -620,7 +620,7 @@ export const en = {
   'aiProvider.codexLogin': 'Sign in with ChatGPT',
   'aiProvider.codexLogout': 'Sign out',
   'aiProvider.codexRefresh': 'Refresh status',
-  'aiProvider.codexConnected': 'Connected as {{email}} · {{plan}} plan',
+  'aiProvider.codexConnected': 'Connected as {{email}}',
   'aiProvider.codexDisconnected': 'Not connected to ChatGPT yet.',
   'aiProvider.codexDeviceCode': 'Use this code to authorize Codex:',
   'aiProvider.codexUnknownEmail': 'unknown email',

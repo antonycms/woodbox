@@ -624,7 +624,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiProvider.codexLogin': 'Entrar com ChatGPT',
   'aiProvider.codexLogout': 'Sair',
   'aiProvider.codexRefresh': 'Atualizar status',
-  'aiProvider.codexConnected': 'Conectado como {{email}} · plano {{plan}}',
+  'aiProvider.codexConnected': 'Conectado como {{email}}',
   'aiProvider.codexDisconnected': 'Ainda não conectado ao ChatGPT.',
   'aiProvider.codexDeviceCode': 'Use este código para autorizar o Codex:',
   'aiProvider.codexUnknownEmail': 'email desconhecido',
