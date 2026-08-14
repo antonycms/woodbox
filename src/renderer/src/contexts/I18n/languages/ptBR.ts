@@ -621,7 +621,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiProvider.removeFailed': 'Falha ao remover provedor de IA',
   'aiProvider.testSuccess': 'Provedor de IA conectado com sucesso.',
   'aiProvider.testFailed': 'Falha ao conectar provedor de IA',
-  'aiProvider.codexLogin': 'Entrar com ChatGPT',
+  'aiProvider.codexLogin': 'Entrar',
   'aiProvider.codexLogout': 'Sair',
   'aiProvider.codexRefresh': 'Atualizar status',
   'aiProvider.codexConnected': 'Conectado como {{email}}',

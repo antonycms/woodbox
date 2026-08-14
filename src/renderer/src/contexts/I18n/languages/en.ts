@@ -617,7 +617,7 @@ export const en = {
   'aiProvider.removeFailed': 'Failed to remove AI provider',
   'aiProvider.testSuccess': 'AI provider connected successfully.',
   'aiProvider.testFailed': 'Failed to connect AI provider',
-  'aiProvider.codexLogin': 'Sign in with ChatGPT',
+  'aiProvider.codexLogin': 'Sign in',
   'aiProvider.codexLogout': 'Sign out',
   'aiProvider.codexRefresh': 'Refresh status',
   'aiProvider.codexConnected': 'Connected as {{email}}',

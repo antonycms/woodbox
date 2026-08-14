@@ -485,6 +485,18 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                         {t('aiProvider.codexLogout')}
                       </Button>
                     )}
+
+                    {!codexAccount?.authenticated && !codexLogin && (
+                      <Button
+                        text
+                        width="64px"
+                        loading={loadingCodexLogin}
+                        color={colors.testButtonBackgroundColor}
+                        onClick={startCodexLogin}
+                      >
+                        {t('aiProvider.codexLogin')}
+                      </Button>
+                    )}
                   </div>
 
                   {!!codexLogin && !codexAccount?.authenticated && (
@@ -499,23 +511,6 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                     </div>
                   )}
 
-                  {!codexAccount?.authenticated && !codexLogin && (
-                    <>
-                      <Divider size={8} />
-
-                      <Row>
-                        <Button
-                          xs={12}
-                          loading={loadingCodexLogin}
-                          color={colors.testButtonColor}
-                          backgroundColor={colors.testButtonBackgroundColor}
-                          onClick={startCodexLogin}
-                        >
-                          {t('aiProvider.codexLogin')}
-                        </Button>
-                      </Row>
-                    </>
-                  )}
                 </Card>
               )}
 
