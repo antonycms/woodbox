@@ -56,16 +56,33 @@ export const sendAIChatMessage = async ({
     throw new Error('Selecione um modelo de IA antes de enviar mensagens.');
   }
 
-  if (provider.type === 'codex-chatgpt') {
-    return await sendCodexChatGPTMessage(provider, { providerId, model: selectedModel, messages });
-  }
-
-  const model = resolveAIModel(provider, selectedModel);
   const normalizedMessages = normalizeMessages(messages);
 
   if (!normalizedMessages.length) {
     throw new Error('Informe uma mensagem para enviar ao assistente.');
   }
+
+  const tools = createAIDatabaseTools(mentionedConnectionIds);
+
+  const instructions = [
+    WOODBOX_AI_INSTRUCTIONS,
+    buildAIDatabaseInstructions(mentionedConnectionIds),
+  ].join('\n\n');
+
+  // Conexao direta usando codex OAuth
+  if (provider.type === 'codex-chatgpt') {
+    return await sendCodexChatGPTMessage(provider, {
+      requestId,
+      providerId,
+      model: selectedModel,
+      mentionedConnectionIds,
+      messages: normalizedMessages,
+      instructions,
+      tools,
+    });
+  }
+
+  const model = resolveAIModel(provider, selectedModel);
 
   const abortController = requestId ? new AbortController() : undefined;
 
@@ -76,12 +93,9 @@ export const sendAIChatMessage = async ({
   try {
     const response = await generateText({
       model,
-      instructions: [
-        WOODBOX_AI_INSTRUCTIONS,
-        buildAIDatabaseInstructions(mentionedConnectionIds),
-      ].join('\n\n'),
+      instructions,
       messages: normalizedMessages,
-      tools: createAIDatabaseTools(mentionedConnectionIds),
+      tools,
       stopWhen: AI_TOOL_STOP_CONDITION,
       maxRetries: 1,
       abortSignal: abortController?.signal,

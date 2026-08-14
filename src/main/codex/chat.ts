@@ -1,46 +1,181 @@
+import { asSchema, type Tool, type ToolSet } from 'ai';
 import { getValidCodexCredential } from './account';
+
+type CodexTextContent = { type?: string; text?: string };
+type CodexInputTextContent = { type: 'input_text'; text: string };
+type CodexMessageItem = {
+  type: 'message';
+  role: 'user' | 'assistant' | 'developer';
+  content: CodexInputTextContent[];
+};
+type CodexFunctionCallItem = {
+  type: 'function_call';
+  call_id: string;
+  name: string;
+  arguments: string;
+};
+type CodexFunctionCallOutputItem = {
+  type: 'function_call_output';
+  call_id: string;
+  output: string;
+};
+type CodexInputItem = CodexMessageItem | CodexFunctionCallItem | CodexFunctionCallOutputItem;
+type CodexOutputItem = {
+  type?: string;
+  call_id?: string;
+  name?: string;
+  arguments?: string;
+  content?: CodexTextContent[];
+};
+type CodexToolDefinition = {
+  type: 'function';
+  name: string;
+  description: string;
+  parameters: unknown;
+  strict?: boolean;
+};
+type CodexToolCall = {
+  call_id: string;
+  name: string;
+  arguments: string;
+};
+type CodexStepResult = {
+  text: string;
+  toolCalls: CodexToolCall[];
+};
+type CodexChatGPTRequest = IAIChatRequest & {
+  instructions: string;
+  tools?: ToolSet;
+};
+type CodexExecutableTool = Tool & {
+  execute?: (
+    input: unknown,
+    options: {
+      toolCallId: string;
+      messages: [];
+      abortSignal?: AbortSignal;
+    },
+  ) => unknown | PromiseLike<unknown> | AsyncIterable<unknown>;
+};
 
 type CodexResponseEvent = {
   type?: string;
   delta?: string;
-  item?: {
-    type?: string;
-    content?: { type?: string; text?: string }[];
-  };
+  output_index?: number;
+  call_id?: string;
+  name?: string;
+  arguments?: string;
+  item?: CodexOutputItem;
   response?: {
-    output?: {
-      type?: string;
-      content?: { type?: string; text?: string }[];
-    }[];
+    output?: CodexOutputItem[];
   };
   error?: {
     message?: string;
   };
 };
 
-const WOODBOX_CODEX_INSTRUCTIONS = [
-  'Você é o assistente de IA do Woodbox, um cliente desktop para bancos de dados.',
-  'Responda em português brasileiro por padrão.',
-  'Ajude com SQL, modelagem, diagnóstico de schema, otimização e migrações.',
-  'Formate respostas em Markdown limpo: parágrafos curtos, listas quando houver itens e blocos ```sql``` para queries.',
-  'Não altere arquivos, não execute comandos e não use ferramentas. Responda apenas no chat.',
-  'Não invente dados do banco; peça contexto quando faltar informação.',
-].join('\n');
-
-const toPrompt = (messages: IAIChatMessageInput[]) =>
-  messages
-    .map((message) => {
-      const role = message.role === 'assistant' ? 'Assistente' : 'Usuário';
-
-      return `${role}: ${message.content}`;
-    })
-    .join('\n\n');
-
 const CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses';
 const CODEX_CLIENT_VERSION = '0.144.1';
+const MAX_CODEX_TOOL_STEPS = 6;
 
-const extractTextFromResponse = (event: CodexResponseEvent) => {
-  return event.response?.output
+const toCodexInput = (messages: IAIChatMessageInput[]): CodexInputItem[] =>
+  messages.map((message) => ({
+    type: 'message',
+    role: message.role,
+    content: [{ type: 'input_text', text: message.content }],
+  }));
+
+const stringifyToolOutput = (output: unknown) => {
+  if (typeof output === 'string') return output;
+
+  try {
+    return JSON.stringify(output);
+  } catch {
+    return String(output);
+  }
+};
+
+const parseToolInput = (input: string) => {
+  if (!input.trim()) return {};
+
+  return JSON.parse(input) as Record<string, unknown>;
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+
+  return String(error);
+};
+
+const isAsyncIterable = (value: unknown): value is AsyncIterable<unknown> => {
+  return !!value && typeof value === 'object' && Symbol.asyncIterator in value;
+};
+
+const resolveToolDescription = (tool: CodexExecutableTool) => {
+  if (typeof tool.description === 'string') return tool.description;
+
+  return '';
+};
+
+const toCodexTools = async (tools?: ToolSet): Promise<CodexToolDefinition[] | undefined> => {
+  const entries = Object.entries(tools || {});
+
+  if (!entries.length) return undefined;
+
+  const definitions: CodexToolDefinition[] = [];
+
+  for (const [name, tool] of entries) {
+    if (tool.type === 'provider') continue;
+
+    const executableTool = tool as CodexExecutableTool;
+
+    definitions.push({
+      type: 'function',
+      name,
+      description: resolveToolDescription(executableTool),
+      parameters: await asSchema(executableTool.inputSchema).jsonSchema,
+      ...(executableTool.strict !== undefined ? { strict: executableTool.strict } : {}),
+    });
+  }
+
+  return definitions.length ? definitions : undefined;
+};
+
+const executeCodexTool = async (
+  tools: ToolSet | undefined,
+  toolCall: CodexToolCall,
+): Promise<unknown> => {
+  const tool = tools?.[toolCall.name] as CodexExecutableTool | undefined;
+
+  if (!tool?.execute) {
+    return { error: `Ferramenta não disponível: ${toolCall.name}` };
+  }
+
+  try {
+    const input = parseToolInput(toolCall.arguments);
+    const result = tool.execute(input, {
+      toolCallId: toolCall.call_id,
+      messages: [],
+    });
+
+    if (isAsyncIterable(result)) {
+      let output: unknown;
+
+      for await (const item of result) {
+        output = item;
+      }
+
+      return output;
+    }
+
+    return await result;
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+};
+
+const extractTextFromOutput = (output?: CodexOutputItem[]) => {
+  return output
     ?.flatMap((item) => item.content || [])
     .map((content) => content.text)
     .filter(Boolean)
@@ -56,7 +191,25 @@ const extractTextFromItem = (event: CodexResponseEvent) => {
     .join('') || '';
 };
 
-const readCodexSseResponse = async (response: Response) => {
+const extractToolCallsFromOutput = (output?: CodexOutputItem[]) => {
+  const toolCalls = new Map<string, CodexToolCall>();
+
+  for (const item of output || []) {
+    if (item.type !== 'function_call' || !item.name) continue;
+
+    const callId = item.call_id || crypto.randomUUID();
+
+    toolCalls.set(callId, {
+      call_id: callId,
+      name: item.name,
+      arguments: item.arguments || '',
+    });
+  }
+
+  return Array.from(toolCalls.values());
+};
+
+const readCodexSseResponse = async (response: Response): Promise<CodexStepResult> => {
   if (!response.body) {
     throw new Error('Codex não retornou corpo de resposta.');
   }
@@ -66,6 +219,9 @@ const readCodexSseResponse = async (response: Response) => {
   let buffer = '';
   let deltaContent = '';
   let finalContent = '';
+  let finalOutput: CodexOutputItem[] | undefined;
+  const toolCalls = new Map<string, CodexToolCall>();
+  const toolCallIdByOutputIndex = new Map<number, string>();
 
   const handleBlock = (block: string) => {
     const data = block
@@ -82,12 +238,49 @@ const readCodexSseResponse = async (response: Response) => {
       throw new Error(event.error.message || 'Codex falhou ao responder.');
     }
 
-    if (event.type?.includes('delta') && event.delta) {
+    const isTextDelta = event.type?.includes('output_text') || event.type?.includes('message');
+
+    if (isTextDelta && event.delta) {
       deltaContent += event.delta;
     }
 
     finalContent ||= extractTextFromItem(event);
-    finalContent ||= extractTextFromResponse(event) || '';
+    finalContent ||= extractTextFromOutput(event.response?.output) || '';
+
+    if (event.response?.output) {
+      finalOutput = event.response.output;
+    }
+
+    if (event.item?.type === 'function_call' && event.item.name) {
+      const callId = event.item.call_id || event.call_id || crypto.randomUUID();
+
+      toolCalls.set(callId, {
+        call_id: callId,
+        name: event.item.name,
+        arguments: event.item.arguments || '',
+      });
+
+      if (typeof event.output_index === 'number') {
+        toolCallIdByOutputIndex.set(event.output_index, callId);
+      }
+    }
+
+    if (event.type?.includes('function_call_arguments')) {
+      const callId =
+        event.call_id ||
+        (typeof event.output_index === 'number'
+          ? toolCallIdByOutputIndex.get(event.output_index)
+          : undefined);
+      const existing = callId ? toolCalls.get(callId) : undefined;
+
+      if (existing && event.delta) {
+        existing.arguments += event.delta;
+      }
+
+      if (existing && event.arguments !== undefined) {
+        existing.arguments = event.arguments;
+      }
+    }
   };
 
   while (true) {
@@ -104,20 +297,52 @@ const readCodexSseResponse = async (response: Response) => {
 
   if (buffer.trim()) handleBlock(buffer);
 
-  return (deltaContent || finalContent).trim();
+  const finalToolCalls = extractToolCallsFromOutput(finalOutput);
+
+  for (const toolCall of finalToolCalls) {
+    toolCalls.set(toolCall.call_id, toolCall);
+  }
+
+  return {
+    text: (deltaContent || finalContent || extractTextFromOutput(finalOutput) || '').trim(),
+    toolCalls: Array.from(toolCalls.values()),
+  };
 };
 
-export const sendCodexChatGPTMessage = async (
-  _provider: IAIProviderConfig,
-  request: IAIChatRequest,
-): Promise<IAIChatResponse> => {
-  const credential = await getValidCodexCredential();
-
+const createCodexResponse = async ({
+  credential,
+  sessionId,
+  model,
+  instructions,
+  input,
+  tools,
+}: {
+  credential: Awaited<ReturnType<typeof getValidCodexCredential>>;
+  sessionId: string;
+  model: string;
+  instructions: string;
+  input: CodexInputItem[];
+  tools?: CodexToolDefinition[];
+}) => {
   if (!credential) {
     throw new Error('Entre com ChatGPT no provedor Codex antes de enviar mensagens.');
   }
 
-  const sessionId = request.requestId || crypto.randomUUID();
+  const body: Record<string, unknown> = {
+    model,
+    instructions,
+    input,
+    store: false,
+    stream: true,
+    include: ['reasoning.encrypted_content'],
+  };
+
+  if (tools?.length) {
+    body.tools = tools;
+    body.tool_choice = 'auto';
+    body.parallel_tool_calls = false;
+  }
+
   const headers = new Headers({
     accept: 'text/event-stream',
     authorization: `Bearer ${credential.accessToken}`,
@@ -137,13 +362,7 @@ export const sendCodexChatGPTMessage = async (
   const response = await fetch(CODEX_API_ENDPOINT, {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      model: request.model,
-      instructions: WOODBOX_CODEX_INSTRUCTIONS,
-      input: [{ role: 'user', content: toPrompt(request.messages) }],
-      store: false,
-      stream: true,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -152,7 +371,72 @@ export const sendCodexChatGPTMessage = async (
     throw new Error(`Codex falhou (${response.status}): ${error || response.statusText}`);
   }
 
-  const content = await readCodexSseResponse(response);
+  return await readCodexSseResponse(response);
+};
 
-  return { content };
+export const sendCodexChatGPTMessage = async (
+  _provider: IAIProviderConfig,
+  request: CodexChatGPTRequest,
+): Promise<IAIChatResponse> => {
+  const credential = await getValidCodexCredential();
+
+  if (!credential) {
+    throw new Error('Entre com ChatGPT no provedor Codex antes de enviar mensagens.');
+  }
+
+  if (!request.model) {
+    throw new Error('Selecione um modelo de IA antes de enviar mensagens.');
+  }
+
+  const sessionId = request.requestId || crypto.randomUUID();
+  const tools = await toCodexTools(request.tools);
+  const input = toCodexInput(request.messages);
+  let latestText = '';
+
+  for (let step = 0; step < MAX_CODEX_TOOL_STEPS; step++) {
+    const result = await createCodexResponse({
+      credential,
+      sessionId,
+      model: request.model,
+      instructions: request.instructions,
+      input,
+      tools,
+    });
+
+    if (result.text) latestText = result.text;
+
+    if (!result.toolCalls.length) {
+      return { content: result.text };
+    }
+
+    for (const toolCall of result.toolCalls) {
+      const output = await executeCodexTool(request.tools, toolCall);
+
+      console.log({
+        toolName: toolCall.name,
+        input: toolCall.arguments,
+        output: stringifyToolOutput(output),
+      });
+
+      input.push(
+        {
+          type: 'function_call',
+          call_id: toolCall.call_id,
+          name: toolCall.name,
+          arguments: toolCall.arguments,
+        },
+        {
+          type: 'function_call_output',
+          call_id: toolCall.call_id,
+          output: stringifyToolOutput(output),
+        },
+      );
+    }
+  }
+
+  return {
+    content:
+      latestText ||
+      'O Codex atingiu o limite de chamadas de ferramentas antes de concluir a resposta.',
+  };
 };
