@@ -3,7 +3,6 @@ import {
   getConnectionInfo,
   getFunctionDefinition,
   getTableColumns,
-  getTableData,
   getTableDefinition,
   getTableIndexes,
   getTableReferences,
@@ -14,7 +13,6 @@ import {
 } from '@main/database/core';
 import { getConnectionsSaved } from '@main/storage/store';
 
-const MAX_PREVIEW_ROWS = 20;
 const aiToolSchema = <T extends object>(schema: Parameters<typeof jsonSchema>[0]): Schema<T> =>
   jsonSchema<T>(schema);
 
@@ -34,10 +32,6 @@ type AITableToolInput = {
   schema?: string;
 };
 
-type AIPreviewTableRowsInput = AITableToolInput & {
-  limit?: number;
-  page?: number;
-};
 
 type AIFunctionDefinitionInput = {
   connection: string;
@@ -227,7 +221,8 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     '',
     'Use a conexão selecionada como contexto padrão para ferramentas de banco.',
     'O usuário pode referenciar tabelas com @tabela ou @schema.tabela; trate isso como tabela da conexão selecionada.',
-    'Antes de responder sobre tabelas, schemas, funções ou dados, use as ferramentas disponíveis.',
+    'Antes de responder sobre tabelas, schemas ou funções, use as ferramentas disponíveis.',
+    'Você não tem ferramenta para visualizar linhas ou valores das tabelas diretamente.',
     'Não invente metadados. Se a conexão/tabela/função não existir, diga isso.',
     'Você não tem ferramenta para executar query. Quando precisar consultar dados, escreva a query em um único bloco ```sql``` e aguarde a confirmação por botões da interface.',
     'Não peça para o usuário digitar "confirmar" ou "rejeitar"; a interface exibirá botões.',
@@ -344,38 +339,6 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
         indexes,
         triggers,
         definition,
-      };
-    },
-  }),
-
-  preview_table_rows: tool<AIPreviewTableRowsInput, unknown, AIToolContext>({
-    description: 'Retorna poucas linhas de uma tabela para entender formato dos dados.',
-    inputSchema: aiToolSchema<AIPreviewTableRowsInput>({
-      type: 'object',
-      properties: {
-        connection: { type: 'string' },
-        table: { type: 'string' },
-        schema: { type: 'string' },
-        limit: { type: 'number', minimum: 1, maximum: MAX_PREVIEW_ROWS },
-        page: { type: 'number', minimum: 1 },
-      },
-      required: ['connection', 'table'],
-      additionalProperties: false,
-    }),
-    execute: async ({ connection, table, schema, limit = MAX_PREVIEW_ROWS, page = 1 }) => {
-      const resolved = resolveConnection(connection, mentionedConnectionIds);
-      const tableRef = await assertTableExists(resolved.id, table, schema);
-      const result = await getTableData(resolved.id, {
-        ...tableRef,
-        schema: tableRef.schema || '',
-        page,
-        limit: Math.min(Math.max(Number(limit) || MAX_PREVIEW_ROWS, 1), MAX_PREVIEW_ROWS),
-      });
-
-      return {
-        connection: serializeConnectionForAI(resolved),
-        table: tableRef,
-        rows: result.data,
       };
     },
   }),
