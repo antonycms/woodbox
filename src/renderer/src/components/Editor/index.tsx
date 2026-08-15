@@ -4,11 +4,6 @@ import * as monaco from './monaco';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
-import {
-  ContextMenu,
-  type IContextMenuOption,
-  type IContextMenuPosition,
-} from '@renderer/components/ContextMenu';
 import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -30,11 +25,20 @@ const Editor = ({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { width, height } = useResize({ HTMLElement: containerRef.current });
   const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
-  const [editorContextMenu, setEditorContextMenu] = React.useState<{
-    position: IContextMenuPosition;
-    selectedText: string;
-  }>();
+  const activeAIChatContextKeyRef =
+    React.useRef<monaco.editor.IContextKey<boolean> | undefined>(undefined);
+  const activeChatIdRef = React.useRef(activeChatId);
+  const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
+  React.useEffect(() => {
+    activeChatIdRef.current = activeChatId;
+    activeAIChatContextKeyRef.current?.set(!!activeChatId);
+  }, [activeChatId]);
+
+  React.useEffect(() => {
+    addEditorSelectionToChatContextRef.current = addEditorSelectionToChatContext;
+  }, [addEditorSelectionToChatContext]);
+
   React.useEffect(() => {
     onCtrlClickRef.current = props.onCtrlClick;
   }, [props.onCtrlClick]);
@@ -155,35 +159,6 @@ const Editor = ({
     return getCurrentQueryRange().sql;
   };
 
-  const getSelectedText = React.useCallback(() => {
-    const model = editor?.getModel();
-    if (!model) return '';
-
-    return (editor?.getSelections() || [])
-      .map((selection) => model.getValueInRange(selection).trim())
-      .filter(Boolean)
-      .join('\n\n');
-  }, [editor]);
-
-  const openEditorContextMenu = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      const selectedText = getSelectedText();
-
-      if (!selectedText) {
-        setEditorContextMenu(undefined);
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      setEditorContextMenu({
-        position: { x: event.clientX, y: event.clientY },
-        selectedText,
-      });
-    },
-    [getSelectedText],
-  );
-
   const initEditor = () => {
     const overflowWidgetsPortal = props.overflowWidgetsPortal
       ? document.createElement('div')
@@ -206,11 +181,6 @@ const Editor = ({
         minimap: { enabled: !props.hidePreview },
         fixedOverflowWidgets: true,
         overflowWidgetsDomNode: overflowWidgetsPortal,
-      },
-      {
-        contextMenuService: {
-          showContextMenu: () => undefined,
-        },
       },
     );
 
@@ -461,42 +431,67 @@ const Editor = ({
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);
 
-  const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
-    () => [
-      {
-        text: activeChatId
-          ? t('context.addSelectionToAIChat')
-          : t('context.addSelectionToNewAIChat'),
-        onClick: () => {
-          if (!editorContextMenu?.selectedText) return;
+  React.useEffect(() => {
+    if (!editor) return;
 
-          addEditorSelectionToChatContext({
-            content: editorContextMenu.selectedText,
-            language,
-          });
-          setEditorContextMenu(undefined);
-        },
-      },
-    ],
-    [activeChatId, addEditorSelectionToChatContext, editorContextMenu?.selectedText, language, t],
-  );
+    const activeAIChatContextKey = editor.createContextKey(
+      'woodboxHasActiveAIChat',
+      !!activeChatIdRef.current,
+    );
+    activeAIChatContextKeyRef.current = activeAIChatContextKey;
+
+    const getSelectedText = (currentEditor: monaco.editor.ICodeEditor) => {
+      const model = currentEditor.getModel();
+      if (!model) return '';
+
+      return (currentEditor.getSelections() || [])
+        .map((selection) => model.getValueInRange(selection).trim())
+        .filter(Boolean)
+        .join('\n\n');
+    };
+
+    const addSelectionToChatContext = (currentEditor: monaco.editor.ICodeEditor) => {
+      const selectedText = getSelectedText(currentEditor);
+      if (!selectedText) return;
+
+      addEditorSelectionToChatContextRef.current({
+        content: selectedText,
+        language,
+      });
+    };
+
+    const disposables = [
+      editor.addAction({
+        id: 'woodbox.add-selection-to-ai-chat-context',
+        label: t('context.addSelectionToAIChat'),
+        precondition: 'editorHasSelection && woodboxHasActiveAIChat',
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.5,
+        run: addSelectionToChatContext,
+      }),
+      editor.addAction({
+        id: 'woodbox.add-selection-to-new-ai-chat-context',
+        label: t('context.addSelectionToNewAIChat'),
+        precondition: 'editorHasSelection && !woodboxHasActiveAIChat',
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.5,
+        run: addSelectionToChatContext,
+      }),
+    ];
+
+    return () => {
+      disposables.forEach((disposable) => disposable.dispose());
+      activeAIChatContextKey.reset();
+      if (activeAIChatContextKeyRef.current === activeAIChatContextKey) {
+        activeAIChatContextKeyRef.current = undefined;
+      }
+    };
+  }, [editor, language, t]);
 
   return (
-    <>
-      <div
-        className={styles.outsideContainer}
-        onClickCapture={stopCtrlClickPropagation}
-        onContextMenuCapture={openEditorContextMenu}
-      >
-        <div className={styles.container} ref={containerRef} />
-      </div>
-
-      <ContextMenu
-        position={editorContextMenu?.position}
-        options={editorContextMenuOptions}
-        onClose={() => setEditorContextMenu(undefined)}
-      />
-    </>
+    <div className={styles.outsideContainer} onClickCapture={stopCtrlClickPropagation}>
+      <div className={styles.container} ref={containerRef} />
+    </div>
   );
 };
 

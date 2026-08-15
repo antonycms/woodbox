@@ -68,11 +68,14 @@ const withAlpha = (color: string, alpha: string) => {
 };
 
 export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
-  const { editor: colors } = serializeTheme(theme);
-  const { editor: defaultColors } = serializeTheme(defaultTheme);
+  const { contextMenu, editor: colors } = serializeTheme(theme);
+  const { contextMenu: defaultContextMenu, editor: defaultColors } = serializeTheme(defaultTheme);
 
   const getColor = (colorName: keyof typeof colors) => {
     return colors[colorName] || defaultColors[colorName];
+  };
+  const getContextMenuColor = (colorName: keyof typeof contextMenu) => {
+    return contextMenu?.[colorName] || defaultContextMenu?.[colorName];
   };
   const themeBase = isLightHexColor(getColor('backgroundColor')) ? 'vs' : 'vs-dark';
 
@@ -111,6 +114,13 @@ export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
       focusBorder: getColor('cursorColor'),
       disabledForeground: getColor('lineNumberColor'),
       'toolbar.hoverBackground': getColor('selectionColor'),
+      'menu.foreground': getContextMenuColor('color'),
+      'menu.background': getContextMenuColor('backgroundColor'),
+      'menu.border': getContextMenuColor('borderColor'),
+      'menu.selectionForeground': getContextMenuColor('color'),
+      'menu.selectionBackground': getColor('selectionColor'),
+      'menu.selectionBorder': getColor('cursorColor'),
+      'menu.separatorBackground': getContextMenuColor('borderColor'),
       'editor.findMatchBackground': withAlpha(getColor('identifierColor'), '80'),
       'editor.findMatchHighlightBackground': withAlpha(getColor('keywordColor'), '55'),
       'editor.findMatchBorder': getColor('identifierColor'),
