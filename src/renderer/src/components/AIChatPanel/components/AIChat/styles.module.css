@@ -354,6 +354,11 @@ p.titleBlock {
   background-color: color-mix(in srgb, var(--queryRejectedColor) 10%, var(--cardBackgroundColor));
 }
 
+.queryApprovalCard_unsafe {
+  border-color: color-mix(in srgb, var(--queryRejectedColor) 48%, var(--borderColor));
+  background-color: color-mix(in srgb, var(--queryRejectedColor) 8%, var(--cardBackgroundColor));
+}
+
 .queryApprovalCard_pending .queryApprovalHeader span {
   color: var(--queryPendingColor);
 }
@@ -376,7 +381,10 @@ p.titleBlock {
 }
 
 .queryApprovalHeader strong {
+  display: flex;
+  align-items: center;
   min-width: 0;
+  gap: 6px;
   margin: 0;
   overflow: hidden;
   font-size: 12px;
@@ -384,7 +392,17 @@ p.titleBlock {
   text-overflow: ellipsis;
 }
 
-.queryApprovalHeader span {
+.queryApprovalHeader strong span {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--queryRejectedColor) 45%, var(--borderColor));
+  border-radius: 999px;
+  color: var(--queryRejectedColor);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.queryApprovalHeader > span {
   color: var(--mutedColor);
   font-size: 11px;
   user-select: none;
@@ -395,6 +413,13 @@ p.titleBlock {
   color: var(--mutedColor);
   font-size: 11px;
   user-select: none;
+}
+
+.queryApprovalWarning {
+  margin-top: 7px;
+  color: var(--queryRejectedColor);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .queryApprovalCard pre {

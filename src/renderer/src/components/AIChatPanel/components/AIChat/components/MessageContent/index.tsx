@@ -2,19 +2,23 @@ import React from 'react';
 import type { IAIQueryApproval } from '@renderer/contexts/Store';
 import { normalizeSqlForComparison } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
-import { QueryApprovalCard, QueryApprovalCards } from '../QueryApprovalCards';
+import {
+  QueryApprovalCard,
+  QueryApprovalCards,
+  type IQueryApprovalApproveOptions,
+} from '../QueryApprovalCards';
 
 interface IMessageContentProps {
   content: string;
   queryApprovals?: IAIQueryApproval[];
-  onApprove?(approval: IAIQueryApproval): void;
+  onApprove?(approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions): void;
   onReject?(approval: IAIQueryApproval): void;
 }
 
 interface IRenderMarkdownOptions {
   queryApprovals?: IAIQueryApproval[];
   usedQueryApprovalIds: Set<string>;
-  onApprove?: (approval: IAIQueryApproval) => void;
+  onApprove?: (approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions) => void;
   onReject?: (approval: IAIQueryApproval) => void;
 }
 

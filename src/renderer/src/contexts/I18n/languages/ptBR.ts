@@ -589,6 +589,10 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiChat.queryApprovalStatus.pending': 'aguardando',
   'aiChat.queryApprovalStatus.approved': 'aprovada',
   'aiChat.queryApprovalStatus.rejected': 'rejeitada',
+  'aiChat.queryApprovalUnsafeBadge': 'ação sensível',
+  'aiChat.queryApprovalUnsafeWarning':
+    'Esta query pode alterar dados ou estrutura. Revise com atenção antes de executar.',
+  'aiChat.queryApprovalUnsafeConfirm': 'Entendo, executar',
   'aiChat.queryApprovedMessage': 'Confirmo a execução da query em {{connection}}.',
   'aiChat.queryApprovalRequiredMessage': 'Revise a query abaixo e confirme para executar.',
   'aiChat.queryApprovalUnsafeTitle': 'Query bloqueada',

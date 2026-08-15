@@ -13,6 +13,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { BackIcon, OptionsIcon } from '@renderer/styles/icons';
 import { generateHash } from '@renderer/utils/string';
 import { MessageContent } from './components/MessageContent';
+import type { IQueryApprovalApproveOptions } from './components/QueryApprovalCards';
 import { QueryResultTable } from './components/QueryResultTable';
 import type { IAIChatProps } from './dtos';
 import styles from './styles.module.css';
@@ -306,8 +307,8 @@ const AIChat = ({
   );
 
   const approveQueryApproval = React.useCallback(
-    async (approval: IAIQueryApproval) => {
-      if (!isReadOnlySelectQuery(approval.sql)) {
+    async (approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions) => {
+      if (!isReadOnlySelectQuery(approval.sql) && !options?.allowUnsafe) {
         showToast({
           type: 'error',
           title: t('aiChat.queryApprovalUnsafeTitle'),

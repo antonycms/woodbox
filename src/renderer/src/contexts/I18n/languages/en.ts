@@ -585,6 +585,10 @@ export const en = {
   'aiChat.queryApprovalStatus.pending': 'pending',
   'aiChat.queryApprovalStatus.approved': 'approved',
   'aiChat.queryApprovalStatus.rejected': 'rejected',
+  'aiChat.queryApprovalUnsafeBadge': 'sensitive action',
+  'aiChat.queryApprovalUnsafeWarning':
+    'This query may change data or structure. Review it carefully before running.',
+  'aiChat.queryApprovalUnsafeConfirm': 'I understand, run',
   'aiChat.queryApprovedMessage': 'I confirm running the query on {{connection}}.',
   'aiChat.queryApprovalRequiredMessage': 'Review the query below and confirm to run it.',
   'aiChat.queryApprovalUnsafeTitle': 'Query blocked',

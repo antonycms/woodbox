@@ -251,7 +251,7 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     : '- nenhuma conexão selecionada nesta mensagem';
 
   return [
-    'Conexões disponíveis para ferramentas read-only:',
+    'Conexões disponíveis para ferramentas de banco:',
     connectionLines,
     '',
     'Conexão selecionada pelo usuário para esta mensagem:',
@@ -264,6 +264,7 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     'Não invente metadados. Se a conexão/tabela/função não existir, diga isso.',
     'Você tem a ferramenta request_query_execution para propor uma query que precisa de execução.',
     'Quando precisar consultar dados, chame request_query_execution com uma única query e explique brevemente o motivo.',
+    'Para alterar dados ou estrutura, chame request_query_execution apenas se o usuário pedir explicitamente a alteração.',
     'Não escreva blocos ```sql``` para execução; a interface exibirá o card de aprovação.',
     'Se o usuário pedir apenas para revisar, explicar, otimizar ou melhorar uma query, responda com sugestões e SQL de exemplo sem pedir confirmação de execução.',
     'Não peça para o usuário digitar "confirmar" ou "rejeitar"; a interface exibirá botões.',
@@ -414,7 +415,7 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
 
   [AI_QUERY_EXECUTION_TOOL_NAME]: tool<AIQueryExecutionInput, AIQueryExecutionToolOutput, AIToolContext>({
     description:
-      'Solicita aprovação do usuário para executar uma única query SQL e obter dados reais.',
+      'Solicita aprovação do usuário para executar uma única query SQL.',
     inputSchema: aiToolSchema<AIQueryExecutionInput>(queryExecutionSchema),
     execute: async ({ connection, query, reason, limit = 200 }) => {
       const resolved = resolveConnection(connection, mentionedConnectionIds);
