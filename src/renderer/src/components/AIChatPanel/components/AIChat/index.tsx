@@ -13,12 +13,11 @@ import { useToast } from '@renderer/contexts/Toast';
 import { BackIcon, OptionsIcon } from '@renderer/styles/icons';
 import { generateHash } from '@renderer/utils/string';
 import { MessageContent } from './components/MessageContent';
-import { QueryApprovalCards } from './components/QueryApprovalCards';
 import { QueryResultTable } from './components/QueryResultTable';
 import type { IAIChatProps } from './dtos';
 import styles from './styles.module.css';
 import {
-  buildFallbackQueryApprovals,
+  getResponseQueryApprovals,
   isReadOnlySelectQuery,
   normalizeSqlForComparison,
 } from './utils/queryApprovals';
@@ -159,6 +158,7 @@ const AIChat = ({
       activeRequestIdRef.current = requestId;
       setLocalMessages((prevState) => [...prevState, userMessage, assistantMessage]);
       setDraftMessage('');
+      onClearDraftContexts?.();
 
       try {
         setLoadingMessage(true);
@@ -176,8 +176,8 @@ const AIChat = ({
 
         if (stopGenerationRef.current) return;
 
-        const queryApprovals = buildFallbackQueryApprovals(
-          response.content,
+        const queryApprovals = getResponseQueryApprovals(
+          response,
           selectedConnectionIds,
           connections,
         );
@@ -213,7 +213,6 @@ const AIChat = ({
             (message) => ![userMessage.id, assistantMessage.id].includes(message.id),
           ),
         );
-        onClearDraftContexts?.();
       } catch (error) {
         if (stopGenerationRef.current) return;
 
@@ -383,8 +382,8 @@ const AIChat = ({
 
         const approvedSql = normalizeSqlForComparison(approval.sql);
 
-        const queryApprovals = buildFallbackQueryApprovals(
-          response.content,
+        const queryApprovals = getResponseQueryApprovals(
+          response,
           [approval.connectionId],
           connections,
         ).filter((item) => normalizeSqlForComparison(item.sql) !== approvedSql);
@@ -613,17 +612,14 @@ const AIChat = ({
                             .filter(Boolean)
                             .join(' ')}
                         >
-                          <MessageContent content={message.content} />
+                          <MessageContent
+                            content={message.content}
+                            queryApprovals={message.queryApprovals}
+                            onApprove={approveQueryApproval}
+                            onReject={rejectQueryApproval}
+                          />
 
                           <QueryResultTable result={message.queryResult} />
-                          
-                          {message.role === 'assistant' && (
-                            <QueryApprovalCards
-                              approvals={message.queryApprovals}
-                              onApprove={approveQueryApproval}
-                              onReject={rejectQueryApproval}
-                            />
-                          )}
                         </article>
                       </div>
                     </React.Fragment>

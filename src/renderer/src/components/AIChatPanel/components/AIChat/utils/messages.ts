@@ -18,15 +18,18 @@ export const getAssistantContent = (
   queryApprovals: IAIQueryApproval[],
   approvalMessage: string,
 ) => {
+  const content = rawContent.trim();
+
+  if (content) return content;
   if (queryApprovals.length) return approvalMessage;
 
-  return rawContent.trim();
+  return '';
 };
 
 export const serializeQueryResultForAI = (approval: IAIQueryApproval, result: unknown) => {
   return [
     'A query abaixo JÁ FOI APROVADA pelo usuário e JÁ FOI EXECUTADA pelo aplicativo.',
-    'Não peça nova confirmação. Não gere outro bloco SQL para a mesma consulta.',
+    'Não peça nova confirmação. Não solicite nova execução para a mesma consulta.',
     'Responda diretamente à pergunta original usando apenas os dados retornados.',
     `Conexão: ${approval.connectionName}`,
     `Database: ${approval.database}`,

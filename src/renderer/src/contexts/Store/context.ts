@@ -124,6 +124,7 @@ export interface IAIChatRequest {
 
 export interface IAIChatResponse {
   content: string;
+  queryApprovals?: IAIQueryApproval[];
 }
 
 export interface ICodexChatGPTAccount {

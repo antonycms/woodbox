@@ -1,38 +1,21 @@
-import type { IConnection } from '@renderer/contexts/Store';
-import { generateHash } from '@renderer/utils/string';
-
-const extractSqlBlocks = (content: string) => {
-  return [...content.matchAll(/```(?:sql)?\s*([\s\S]*?)```/gi)]
-    .map((match) => match[1].trim().replace(/;+\s*$/, ''))
-    .filter(Boolean);
-};
+import type { IAIChatResponse, IConnection } from '@renderer/contexts/Store';
 
 export const normalizeSqlForComparison = (sql: string) =>
   sql.trim().replace(/;+\s*$/, '').replace(/\s+/g, ' ').toLowerCase();
 
-export const buildFallbackQueryApprovals = (
-  content: string,
+export const getResponseQueryApprovals = (
+  response: IAIChatResponse,
   connectionIds: string[],
-  connections: IConnection[],
+  _connections: IConnection[],
 ) => {
-  const effectiveConnectionIds = [...new Set(connectionIds.filter(Boolean))];
+  const allowedConnectionIds = new Set(connectionIds.filter(Boolean));
+  const structuredQueryApprovals = (response.queryApprovals || []).filter((approval) => {
+    if (!allowedConnectionIds.size) return true;
 
-  if (effectiveConnectionIds.length !== 1) return [];
+    return allowedConnectionIds.has(approval.connectionId);
+  });
 
-  const connection = connections.find((item) => item.id === effectiveConnectionIds[0]);
-
-  if (!connection) return [];
-
-  return extractSqlBlocks(content).map((sql) => ({
-    id: generateHash(),
-    connectionId: connection.id,
-    connectionName: connection.description,
-    dialect: connection.dialect,
-    database: connection.database,
-    sql,
-    limit: 200,
-    status: 'pending' as const,
-  }));
+  return structuredQueryApprovals;
 };
 
 export const isReadOnlySelectQuery = (sql: string) => {

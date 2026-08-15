@@ -39,7 +39,21 @@ type AIFunctionDefinitionInput = {
   schema?: string;
 };
 
+type AIQueryExecutionInput = {
+  connection: string;
+  query: string;
+  reason?: string;
+  limit?: number;
+};
+
+export type AIQueryExecutionToolOutput = {
+  queryApproval: IAIQueryApproval;
+  reason?: string;
+};
+
 type AIToolContext = Record<string, unknown>;
+
+export const AI_QUERY_EXECUTION_TOOL_NAME = 'request_query_execution';
 
 const normalizeMention = (value: string) =>
   value
@@ -184,6 +198,30 @@ const tableSchema = {
   additionalProperties: false,
 } as const;
 
+const queryExecutionSchema = {
+  type: 'object',
+  properties: {
+    connection: {
+      type: 'string',
+      description: 'ID, nome ou menção da conexão selecionada pelo usuário.',
+    },
+    query: {
+      type: 'string',
+      description: 'Uma única query SQL proposta para execução.',
+    },
+    reason: {
+      type: 'string',
+      description: 'Motivo curto para solicitar a execução da query.',
+    },
+    limit: {
+      type: 'number',
+      description: 'Limite de linhas para exibição do resultado. Use 200 por padrão.',
+    },
+  },
+  required: ['connection', 'query'],
+  additionalProperties: false,
+} as const;
+
 export const getAIConnectionContexts = (mentionedConnectionIds?: string[]) => {
   const connections = getPublicConnections();
   const mentionedIds = getAllowedConnectionIds(mentionedConnectionIds);
@@ -222,11 +260,14 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     'Use a conexão selecionada como contexto padrão para ferramentas de banco.',
     'O usuário pode referenciar tabelas com @tabela ou @schema.tabela; trate isso como tabela da conexão selecionada.',
     'Antes de responder sobre tabelas, schemas ou funções, use as ferramentas disponíveis.',
-    'Você não tem ferramenta para visualizar linhas ou valores das tabelas diretamente.',
+    'Você não tem ferramenta para visualizar linhas ou valores das tabelas diretamente sem aprovação do usuário.',
     'Não invente metadados. Se a conexão/tabela/função não existir, diga isso.',
-    'Você não tem ferramenta para executar query. Quando precisar consultar dados, escreva a query em um único bloco ```sql``` e aguarde a confirmação por botões da interface.',
+    'Você tem a ferramenta request_query_execution para propor uma query que precisa de execução.',
+    'Quando precisar consultar dados, chame request_query_execution com uma única query e explique brevemente o motivo.',
+    'Não escreva blocos ```sql``` para execução; a interface exibirá o card de aprovação.',
+    'Se o usuário pedir apenas para revisar, explicar, otimizar ou melhorar uma query, responda com sugestões e SQL de exemplo sem pedir confirmação de execução.',
     'Não peça para o usuário digitar "confirmar" ou "rejeitar"; a interface exibirá botões.',
-    'Quando receber uma mensagem informando que a query JÁ FOI APROVADA e JÁ FOI EXECUTADA, não peça nova confirmação e não repita a SQL; responda diretamente com base no JSON retornado.',
+    'Quando receber uma mensagem informando que a query JÁ FOI APROVADA e JÁ FOI EXECUTADA, não chame request_query_execution para a mesma SQL; responda diretamente com base no JSON retornado.',
   ].join('\n');
 };
 
@@ -367,6 +408,29 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
         connection: serializeConnectionForAI(resolved),
         function: functionRef,
         definition,
+      };
+    },
+  }),
+
+  [AI_QUERY_EXECUTION_TOOL_NAME]: tool<AIQueryExecutionInput, AIQueryExecutionToolOutput, AIToolContext>({
+    description:
+      'Solicita aprovação do usuário para executar uma única query SQL e obter dados reais.',
+    inputSchema: aiToolSchema<AIQueryExecutionInput>(queryExecutionSchema),
+    execute: async ({ connection, query, reason, limit = 200 }) => {
+      const resolved = resolveConnection(connection, mentionedConnectionIds);
+
+      return {
+        reason,
+        queryApproval: {
+          id: crypto.randomUUID(),
+          connectionId: resolved.id,
+          connectionName: resolved.description,
+          dialect: resolved.dialect,
+          database: resolved.database,
+          sql: query.trim().replace(/;+\s*$/, ''),
+          limit,
+          status: 'pending',
+        },
       };
     },
   }),

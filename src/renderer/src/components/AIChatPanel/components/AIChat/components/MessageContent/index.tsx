@@ -1,8 +1,21 @@
 import React from 'react';
+import type { IAIQueryApproval } from '@renderer/contexts/Store';
+import { normalizeSqlForComparison } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
+import { QueryApprovalCard, QueryApprovalCards } from '../QueryApprovalCards';
 
 interface IMessageContentProps {
   content: string;
+  queryApprovals?: IAIQueryApproval[];
+  onApprove?(approval: IAIQueryApproval): void;
+  onReject?(approval: IAIQueryApproval): void;
+}
+
+interface IRenderMarkdownOptions {
+  queryApprovals?: IAIQueryApproval[];
+  usedQueryApprovalIds: Set<string>;
+  onApprove?: (approval: IAIQueryApproval) => void;
+  onReject?: (approval: IAIQueryApproval) => void;
 }
 
 const renderInlineText = (text: string, keyPrefix: string) => {
@@ -69,14 +82,49 @@ const renderMessageBlock = (block: string, key: string) => {
   return renderParagraph(block, key);
 };
 
-const renderMarkdownBlocks = (content: string, keyPrefix: string) => {
+const findQueryApprovalForCode = (
+  code: string,
+  options: IRenderMarkdownOptions,
+): IAIQueryApproval | undefined => {
+  const normalizedCode = normalizeSqlForComparison(code);
+
+  return options.queryApprovals?.find(
+    (approval) =>
+      !options.usedQueryApprovalIds.has(approval.id) &&
+      normalizeSqlForComparison(approval.sql) === normalizedCode,
+  );
+};
+
+const renderMarkdownBlocks = (
+  content: string,
+  keyPrefix: string,
+  options: IRenderMarkdownOptions,
+) => {
   if (!content.trim()) return [];
 
   const blocks = content.split(/(```[\s\S]*?```)/g).filter(Boolean);
 
   return blocks.map((block, index) => {
     if (block.startsWith('```') && block.endsWith('```')) {
+      const language = /^```([a-zA-Z0-9_-]*)/.exec(block)?.[1]?.toLowerCase();
       const code = block.replace(/^```[a-zA-Z0-9_-]*\n?/, '').replace(/```$/, '');
+      const approval =
+        (!language || language === 'sql') && options.onApprove && options.onReject
+          ? findQueryApprovalForCode(code, options)
+          : undefined;
+
+      if (approval) {
+        options.usedQueryApprovalIds.add(approval.id);
+
+        return (
+          <QueryApprovalCard
+            key={`${keyPrefix}_approval_${index}`}
+            approval={approval}
+            onApprove={options.onApprove}
+            onReject={options.onReject}
+          />
+        );
+      }
 
       return (
         <pre key={`${keyPrefix}_code_${index}`}>
@@ -95,16 +143,42 @@ const renderMarkdownBlocks = (content: string, keyPrefix: string) => {
   });
 };
 
-export const MessageContent = React.memo(({ content }: IMessageContentProps) => {
+export const MessageContent = React.memo(({
+  content,
+  queryApprovals,
+  onApprove,
+  onReject,
+}: IMessageContentProps) => {
   const [activeContextKey, setActiveContextKey] = React.useState<string>();
 
-  if (!content.trim()) return null;
+  if (!content.trim()) {
+    if (queryApprovals?.length && onApprove && onReject) {
+      return (
+        <div className={styles.messageContent}>
+          <QueryApprovalCards
+            approvals={queryApprovals}
+            onApprove={onApprove}
+            onReject={onReject}
+          />
+        </div>
+      );
+    }
+
+    return null;
+  }
 
   const contextPattern =
     /(Contexto do editor|Editor context):\n\n```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let contextIndex = 0;
+  const usedQueryApprovalIds = new Set<string>();
+  const renderOptions: IRenderMarkdownOptions = {
+    queryApprovals,
+    usedQueryApprovalIds,
+    onApprove,
+    onReject,
+  };
 
   for (const match of content.matchAll(contextPattern)) {
     const index = match.index ?? 0;
@@ -112,7 +186,9 @@ export const MessageContent = React.memo(({ content }: IMessageContentProps) => 
     const key = `context_${contextIndex}`;
 
     if (index > lastIndex) {
-      parts.push(...renderMarkdownBlocks(content.slice(lastIndex, index), `text_${contextIndex}`));
+      parts.push(
+        ...renderMarkdownBlocks(content.slice(lastIndex, index), `text_${contextIndex}`, renderOptions),
+      );
     }
 
     parts.push(
@@ -142,12 +218,27 @@ export const MessageContent = React.memo(({ content }: IMessageContentProps) => 
   }
 
   if (lastIndex < content.length) {
-    parts.push(...renderMarkdownBlocks(content.slice(lastIndex), `text_${contextIndex}`));
+    parts.push(...renderMarkdownBlocks(content.slice(lastIndex), `text_${contextIndex}`, renderOptions));
+  }
+
+  const pendingQueryApprovals = queryApprovals?.filter(
+    (approval) => !usedQueryApprovalIds.has(approval.id),
+  );
+
+  if (pendingQueryApprovals?.length && onApprove && onReject) {
+    parts.push(
+      <QueryApprovalCards
+        key="query_approvals"
+        approvals={pendingQueryApprovals}
+        onApprove={onApprove}
+        onReject={onReject}
+      />,
+    );
   }
 
   return (
     <div className={styles.messageContent}>
-      {parts.length ? parts : renderMarkdownBlocks(content, 'content')}
+      {parts.length ? parts : renderMarkdownBlocks(content, 'content', renderOptions)}
     </div>
   );
 });

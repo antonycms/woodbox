@@ -1,4 +1,8 @@
 import { asSchema, type Tool, type ToolSet } from 'ai';
+import {
+  AI_QUERY_EXECUTION_TOOL_NAME,
+  type AIQueryExecutionToolOutput,
+} from '@main/ai/tools';
 import { getValidCodexCredential } from './account';
 
 type CodexTextContent = { type?: string; text?: string };
@@ -116,6 +120,14 @@ const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
 
   return String(error);
+};
+
+const isQueryExecutionToolOutput = (output: unknown): output is AIQueryExecutionToolOutput => {
+  if (!output || typeof output !== 'object') return false;
+
+  const queryApproval = (output as Partial<AIQueryExecutionToolOutput>).queryApproval;
+
+  return !!queryApproval && typeof queryApproval.sql === 'string';
 };
 
 const isAsyncIterable = (value: unknown): value is AsyncIterable<unknown> => {
@@ -403,6 +415,7 @@ export const sendCodexChatGPTMessage = async (
   const tools = await toCodexTools(request.tools);
   const input = toCodexInput(request.messages);
   let latestText = '';
+  const queryApprovals = new Map<string, IAIQueryApproval>();
 
   for (let step = 0; step < MAX_CODEX_TOOL_STEPS; step++) {
     const result = await createCodexResponse({
@@ -417,11 +430,21 @@ export const sendCodexChatGPTMessage = async (
     if (result.text) latestText = result.text;
 
     if (!result.toolCalls.length) {
-      return { content: result.text };
+      return {
+        content: result.text,
+        queryApprovals: Array.from(queryApprovals.values()),
+      };
     }
 
     for (const toolCall of result.toolCalls) {
       const output = await executeCodexTool(request.tools, toolCall);
+
+      if (
+        toolCall.name === AI_QUERY_EXECUTION_TOOL_NAME &&
+        isQueryExecutionToolOutput(output)
+      ) {
+        queryApprovals.set(output.queryApproval.id, output.queryApproval);
+      }
 
       console.log({
         toolName: toolCall.name,
@@ -449,5 +472,6 @@ export const sendCodexChatGPTMessage = async (
     content:
       latestText ||
       'O Codex atingiu o limite de chamadas de ferramentas antes de concluir a resposta.',
+    queryApprovals: Array.from(queryApprovals.values()),
   };
 };
