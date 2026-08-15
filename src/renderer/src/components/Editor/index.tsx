@@ -27,23 +27,17 @@ const Editor = ({
   const { t } = useI18n();
   const { activeTheme } = useThemeContext();
   const { activeChatId, addEditorSelectionToChatContext } = useAIChatPanelContext();
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const { width, height } = useResize({ HTMLElement: containerRef.current });
   const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
   const [editorContextMenu, setEditorContextMenu] = React.useState<{
     position: IContextMenuPosition;
     selectedText: string;
   }>();
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
 
-  React.useEffect(() => {
-    addEditorSelectionToChatContextRef.current = addEditorSelectionToChatContext;
-  }, [addEditorSelectionToChatContext]);
-
-  React.useEffect(() => {
-    onCtrlClickRef.current = props.onCtrlClick;
-  }, [props.onCtrlClick]);
+  const { width, height } = useResize({ HTMLElement: containerRef.current });
 
   const stopCtrlClickPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!props.onCtrlClick || !isPrimaryShortcutPressed(event)) return;
@@ -496,6 +490,48 @@ const Editor = ({
     return currentEditor;
   };
 
+  const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
+    () => [
+      {
+        text: t('common.cut'),
+        show: () => !props.readonly,
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardCutAction'),
+      },
+      {
+        text: t('common.copy'),
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardCopyAction'),
+      },
+      {
+        text: t('common.paste'),
+        show: () => !props.readonly,
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardPasteAction'),
+      },
+      {
+        text: activeChatId
+          ? t('context.addSelectionToAIChat')
+          : t('context.addSelectionToNewAIChat'),
+        show: () => !!editorContextMenu?.selectedText,
+        onClick: () => {
+          if (!editorContextMenu?.selectedText) return;
+
+          addEditorSelectionToChatContextRef.current({
+            content: editorContextMenu.selectedText,
+            language,
+          });
+          setEditorContextMenu(undefined);
+        },
+      },
+    ],
+    [
+      activeChatId,
+      editorContextMenu?.selectedText,
+      executeEditorClipboardAction,
+      language,
+      props.readonly,
+      t,
+    ],
+  );
+
   React.useImperativeHandle(
     ref,
     () => ({
@@ -520,6 +556,14 @@ const Editor = ({
     }),
     [editor],
   );
+
+  React.useEffect(() => {
+    addEditorSelectionToChatContextRef.current = addEditorSelectionToChatContext;
+  }, [addEditorSelectionToChatContext]);
+
+  React.useEffect(() => {
+    onCtrlClickRef.current = props.onCtrlClick;
+  }, [props.onCtrlClick]);
 
   React.useEffect(() => {
     // Inicializa uma vez por montagem; mudanças de props são sincronizadas nos efeitos abaixo.
@@ -620,47 +664,6 @@ const Editor = ({
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);
 
-  const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
-    () => [
-      {
-        text: t('common.cut'),
-        show: () => !props.readonly,
-        onClick: () => executeEditorClipboardAction('editor.action.clipboardCutAction'),
-      },
-      {
-        text: t('common.copy'),
-        onClick: () => executeEditorClipboardAction('editor.action.clipboardCopyAction'),
-      },
-      {
-        text: t('common.paste'),
-        show: () => !props.readonly,
-        onClick: () => executeEditorClipboardAction('editor.action.clipboardPasteAction'),
-      },
-      {
-        text: activeChatId
-          ? t('context.addSelectionToAIChat')
-          : t('context.addSelectionToNewAIChat'),
-        show: () => !!editorContextMenu?.selectedText,
-        onClick: () => {
-          if (!editorContextMenu?.selectedText) return;
-
-          addEditorSelectionToChatContextRef.current({
-            content: editorContextMenu.selectedText,
-            language,
-          });
-          setEditorContextMenu(undefined);
-        },
-      },
-    ],
-    [
-      activeChatId,
-      editorContextMenu?.selectedText,
-      executeEditorClipboardAction,
-      language,
-      props.readonly,
-      t,
-    ],
-  );
 
   return (
     <>
