@@ -3,13 +3,26 @@
   z-index: 20;
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
-  border-radius: 4px;
   width: max-content;
+  padding: 4px;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 42%, transparent);
   animation: blowUp 0.05s forwards;
 }
 
 .option {
   position: relative;
+}
+
+.container button,
+.submenu button {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 0;
+}
+
+.container button:hover,
+.submenu button:hover {
+  opacity: 1;
 }
 
 .optionContent {
@@ -19,6 +32,8 @@
   gap: 16px;
   width: 100%;
   white-space: nowrap;
+  padding: 0 26px;
+  font-size: 13px;
 }
 
 .submenuArrow {
@@ -28,12 +43,14 @@
 .submenu {
   display: none;
   position: absolute;
-  top: 0;
+  top: -5px;
   left: 100%;
   min-width: 160px;
+  padding: 4px 0;
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
-  border-radius: 4px;
+  border-radius: 2px;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 42%, transparent);
 }
 
 .openLeft .submenu {
