@@ -4,6 +4,11 @@ import * as monaco from './monaco';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
+import {
+  ContextMenu,
+  type IContextMenuOption,
+  type IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
 import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -25,15 +30,12 @@ const Editor = ({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { width, height } = useResize({ HTMLElement: containerRef.current });
   const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
-  const activeAIChatContextKeyRef =
-    React.useRef<monaco.editor.IContextKey<boolean> | undefined>(undefined);
-  const activeChatIdRef = React.useRef(activeChatId);
+  const [editorContextMenu, setEditorContextMenu] = React.useState<{
+    position: IContextMenuPosition;
+    selectedText: string;
+  }>();
   const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
-  React.useEffect(() => {
-    activeChatIdRef.current = activeChatId;
-    activeAIChatContextKeyRef.current?.set(!!activeChatId);
-  }, [activeChatId]);
 
   React.useEffect(() => {
     addEditorSelectionToChatContextRef.current = addEditorSelectionToChatContext;
@@ -159,6 +161,187 @@ const Editor = ({
     return getCurrentQueryRange().sql;
   };
 
+  const getSelectedText = React.useCallback(
+    (currentEditor: monaco.editor.ICodeEditor | undefined = editor) => {
+      const model = currentEditor?.getModel();
+      if (!model) return '';
+
+      return (currentEditor?.getSelections() || [])
+        .map((selection) => model.getValueInRange(selection).trim())
+        .filter(Boolean)
+        .join('\n\n');
+    },
+    [editor],
+  );
+
+  const getClipboardSelectedText = React.useCallback(
+    (currentEditor: monaco.editor.ICodeEditor) => {
+      const model = currentEditor.getModel();
+      if (!model) return;
+
+      const selectedValues = (currentEditor.getSelections() || [])
+        .filter((selection) => !selection.isEmpty())
+        .map((selection) => model.getValueInRange(selection));
+
+      if (!selectedValues.length) return;
+
+      return selectedValues.join(model.getEOL());
+    },
+    [],
+  );
+
+  const isPositionInSelection = React.useCallback(
+    (position: monaco.IPosition) => {
+      return getSelections().some(
+        (selection) =>
+          !selection.isEmpty() &&
+          selection.containsPosition({
+            lineNumber: position.lineNumber,
+            column: position.column,
+          }),
+      );
+    },
+    [editor],
+  );
+
+  const openEditorContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!editor) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const target = editor.getTargetAtClientPoint(event.clientX, event.clientY);
+      const position = target?.position;
+
+      if (position && !isPositionInSelection(position)) {
+        editor.setPosition(position);
+      }
+
+      setEditorContextMenu({
+        position: { x: event.clientX, y: event.clientY },
+        selectedText: getSelectedText(editor),
+      });
+    },
+    [editor, getSelectedText, isPositionInSelection],
+  );
+
+  const pasteTextFallback = React.useCallback(
+    async (currentEditor: monaco.editor.ICodeEditor) => {
+      if (props.readonly) return;
+
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+
+      const selections = currentEditor.getSelections();
+      if (!selections?.length) return;
+
+      currentEditor.pushUndoStop();
+      currentEditor.executeEdits(
+        'woodbox.contextMenuPaste',
+        selections.map((selection) => ({
+          range: selection,
+          text,
+          forceMoveMarkers: true,
+        })),
+      );
+      currentEditor.pushUndoStop();
+    },
+    [props.readonly],
+  );
+
+  const copyTextFallback = React.useCallback(
+    async (currentEditor: monaco.editor.ICodeEditor) => {
+      const text = getClipboardSelectedText(currentEditor);
+      if (text === undefined) return false;
+
+      await navigator.clipboard.writeText(text);
+      return true;
+    },
+    [getClipboardSelectedText],
+  );
+
+  const cutTextFallback = React.useCallback(
+    async (currentEditor: monaco.editor.ICodeEditor) => {
+      if (props.readonly) return false;
+
+      const text = getClipboardSelectedText(currentEditor);
+      if (text === undefined) return false;
+
+      await navigator.clipboard.writeText(text);
+
+      const selections = currentEditor.getSelections();
+      if (!selections?.length) return true;
+
+      currentEditor.pushUndoStop();
+      currentEditor.executeEdits(
+        'woodbox.contextMenuCut',
+        selections
+          .filter((selection) => !selection.isEmpty())
+          .map((selection) => ({
+            range: selection,
+            text: '',
+            forceMoveMarkers: true,
+          })),
+      );
+      currentEditor.pushUndoStop();
+
+      return true;
+    },
+    [getClipboardSelectedText, props.readonly],
+  );
+
+  const executeEditorClipboardAction = React.useCallback(
+    async (
+      actionId:
+        | 'editor.action.clipboardCopyAction'
+        | 'editor.action.clipboardCutAction'
+        | 'editor.action.clipboardPasteAction',
+    ) => {
+      if (!editor) return;
+
+      editor.focus();
+
+      try {
+        if (actionId === 'editor.action.clipboardCutAction' && (await cutTextFallback(editor))) {
+          return;
+        }
+
+        if (actionId === 'editor.action.clipboardCopyAction' && (await copyTextFallback(editor))) {
+          return;
+        }
+
+        const action = editor.getAction(actionId);
+        if (action) {
+          await action.run();
+          return;
+        }
+
+        if (actionId === 'editor.action.clipboardPasteAction') {
+          await pasteTextFallback(editor);
+        }
+      } catch (error) {
+        if (actionId === 'editor.action.clipboardCutAction' && (await cutTextFallback(editor))) {
+          return;
+        }
+
+        if (actionId === 'editor.action.clipboardCopyAction' && (await copyTextFallback(editor))) {
+          return;
+        }
+
+        if (actionId === 'editor.action.clipboardPasteAction') {
+          await pasteTextFallback(editor);
+          return;
+        }
+
+        console.error(error);
+      } finally {
+        setEditorContextMenu(undefined);
+      }
+    },
+    [copyTextFallback, cutTextFallback, editor, pasteTextFallback],
+  );
+
   const initEditor = () => {
     const overflowWidgetsPortal = props.overflowWidgetsPortal
       ? document.createElement('div')
@@ -178,9 +361,15 @@ const Editor = ({
         value: initialValue,
         theme: 'active-theme',
         readOnly: props.readonly,
+        contextmenu: false,
         minimap: { enabled: !props.hidePreview },
         fixedOverflowWidgets: true,
         overflowWidgetsDomNode: overflowWidgetsPortal,
+      },
+      {
+        contextMenuService: {
+          showContextMenu: () => undefined,
+        },
       },
     );
 
@@ -431,67 +620,64 @@ const Editor = ({
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);
 
-  React.useEffect(() => {
-    if (!editor) return;
+  const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
+    () => [
+      {
+        text: t('common.cut'),
+        show: () => !props.readonly,
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardCutAction'),
+      },
+      {
+        text: t('common.copy'),
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardCopyAction'),
+      },
+      {
+        text: t('common.paste'),
+        show: () => !props.readonly,
+        onClick: () => executeEditorClipboardAction('editor.action.clipboardPasteAction'),
+      },
+      {
+        text: activeChatId
+          ? t('context.addSelectionToAIChat')
+          : t('context.addSelectionToNewAIChat'),
+        show: () => !!editorContextMenu?.selectedText,
+        onClick: () => {
+          if (!editorContextMenu?.selectedText) return;
 
-    const activeAIChatContextKey = editor.createContextKey(
-      'woodboxHasActiveAIChat',
-      !!activeChatIdRef.current,
-    );
-    activeAIChatContextKeyRef.current = activeAIChatContextKey;
-
-    const getSelectedText = (currentEditor: monaco.editor.ICodeEditor) => {
-      const model = currentEditor.getModel();
-      if (!model) return '';
-
-      return (currentEditor.getSelections() || [])
-        .map((selection) => model.getValueInRange(selection).trim())
-        .filter(Boolean)
-        .join('\n\n');
-    };
-
-    const addSelectionToChatContext = (currentEditor: monaco.editor.ICodeEditor) => {
-      const selectedText = getSelectedText(currentEditor);
-      if (!selectedText) return;
-
-      addEditorSelectionToChatContextRef.current({
-        content: selectedText,
-        language,
-      });
-    };
-
-    const disposables = [
-      editor.addAction({
-        id: 'woodbox.add-selection-to-ai-chat-context',
-        label: t('context.addSelectionToAIChat'),
-        precondition: 'editorHasSelection && woodboxHasActiveAIChat',
-        contextMenuGroupId: 'navigation',
-        contextMenuOrder: 1.5,
-        run: addSelectionToChatContext,
-      }),
-      editor.addAction({
-        id: 'woodbox.add-selection-to-new-ai-chat-context',
-        label: t('context.addSelectionToNewAIChat'),
-        precondition: 'editorHasSelection && !woodboxHasActiveAIChat',
-        contextMenuGroupId: 'navigation',
-        contextMenuOrder: 1.5,
-        run: addSelectionToChatContext,
-      }),
-    ];
-
-    return () => {
-      disposables.forEach((disposable) => disposable.dispose());
-      activeAIChatContextKey.reset();
-      if (activeAIChatContextKeyRef.current === activeAIChatContextKey) {
-        activeAIChatContextKeyRef.current = undefined;
-      }
-    };
-  }, [editor, language, t]);
+          addEditorSelectionToChatContextRef.current({
+            content: editorContextMenu.selectedText,
+            language,
+          });
+          setEditorContextMenu(undefined);
+        },
+      },
+    ],
+    [
+      activeChatId,
+      editorContextMenu?.selectedText,
+      executeEditorClipboardAction,
+      language,
+      props.readonly,
+      t,
+    ],
+  );
 
   return (
-    <div className={styles.outsideContainer} onClickCapture={stopCtrlClickPropagation}>
-      <div className={styles.container} ref={containerRef} />
-    </div>
+    <>
+      <div
+        className={styles.outsideContainer}
+        onClickCapture={stopCtrlClickPropagation}
+        onContextMenu={openEditorContextMenu}
+      >
+        <div className={styles.container} ref={containerRef} />
+      </div>
+
+      <ContextMenu
+        position={editorContextMenu?.position}
+        options={editorContextMenuOptions}
+        onClose={() => setEditorContextMenu(undefined)}
+      />
+    </>
   );
 };
 
