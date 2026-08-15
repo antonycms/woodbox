@@ -69,30 +69,85 @@ const renderMessageBlock = (block: string, key: string) => {
   return renderParagraph(block, key);
 };
 
-export const MessageContent = React.memo(({ content }: IMessageContentProps) => {
-  if (!content.trim()) return null;
+const renderMarkdownBlocks = (content: string, keyPrefix: string) => {
+  if (!content.trim()) return [];
 
   const blocks = content.split(/(```[\s\S]*?```)/g).filter(Boolean);
 
+  return blocks.map((block, index) => {
+    if (block.startsWith('```') && block.endsWith('```')) {
+      const code = block.replace(/^```[a-zA-Z0-9_-]*\n?/, '').replace(/```$/, '');
+
+      return (
+        <pre key={`${keyPrefix}_code_${index}`}>
+          <code>{code.trim()}</code>
+        </pre>
+      );
+    }
+
+    return block
+      .split(/\n{2,}/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item, blockIndex) =>
+        renderMessageBlock(item, `${keyPrefix}_block_${index}_${blockIndex}`),
+      );
+  });
+};
+
+export const MessageContent = React.memo(({ content }: IMessageContentProps) => {
+  const [activeContextKey, setActiveContextKey] = React.useState<string>();
+
+  if (!content.trim()) return null;
+
+  const contextPattern =
+    /(Contexto do editor|Editor context):\n\n```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let contextIndex = 0;
+
+  for (const match of content.matchAll(contextPattern)) {
+    const index = match.index ?? 0;
+    const [fullMatch, title, language, contextContent] = match;
+    const key = `context_${contextIndex}`;
+
+    if (index > lastIndex) {
+      parts.push(...renderMarkdownBlocks(content.slice(lastIndex, index), `text_${contextIndex}`));
+    }
+
+    parts.push(
+      <div key={key} className={styles.messageContextWrap}>
+        <button
+          type="button"
+          className={styles.messageContextChip}
+          onClick={() => setActiveContextKey((currentKey) => (currentKey === key ? undefined : key))}
+        >
+          <span>{title}</span>
+        </button>
+
+        {activeContextKey === key && (
+          <div className={styles.messageContextBubble}>
+            <header>
+              <strong>{title}</strong>
+              {!!language && <span>{language.toUpperCase()}</span>}
+            </header>
+            <pre>{contextContent.trim()}</pre>
+          </div>
+        )}
+      </div>,
+    );
+
+    contextIndex += 1;
+    lastIndex = index + fullMatch.length;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push(...renderMarkdownBlocks(content.slice(lastIndex), `text_${contextIndex}`));
+  }
+
   return (
     <div className={styles.messageContent}>
-      {blocks.map((block, index) => {
-        if (block.startsWith('```') && block.endsWith('```')) {
-          const code = block.replace(/^```[a-zA-Z0-9_-]*\n?/, '').replace(/```$/, '');
-
-          return (
-            <pre key={`code_${index}`}>
-              <code>{code.trim()}</code>
-            </pre>
-          );
-        }
-
-        return block
-          .split(/\n{2,}/)
-          .map((item, blockIndex) =>
-            renderMessageBlock(item.trim(), `block_${index}_${blockIndex}`),
-          );
-      })}
+      {parts.length ? parts : renderMarkdownBlocks(content, 'content')}
     </div>
   );
 });

@@ -3,13 +3,14 @@ import { useI18n } from '@renderer/contexts/I18n';
 import { IconArrowUp, IconStop } from '@renderer/styles/icons';
 import type {
   IAIChatConnectionOption,
+  IAIChatDraftContext,
   IAIChatModelGroup,
-  IAIChatTableMentionOption,
+  IAIChatReferenceOption,
 } from '../../types';
 import { getAIModelLabel } from '../../utils/aiModels';
 import styles from './styles.module.css';
 
-interface IActiveTableMention {
+interface IActiveReference {
   start: number;
   end: number;
   query: string;
@@ -20,8 +21,9 @@ interface IAIChatComposerProps {
   canSubmit: boolean;
   loading?: boolean;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
+  contexts?: IAIChatDraftContext[];
   connectionOptions?: IAIChatConnectionOption[];
-  tableMentionOptions?: IAIChatTableMentionOption[];
+  referenceOptions?: IAIChatReferenceOption[];
   modelGroups?: IAIChatModelGroup[];
   selectedConnectionId?: string;
   selectedProviderId?: string;
@@ -30,6 +32,8 @@ interface IAIChatComposerProps {
   onModelChange?(providerId: string, model: string): void;
   onSubmit(event: React.FormEvent<HTMLFormElement>): void;
   onChange(event: React.ChangeEvent<HTMLTextAreaElement>): void;
+  onOpenReference?(option: IAIChatReferenceOption): void;
+  onRemoveContext?(contextId: string): void;
   onStop?(): void;
   onPaste?: React.ClipboardEventHandler<HTMLTextAreaElement>;
   onClick?: React.MouseEventHandler<HTMLTextAreaElement>;
@@ -37,10 +41,10 @@ interface IAIChatComposerProps {
   onKeyDown?: React.KeyboardEventHandler<HTMLTextAreaElement>;
 }
 
-const getActiveTableMention = (
+const getActiveReference = (
   text: string,
   cursor: number,
-): IActiveTableMention | undefined => {
+): IActiveReference | undefined => {
   const prefix = text.slice(0, cursor);
   const match = /(?:^|\s)(@[a-zA-Z0-9_.-]*)$/.exec(prefix);
 
@@ -57,7 +61,11 @@ const getActiveTableMention = (
   };
 };
 
-const renderComposerPreview = (text: string, tableMentionLabels: Set<string>) => {
+const renderComposerPreview = (
+  text: string,
+  referenceLabels: Set<string>,
+  referenceTitle: string,
+) => {
   const parts: React.ReactNode[] = [];
   const mentionPattern = /@[a-zA-Z0-9_.-]+/g;
   let lastIndex = 0;
@@ -70,9 +78,14 @@ const renderComposerPreview = (text: string, tableMentionLabels: Set<string>) =>
       parts.push(<React.Fragment key={`text_${index}`}>{text.slice(lastIndex, index)}</React.Fragment>);
     }
 
-    if (tableMentionLabels.has(mention.toLowerCase())) {
+    if (referenceLabels.has(mention.toLowerCase())) {
       parts.push(
-        <span key={`mention_${index}`} className={styles.tableMentionChip}>
+        <span
+          key={`mention_${index}`}
+          className={styles.tableMentionChip}
+          data-reference-label={mention.toLowerCase()}
+          title={referenceTitle}
+        >
           {mention}
         </span>,
       );
@@ -96,8 +109,9 @@ export const AIChatComposer = React.memo(
     canSubmit,
     loading,
     textareaRef,
+    contexts = [],
     connectionOptions = [],
-    tableMentionOptions = [],
+    referenceOptions = [],
     modelGroups = [],
     selectedConnectionId,
     selectedProviderId,
@@ -106,6 +120,8 @@ export const AIChatComposer = React.memo(
     onModelChange,
     onSubmit,
     onChange,
+    onOpenReference,
+    onRemoveContext,
     onStop,
     onPaste,
     onClick,
@@ -116,12 +132,14 @@ export const AIChatComposer = React.memo(
     const [openConnections, setOpenConnections] = React.useState(false);
     const [openModels, setOpenModels] = React.useState(false);
     const [connectionFilter, setConnectionFilter] = React.useState('');
-    const [activeTableMention, setActiveTableMention] =
-      React.useState<IActiveTableMention>();
-    const [highlightedTableMentionIndex, setHighlightedTableMentionIndex] = React.useState(0);
+    const [activeContextPreviewId, setActiveContextPreviewId] = React.useState<string>();
+    const [activeReference, setActiveReference] =
+      React.useState<IActiveReference>();
+    const [highlightedReferenceIndex, setHighlightedReferenceIndex] = React.useState(0);
     const localTextareaRef = React.useRef<HTMLTextAreaElement>(null);
     const mirrorRef = React.useRef<HTMLDivElement>(null);
     const composerInputWrapRef = React.useRef<HTMLDivElement>(null);
+    const contextPreviewRef = React.useRef<HTMLDivElement>(null);
     const connectionMenuRef = React.useRef<HTMLDivElement>(null);
     const connectionFilterRef = React.useRef<HTMLInputElement>(null);
     const modelMenuRef = React.useRef<HTMLDivElement>(null);
@@ -134,17 +152,21 @@ export const AIChatComposer = React.memo(
       () => connectionOptions.find((connection) => connection.id === selectedConnectionId),
       [connectionOptions, selectedConnectionId],
     );
-    const tableMentionLabels = React.useMemo(
-      () => new Set(tableMentionOptions.map((option) => option.label.toLowerCase())),
-      [tableMentionOptions],
+    const referenceLabels = React.useMemo(
+      () => new Set(referenceOptions.map((option) => option.label.toLowerCase())),
+      [referenceOptions],
+    );
+    const referenceOptionsByLabel = React.useMemo(
+      () => new Map(referenceOptions.map((option) => [option.label.toLowerCase(), option])),
+      [referenceOptions],
     );
     const shouldRenderComposerPreview = value.length <= 3000 && /@[a-zA-Z0-9_.-]+/.test(value);
     const composerPreview = React.useMemo(
       () =>
         shouldRenderComposerPreview
-          ? renderComposerPreview(value, tableMentionLabels)
+          ? renderComposerPreview(value, referenceLabels, t('aiChat.openMentionTitle'))
           : value,
-      [shouldRenderComposerPreview, tableMentionLabels, value],
+      [shouldRenderComposerPreview, referenceLabels, t, value],
     );
 
     const hasModelOptions = modelGroups.some((group) => group.models.length);
@@ -160,21 +182,25 @@ export const AIChatComposer = React.memo(
         return searchable.includes(filter);
       });
     }, [connectionFilter, connectionOptions]);
-    const tableMentionSuggestions = React.useMemo(() => {
-      if (!activeTableMention) return [];
+    const referenceSuggestions = React.useMemo(() => {
+      if (!activeReference) return [];
 
-      return tableMentionOptions
+      return referenceOptions
         .filter((option) => {
           const searchable = [option.label, option.meta].filter(Boolean).join(' ').toLowerCase();
 
-          return !activeTableMention.query || searchable.includes(activeTableMention.query);
+          return !activeReference.query || searchable.includes(activeReference.query);
         })
         .slice(0, 8);
-    }, [activeTableMention, tableMentionOptions]);
-    const selectedTableMentionSuggestion =
-      tableMentionSuggestions[
-        Math.min(highlightedTableMentionIndex, tableMentionSuggestions.length - 1)
+    }, [activeReference, referenceOptions]);
+    const selectedReferenceSuggestion =
+      referenceSuggestions[
+        Math.min(highlightedReferenceIndex, referenceSuggestions.length - 1)
       ];
+    const activeContextPreview = React.useMemo(
+      () => contexts.find((context) => context.id === activeContextPreviewId),
+      [activeContextPreviewId, contexts],
+    );
 
     const selectConnection = React.useCallback(
       (connectionId: string) => {
@@ -185,12 +211,12 @@ export const AIChatComposer = React.memo(
       [onConnectionChange],
     );
 
-    const selectTableMention = React.useCallback(
-      (option: IAIChatTableMentionOption) => {
-        if (!activeTableMention || !activeTextareaRef.current) return;
+    const selectReference = React.useCallback(
+      (option: IAIChatReferenceOption) => {
+        if (!activeReference || !activeTextareaRef.current) return;
 
-        const prefix = value.slice(0, activeTableMention.start);
-        const suffix = value.slice(activeTableMention.end).replace(/^\s+/, '');
+        const prefix = value.slice(0, activeReference.start);
+        const suffix = value.slice(activeReference.end).replace(/^\s+/, '');
         const separator = suffix ? ' ' : '';
         const nextValue = `${prefix}${option.label}${separator}${suffix}`;
         const nextCursor = prefix.length + option.label.length + separator.length;
@@ -199,15 +225,15 @@ export const AIChatComposer = React.memo(
           target: { value: nextValue },
           currentTarget: { value: nextValue },
         } as React.ChangeEvent<HTMLTextAreaElement>);
-        setActiveTableMention(undefined);
-        setHighlightedTableMentionIndex(0);
+        setActiveReference(undefined);
+        setHighlightedReferenceIndex(0);
 
         window.requestAnimationFrame(() => {
           activeTextareaRef.current?.focus();
           activeTextareaRef.current?.setSelectionRange(nextCursor, nextCursor);
         });
       },
-      [activeTableMention, activeTextareaRef, onChange, value],
+      [activeReference, activeTextareaRef, onChange, value],
     );
 
     const selectModel = React.useCallback(
@@ -219,23 +245,36 @@ export const AIChatComposer = React.memo(
     );
 
     React.useEffect(() => {
-      if (!activeTableMention && !openConnections && !openModels) return;
+      if (!activeReference && !openConnections && !openModels) return;
 
       const closeOnOutsideClick = (event: MouseEvent) => {
         if (connectionMenuRef.current?.contains(event.target as Node)) return;
         if (modelMenuRef.current?.contains(event.target as Node)) return;
-        if (activeTableMention && composerInputWrapRef.current?.contains(event.target as Node)) {
+        if (activeReference && composerInputWrapRef.current?.contains(event.target as Node)) {
           return;
         }
 
-        setActiveTableMention(undefined);
+        setActiveReference(undefined);
         setOpenConnections(false);
         setOpenModels(false);
       };
 
       window.addEventListener('mousedown', closeOnOutsideClick);
       return () => window.removeEventListener('mousedown', closeOnOutsideClick);
-    }, [activeTableMention, openConnections, openModels]);
+    }, [activeReference, openConnections, openModels]);
+
+    React.useEffect(() => {
+      if (!activeContextPreview) return;
+
+      const closeOnOutsideClick = (event: MouseEvent) => {
+        if (contextPreviewRef.current?.contains(event.target as Node)) return;
+
+        setActiveContextPreviewId(undefined);
+      };
+
+      window.addEventListener('mousedown', closeOnOutsideClick);
+      return () => window.removeEventListener('mousedown', closeOnOutsideClick);
+    }, [activeContextPreview]);
 
     React.useEffect(() => {
       if (openConnections) {
@@ -253,75 +292,123 @@ export const AIChatComposer = React.memo(
     }, [openConnections]);
 
     React.useEffect(() => {
-      setHighlightedTableMentionIndex(0);
-    }, [activeTableMention?.query]);
+      setHighlightedReferenceIndex(0);
+    }, [activeReference?.query]);
 
     React.useEffect(() => {
-      if (highlightedTableMentionIndex >= tableMentionSuggestions.length) {
-        setHighlightedTableMentionIndex(0);
+      if (highlightedReferenceIndex >= referenceSuggestions.length) {
+        setHighlightedReferenceIndex(0);
       }
-    }, [highlightedTableMentionIndex, tableMentionSuggestions.length]);
+    }, [highlightedReferenceIndex, referenceSuggestions.length]);
 
     const handleChange = React.useCallback(
       (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         onChange(event);
-        setActiveTableMention(
-          getActiveTableMention(event.target.value, event.target.selectionStart),
+        setActiveReference(
+          getActiveReference(event.target.value, event.target.selectionStart),
         );
       },
       [onChange],
     );
 
-    const updateActiveTableMention = React.useCallback(
+    const updateActiveReference = React.useCallback(
       (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
-        setActiveTableMention(
-          getActiveTableMention(event.currentTarget.value, event.currentTarget.selectionStart),
+        setActiveReference(
+          getActiveReference(event.currentTarget.value, event.currentTarget.selectionStart),
         );
       },
       [],
     );
 
+    const getReferenceOptionAtPoint = React.useCallback(
+      (event: React.MouseEvent<HTMLTextAreaElement>) => {
+        const textarea = event.currentTarget;
+        const previousPointerEvents = textarea.style.pointerEvents;
+        textarea.style.pointerEvents = 'none';
+        const element = document.elementFromPoint(event.clientX, event.clientY);
+        textarea.style.pointerEvents = previousPointerEvents;
+
+        const label = element
+          ?.closest<HTMLElement>('[data-reference-label]')
+          ?.dataset.referenceLabel;
+
+        return label ? referenceOptionsByLabel.get(label) : undefined;
+      },
+      [referenceOptionsByLabel],
+    );
+
+    const handleTextareaMouseMove = React.useCallback(
+      (event: React.MouseEvent<HTMLTextAreaElement>) => {
+        const option = getReferenceOptionAtPoint(event);
+
+        event.currentTarget.style.cursor = option ? 'pointer' : '';
+        event.currentTarget.title = option ? t('aiChat.openMentionTitle') : '';
+      },
+      [getReferenceOptionAtPoint, t],
+    );
+
+    const handleTextareaMouseLeave = React.useCallback(
+      (event: React.MouseEvent<HTMLTextAreaElement>) => {
+        event.currentTarget.style.cursor = '';
+        event.currentTarget.title = '';
+      },
+      [],
+    );
+
+    const handleTextareaMouseDown = React.useCallback(
+      (event: React.MouseEvent<HTMLTextAreaElement>) => {
+        const option = getReferenceOptionAtPoint(event);
+        if (!option) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        setActiveReference(undefined);
+        onOpenReference?.(option);
+      },
+      [getReferenceOptionAtPoint, onOpenReference],
+    );
+
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (activeTableMention && tableMentionSuggestions.length) {
+        if (activeReference && referenceSuggestions.length) {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setHighlightedTableMentionIndex(
-              (prevState) => (prevState + 1) % tableMentionSuggestions.length,
+            setHighlightedReferenceIndex(
+              (prevState) => (prevState + 1) % referenceSuggestions.length,
             );
             return;
           }
 
           if (event.key === 'ArrowUp') {
             event.preventDefault();
-            setHighlightedTableMentionIndex(
+            setHighlightedReferenceIndex(
               (prevState) =>
-                (prevState - 1 + tableMentionSuggestions.length) % tableMentionSuggestions.length,
+                (prevState - 1 + referenceSuggestions.length) % referenceSuggestions.length,
             );
             return;
           }
 
           if (event.key === 'Enter' || event.key === 'Tab') {
             event.preventDefault();
-            if (selectedTableMentionSuggestion) selectTableMention(selectedTableMentionSuggestion);
+            if (selectedReferenceSuggestion) selectReference(selectedReferenceSuggestion);
             return;
           }
         }
 
-        if (event.key === 'Escape' && activeTableMention) {
+        if (event.key === 'Escape' && activeReference) {
           event.preventDefault();
-          setActiveTableMention(undefined);
+          setActiveReference(undefined);
           return;
         }
 
         onKeyDown?.(event);
       },
       [
-        activeTableMention,
+        activeReference,
         onKeyDown,
-        selectTableMention,
-        selectedTableMentionSuggestion,
-        tableMentionSuggestions.length,
+        selectReference,
+        selectedReferenceSuggestion,
+        referenceSuggestions.length,
       ],
     );
 
@@ -341,6 +428,48 @@ export const AIChatComposer = React.memo(
         <form className={styles.composerForm} onSubmit={onSubmit}>
           <div ref={composerInputWrapRef} className={styles.composerInputWrap}>
             <div className={styles.composerField}>
+              {!!contexts.length && (
+                <div className={styles.contextChips}>
+                  {contexts.map((context) => (
+                    <div
+                      key={context.id}
+                      className={styles.contextChip}
+                      title={context.title}
+                    >
+                      <button
+                        type="button"
+                        className={styles.contextChipMain}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={() =>
+                          setActiveContextPreviewId((currentId) =>
+                            currentId === context.id ? undefined : context.id,
+                          )
+                        }
+                      >
+                        <span>{context.title}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.contextChipRemove}
+                        title={t('aiChat.removeContext')}
+                        aria-label={t('aiChat.removeContext')}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setActiveContextPreviewId((currentId) =>
+                            currentId === context.id ? undefined : currentId,
+                          );
+                          onRemoveContext?.(context.id);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className={styles.composerTextareaWrap}>
                 <div ref={mirrorRef} className={styles.composerTextareaMirror} aria-hidden="true">
                   <div className={styles.composerTextareaMirrorInner}>{composerPreview}</div>
@@ -354,13 +483,16 @@ export const AIChatComposer = React.memo(
                   aria-label={t('aiChat.composerPlaceholder')}
                   onChange={handleChange}
                   onPaste={onPaste}
+                  onMouseMove={handleTextareaMouseMove}
+                  onMouseLeave={handleTextareaMouseLeave}
+                  onMouseDown={handleTextareaMouseDown}
                   onClick={(event) => {
                     onClick?.(event);
-                    updateActiveTableMention(event);
+                    updateActiveReference(event);
                   }}
                   onKeyUp={(event) => {
                     onKeyUp?.(event);
-                    updateActiveTableMention(event);
+                    updateActiveReference(event);
                   }}
                   onKeyDown={handleKeyDown}
                   onScroll={syncMirrorScroll}
@@ -480,22 +612,34 @@ export const AIChatComposer = React.memo(
               </div>
             </div>
 
-            {!!tableMentionSuggestions.length && (
+            {!!activeContextPreview && (
+              <div ref={contextPreviewRef} className={styles.contextPreviewBubble}>
+                <header>
+                  <strong>{activeContextPreview.title}</strong>
+                  {!!activeContextPreview.language && (
+                    <span>{activeContextPreview.language.toUpperCase()}</span>
+                  )}
+                </header>
+                <pre>{activeContextPreview.content}</pre>
+              </div>
+            )}
+
+            {!!referenceSuggestions.length && (
               <div className={styles.tableMentionDropdown} role="listbox">
-                {tableMentionSuggestions.map((option, index) => (
+                {referenceSuggestions.map((option, index) => (
                   <button
                     key={option.id}
                     type="button"
                     role="option"
-                    aria-selected={index === highlightedTableMentionIndex}
+                    aria-selected={index === highlightedReferenceIndex}
                     className={
-                      index === highlightedTableMentionIndex
+                      index === highlightedReferenceIndex
                         ? styles.tableMentionOptionActive
                         : styles.tableMentionOption
                     }
                     onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setHighlightedTableMentionIndex(index)}
-                    onClick={() => selectTableMention(option)}
+                    onMouseEnter={() => setHighlightedReferenceIndex(index)}
+                    onClick={() => selectReference(option)}
                   >
                     <strong>{option.label}</strong>
                     {!!option.meta && <span>{option.meta}</span>}

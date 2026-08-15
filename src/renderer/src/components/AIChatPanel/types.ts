@@ -1,3 +1,5 @@
+import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
+
 export interface IAIChatModelGroup {
   providerId: string;
   providerName: string;
@@ -22,8 +24,23 @@ export interface IAIChatConnectionOption {
   meta: string;
 }
 
-export interface IAIChatTableMentionOption {
+export interface IAIChatReferenceOption {
   id: string;
   label: string;
   meta: string;
+  idConnection: string;
+  type: 'table' | 'function';
+  schema?: string;
+  table?: string;
+  functionName?: string;
+  objectType?: DatabaseObjectType;
+  supportsIndexes?: boolean;
+  supportsTriggers?: boolean;
+}
+
+export interface IAIChatDraftContext {
+  id: string;
+  title: string;
+  content: string;
+  language?: 'sql' | 'json';
 }

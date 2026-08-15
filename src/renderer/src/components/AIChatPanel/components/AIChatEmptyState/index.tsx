@@ -7,15 +7,17 @@ import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import { AIChatComposer } from '../AIChatComposer';
 import type {
   IAIChatConnectionOption,
+  IAIChatDraftContext,
   IAIChatModelSelectionProps,
-  IAIChatTableMentionOption,
+  IAIChatReferenceOption,
 } from '../../types';
 import styles from '../../styles.module.css';
 
 interface IAIChatEmptyStateProps {
   value: string;
+  contexts?: IAIChatDraftContext[];
   connectionOptions: IAIChatConnectionOption[];
-  tableMentionOptions: IAIChatTableMentionOption[];
+  referenceOptions: IAIChatReferenceOption[];
   menuOptions: IButtonDropdownOption[];
   modelSelection: IAIChatModelSelectionProps;
   selectedConnectionId?: string;
@@ -23,6 +25,8 @@ interface IAIChatEmptyStateProps {
   onClose(): void;
   onConnectionChange(connectionId: string): void;
   onDeleteChat(chat: IAIChat): void;
+  onOpenReference(option: IAIChatReferenceOption): void;
+  onRemoveContext(contextId: string): void;
   onSelectChat(chat: IAIChat): void;
   onSelectMenuOption(option: IButtonDropdownOption): void;
   onSubmit(event: React.SubmitEvent<HTMLFormElement>): void;
@@ -31,8 +35,9 @@ interface IAIChatEmptyStateProps {
 export const AIChatEmptyState = React.memo(
   ({
     value,
+    contexts = [],
     connectionOptions,
-    tableMentionOptions,
+    referenceOptions,
     menuOptions,
     modelSelection,
     selectedConnectionId,
@@ -40,6 +45,8 @@ export const AIChatEmptyState = React.memo(
     onClose,
     onConnectionChange,
     onDeleteChat,
+    onOpenReference,
+    onRemoveContext,
     onSelectChat,
     onSelectMenuOption,
     onSubmit,
@@ -129,13 +136,14 @@ export const AIChatEmptyState = React.memo(
         <AIChatComposer
           value={value}
           canSubmit={
-            !!value.trim() &&
+            (!!value.trim() || !!contexts.length) &&
             !!modelSelection.selectedProviderId &&
             !!modelSelection.selectedModel &&
             !!selectedConnectionId
           }
+          contexts={contexts}
           connectionOptions={connectionOptions}
-          tableMentionOptions={tableMentionOptions}
+          referenceOptions={referenceOptions}
           modelGroups={modelSelection.modelGroups}
           selectedConnectionId={selectedConnectionId}
           selectedProviderId={modelSelection.selectedProviderId}
@@ -144,6 +152,8 @@ export const AIChatEmptyState = React.memo(
           onModelChange={modelSelection.onModelChange}
           onSubmit={onSubmit}
           onChange={(event) => onChange(event.target.value)}
+          onOpenReference={onOpenReference}
+          onRemoveContext={onRemoveContext}
           onKeyDown={handleKeyDown}
         />
       </div>

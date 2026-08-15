@@ -29,17 +29,22 @@ import {
   getQueryResultForTable,
   serializeQueryResultForAI,
 } from './utils/messages';
+import { buildAIChatMessageContent } from '../../utils/draftContexts';
 
 const AIChat = ({
   id_chat,
   initialMessage,
+  draftContexts = [],
   connectionOptions,
-  tableMentionOptions,
+  referenceOptions,
   menuOptions,
   modelSelection,
   selectedConnectionId,
   onClose,
   onConnectionChange,
+  onClearDraftContexts,
+  onOpenReference,
+  onRemoveDraftContext,
   onInitialMessageHandled,
   onNewChat,
   onSelectMenuOption,
@@ -78,7 +83,7 @@ const AIChat = ({
 
   const canSendMessage =
     !!chat &&
-    !!draftMessage.trim() &&
+    (!!draftMessage.trim() || !!draftContexts.length) &&
     !loadingMessage &&
     !!modelSelection.selectedProviderId &&
     !!modelSelection.selectedModel &&
@@ -208,6 +213,7 @@ const AIChat = ({
             (message) => ![userMessage.id, assistantMessage.id].includes(message.id),
           ),
         );
+        onClearDraftContexts?.();
       } catch (error) {
         if (stopGenerationRef.current) return;
 
@@ -236,6 +242,7 @@ const AIChat = ({
       messages,
       modelSelection.selectedModel,
       modelSelection.selectedProviderId,
+      onClearDraftContexts,
       sendAIChatMessage,
       selectedConnectionId,
       selectedConnectionIds,
@@ -248,9 +255,9 @@ const AIChat = ({
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      await submitMessageContent(draftMessage.trim());
+      await submitMessageContent(buildAIChatMessageContent(draftMessage, draftContexts));
     },
-    [draftMessage, submitMessageContent],
+    [draftContexts, draftMessage, submitMessageContent],
   );
 
   const stopGeneration = React.useCallback(() => {
@@ -472,6 +479,14 @@ const AIChat = ({
   }, [id_chat]);
 
   React.useEffect(() => {
+    if (!draftContexts.length) return;
+
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, [draftContexts.length]);
+
+  React.useEffect(() => {
     if (!initialMessage || handledInitialMessageRef.current === initialMessage || loadingMessage) {
       return;
     }
@@ -623,8 +638,9 @@ const AIChat = ({
             value={draftMessage}
             canSubmit={canSendMessage}
             loading={loadingMessage}
+            contexts={draftContexts}
             connectionOptions={connectionOptions}
-            tableMentionOptions={tableMentionOptions}
+            referenceOptions={referenceOptions}
             modelGroups={modelSelection.modelGroups}
             selectedConnectionId={selectedConnectionId}
             selectedProviderId={modelSelection.selectedProviderId}
@@ -633,6 +649,8 @@ const AIChat = ({
             onModelChange={modelSelection.onModelChange}
             onSubmit={handleSubmitMessage}
             onChange={handleComposerChange}
+            onOpenReference={onOpenReference}
+            onRemoveContext={onRemoveDraftContext}
             onStop={stopGeneration}
             onPaste={handleComposerPaste}
             onKeyDown={handleComposerKeyDown}

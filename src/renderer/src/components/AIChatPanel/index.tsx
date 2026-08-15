@@ -1,6 +1,7 @@
 import React from 'react';
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import ResizableContainer from '@renderer/components/ResizableContainer';
+import * as centralSearchConstants from '@renderer/components/CentralSearchModal/constants';
 import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useI18n } from '@renderer/contexts/I18n';
@@ -10,19 +11,33 @@ import { useToast } from '@renderer/contexts/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconAI } from '@renderer/styles/icons';
+import FunctionInfo from '@renderer/views/FunctionInfo';
+import TableInfo from '@renderer/views/TableInfo';
 import AIChat from './components/AIChat';
 import { AIChatEmptyState } from './components/AIChatEmptyState';
 import { ModalAIProviders } from './components/ModalAIProviders';
 import { ModalDeleteAIChat } from './components/ModalDeleteAIChat';
 import { useAIModelSelection } from './hooks/useAIModelSelection';
-import type { IAIChatModelSelection } from './types';
+import type {
+  IAIChatDraftContext,
+  IAIChatModelSelection,
+  IAIChatReferenceOption,
+} from './types';
+import { buildAIChatMessageContent } from './utils/draftContexts';
 import styles from './styles.module.css';
 
 export const AIChatPanel = React.memo(() => {
   const { t } = useI18n();
-  const { activeChatId, closeChatPanel, openChatPanel, toggleChatPanel, visible } =
-    useAIChatPanelContext();
-  const { activeTabId, tabs } = useAppTabContext();
+  const {
+    activeChatId,
+    clearEditorContextRequest,
+    closeChatPanel,
+    editorContextRequest,
+    openChatPanel,
+    toggleChatPanel,
+    visible,
+  } = useAIChatPanelContext();
+  const { activeTabId, addTab, getTab, setActiveTabId, tabs } = useAppTabContext();
   const {
     aiChats,
     aiProviders,
@@ -41,6 +56,8 @@ export const AIChatPanel = React.memo(() => {
   const [width, _setWidth] = useStorage('ai_chat_panel_width', 430);
   const [emptyDraft, setEmptyDraft] = React.useState('');
   const [initialMessage, setInitialMessage] = React.useState('');
+  const [chatDraftContexts, setChatDraftContexts] = React.useState<IAIChatDraftContext[]>([]);
+  const [emptyDraftContexts, setEmptyDraftContexts] = React.useState<IAIChatDraftContext[]>([]);
   const [draftNewChat, setDraftNewChat] = React.useState(false);
   const [showProvidersModal, setShowProvidersModal] = React.useState(false);
   const [chatToRemove, setChatToRemove] = React.useState<IAIChat>();
@@ -104,21 +121,115 @@ export const AIChatPanel = React.memo(() => {
       })),
     [connections],
   );
-  const tableMentionOptions = React.useMemo(() => {
+  const referenceOptions = React.useMemo<IAIChatReferenceOption[]>(() => {
     const connectionInfo = selectedConnectionId
       ? connectionsInfo.get(selectedConnectionId)
       : undefined;
 
-    return (connectionInfo?.tables || []).map((table) => {
+    const tableOptions = (connectionInfo?.tables || []).map((table) => {
       const tableName = [table.table_schema, table.table_name].filter(Boolean).join('.');
 
       return {
         id: tableName,
         label: `@${tableName}`,
         meta: table.object_type || 'table',
+        idConnection: selectedConnectionId,
+        type: 'table' as const,
+        schema: table.table_schema,
+        table: table.table_name,
+        objectType: table.object_type,
+        supportsIndexes: table.supports_indexes,
+        supportsTriggers: table.supports_triggers,
       };
     });
+
+    const functionOptions = (connectionInfo?.functions || []).map((fn) => {
+      const functionName = [fn.function_schema, fn.function_name].filter(Boolean).join('.');
+
+      return {
+        id: functionName,
+        label: `@${functionName}`,
+        meta: 'function',
+        idConnection: selectedConnectionId,
+        type: 'function' as const,
+        schema: fn.function_schema,
+        functionName: fn.function_name,
+      };
+    });
+
+    return [...tableOptions, ...functionOptions];
   }, [connectionsInfo, selectedConnectionId]);
+
+  const openReference = React.useCallback(
+    (option: IAIChatReferenceOption) => {
+      if (option.type === 'function' && option.functionName) {
+        const tabId = centralSearchConstants.getFunctionTabId(
+          option.idConnection,
+          option.schema,
+          option.functionName,
+        );
+        const tab = getTab(tabId);
+
+        if (tab) return setActiveTabId(tabId);
+
+        addTab({
+          id: tabId,
+          title: centralSearchConstants.getQualifiedName(option.schema, option.functionName),
+          data: {
+            type: 'function-info',
+            id_connection: option.idConnection,
+            schema: option.schema,
+            function_name: option.functionName,
+          },
+          component: () => (
+            <FunctionInfo
+              id_connection={option.idConnection}
+              schema={option.schema}
+              function_name={option.functionName}
+            />
+          ),
+        });
+        return;
+      }
+
+      if (!option.table) return;
+
+      const tabId = centralSearchConstants.getTableTabId(
+        option.idConnection,
+        option.schema,
+        option.table,
+      );
+      const tab = getTab(tabId);
+
+      if (tab) return setActiveTabId(tabId);
+
+      addTab({
+        id: tabId,
+        title: centralSearchConstants.getQualifiedName(option.schema, option.table),
+        data: {
+          type: 'table-info',
+          id_connection: option.idConnection,
+          schema: option.schema,
+          table: option.table,
+          objectType: option.objectType,
+          supportsIndexes: option.supportsIndexes,
+          supportsTriggers: option.supportsTriggers,
+        },
+        component: () => (
+          <TableInfo
+            id_connection={option.idConnection}
+            schema={option.schema}
+            table={option.table}
+            appTabId={tabId}
+            objectType={option.objectType}
+            supportsIndexes={option.supportsIndexes}
+            supportsTriggers={option.supportsTriggers}
+          />
+        ),
+      });
+    },
+    [addTab, getTab, setActiveTabId],
+  );
 
   const handleChatModelChange = React.useCallback(
     async (providerId: string, model: string) => {
@@ -224,6 +335,7 @@ export const AIChatPanel = React.memo(() => {
       if (option.id === 'new-chat') {
         setDraftNewChat(true);
         setInitialMessage('');
+        setChatDraftContexts([]);
         setEmptyAISelection(undefined);
       }
       if (option.id === 'providers') setShowProvidersModal(true);
@@ -239,7 +351,7 @@ export const AIChatPanel = React.memo(() => {
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (
-        !emptyDraft.trim() ||
+        (!emptyDraft.trim() && !emptyDraftContexts.length) ||
         !emptyChatModelSelection.selectedProviderId ||
         !emptyChatModelSelection.selectedModel ||
         !selectedConnectionId
@@ -247,15 +359,17 @@ export const AIChatPanel = React.memo(() => {
         return;
       }
 
-      setInitialMessage(emptyDraft.trim());
+      setInitialMessage(buildAIChatMessageContent(emptyDraft, emptyDraftContexts));
       await createChat();
       setEmptyDraft('');
+      setEmptyDraftContexts([]);
     },
     [
       createChat,
       emptyChatModelSelection.selectedModel,
       emptyChatModelSelection.selectedProviderId,
       emptyDraft,
+      emptyDraftContexts,
       selectedConnectionId,
     ],
   );
@@ -271,6 +385,36 @@ export const AIChatPanel = React.memo(() => {
   React.useEffect(() => {
     manualConnectionSelectionRef.current = false;
   }, [visibleChat?.id]);
+
+  React.useEffect(() => {
+    if (!editorContextRequest) return;
+
+    const context: IAIChatDraftContext = {
+      id: editorContextRequest.id,
+      title: t('aiChat.editorContextLabel'),
+      content: editorContextRequest.content,
+      language: editorContextRequest.language,
+    };
+
+    if (activeChat) {
+      setDraftNewChat(false);
+      setChatDraftContexts((prevState) => [...prevState, context]);
+      openChatPanel(activeChat.id);
+    } else {
+      setDraftNewChat(true);
+      setInitialMessage('');
+      setEmptyAISelection(undefined);
+      setEmptyDraftContexts((prevState) => [...prevState, context]);
+    }
+
+    clearEditorContextRequest();
+  }, [
+    activeChat,
+    clearEditorContextRequest,
+    editorContextRequest,
+    openChatPanel,
+    t,
+  ]);
 
   React.useEffect(() => {
     if (!visible) {
@@ -375,17 +519,26 @@ export const AIChatPanel = React.memo(() => {
                   <AIChat
                     id_chat={visibleChat.id}
                     initialMessage={initialMessage}
+                    draftContexts={chatDraftContexts}
                     connectionOptions={connectionOptions}
-                    tableMentionOptions={tableMentionOptions}
+                    referenceOptions={referenceOptions}
                     menuOptions={optionsMenu}
                     modelSelection={activeChatModelSelection}
                     selectedConnectionId={selectedConnectionId}
                     onClose={closeChatPanel}
                     onConnectionChange={handleConnectionChange}
+                    onClearDraftContexts={() => setChatDraftContexts([])}
+                    onOpenReference={openReference}
+                    onRemoveDraftContext={(contextId) =>
+                      setChatDraftContexts((prevState) =>
+                        prevState.filter((context) => context.id !== contextId),
+                      )
+                    }
                     onInitialMessageHandled={() => setInitialMessage('')}
                     onNewChat={() => {
                       setDraftNewChat(true);
                       setInitialMessage('');
+                      setChatDraftContexts([]);
                       setEmptyAISelection(undefined);
                     }}
                     onSelectMenuOption={handleSelectOption}
@@ -393,8 +546,9 @@ export const AIChatPanel = React.memo(() => {
                 ) : (
                   <AIChatEmptyState
                     value={emptyDraft}
+                    contexts={emptyDraftContexts}
                     connectionOptions={connectionOptions}
-                    tableMentionOptions={tableMentionOptions}
+                    referenceOptions={referenceOptions}
                     menuOptions={optionsMenu}
                     modelSelection={emptyChatModelSelection}
                     selectedConnectionId={selectedConnectionId}
@@ -402,6 +556,12 @@ export const AIChatPanel = React.memo(() => {
                     onClose={closeChatPanel}
                     onConnectionChange={handleConnectionChange}
                     onDeleteChat={setChatToRemove}
+                    onOpenReference={openReference}
+                    onRemoveContext={(contextId) =>
+                      setEmptyDraftContexts((prevState) =>
+                        prevState.filter((context) => context.id !== contextId),
+                      )
+                    }
                     onSelectChat={selectChat}
                     onSelectMenuOption={handleSelectOption}
                     onSubmit={handleEmptySubmit}

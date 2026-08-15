@@ -4,6 +4,13 @@ import * as monaco from './monaco';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
+import {
+  ContextMenu,
+  type IContextMenuOption,
+  type IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
+import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
+import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContentRange } from '@renderer/utils/sql';
@@ -17,10 +24,16 @@ const Editor = ({
   language = 'sql',
   ...props
 }: IEditorProps) => {
+  const { t } = useI18n();
   const { activeTheme } = useThemeContext();
+  const { activeChatId, addEditorSelectionToChatContext } = useAIChatPanelContext();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { width, height } = useResize({ HTMLElement: containerRef.current });
   const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
+  const [editorContextMenu, setEditorContextMenu] = React.useState<{
+    position: IContextMenuPosition;
+    selectedText: string;
+  }>();
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
   React.useEffect(() => {
     onCtrlClickRef.current = props.onCtrlClick;
@@ -141,6 +154,35 @@ const Editor = ({
   const getCurrentValue = () => {
     return getCurrentQueryRange().sql;
   };
+
+  const getSelectedText = React.useCallback(() => {
+    const model = editor?.getModel();
+    if (!model) return '';
+
+    return (editor?.getSelections() || [])
+      .map((selection) => model.getValueInRange(selection).trim())
+      .filter(Boolean)
+      .join('\n\n');
+  }, [editor]);
+
+  const openEditorContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const selectedText = getSelectedText();
+
+      if (!selectedText) {
+        setEditorContextMenu(undefined);
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setEditorContextMenu({
+        position: { x: event.clientX, y: event.clientY },
+        selectedText,
+      });
+    },
+    [getSelectedText],
+  );
 
   const initEditor = () => {
     const overflowWidgetsPortal = props.overflowWidgetsPortal
@@ -419,10 +461,42 @@ const Editor = ({
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);
 
+  const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
+    () => [
+      {
+        text: activeChatId
+          ? t('context.addSelectionToAIChat')
+          : t('context.addSelectionToNewAIChat'),
+        onClick: () => {
+          if (!editorContextMenu?.selectedText) return;
+
+          addEditorSelectionToChatContext({
+            content: editorContextMenu.selectedText,
+            language,
+          });
+          setEditorContextMenu(undefined);
+        },
+      },
+    ],
+    [activeChatId, addEditorSelectionToChatContext, editorContextMenu?.selectedText, language, t],
+  );
+
   return (
-    <div className={styles.outsideContainer} onClickCapture={stopCtrlClickPropagation}>
-      <div className={styles.container} ref={containerRef} />
-    </div>
+    <>
+      <div
+        className={styles.outsideContainer}
+        onClickCapture={stopCtrlClickPropagation}
+        onContextMenuCapture={openEditorContextMenu}
+      >
+        <div className={styles.container} ref={containerRef} />
+      </div>
+
+      <ContextMenu
+        position={editorContextMenu?.position}
+        options={editorContextMenuOptions}
+        onClose={() => setEditorContextMenu(undefined)}
+      />
+    </>
   );
 };
 
