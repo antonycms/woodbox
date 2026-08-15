@@ -3,10 +3,11 @@ import { getValidCodexCredential } from './account';
 
 type CodexTextContent = { type?: string; text?: string };
 type CodexInputTextContent = { type: 'input_text'; text: string };
+type CodexOutputTextContent = { type: 'output_text'; text: string };
 type CodexMessageItem = {
   type: 'message';
   role: 'user' | 'assistant' | 'developer';
-  content: CodexInputTextContent[];
+  content: (CodexInputTextContent | CodexOutputTextContent)[];
 };
 type CodexFunctionCallItem = {
   type: 'function_call';
@@ -78,11 +79,21 @@ const CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses';
 const CODEX_CLIENT_VERSION = '0.144.1';
 const MAX_CODEX_TOOL_STEPS = 6;
 
+const toCodexMessageContent = (
+  message: IAIChatMessageInput,
+): (CodexInputTextContent | CodexOutputTextContent)[] => {
+  if (message.role === 'assistant') {
+    return [{ type: 'output_text', text: message.content }];
+  }
+
+  return [{ type: 'input_text', text: message.content }];
+};
+
 const toCodexInput = (messages: IAIChatMessageInput[]): CodexInputItem[] =>
   messages.map((message) => ({
     type: 'message',
     role: message.role,
-    content: [{ type: 'input_text', text: message.content }],
+    content: toCodexMessageContent(message),
   }));
 
 const stringifyToolOutput = (output: unknown) => {
