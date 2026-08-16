@@ -3,13 +3,11 @@ import {
   getConnectionInfo,
   getFunctionDefinition,
   getTableColumns,
-  getTableDefinition,
   getTableIndexes,
   getTableReferences,
   getTableRestrictions,
   getTableRowsCount,
-  getTableTriggers,
-  getTableUsedAsReference,
+  runExplainSql,
 } from '@main/database/core';
 import { getConnectionsSaved } from '@main/storage/store';
 
@@ -46,6 +44,11 @@ type AIQueryExecutionInput = {
   limit?: number;
 };
 
+type AIExplainQueryPlanInput = {
+  connection: string;
+  query: string;
+};
+
 export type AIQueryExecutionToolOutput = {
   queryApproval: IAIQueryApproval;
   reason?: string;
@@ -65,6 +68,86 @@ const normalizeMention = (value: string) =>
 
 const compactMention = (value: string) => normalizeMention(value).replace(/-/g, '');
 
+const isEmptyAIValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return true;
+  if (Array.isArray(value)) return !value.length;
+  if (typeof value === 'object') return !Object.keys(value).length;
+
+  return false;
+};
+
+const compactForAI = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map(compactForAI).filter((item) => !isEmptyAIValue(item));
+  }
+
+  if (!value || typeof value !== 'object') return value;
+
+  const entries = Object.entries(value)
+    .map(([key, item]) => [key, compactForAI(item)] as const)
+    .filter(([, item]) => !isEmptyAIValue(item));
+
+  return Object.fromEntries(entries);
+};
+
+const summarizeRows = (rows: unknown[], limit: number) => ({
+  items: rows.slice(0, limit).map(compactForAI),
+  total: rows.length,
+  truncated: rows.length > limit,
+});
+
+const compactColumnForAI = (column: unknown) => {
+  if (!column || typeof column !== 'object' || Array.isArray(column)) return column;
+
+  const { udt_name, data_type, ...rest } = column as Record<string, unknown>;
+
+  if (udt_name === data_type) return { data_type, ...rest };
+
+  return column;
+};
+
+const getObjectSchemaKey = (schema: unknown) => String(schema || 'default');
+
+const addGroupedObjectName = (
+  groups: Record<string, string[]>,
+  key: string,
+  name: unknown,
+) => {
+  if (typeof name !== 'string' || !name) return;
+
+  groups[key] ||= [];
+  groups[key].push(name);
+};
+
+const getTableObjectGroup = (objectType: unknown) => {
+  if (objectType === 'view') return 'views';
+  if (objectType === 'materialized_view') return 'materialized_views';
+
+  return 'tables';
+};
+
+const groupConnectionObjects = (
+  tables: Record<string, unknown>[],
+  functions: Record<string, unknown>[],
+) => {
+  const groups: Record<string, string[]> = {};
+
+  for (const table of tables) {
+    const schema = getObjectSchemaKey(table.table_schema);
+    const group = getTableObjectGroup(table.object_type);
+
+    addGroupedObjectName(groups, `${schema}.${group}`, table.table_name);
+  }
+
+  for (const fn of functions) {
+    const schema = getObjectSchemaKey(fn.function_schema);
+
+    addGroupedObjectName(groups, `${schema}.functions`, fn.function_name);
+  }
+
+  return groups;
+};
+
 const getPublicConnections = (): AIConnectionContext[] =>
   getConnectionsSaved().map((connection) => ({
     id: connection.id,
@@ -75,16 +158,6 @@ const getPublicConnections = (): AIConnectionContext[] =>
     port: connection.port,
     environment: connection.environment,
   }));
-
-const serializeConnectionForAI = (connection: AIConnectionContext) => ({
-  id: connection.id,
-  name: connection.description,
-  dialect: connection.dialect,
-  database: connection.database,
-  host: connection.host,
-  port: connection.port,
-  environment: connection.environment,
-});
 
 const getAllowedConnectionIds = (mentionedConnectionIds?: string[]) =>
   new Set((mentionedConnectionIds || []).filter(Boolean));
@@ -222,6 +295,22 @@ const queryExecutionSchema = {
   additionalProperties: false,
 } as const;
 
+const explainQueryPlanSchema = {
+  type: 'object',
+  properties: {
+    connection: {
+      type: 'string',
+      description: 'ID, nome ou menção da conexão selecionada pelo usuário.',
+    },
+    query: {
+      type: 'string',
+      description: 'Uma única query SELECT/WITH para analisar com EXPLAIN.',
+    },
+  },
+  required: ['connection', 'query'],
+  additionalProperties: false,
+} as const;
+
 export const getAIConnectionContexts = (mentionedConnectionIds?: string[]) => {
   const connections = getPublicConnections();
   const mentionedIds = getAllowedConnectionIds(mentionedConnectionIds);
@@ -265,8 +354,9 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     'Você tem a ferramenta request_query_execution para propor uma query que precisa de execução.',
     'Quando precisar consultar dados, chame request_query_execution com uma única query e explique brevemente o motivo.',
     'Para alterar dados ou estrutura, chame request_query_execution apenas se o usuário pedir explicitamente a alteração.',
+    'Se o usuário pedir análise de performance ou plano de execução de uma query SELECT/WITH, use explain_query_plan.',
     'Não escreva blocos ```sql``` para execução; a interface exibirá o card de aprovação.',
-    'Se o usuário pedir apenas para revisar, explicar, otimizar ou melhorar uma query, responda com sugestões e SQL de exemplo sem pedir confirmação de execução.',
+    'Se o usuário pedir apenas para revisar, explicar, otimizar ou melhorar uma query, use explain_query_plan quando o plano real ajudar; caso contrário responda com sugestões e SQL de exemplo sem pedir confirmação de execução.',
     'Não peça para o usuário digitar "confirmar" ou "rejeitar"; a interface exibirá botões.',
     'Quando receber uma mensagem informando que a query JÁ FOI APROVADA e JÁ FOI EXECUTADA, não chame request_query_execution para a mesma SQL; responda diretamente com base no JSON retornado.',
   ].join('\n');
@@ -274,35 +364,42 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
 
 export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSet => ({
   list_connections: tool({
-    description: 'Lista conexões disponíveis, sem credenciais.',
+    description: 'Lista conexões disponíveis, sem credenciais, em formato compacto.',
     inputSchema: aiToolSchema<Record<string, never>>({
       type: 'object',
       properties: {},
       additionalProperties: false,
     }),
     execute: async () => ({
-      connections: getPublicConnections().map(serializeConnectionForAI),
+      connections: getPublicConnections().map((connection) =>
+        compactForAI({
+          id: connection.id,
+          name: connection.description,
+          dialect: connection.dialect,
+          database: connection.database,
+          env: connection.environment,
+        }),
+      ),
     }),
   }),
 
   get_connection_info: tool({
-    description: 'Lista schemas, tabelas e funções de uma conexão.',
+    description:
+      'Lista objetos da conexão agrupados por chave: schema.tables, schema.views, schema.materialized_views e schema.functions.',
     inputSchema: aiToolSchema<{ connection: string }>(connectionSchema),
     execute: async ({ connection }) => {
       const resolved = resolveConnection(connection, mentionedConnectionIds);
       const info = await getKnownObjects(resolved.id);
 
       return {
-        connection: serializeConnectionForAI(resolved),
-        schemas: info.schemas || [],
-        tables: info.tables,
-        functions: info.functions,
+        objects: groupConnectionObjects(info.tables, info.functions),
       };
     },
   }),
 
   search_database_objects: tool({
-    description: 'Busca tabelas e funções por nome em uma conexão.',
+    description:
+      'Busca tabelas e funções por nome e retorna objetos agrupados por schema.tables/schema.views/schema.functions, limitado a 50 por tipo.',
     inputSchema: aiToolSchema<{
       connection: string;
       query: string;
@@ -321,66 +418,72 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
       const resolved = resolveConnection(connection, mentionedConnectionIds);
       const info = await getKnownObjects(resolved.id);
       const normalizedQuery = query.trim().toLowerCase();
+      const matchedTables =
+        objectType === 'function'
+          ? []
+          : info.tables.filter((table) =>
+              [table.table_schema, table.table_name]
+                .filter(Boolean)
+                .join('.')
+                .toLowerCase()
+                .includes(normalizedQuery),
+            );
+      const matchedFunctions =
+        objectType === 'table'
+          ? []
+          : info.functions.filter((fn) =>
+              [fn.function_schema, fn.function_name]
+                .filter(Boolean)
+                .join('.')
+                .toLowerCase()
+                .includes(normalizedQuery),
+            );
 
       return {
-        connection: serializeConnectionForAI(resolved),
-        tables:
-          objectType === 'function'
-            ? []
-            : info.tables
-                .filter((table) =>
-                  [table.table_schema, table.table_name]
-                    .filter(Boolean)
-                    .join('.')
-                    .toLowerCase()
-                    .includes(normalizedQuery),
-                )
-                .slice(0, 50),
-        functions:
-          objectType === 'table'
-            ? []
-            : info.functions
-                .filter((fn) =>
-                  [fn.function_schema, fn.function_name]
-                    .filter(Boolean)
-                    .join('.')
-                    .toLowerCase()
-                    .includes(normalizedQuery),
-                )
-                .slice(0, 50),
+        objects: groupConnectionObjects(
+          matchedTables.slice(0, 50),
+          matchedFunctions.slice(0, 50),
+        ),
+        total: {
+          tables: matchedTables.length,
+          functions: matchedFunctions.length,
+        },
+        truncated: {
+          tables: matchedTables.length > 50,
+          functions: matchedFunctions.length > 50,
+        },
       };
     },
   }),
 
   get_table_schema: tool<AITableToolInput, unknown, AIToolContext>({
-    description: 'Carrega metadados completos de uma tabela.',
+    description:
+      'Carrega metadados resumidos de uma tabela. Retorna listas {items,total,truncated}; omite DDL/triggers.',
     inputSchema: aiToolSchema<AITableToolInput>(tableSchema),
     execute: async ({ connection, table, schema }) => {
       const resolved = resolveConnection(connection, mentionedConnectionIds);
       const tableRef = await assertTableExists(resolved.id, table, schema);
-      const [columns, references, usedAsReference, restrictions, indexes, triggers, definition, rowsCount] =
+      const [columns, references, restrictions, indexes, rowsCount] =
         await Promise.all([
           getTableColumns(resolved.id, tableRef),
           getTableReferences(resolved.id, tableRef),
-          getTableUsedAsReference(resolved.id, tableRef),
           getTableRestrictions(resolved.id, tableRef),
           getTableIndexes(resolved.id, tableRef),
-          getTableTriggers(resolved.id, tableRef),
-          getTableDefinition(resolved.id, tableRef),
           getTableRowsCount(resolved.id, tableRef),
         ]);
 
       return {
-        connection: serializeConnectionForAI(resolved),
         table: tableRef,
         rowsCount,
-        columns,
-        references,
-        usedAsReference,
-        restrictions,
-        indexes,
-        triggers,
-        definition,
+        columns: summarizeRows(columns.map(compactColumnForAI), 80),
+        references: summarizeRows(references, 40),
+        restrictions: summarizeRows(restrictions, 40),
+        indexes: summarizeRows(indexes, 40),
+        omitted: {
+          definition: true,
+          triggers: true,
+          usedAsReference: true,
+        },
       };
     },
   }),
@@ -406,9 +509,24 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
       });
 
       return {
-        connection: serializeConnectionForAI(resolved),
         function: functionRef,
         definition,
+      };
+    },
+  }),
+
+  explain_query_plan: tool<AIExplainQueryPlanInput, unknown, AIToolContext>({
+    description:
+      'Executa EXPLAIN seguro para uma única query SELECT/WITH e retorna o plano de execução.',
+    inputSchema: aiToolSchema<AIExplainQueryPlanInput>(explainQueryPlanSchema),
+    execute: async ({ connection, query }) => {
+      const resolved = resolveConnection(connection, mentionedConnectionIds);
+      const explain = await runExplainSql(resolved.id, query);
+
+      return {
+        dialect: resolved.dialect,
+        query: query.trim(),
+        explain: compactForAI(explain),
       };
     },
   }),
