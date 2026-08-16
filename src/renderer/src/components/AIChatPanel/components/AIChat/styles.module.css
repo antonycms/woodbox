@@ -168,7 +168,7 @@ p.titleBlock {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  gap: 4px;
+  gap: 16px;
   color: var(--color);
   font-size: 12px;
   line-height: 1.48;
