@@ -6,6 +6,7 @@ import styles from '../../styles.module.css';
 
 export interface IQueryApprovalApproveOptions {
   allowUnsafe?: boolean;
+  sql?: string;
 }
 
 interface IQueryApprovalCardsProps {
@@ -23,18 +24,36 @@ interface IQueryApprovalCardProps {
 export const QueryApprovalCard = React.memo(
   ({ approval, onApprove, onReject }: IQueryApprovalCardProps) => {
     const { t } = useI18n();
+    const [editing, setEditing] = React.useState(false);
+    const [editedSql, setEditedSql] = React.useState(approval.sql);
     const [unsafeConfirming, setUnsafeConfirming] = React.useState(false);
     const status = approval.status || 'pending';
     const isPending = status === 'pending';
-    const isUnsafe = !isReadOnlySelectQuery(approval.sql);
+    const executableSql = editing ? editedSql.trim() : approval.sql;
+    const isUnsafe = !isReadOnlySelectQuery(executableSql);
+    const canApprove = !!executableSql;
 
     const handleApproveClick = () => {
+      if (!canApprove) return;
+
       if (isUnsafe && !unsafeConfirming) {
         setUnsafeConfirming(true);
         return;
       }
 
-      onApprove(approval, { allowUnsafe: isUnsafe });
+      onApprove(approval, { allowUnsafe: isUnsafe, sql: executableSql });
+    };
+
+    const handleEditClick = () => {
+      setEditedSql(approval.sql);
+      setUnsafeConfirming(false);
+      setEditing(true);
+    };
+
+    const handleCancelEdit = () => {
+      setEditedSql(approval.sql);
+      setUnsafeConfirming(false);
+      setEditing(false);
     };
 
     return (
@@ -59,9 +78,21 @@ export const QueryApprovalCard = React.memo(
           {[approval.connectionName, approval.database, approval.dialect].filter(Boolean).join(' · ')}
         </div>
 
-        <pre>
-          <code>{approval.sql}</code>
-        </pre>
+        {editing ? (
+          <textarea
+            className={styles.queryApprovalEditor}
+            value={editedSql}
+            spellCheck={false}
+            onChange={(event) => {
+              setEditedSql(event.target.value);
+              setUnsafeConfirming(false);
+            }}
+          />
+        ) : (
+          <pre>
+            <code>{approval.sql}</code>
+          </pre>
+        )}
 
         {isPending && isUnsafe && (
           <div className={styles.queryApprovalWarning}>
@@ -71,13 +102,26 @@ export const QueryApprovalCard = React.memo(
 
         {isPending && (
           <div className={styles.queryApprovalActions}>
-            <button type="button" onClick={() => onReject(approval)}>
-              {t('aiChat.queryApprovalReject')}
-            </button>
-            <button type="button" onClick={handleApproveClick}>
+            {editing ? (
+              <button type="button" onClick={handleCancelEdit}>
+                {t('aiChat.queryApprovalCancelEdit')}
+              </button>
+            ) : (
+              <button type="button" onClick={() => onReject(approval)}>
+                {t('aiChat.queryApprovalReject')}
+              </button>
+            )}
+            {!editing && (
+              <button type="button" onClick={handleEditClick}>
+                {t('aiChat.queryApprovalEdit')}
+              </button>
+            )}
+            <button type="button" disabled={!canApprove} onClick={handleApproveClick}>
               {unsafeConfirming
                 ? t('aiChat.queryApprovalUnsafeConfirm')
-                : t('aiChat.queryApprovalApprove')}
+                : editing
+                  ? t('aiChat.queryApprovalSaveAndRun')
+                  : t('aiChat.queryApprovalApprove')}
             </button>
           </div>
         )}

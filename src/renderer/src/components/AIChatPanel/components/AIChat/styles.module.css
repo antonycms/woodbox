@@ -435,6 +435,22 @@ p.titleBlock {
   background-color: color-mix(in srgb, var(--backgroundColor) 72%, black);
 }
 
+.queryApprovalEditor {
+  width: 100%;
+  min-height: 120px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 7px;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--ascentColor) 45%, var(--borderColor));
+  border-radius: 8px;
+  outline: none;
+  color: var(--color);
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  background-color: color-mix(in srgb, var(--backgroundColor) 72%, black);
+}
+
 .queryApprovalCard code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 11px;
@@ -458,6 +474,11 @@ p.titleBlock {
   font-size: 11px;
   line-height: 1.25;
   background-color: transparent;
+}
+
+.queryApprovalActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .queryApprovalActions button:first-child {

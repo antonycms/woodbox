@@ -138,6 +138,34 @@ const AIChat = ({
 
       if (!content || loadingMessage || !selectedConnectionId) return;
 
+      const persistedMessages = chat?.messages || [];
+      const hasPendingApprovals = persistedMessages.some((message) =>
+        message.queryApprovals?.some((approval) => !approval.status || approval.status === 'pending'),
+      );
+      const messagesWithoutPendingApprovals = hasPendingApprovals
+        ? persistedMessages.map((message) => ({
+            ...message,
+            queryApprovals: message.queryApprovals?.map((approval) =>
+              !approval.status || approval.status === 'pending'
+                ? { ...approval, status: 'rejected' as const }
+                : approval,
+            ),
+          }))
+        : persistedMessages;
+
+      if (hasPendingApprovals) {
+        try {
+          await editAIChat(id_chat, { messages: messagesWithoutPendingApprovals });
+        } catch (error) {
+          showToast({
+            type: 'error',
+            title: t('aiChat.sendFailed'),
+            description: getErrorMessage(error),
+          });
+          return;
+        }
+      }
+
       const userMessage: IAIChatMessage = {
         id: generateHash(),
         role: 'user',
@@ -150,7 +178,7 @@ const AIChat = ({
         content: t('aiChat.sending'),
         created_at: new Date().toISOString(),
       };
-      const nextMessages = [...messages, userMessage];
+      const nextMessages = [...messagesWithoutPendingApprovals, ...localMessages, userMessage];
       const assistantMessageId = assistantMessage.id;
       const requestId = generateHash();
 
@@ -236,11 +264,12 @@ const AIChat = ({
     },
     [
       appendAIChatMessages,
-      chat?.messages.length,
+      chat?.messages,
       connections,
+      editAIChat,
       id_chat,
       loadingMessage,
-      messages,
+      localMessages,
       modelSelection.selectedModel,
       modelSelection.selectedProviderId,
       onClearDraftContexts,
@@ -282,14 +311,14 @@ const AIChat = ({
     activeAssistantMessageIdRef.current = undefined;
   }, [cancelAIChatMessage]);
 
-  const updateApprovalStatus = React.useCallback(
-    async (approval: IAIQueryApproval, status: NonNullable<IAIQueryApproval['status']>) => {
+  const updateQueryApproval = React.useCallback(
+    async (approval: IAIQueryApproval, patch: Partial<IAIQueryApproval>) => {
       if (!chat) return [];
 
       const updatedMessages = chat.messages.map((message) => ({
         ...message,
         queryApprovals: message.queryApprovals?.map((item) =>
-          item.id === approval.id ? { ...item, status } : item,
+          item.id === approval.id ? { ...item, ...patch } : item,
         ),
       }));
 
@@ -302,14 +331,19 @@ const AIChat = ({
 
   const rejectQueryApproval = React.useCallback(
     async (approval: IAIQueryApproval) => {
-      await updateApprovalStatus(approval, 'rejected');
+      await updateQueryApproval(approval, { status: 'rejected' });
     },
-    [updateApprovalStatus],
+    [updateQueryApproval],
   );
 
   const approveQueryApproval = React.useCallback(
     async (approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions) => {
-      if (!isReadOnlySelectQuery(approval.sql) && !options?.allowUnsafe) {
+      const executableApproval = {
+        ...approval,
+        sql: options?.sql?.trim() || approval.sql,
+      };
+
+      if (!isReadOnlySelectQuery(executableApproval.sql) && !options?.allowUnsafe) {
         showToast({
           type: 'error',
           title: t('aiChat.queryApprovalUnsafeTitle'),
@@ -318,12 +352,17 @@ const AIChat = ({
         return;
       }
 
-      const updatedMessages = await updateApprovalStatus(approval, 'approved');
+      const updatedMessages = await updateQueryApproval(executableApproval, {
+        sql: executableApproval.sql,
+        status: 'approved',
+      });
 
       const userMessage: IAIChatMessage = {
         id: generateHash(),
         role: 'user',
-        content: t('aiChat.queryApprovedMessage', { connection: approval.connectionName }),
+        content: t('aiChat.queryApprovedMessage', {
+          connection: executableApproval.connectionName,
+        }),
         created_at: new Date().toISOString(),
       };
 
@@ -340,9 +379,9 @@ const AIChat = ({
 
       try {
         setLoadingMessage(true);
-        const result = await runSql(approval.connectionId, approval.sql, {
+        const result = await runSql(executableApproval.connectionId, executableApproval.sql, {
           page: 1,
-          limit: approval.limit,
+          limit: executableApproval.limit,
         });
         const queryResult = getQueryResultForTable(result);
 
@@ -366,13 +405,13 @@ const AIChat = ({
 
         const queryResultMessage: IAIChatMessageInput = {
           role: 'user',
-          content: serializeQueryResultForAI(approval, result),
+          content: serializeQueryResultForAI(executableApproval, result),
         };
 
         const response = await sendAIChatMessage({
           providerId: modelSelection.selectedProviderId,
           model: modelSelection.selectedModel,
-          mentionedConnectionIds: [approval.connectionId],
+          mentionedConnectionIds: [executableApproval.connectionId],
           messages: [
             ...modelMessages.map((message) => ({
               role: message.role,
@@ -382,11 +421,11 @@ const AIChat = ({
           ],
         });
 
-        const approvedSql = normalizeSqlForComparison(approval.sql);
+        const approvedSql = normalizeSqlForComparison(executableApproval.sql);
 
         const queryApprovals = getResponseQueryApprovals(
           response,
-          [approval.connectionId],
+          [executableApproval.connectionId],
           connections,
         ).filter((item) => normalizeSqlForComparison(item.sql) !== approvedSql);
 
@@ -438,7 +477,7 @@ const AIChat = ({
       sendAIChatMessage,
       showToast,
       t,
-      updateApprovalStatus,
+      updateQueryApproval,
     ],
   );
 
