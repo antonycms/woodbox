@@ -337,6 +337,7 @@ const mysql: RendererDialect = {
   label: 'MySQL',
   editorDialect: 'mysql',
   defaultPort: 3306,
+  supportsSsl: true,
   supportsSchemas: false,
   supportsFunctions: false,
   supportsAutoIncrement: true,

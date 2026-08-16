@@ -181,6 +181,7 @@ export interface RendererDialect {
   editorDialect: Dialect;
   defaultPort?: number;
   connectionMode?: 'network' | 'file';
+  supportsSsl?: boolean;
   supportsSchemas: boolean;
   supportsFunctions: boolean;
   supportsAutoIncrement: boolean;

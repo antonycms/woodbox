@@ -15,6 +15,11 @@ declare global {
     port: number;
     username?: string;
     password?: string;
+    ssl?: boolean;
+    sslRejectUnauthorized?: boolean;
+    sslCaCert?: string;
+    sslCert?: string;
+    sslKey?: string;
   }
 
   export interface IConnection {

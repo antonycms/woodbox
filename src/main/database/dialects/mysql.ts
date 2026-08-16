@@ -1,5 +1,6 @@
 import queries from '@main/database/querys/mysql';
 import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
+import { getSslConfig } from './ssl';
 
 const quoteIdentifier = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
@@ -131,13 +132,14 @@ const mysql: DatabaseDialectAdapter = {
   client: 'mysql2',
   queries,
   quoteIdentifier,
-  getConnectionConfig: ({ database, host, port, username: user, password }) => ({
-    host,
-    port,
-    user,
-    password,
-    database,
+  getConnectionConfig: (config) => ({
+    host: config.host,
+    port: config.port,
+    user: config.username,
+    password: config.password,
+    database: config.database,
     dateStrings: true,
+    ssl: getSslConfig(config),
   }),
   getRows,
   splitStatements,

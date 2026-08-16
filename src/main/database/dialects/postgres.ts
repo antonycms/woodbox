@@ -1,6 +1,7 @@
 import pg from 'pg';
 import queries from '@main/database/querys/postgres';
 import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
+import { getSslConfig } from './ssl';
 
 pg.types.setTypeParser(1114, (val) => val);
 pg.types.setTypeParser(1184, (val) => val);
@@ -16,14 +17,15 @@ const postgres: DatabaseDialectAdapter = {
   client: 'postgres',
   queries,
   quoteIdentifier,
-  getConnectionConfig: ({ description, database, host, port, username: user, password }) => ({
-    host,
-    port,
-    user,
-    password,
-    database,
+  getConnectionConfig: (config) => ({
+    host: config.host,
+    port: config.port,
+    user: config.username,
+    password: config.password,
+    database: config.database,
     dateStrings: true,
-    application_name: `Woodbox (${description})`,
+    ssl: getSslConfig(config),
+    application_name: `Woodbox (${config.description})`,
   }),
   getRows: (raw) => raw?.rows || [],
   getExplainSql: (sql) => `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql};`,
