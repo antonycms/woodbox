@@ -43,6 +43,7 @@ const TabsBar = (props: ITabsBarProps) => {
     onCloseTabGroup,
     height = '30px',
     width = '100%',
+    padding,
   } = props;
   const {
     activeTheme: { __colors },
@@ -183,8 +184,8 @@ const TabsBar = (props: ITabsBarProps) => {
 
   const styleTabBar = React.useMemo(() => {
     const cssProperties = toCssProperties({ backgroundColorBar });
-    return { ...cssProperties, width: vertical ? width : undefined };
-  }, [backgroundColorBar, width, vertical]);
+    return { ...cssProperties, padding, width: vertical ? width : undefined };
+  }, [backgroundColorBar, padding, width, vertical]);
 
   const groupsById = React.useMemo(
     () => new Map(groups.map((group) => [group.id, group])),
@@ -614,6 +615,7 @@ export interface ITabsBarProps {
   backgroundColorBar: string;
   borderColor: string;
   contextMenuOptions?: IContextMenuOption<IActiveTabContextMenu>[];
+  padding?: string;
 }
 
 export interface IActiveTabContextMenu {

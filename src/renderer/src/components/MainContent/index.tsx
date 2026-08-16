@@ -9,6 +9,7 @@ import {
 import { Welcolme } from '@renderer/components/Welcome';
 import { useAppTabContext, type IAppTabData } from '@renderer/contexts/AppTab';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext } from '@renderer/contexts/Store';
 import { copyToClipboard } from '@renderer/utils/methods';
@@ -60,6 +61,7 @@ export const MainContent = () => {
     ungroupTabGroup,
     closeTabGroup,
   } = useAppTabContext();
+  const { visible: aiChatVisible } = useAIChatPanelContext();
   const { t } = useI18n();
   const { connections } = useStoreContext();
   const {
@@ -352,6 +354,7 @@ export const MainContent = () => {
         }
       >
         {splitPanes.map((pane, paneIndex) => {
+          const isLastPane = paneIndex === splitPanes.length - 1;
           const paneTabs = tabs.filter((tab) => pane.tabIds.includes(tab.id));
           const visiblePaneTabs = paneTabs.filter(
             (tab) => !tab.groupId || !collapsedGroupIds.has(tab.groupId),
@@ -399,6 +402,7 @@ export const MainContent = () => {
                 allowClose
                 draggable
                 borderBottom
+                padding={isLastPane && !aiChatVisible ? '0 34px 0 0' : undefined}
                 color={theme.color}
                 ascentColor={theme.ascentColor}
                 backgroundColor={theme.backgroundColor}
