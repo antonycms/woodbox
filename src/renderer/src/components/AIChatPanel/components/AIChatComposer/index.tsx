@@ -311,6 +311,34 @@ export const AIChatComposer = React.memo(
       [onChange],
     );
 
+    const handlePaste = React.useCallback(
+      (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const pastedText = event.clipboardData.getData('text');
+        const sanitizedText = pastedText.trim();
+
+        if (sanitizedText !== pastedText) {
+          event.preventDefault();
+
+          const { selectionStart, selectionEnd, value } = event.currentTarget;
+          const nextValue = `${value.slice(0, selectionStart)}${sanitizedText}${value.slice(selectionEnd)}`;
+          const nextCursor = selectionStart + sanitizedText.length;
+
+          onChange({
+            target: { value: nextValue },
+            currentTarget: { value: nextValue },
+          } as React.ChangeEvent<HTMLTextAreaElement>);
+          setActiveReference(getActiveReference(nextValue, nextCursor));
+
+          window.requestAnimationFrame(() => {
+            activeTextareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+          });
+        }
+
+        onPaste?.(event);
+      },
+      [activeTextareaRef, onChange, onPaste],
+    );
+
     const updateActiveReference = React.useCallback(
       (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
         setActiveReference(
@@ -482,7 +510,7 @@ export const AIChatComposer = React.memo(
                   placeholder={t('aiChat.composerPlaceholder')}
                   aria-label={t('aiChat.composerPlaceholder')}
                   onChange={handleChange}
-                  onPaste={onPaste}
+                  onPaste={handlePaste}
                   onMouseMove={handleTextareaMouseMove}
                   onMouseLeave={handleTextareaMouseLeave}
                   onMouseDown={handleTextareaMouseDown}
