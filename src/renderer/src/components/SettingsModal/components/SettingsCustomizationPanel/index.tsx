@@ -222,14 +222,12 @@ export const SettingsCustomizationPanel = React.memo(() => {
   );
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
-  const isBuiltinTheme = builtinThemeNames.includes(activeTheme.name);
   const canRemoveThemeName = React.useCallback((themeName: string) => {
     return !builtinThemeNames.includes(themeName) && themeName !== currentCustomThemeName;
   }, []);
   const canSaveCurrentTheme = isCurrentCustomTheme;
   const canDiscardCurrentChanges = isCurrentCustomTheme;
   const canRemoveActiveTheme = canRemoveThemeName(activeTheme.name);
-  const canExportActiveTheme = !isBuiltinTheme;
 
   const handleChangeTheme = React.useCallback(
     (themeNameSelected: string) => {
@@ -573,16 +571,14 @@ export const SettingsCustomizationPanel = React.memo(() => {
           />
         )}
 
-        {canExportActiveTheme && (
-          <Button
-            smallIcon
-            text
-            title={t('settings.customization.exportThemeTitle')}
-            icon={() => <ExportIcon size={15} />}
-            onClick={handleExportTheme}
-            color={colors.testButtonBackgroundColor}
-          />
-        )}
+        <Button
+          smallIcon
+          text
+          title={t('settings.customization.exportThemeTitle')}
+          icon={() => <ExportIcon size={15} />}
+          onClick={handleExportTheme}
+          color={colors.testButtonBackgroundColor}
+        />
 
         <Button
           smallIcon
