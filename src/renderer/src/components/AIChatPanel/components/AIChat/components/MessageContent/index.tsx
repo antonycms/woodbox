@@ -12,6 +12,7 @@ interface IMessageContentProps {
   content: string;
   queryApprovals?: IAIQueryApproval[];
   onApprove?(approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions): void;
+  onCopy?(approval: IAIQueryApproval): void;
   onReject?(approval: IAIQueryApproval): void;
 }
 
@@ -19,6 +20,7 @@ interface IRenderMarkdownOptions {
   queryApprovals?: IAIQueryApproval[];
   usedQueryApprovalIds: Set<string>;
   onApprove?: (approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions) => void;
+  onCopy?: (approval: IAIQueryApproval) => void;
   onReject?: (approval: IAIQueryApproval) => void;
 }
 
@@ -125,6 +127,7 @@ const renderMarkdownBlocks = (
             key={`${keyPrefix}_approval_${index}`}
             approval={approval}
             onApprove={options.onApprove}
+            onCopy={options.onCopy}
             onReject={options.onReject}
           />
         );
@@ -151,6 +154,7 @@ export const MessageContent = React.memo(({
   content,
   queryApprovals,
   onApprove,
+  onCopy,
   onReject,
 }: IMessageContentProps) => {
   const [activeContextKey, setActiveContextKey] = React.useState<string>();
@@ -162,6 +166,7 @@ export const MessageContent = React.memo(({
           <QueryApprovalCards
             approvals={queryApprovals}
             onApprove={onApprove}
+            onCopy={onCopy}
             onReject={onReject}
           />
         </div>
@@ -181,6 +186,7 @@ export const MessageContent = React.memo(({
     queryApprovals,
     usedQueryApprovalIds,
     onApprove,
+    onCopy,
     onReject,
   };
 
@@ -235,6 +241,7 @@ export const MessageContent = React.memo(({
         key="query_approvals"
         approvals={pendingQueryApprovals}
         onApprove={onApprove}
+        onCopy={onCopy}
         onReject={onReject}
       />,
     );

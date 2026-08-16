@@ -459,21 +459,37 @@ p.titleBlock {
 
 .queryApprovalActions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  margin-top: 7px;
+  margin-top: 12px;
+}
+
+.queryApprovalActionsLeft,
+.queryApprovalActionsRight {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.queryApprovalActionsRight {
+  justify-content: flex-end;
 }
 
 .queryApprovalActions button {
-  padding: 5px 8px;
-  border: 1px solid var(--borderColor);
-  border-radius: 6px;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 0;
   color: var(--color);
   cursor: pointer;
   font-size: 11px;
   line-height: 1.25;
-  background-color: transparent;
+  background: none;
+}
+
+.queryApprovalActions button:hover {
+  opacity: 0.8;
 }
 
 .queryApprovalActions button:disabled {
@@ -481,16 +497,26 @@ p.titleBlock {
   opacity: 0.55;
 }
 
-.queryApprovalActions button:first-child {
+.queryApprovalActions .queryApprovalButtonReject {
   color: var(--queryRejectedColor);
-  border-color: color-mix(in srgb, var(--queryRejectedColor) 48%, var(--borderColor));
-  background-color: color-mix(in srgb, var(--queryRejectedColor) 14%, transparent);
 }
 
-.queryApprovalActions button:last-child {
-  color: var(--sendColor);
-  border-color: var(--sendBackgroundColor);
-  background-color: var(--sendBackgroundColor);
+.queryApprovalActions .queryApprovalButtonPrimary {
+  color: var(--sendBackgroundColor);
+}
+
+.queryApprovalActions .queryApprovalButtonSecondary {
+  color: var(--color);
+}
+
+.queryApprovalActions .queryApprovalButtonIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  padding: 0;
+  color: var(--mutedColor);
 }
 
 .queryResultTable {

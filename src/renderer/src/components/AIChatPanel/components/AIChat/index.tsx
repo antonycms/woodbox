@@ -481,6 +481,25 @@ const AIChat = ({
     ],
   );
 
+  const copyQueryApprovalSql = React.useCallback(
+    async (approval: IAIQueryApproval) => {
+      try {
+        await navigator.clipboard.writeText(approval.sql);
+        showToast({
+          type: 'success',
+          title: t('aiChat.queryApprovalCopied'),
+        });
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: t('aiChat.queryApprovalCopyFailed'),
+          description: getErrorMessage(error),
+        });
+      }
+    },
+    [showToast, t],
+  );
+
   const handleComposerChange = React.useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraftMessage(event.target.value);
   }, []);
@@ -657,6 +676,7 @@ const AIChat = ({
                             content={message.content}
                             queryApprovals={message.queryApprovals}
                             onApprove={approveQueryApproval}
+                            onCopy={copyQueryApprovalSql}
                             onReject={rejectQueryApproval}
                           />
 

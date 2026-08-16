@@ -1,6 +1,7 @@
 import React from 'react';
 import { useI18n } from '@renderer/contexts/I18n';
 import type { IAIQueryApproval } from '@renderer/contexts/Store';
+import { CopyIcon } from '@renderer/styles/icons';
 import { isReadOnlySelectQuery } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
 
@@ -12,17 +13,19 @@ export interface IQueryApprovalApproveOptions {
 interface IQueryApprovalCardsProps {
   approvals?: IAIQueryApproval[];
   onApprove(approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions): void;
+  onCopy?(approval: IAIQueryApproval): void;
   onReject(approval: IAIQueryApproval): void;
 }
 
 interface IQueryApprovalCardProps {
   approval: IAIQueryApproval;
   onApprove(approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions): void;
+  onCopy?(approval: IAIQueryApproval): void;
   onReject(approval: IAIQueryApproval): void;
 }
 
 export const QueryApprovalCard = React.memo(
-  ({ approval, onApprove, onReject }: IQueryApprovalCardProps) => {
+  ({ approval, onApprove, onCopy, onReject }: IQueryApprovalCardProps) => {
     const { t } = useI18n();
     const [editing, setEditing] = React.useState(false);
     const [editedSql, setEditedSql] = React.useState(approval.sql);
@@ -102,27 +105,60 @@ export const QueryApprovalCard = React.memo(
 
         {isPending && (
           <div className={styles.queryApprovalActions}>
-            {editing ? (
-              <button type="button" onClick={handleCancelEdit}>
-                {t('aiChat.queryApprovalCancelEdit')}
+            <div className={styles.queryApprovalActionsLeft}>
+              {!editing && !!onCopy && (
+                <button
+                  type="button"
+                  className={styles.queryApprovalButtonIcon}
+                  title={t('aiChat.queryApprovalCopy')}
+                  aria-label={t('aiChat.queryApprovalCopy')}
+                  onClick={() => onCopy(approval)}
+                >
+                  <CopyIcon size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className={styles.queryApprovalActionsRight}>
+              {!editing && (
+                <button
+                  type="button"
+                  className={styles.queryApprovalButtonSecondary}
+                  onClick={handleEditClick}
+                >
+                  {t('aiChat.queryApprovalEdit')}
+                </button>
+              )}
+              {editing ? (
+                <button
+                  type="button"
+                  className={styles.queryApprovalButtonSecondary}
+                  onClick={handleCancelEdit}
+                >
+                  {t('aiChat.queryApprovalCancelEdit')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.queryApprovalButtonReject}
+                  onClick={() => onReject(approval)}
+                >
+                  {t('aiChat.queryApprovalReject')}
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.queryApprovalButtonPrimary}
+                disabled={!canApprove}
+                onClick={handleApproveClick}
+              >
+                {unsafeConfirming
+                  ? t('aiChat.queryApprovalUnsafeConfirm')
+                  : editing
+                    ? t('aiChat.queryApprovalSaveAndRun')
+                    : t('aiChat.queryApprovalApprove')}
               </button>
-            ) : (
-              <button type="button" onClick={() => onReject(approval)}>
-                {t('aiChat.queryApprovalReject')}
-              </button>
-            )}
-            {!editing && (
-              <button type="button" onClick={handleEditClick}>
-                {t('aiChat.queryApprovalEdit')}
-              </button>
-            )}
-            <button type="button" disabled={!canApprove} onClick={handleApproveClick}>
-              {unsafeConfirming
-                ? t('aiChat.queryApprovalUnsafeConfirm')
-                : editing
-                  ? t('aiChat.queryApprovalSaveAndRun')
-                  : t('aiChat.queryApprovalApprove')}
-            </button>
+            </div>
           </div>
         )}
       </div>
@@ -133,7 +169,7 @@ export const QueryApprovalCard = React.memo(
 QueryApprovalCard.displayName = 'QueryApprovalCard';
 
 export const QueryApprovalCards = React.memo(
-  ({ approvals, onApprove, onReject }: IQueryApprovalCardsProps) => {
+  ({ approvals, onApprove, onCopy, onReject }: IQueryApprovalCardsProps) => {
     if (!approvals?.length) return null;
 
     return (
@@ -143,6 +179,7 @@ export const QueryApprovalCards = React.memo(
             key={approval.id}
             approval={approval}
             onApprove={onApprove}
+            onCopy={onCopy}
             onReject={onReject}
           />
         ))}
