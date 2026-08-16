@@ -29,7 +29,7 @@ import {
   getQueryResultForTable,
   serializeQueryResultForAI,
 } from './utils/messages';
-import { buildAIChatMessageContent } from '../../utils/draftContexts';
+import { buildAIChatMessageContent, getAIChatUserContent } from '../../utils/draftContexts';
 
 const AIChat = ({
   id_chat,
@@ -189,7 +189,8 @@ const AIChat = ({
             t('aiChat.queryApprovalRequiredMessage'),
           ) || t('aiChat.queryApprovalRequiredMessage');
         const isFirstMessage = !chat?.messages.length;
-        const nextTitle = isFirstMessage ? getExcerpt(content, 64) : undefined;
+        const titleContent = getAIChatUserContent(content);
+        const nextTitle = isFirstMessage && titleContent ? getExcerpt(titleContent, 64) : undefined;
 
         const completedAt = new Date().toISOString();
 
