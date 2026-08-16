@@ -19,5 +19,18 @@ const selectDbeaverExportFile = async () => {
   return result.canceled ? null : result.filePaths[0];
 };
 
+const selectSslFile = async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [
+      { name: 'Certificados e chaves', extensions: ['pem', 'crt', 'cert', 'cer', 'key'] },
+      { name: 'Todos os arquivos', extensions: ['*'] },
+    ],
+  });
+
+  return result.canceled ? null : result.filePaths[0];
+};
+
 addListener('@dialog:select_sqlite_file', selectSqliteFile);
 addListener('@dialog:select_dbeaver_export_file', selectDbeaverExportFile);
+addListener('@dialog:select_ssl_file', selectSslFile);

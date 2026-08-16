@@ -1,0 +1,21 @@
+.checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 4px 10px;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.checkbox input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

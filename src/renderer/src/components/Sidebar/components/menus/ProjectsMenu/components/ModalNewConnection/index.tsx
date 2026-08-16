@@ -18,11 +18,31 @@ import {
   getRendererDialectOptions,
   type Dialect,
 } from '@renderer/database/dialects';
+import styles from './styles.module.css';
 
 const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironment }[] = [
   { label: 'Desenvolvimento', value: 'development' },
   { label: 'Produção', value: 'production' },
 ];
+
+type SslFileField = 'sslCaCert' | 'sslCert' | 'sslKey';
+
+const getConnectionData = (data: IDataNewConnection, idProject?: string) => {
+  const dialect = getRendererDialect(data.dialect);
+  const useSsl = !!(dialect.supportsSsl && data.ssl);
+
+  return {
+    ...data,
+    host: dialect.connectionMode === 'file' ? '' : data.host,
+    port: dialect.connectionMode === 'file' ? 0 : Number(data.port),
+    ssl: useSsl,
+    sslRejectUnauthorized: useSsl ? !!data.sslRejectUnauthorized : false,
+    sslCaCert: useSsl ? data.sslCaCert : '',
+    sslCert: useSsl ? data.sslCert : '',
+    sslKey: useSsl ? data.sslKey : '',
+    id_project: idProject || data.id_project,
+  };
+};
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
@@ -52,6 +72,11 @@ export const ModalNewConnection = React.memo(
         database: '',
         username: '',
         password: '',
+        ssl: false,
+        sslRejectUnauthorized: false,
+        sslCaCert: '',
+        sslCert: '',
+        sslKey: '',
       });
 
     const selectedDialect = getRendererDialect(state.dialect);
@@ -70,6 +95,11 @@ export const ModalNewConnection = React.memo(
           dialect,
           host: spec.connectionMode === 'file' ? '' : prevState.host,
           port: spec.connectionMode === 'file' ? '' : spec.defaultPort || prevState.port,
+          ssl: spec.supportsSsl ? prevState.ssl : false,
+          sslRejectUnauthorized: spec.supportsSsl ? prevState.sslRejectUnauthorized : false,
+          sslCaCert: spec.supportsSsl ? prevState.sslCaCert : '',
+          sslCert: spec.supportsSsl ? prevState.sslCert : '',
+          sslKey: spec.supportsSsl ? prevState.sslKey : '',
         }));
       },
       [registerDialect],
@@ -92,13 +122,7 @@ export const ModalNewConnection = React.memo(
 
     const onSubmit = React.useCallback(
       handleSubmit(async (data) => {
-        const dialect = getRendererDialect(data.dialect);
-        const connection = {
-          ...data,
-          host: dialect.connectionMode === 'file' ? '' : data.host,
-          port: dialect.connectionMode === 'file' ? 0 : Number(data.port),
-          id_project: idProject || data.id_project,
-        };
+        const connection = getConnectionData(data, idProject);
 
         if (idConnection) {
           await editConnection(idConnection, connection);
@@ -118,14 +142,7 @@ export const ModalNewConnection = React.memo(
       if (!checkDataForm) return;
 
       const formValue = getValue();
-      const dialect = getRendererDialect(formValue.dialect);
-
-      const connection = {
-        ...formValue,
-        host: dialect.connectionMode === 'file' ? '' : formValue.host,
-        port: dialect.connectionMode === 'file' ? 0 : Number(formValue.port),
-        id_project: idProject || formValue.id_project,
-      };
+      const connection = getConnectionData(formValue, idProject);
 
       try {
         setLoadingTestConnection(true);
@@ -153,8 +170,36 @@ export const ModalNewConnection = React.memo(
         ...prevState,
         ...connectionSavedData,
         environment: connectionSavedData?.environment || 'development',
+        ssl: !!connectionSavedData?.ssl,
+        sslRejectUnauthorized: !!connectionSavedData?.sslRejectUnauthorized,
+        sslCaCert: connectionSavedData?.sslCaCert || '',
+        sslCert: connectionSavedData?.sslCert || '',
+        sslKey: connectionSavedData?.sslKey || '',
       }));
     };
+
+    const handleSslChange = React.useCallback((ssl: boolean) => {
+      setState((prevState) => ({
+        ...prevState,
+        ssl,
+        sslRejectUnauthorized: ssl ? prevState.sslRejectUnauthorized : false,
+        sslCaCert: ssl ? prevState.sslCaCert : '',
+        sslCert: ssl ? prevState.sslCert : '',
+        sslKey: ssl ? prevState.sslKey : '',
+      }));
+    }, []);
+
+    const handleSslRejectUnauthorizedChange = React.useCallback((sslRejectUnauthorized: boolean) => {
+      setState((prevState) => ({ ...prevState, sslRejectUnauthorized }));
+    }, []);
+
+    const selectSslFile = React.useCallback(async (field: SslFileField) => {
+      const filePath = await call<string | null>('@dialog:select_ssl_file');
+
+      if (!filePath) return;
+
+      setState((prevState) => ({ ...prevState, [field]: filePath }));
+    }, []);
 
     React.useEffect(() => {
       loadConnectionEditingData();
@@ -243,6 +288,7 @@ export const ModalNewConnection = React.memo(
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
                 {...register('database')}
+                readOnly
                 onClick={isFileConnection ? selectSqliteFile : undefined}
               />
             ) : (
@@ -273,6 +319,69 @@ export const ModalNewConnection = React.memo(
                   color={colors.fieldColor}
                   {...register('password')}
                 />
+                {!!selectedDialect.supportsSsl && (
+                  <>
+                    <div className={styles.checkboxes}>
+                      <label className={styles.checkbox} style={{ color: colors.color }}>
+                        <input
+                          type="checkbox"
+                          name="ssl"
+                          checked={!!state.ssl}
+                          onChange={(event) => handleSslChange(event.target.checked)}
+                        />
+                        {t('field.ssl')}
+                      </label>
+
+                      <label className={styles.checkbox} style={{ color: colors.color }}>
+                        <input
+                          type="checkbox"
+                          name="sslRejectUnauthorized"
+                          checked={!!state.sslRejectUnauthorized}
+                          disabled={!state.ssl}
+                          onChange={(event) =>
+                            handleSslRejectUnauthorizedChange(event.target.checked)
+                          }
+                        />
+                        {t('field.sslRejectUnauthorized')}
+                      </label>
+                    </div>
+
+                    {!!state.ssl && (
+                      <>
+                        <Input
+                          label={t('field.sslCaCert')}
+                          xs={12}
+                          md={4}
+                          backgroundColor={colors.fieldBackgroundColor}
+                          color={colors.fieldColor}
+                          {...register('sslCaCert')}
+                          readOnly
+                          onClick={() => selectSslFile('sslCaCert')}
+                        />
+                        <Input
+                          label={t('field.sslCert')}
+                          xs={12}
+                          md={4}
+                          backgroundColor={colors.fieldBackgroundColor}
+                          color={colors.fieldColor}
+                          {...register('sslCert')}
+                          readOnly
+                          onClick={() => selectSslFile('sslCert')}
+                        />
+                        <Input
+                          label={t('field.sslKey')}
+                          xs={12}
+                          md={4}
+                          backgroundColor={colors.fieldBackgroundColor}
+                          color={colors.fieldColor}
+                          {...register('sslKey')}
+                          readOnly
+                          onClick={() => selectSslFile('sslKey')}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
               </>
             )}
           </Row>
@@ -348,4 +457,9 @@ interface IDataNewConnection {
   database: string;
   username?: string;
   password?: string;
+  ssl?: boolean;
+  sslRejectUnauthorized?: boolean;
+  sslCaCert?: string;
+  sslCert?: string;
+  sslKey?: string;
 }

@@ -32,6 +32,7 @@ export const Input = (props: IInputProps) => {
     backgroundColor,
     placeholderColor,
     disabled,
+    readOnly,
     autoFocus,
     useFakeInputToValidate,
     children,
@@ -65,8 +66,13 @@ export const Input = (props: IInputProps) => {
   const inputContainerStyle = React.useMemo(() => ({ backgroundColor }), [backgroundColor]);
 
   const inputStyle = React.useMemo(() => {
-    return { ...toCssProperties({ placeholderColor }), maxWidth, color };
-  }, [color, maxWidth, placeholderColor]);
+    return {
+      ...toCssProperties({ placeholderColor }),
+      maxWidth,
+      color,
+      cursor: readOnly && onClick ? 'pointer' : undefined,
+    };
+  }, [color, maxWidth, onClick, placeholderColor, readOnly]);
 
   return (
     <Column {...gridSystem}>
@@ -90,14 +96,16 @@ export const Input = (props: IInputProps) => {
               value={value || dataValue || ''}
               type={type}
               onChange={fakeHandle}
-              disabled={disabled}
-            />
+            disabled={disabled}
+            readOnly={readOnly}
+          />
           )}
 
           <input
             ref={ref}
             autoFocus={autoFocus}
             disabled={disabled}
+            readOnly={readOnly}
             id={id}
             name={name}
             title={inputTitle}
@@ -163,6 +171,7 @@ export type IInputProps = IGridSystem & {
   ref?: React.Ref<HTMLInputElement>;
   children?: React.ReactNode;
   disabled?: boolean;
+  readOnly?: boolean;
   value?: string | number;
   'data-value'?: any;
   useFakeInputToValidate?: boolean;
