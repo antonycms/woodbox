@@ -444,6 +444,11 @@ export const sendCodexChatGPTMessage = async (
         isQueryExecutionToolOutput(output)
       ) {
         queryApprovals.set(output.queryApproval.id, output.queryApproval);
+
+        return {
+          content: latestText,
+          queryApprovals: Array.from(queryApprovals.values()),
+        };
       }
 
       console.log({
