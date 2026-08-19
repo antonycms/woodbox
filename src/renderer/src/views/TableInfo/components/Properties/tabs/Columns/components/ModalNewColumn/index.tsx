@@ -183,7 +183,6 @@ const ModalNewColumn = ({
 
       const column: IPendingColumnCreate = {
         __pendingId: generateHash(),
-        __pendingAction: 'create',
         column_name: columnName,
         data_type: dataType,
         is_nullable: data.is_auto_increment ? false : !data.required,
@@ -197,8 +196,7 @@ const ModalNewColumn = ({
       const reference: IPendingReferenceCreate | undefined = data.is_foreign_key
         ? {
             __pendingId: generateHash(),
-            __pendingAction: 'create',
-            constraint_name: getGeneratedForeignKeyName(
+                constraint_name: getGeneratedForeignKeyName(
               table,
               columnName,
               selectedReferenceTable!.table_name,
@@ -215,8 +213,7 @@ const ModalNewColumn = ({
       const index: IPendingIndexCreate | undefined = data.is_index
         ? {
             __pendingId: generateHash(),
-            __pendingAction: 'create',
-            index_name: getGeneratedIndexName(table, [columnName]),
+                index_name: getGeneratedIndexName(table, [columnName]),
             index_method: indexMethods[0] || '',
             is_unique: false,
             is_primary: false,

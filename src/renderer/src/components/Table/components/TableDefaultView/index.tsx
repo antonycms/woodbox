@@ -178,6 +178,8 @@ const TableDefaultView = <Row,>({
               const editedValue = editedRow?.[column.attribute];
               const newValue = newRow?.[column.attribute];
               const isEdited = editedValue !== undefined;
+              const isRemoved = !!row.__is_removed;
+              const isNew = !!row.__is_new_row;
               const hasNewValue = newValue !== undefined;
               const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
 
@@ -188,8 +190,9 @@ const TableDefaultView = <Row,>({
                   columnIndex={columnIndex}
                   indexRow={indexRow}
                   rowHeight={rowHeight}
-                  style={row.__style}
+                  isNew={isNew}
                   isEdited={isEdited}
+                  isRemoved={isRemoved}
                   isEditing={rowColumnKey === cellEditingKey}
                   editInitialValue={
                     rowColumnKey === cellEditingKey ? cellEditInitialValue : undefined

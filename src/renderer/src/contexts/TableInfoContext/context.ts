@@ -1,4 +1,4 @@
-import { createContext, type CSSProperties } from 'react';
+import { createContext } from 'react';
 
 import type {
   ConstraintType,
@@ -29,54 +29,32 @@ export type ITableInfoLoading = {
 
 export interface IPendingColumnCreate extends IColumnInfo {
   __pendingId: string;
-  __pendingAction: 'create';
-  __style?: CSSProperties;
 }
 
-export interface IPendingColumnDrop extends IColumnInfo {
-  __pendingAction: 'drop';
-  __style?: CSSProperties;
-}
+export type IPendingColumnDrop = IColumnInfo;
 
 export interface IPendingColumnChange extends IColumnInfo {
-  __pendingAction: 'change';
   __originalColumn: IColumnInfo;
-  __style?: CSSProperties;
 }
 
 export interface IPendingIndexCreate extends IIndexInfo {
   __pendingId: string;
-  __pendingAction: 'create';
-  __style?: CSSProperties;
 }
 
-export interface IPendingIndexDrop extends IIndexInfo {
-  __pendingAction: 'drop';
-  __style?: CSSProperties;
-}
+export type IPendingIndexDrop = IIndexInfo;
 
 export interface IPendingRestrictionCreate extends IColumnRestrictionsInfo {
   __pendingId: string;
-  __pendingAction: 'create';
-  __style?: CSSProperties;
   constraint_type: ConstraintType;
 }
 
-export interface IPendingRestrictionDrop extends IColumnRestrictionsInfo {
-  __pendingAction: 'drop';
-  __style?: CSSProperties;
-}
+export type IPendingRestrictionDrop = IColumnRestrictionsInfo;
 
 export interface IPendingReferenceCreate extends IColumnReferenceInfo {
   __pendingId: string;
-  __pendingAction: 'create';
-  __style?: CSSProperties;
 }
 
-export interface IPendingReferenceDrop extends IColumnReferenceInfo {
-  __pendingAction: 'drop';
-  __style?: CSSProperties;
-}
+export type IPendingReferenceDrop = IColumnReferenceInfo;
 
 export interface ITableInfoContext extends ITableInfo {
   pendingColumns: IPendingColumnCreate[];

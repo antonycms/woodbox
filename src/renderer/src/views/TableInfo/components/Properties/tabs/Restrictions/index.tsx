@@ -53,7 +53,6 @@ const Restrictios = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
-      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -112,30 +111,38 @@ const Restrictios = ({
     ],
     [columns, droppedColumnNames, pendingColumns],
   );
+  const existingRestrictions = React.useMemo(() => restrictions, [restrictions]);
+  const pendingRestrictionRows = React.useMemo(
+    () => pendingRestrictions,
+    [pendingRestrictions],
+  );
   const allRestrictions = React.useMemo(
-    () => [
-      ...restrictions.map((restriction) => {
-        if (!droppedConstraintNames.has(restriction.constraint_name)) return restriction;
-
-        return {
-          ...restriction,
-          __pendingAction: 'drop',
-          __style: {
-            backgroundColor: __colors.redTransparent,
-            textDecoration: 'line-through',
-          },
-        };
-      }),
-      ...pendingRestrictions,
-    ],
-    [__colors.redTransparent, restrictions, droppedConstraintNames, pendingRestrictions],
+    () => [...existingRestrictions, ...pendingRestrictionRows],
+    [existingRestrictions, pendingRestrictionRows],
   );
   const filteredAndSortedRestrictions = useFilteredSortedRows({
-    rows: allRestrictions,
+    rows: existingRestrictions,
     filterText: restrictionFilterText,
     sort,
     getSearchValues: getRestrictionSearchValues,
   });
+
+  const filteredPendingRestrictionRows = useFilteredSortedRows({
+    rows: pendingRestrictionRows,
+    filterText: restrictionFilterText,
+    sort,
+    getSearchValues: getRestrictionSearchValues,
+  });
+  const newRestrictionRows = React.useMemo(
+    () =>
+      new Map(
+        filteredPendingRestrictionRows.map((restriction) => [
+          (restriction as IPendingRestrictionCreate).__pendingId,
+          restriction,
+        ]),
+      ),
+    [filteredPendingRestrictionRows],
+  );
 
   const handleSortRestrictions = React.useCallback(
     (column: IColumn<IColumnRestrictionsInfo>, sortType?: ISortDirection | null) => {
@@ -251,11 +258,7 @@ const Restrictios = ({
 
   const handleUndoSelectedDroppedRestrictions = React.useCallback(() => {
     const constraintNames = selectedRestrictions
-      .filter(
-        (restriction) =>
-          (restriction as { __pendingAction?: string }).__pendingAction === 'drop' ||
-          droppedConstraintNames.has(restriction.constraint_name),
-      )
+      .filter((restriction) => droppedConstraintNames.has(restriction.constraint_name))
       .map((restriction) => restriction.constraint_name);
 
     if (!constraintNames.length) return;
@@ -375,6 +378,9 @@ const Restrictios = ({
         rowKeyExtractor={getRestrictionSelectionKey}
         onContextMenu={onContextMenuTable}
         onSelectRow={setSelectedRestrictions}
+        newRows={newRestrictionRows}
+        newRowsPosition="end"
+        removedRows={droppedConstraintNames}
         columns={tableColumns}
       />
 

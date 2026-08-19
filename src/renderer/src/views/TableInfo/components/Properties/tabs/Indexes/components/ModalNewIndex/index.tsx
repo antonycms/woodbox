@@ -101,7 +101,6 @@ const ModalNewIndex = ({
 
       const index: IPendingIndexCreate = {
         __pendingId: generateHash(),
-        __pendingAction: 'create',
         index_name: getGeneratedIndexName(table, columnNames, columnOrders),
         index_method: indexMethod,
         is_unique: false,

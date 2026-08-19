@@ -71,6 +71,8 @@ interface ITableProps<Row = any> {
   onEditNewRow?(rowKey: React.Key, attribute: string, value: any): void;
   editedRows?: Map<React.Key, any>;
   newRows?: Map<React.Key, any>;
+  newRowsPosition?: 'start' | 'end';
+  removedRows?: Set<React.Key>;
   rows: Row[];
   columns: IColumn<Row>[];
   sort?: ITableSort[];
@@ -165,6 +167,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onScrollEnd,
     editedRows,
     newRows,
+    newRowsPosition = 'start',
+    removedRows,
     onEditRow,
     onEditNewRow,
     sort,
@@ -178,7 +182,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   } = props;
 
   const {
-    activeTheme: { table: theme },
+    activeTheme: { __colors, table: theme },
   } = useThemeContext();
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
@@ -238,32 +242,34 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const serializedRows = React.useMemo(() => {
     const newRowsLength = newRows?.size ?? 0;
+    const newRowsStartIndex = newRowsPosition === 'end' ? rows.length : 0;
+    const rowsStartIndex = newRowsPosition === 'end' ? 0 : newRowsLength;
 
     const serializedNewRows = [...(newRows?.entries() ?? [])].map(([keyRow, row], index) => ({
       ...row,
-      __index_row: index,
+      __index_row: newRowsStartIndex + index,
       __row_index: index,
       __key_row: keyRow,
       __is_new_row: true,
-      __style: {
-        backgroundColor: theme.backgroundColorColumnEdited,
-        color: theme.colorColumnEdited,
-      },
     }));
 
     const serializedRows = rows.map((row, index) => {
       const keyRow = rowKeyExtractor(row, index);
+      const isRemoved = removedRows?.has(keyRow);
 
       return {
         ...row,
-        __index_row: index + newRowsLength,
+        __index_row: rowsStartIndex + index,
         __row_index: index,
         __key_row: keyRow,
+        __is_removed: isRemoved,
       };
     });
 
-    return [...serializedNewRows, ...serializedRows];
-  }, [rows, newRows, rowKeyExtractor, theme.backgroundColorColumnEdited, theme.colorColumnEdited]);
+    return newRowsPosition === 'end'
+      ? [...serializedRows, ...serializedNewRows]
+      : [...serializedNewRows, ...serializedRows];
+  }, [rows, newRows, newRowsPosition, removedRows, rowKeyExtractor]);
 
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;
@@ -303,8 +309,16 @@ function Table<Row = any>(props: ITableProps<Row>) {
         ...cssVars,
         '--tableSearchTop': `${searchOverlayPosition.top}px`,
         '--tableSearchRight': `${searchOverlayPosition.right}px`,
+        '--backgroundColorRowNew': `color-mix(in srgb, ${__colors.green} 24%, transparent)`,
+        '--backgroundColorRowRemoved': __colors.redTransparent,
       }) as React.CSSProperties,
-    [cssVars, searchOverlayPosition.right, searchOverlayPosition.top],
+    [
+      __colors.green,
+      __colors.redTransparent,
+      cssVars,
+      searchOverlayPosition.right,
+      searchOverlayPosition.top,
+    ],
   );
 
   const {
@@ -379,7 +393,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           !!column.editable &&
           column.type !== 'autocomplete' &&
           column.type !== 'autocomplete-multi' &&
-          (row.__is_new_row ? !!onEditNewRow : !!onEditRow);
+          !row.__is_removed && (row.__is_new_row ? !!onEditNewRow : !!onEditRow);
 
         if (findSearchIndex(serializedValue, query, options) !== -1) {
           occurrences.push({
@@ -701,7 +715,9 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const saveCell = (rowIndex: number, attribute: string) => {
         const row = serializedRowsRef.current[rowIndex];
 
-        if (row?.__is_new_row) {
+        if (!row || row.__is_removed) return;
+
+        if (row.__is_new_row) {
           onEditNewRow?.(row.__key_row, attribute, newValue);
           return;
         }
@@ -732,7 +748,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         const row = serializedRowsRef.current[rowIndex];
         const column = columnsRef.current[colIndex];
 
-        if (!row || !column?.editable) return;
+        if (!row || row.__is_removed || !column?.editable) return;
         if (column.type === 'autocomplete') {
           if (Array.isArray(newValue) || !column.dataAutocomplete?.includes(String(newValue))) {
             return;
@@ -752,7 +768,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
       const row = serializedRowsRef.current[occurrence.rowIndex];
       const column = columnsRef.current[occurrence.colIndex];
-      if (!row || !column?.editable) return false;
+      if (!row || row.__is_removed || !column?.editable) return false;
       if (column.type === 'autocomplete' || column.type === 'autocomplete-multi') return false;
 
       const value = getResolvedCellValue(row, column);
@@ -810,7 +826,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const row = serializedRowsRef.current.find((item) => String(item.__key_row) === keyRow);
       const column = columnsRef.current[columnIndex];
 
-      if (!row || !column?.editable) return;
+      if (!row || row.__is_removed || !column?.editable) return;
 
       scrollCellIntoView(row.__index_row, columnIndex);
       setCellEditInitialValue(undefined);
@@ -1372,7 +1388,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           : serializedRowsRef.current[anchor.rowIndex];
         const column = columnsRef.current[anchor.colIndex];
 
-        if (!row || !column?.editable) return;
+        if (!row || row.__is_removed || !column?.editable) return;
 
         scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
         setCellEditInitialValue(undefined);
@@ -1398,7 +1414,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           : serializedRowsRef.current[anchor.rowIndex];
         const column = columnsRef.current[anchor.colIndex];
 
-        if (!row || !column?.editable) return;
+        if (!row || row.__is_removed || !column?.editable) return;
 
         ev.preventDefault();
         scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
@@ -1615,7 +1631,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         const column = columnsRef.current[colIndex];
         const value = isMatrix ? grid[rowIndex - firstRow]?.[colIndex - firstColumn] : grid[0][0];
 
-        if (!row || !column?.editable || value === undefined) return [];
+        if (!row || row.__is_removed || !column?.editable || value === undefined) return [];
         if (column.type === 'autocomplete' && !column.dataAutocomplete?.includes(value)) return [];
         if (row.__is_new_row ? !onEditNewRow : !onEditRow) return [];
 

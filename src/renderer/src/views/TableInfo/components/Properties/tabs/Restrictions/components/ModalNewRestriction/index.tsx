@@ -80,7 +80,6 @@ const ModalNewRestriction = ({
 
       const restriction: IPendingRestrictionCreate = {
         __pendingId: generateHash(),
-        __pendingAction: 'create',
         constraint_name: getGeneratedConstraintName(
           table,
           data.constraint_type,

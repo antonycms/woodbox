@@ -98,6 +98,8 @@ interface ITableAnalysisValueProps {
   value: any;
   serializedValue: string;
   isEdited?: boolean;
+  isRemoved?: boolean;
+  isNew?: boolean;
   isSelected?: boolean;
   isSearchMatch?: boolean;
   isActiveSearchMatch?: boolean;
@@ -125,6 +127,8 @@ const TableAnalysisValue = React.memo(
     value,
     serializedValue,
     isEdited,
+    isRemoved,
+    isNew,
     isSelected,
     isSearchMatch,
     isActiveSearchMatch,
@@ -141,12 +145,14 @@ const TableAnalysisValue = React.memo(
     const className = React.useMemo(() => {
       return classes(
         styles.analysis_value,
+        isNew && styles.new,
         isEdited && styles.edited,
+        isRemoved && styles.removed,
         isSearchMatch && styles.search_match,
         isActiveSearchMatch && styles.search_active_match,
         isSelected && styles.cell_selected,
       );
-    }, [isActiveSearchMatch, isEdited, isSearchMatch, isSelected]);
+    }, [isActiveSearchMatch, isEdited, isNew, isRemoved, isSearchMatch, isSelected]);
 
     const handleDoubleClick = React.useCallback(() => {
       onDoubleClick?.(rowColumnKey);
@@ -423,6 +429,8 @@ const TableAnalysisView = ({
               const editedValue = editedRow?.[column.attribute];
               const newValue = newRow?.[column.attribute];
               const isEdited = editedValue !== undefined;
+              const isRemoved = !!row.__is_removed;
+              const isNew = !!row.__is_new_row;
               const hasNewValue = newValue !== undefined;
               const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
               const serializedValue = serializeTableValue(value, column.type);
@@ -457,7 +465,9 @@ const TableAnalysisView = ({
                   attribute={attribute}
                   value={value}
                   serializedValue={serializedValue}
+                  isNew={isNew}
                   isEdited={isEdited}
+                  isRemoved={isRemoved}
                   isSelected={isSelected}
                   isSearchMatch={isSearchMatch}
                   isActiveSearchMatch={isActiveSearchMatch}

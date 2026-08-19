@@ -42,6 +42,8 @@ interface ITableColumnProps {
   isEditing?: boolean;
   editInitialValue?: string | number;
   isEdited?: boolean;
+  isRemoved?: boolean;
+  isNew?: boolean;
   value?: number | string | boolean | null | (string | number)[];
   info?: string;
   name?: string;
@@ -68,6 +70,8 @@ interface ITableColumnProps {
 const TableColumn = ({
   isEditing,
   isEdited,
+  isRemoved,
+  isNew,
   title,
   value,
   info,
@@ -115,7 +119,9 @@ const TableColumn = ({
       styles.table_column,
       indexRow % 2 ? styles.even : styles.odd,
       resizable && styles.resizable,
+      isNew && styles.new,
       isEdited && styles.edited,
+      isRemoved && styles.removed,
       isHeaderColumn && styles.disableSelection,
       isSearchMatch && !resizable && styles.search_match,
       isActiveSearchMatch && !resizable && styles.search_active_match,
@@ -126,6 +132,8 @@ const TableColumn = ({
     isActiveSearchMatch,
     isEdited,
     isHeaderColumn,
+    isNew,
+    isRemoved,
     isSearchMatch,
     isSelectedCell,
     resizable,

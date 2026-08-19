@@ -81,7 +81,6 @@ const Data = ({
 }: IDataProps) => {
   const {
     activeTheme: {
-      __colors,
       tableInfo: { data: theme, tab: tabTheme },
       modal: colors,
     },
@@ -414,34 +413,9 @@ const Data = ({
     [handleApplySelectedCellValue, selectedCell],
   );
 
-  const itemsWithPendingStyles = React.useMemo(
-    () =>
-      items.map((item, index) => {
-        const key = item.__table_hash_item ?? index;
-
-        if (droppedRows.has(key)) {
-          return {
-            ...item,
-            __pendingAction: 'drop',
-            __style: {
-              ...(item as any).__style,
-              backgroundColor: __colors.redTransparent,
-              textDecoration: 'line-through',
-            },
-          };
-        }
-
-        if (!editedFieldsRows.has(key)) return item;
-
-        return {
-          ...item,
-          __style: {
-            ...(item as any).__style,
-            backgroundColor: __colors.orangeTransparent,
-          },
-        };
-      }),
-    [__colors.orangeTransparent, __colors.redTransparent, items, droppedRows, editedFieldsRows],
+  const removedRowKeys = React.useMemo(
+    () => new Set(droppedRows.keys()),
+    [droppedRows],
   );
 
   const onContextMenuTable = React.useCallback((
@@ -1016,7 +990,7 @@ const Data = ({
         <div className={styles.tableWrapper}>
           <Table
             columns={columnsSerialized}
-            rows={itemsWithPendingStyles}
+            rows={items}
             sort={sort}
             onSort={handleSort}
             rowKeyExtractor={rowKeyExtractor}
@@ -1027,6 +1001,7 @@ const Data = ({
             onSelectCellData={setSelectedCell}
             editedRows={editedFieldsRows}
             newRows={newRows}
+            removedRows={removedRowKeys}
             onCellLinkClick={handleFkCellClick}
             onCellLinkPreviewClick={handleFkPreviewClick}
             onEditNewRow={isReadOnlyObject ? undefined : handleEditNewRow}

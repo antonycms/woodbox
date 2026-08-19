@@ -80,7 +80,6 @@ const Indexes = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
-      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -136,40 +135,51 @@ const Indexes = ({
     ],
     [columns, droppedColumnNames, pendingColumns],
   );
-  const allIndexes = React.useMemo<IIndexInfoSerialized[]>(
-    () => [
-      ...indexes.map((index) => {
-        const indexWithSize = {
-          ...index,
-          column_names_display: getIndexColumnsText(index),
-          index_size: getIndexSizeText(index),
-        };
-
-        if (!droppedIndexNames.has(index.index_name)) return indexWithSize;
-
-        return {
-          ...indexWithSize,
-          __pendingAction: 'drop',
-          __style: {
-            backgroundColor: __colors.redTransparent,
-            textDecoration: 'line-through',
-          },
-        };
-      }),
-      ...pendingIndexes.map((index) => ({
+  const existingIndexes = React.useMemo<IIndexInfoSerialized[]>(
+    () =>
+      indexes.map((index) => ({
         ...index,
         column_names_display: getIndexColumnsText(index),
         index_size: getIndexSizeText(index),
       })),
-    ],
-    [__colors.redTransparent, indexes, droppedIndexNames, pendingIndexes],
+    [indexes],
+  );
+  const pendingIndexRows = React.useMemo<IIndexInfoSerialized[]>(
+    () =>
+      pendingIndexes.map((index) => ({
+        ...index,
+        column_names_display: getIndexColumnsText(index),
+        index_size: getIndexSizeText(index),
+      })),
+    [pendingIndexes],
+  );
+  const allIndexes = React.useMemo<IIndexInfoSerialized[]>(
+    () => [...existingIndexes, ...pendingIndexRows],
+    [existingIndexes, pendingIndexRows],
   );
   const filteredAndSortedIndexes = useFilteredSortedRows({
-    rows: allIndexes,
+    rows: existingIndexes,
     filterText: indexFilterText,
     sort,
     getSearchValues: getIndexSearchValues,
   });
+
+  const filteredPendingIndexRows = useFilteredSortedRows({
+    rows: pendingIndexRows,
+    filterText: indexFilterText,
+    sort,
+    getSearchValues: getIndexSearchValues,
+  });
+  const newIndexRows = React.useMemo(
+    () =>
+      new Map(
+        filteredPendingIndexRows.map((index) => [
+          (index as IPendingIndexCreate).__pendingId,
+          index,
+        ]),
+      ),
+    [filteredPendingIndexRows],
+  );
 
   const handleSortIndexes = React.useCallback(
     (column: IColumn<IIndexInfoSerialized>, sortType?: ISortDirection | null) => {
@@ -292,11 +302,7 @@ const Indexes = ({
 
   const handleUndoSelectedDroppedIndexes = React.useCallback(() => {
     const indexNames = selectedIndexes
-      .filter(
-        (index) =>
-          (index as { __pendingAction?: string }).__pendingAction === 'drop' ||
-          droppedIndexNames.has(index.index_name),
-      )
+      .filter((index) => droppedIndexNames.has(index.index_name))
       .map((index) => index.index_name);
 
     if (!indexNames.length) return;
@@ -407,6 +413,9 @@ const Indexes = ({
         rows={filteredAndSortedIndexes}
         sort={sort}
         onSort={handleSortIndexes}
+        newRows={newIndexRows}
+        newRowsPosition="end"
+        removedRows={droppedIndexNames}
         columns={tableColumns}
       />
 

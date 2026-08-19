@@ -36,7 +36,6 @@ interface IForeingKeysProps extends ITableInfoProps {
 interface IReferenceSerialized extends IColumnReferenceInfo {
   table_reference: string;
   __pendingId?: string;
-  __pendingAction?: 'create' | 'drop';
 }
 
 const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>
@@ -64,7 +63,6 @@ const ForeingKeys = ({
 }: IForeingKeysProps) => {
   const {
     activeTheme: {
-      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -121,39 +119,64 @@ const ForeingKeys = ({
     [columns, droppedColumnNames, pendingColumns],
   );
 
-  const allReferences = React.useMemo<IReferenceSerialized[]>(() => {
-    const existingReferences = references.map<IReferenceSerialized>((ref) => ({
-      ...ref,
-      table_reference: !ref.reference_table_schema
-        ? ref.reference_table_name
-        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
-      ...(droppedConstraintNames.has(ref.constraint_name)
-        ? {
-            __pendingAction: 'drop' as const,
-            __style: {
-              backgroundColor: __colors.redTransparent,
-              textDecoration: 'line-through',
-            },
-          }
-        : {}),
-    }));
-
-    const createdReferences = pendingReferences.map<IReferenceSerialized>((ref) => ({
-      ...ref,
-      table_reference: !ref.reference_table_schema
-        ? ref.reference_table_name
-        : `${ref.reference_table_schema}.${ref.reference_table_name}`,
-    }));
-
-    return [...existingReferences, ...createdReferences];
-  }, [__colors.redTransparent, references, droppedConstraintNames, pendingReferences]);
+  const existingReferences = React.useMemo<IReferenceSerialized[]>(
+    () =>
+      references.map<IReferenceSerialized>((ref) => ({
+        ...ref,
+        table_reference: !ref.reference_table_schema
+          ? ref.reference_table_name
+          : `${ref.reference_table_schema}.${ref.reference_table_name}`,
+      })),
+    [references],
+  );
+  const pendingReferenceRows = React.useMemo<IReferenceSerialized[]>(
+    () =>
+      pendingReferences.map<IReferenceSerialized>((ref) => ({
+        ...ref,
+        table_reference: !ref.reference_table_schema
+          ? ref.reference_table_name
+          : `${ref.reference_table_schema}.${ref.reference_table_name}`,
+      })),
+    [pendingReferences],
+  );
+  const allReferences = React.useMemo<IReferenceSerialized[]>(
+    () => [...existingReferences, ...pendingReferenceRows],
+    [existingReferences, pendingReferenceRows],
+  );
 
   const filteredAndSortedReferences = useFilteredSortedRows({
-    rows: allReferences,
+    rows: existingReferences,
     filterText: referenceFilterText,
     sort,
     getSearchValues: getReferenceSearchValues,
   });
+
+  const filteredPendingReferenceRows = useFilteredSortedRows({
+    rows: pendingReferenceRows,
+    filterText: referenceFilterText,
+    sort,
+    getSearchValues: getReferenceSearchValues,
+  });
+  const newReferenceRows = React.useMemo(
+    () =>
+      new Map(
+        filteredPendingReferenceRows.map((reference) => [
+          (reference as IPendingReferenceCreate).__pendingId,
+          reference,
+        ]),
+      ),
+    [filteredPendingReferenceRows],
+  );
+
+  const removedReferenceKeys = React.useMemo(
+    () =>
+      new Set(
+        allReferences
+          .filter((reference) => droppedConstraintNames.has(reference.constraint_name))
+          .map(getReferenceSelectionKey),
+      ),
+    [allReferences, droppedConstraintNames],
+  );
 
   const handleSortReferences = React.useCallback(
     (column: IColumn<IReferenceSerialized>, sortType?: ISortDirection | null) => {
@@ -281,11 +304,7 @@ const ForeingKeys = ({
 
   const handleUndoSelectedDroppedReferences = React.useCallback(() => {
     const constraintNames = selectedReferences
-      .filter(
-        (reference) =>
-          reference.__pendingAction === 'drop' ||
-          droppedConstraintNames.has(reference.constraint_name),
-      )
+      .filter((reference) => droppedConstraintNames.has(reference.constraint_name))
       .map((reference) => reference.constraint_name);
 
     if (!constraintNames.length) return;
@@ -412,6 +431,9 @@ const ForeingKeys = ({
         sort={sort}
         onSort={handleSortReferences}
         onCellLinkClick={handleCellLinkClick}
+        newRows={newReferenceRows}
+        newRowsPosition="end"
+        removedRows={removedReferenceKeys}
         columns={tableColumns}
       />
 

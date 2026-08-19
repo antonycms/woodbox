@@ -411,38 +411,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [showToast, t],
   );
 
-  const rowsWithPendingStyles = React.useMemo(
-    () =>
-      data.rows.map((row, index) => {
-        if (droppedRows.has(index)) {
-          return {
-            ...row,
-            __pendingAction: 'drop',
-            __style: {
-              ...(row as any).__style,
-              backgroundColor: activeTheme.__colors.redTransparent,
-              textDecoration: 'line-through',
-            },
-          };
-        }
-
-        if (!editedFieldsRows.has(index)) return row;
-
-        return {
-          ...row,
-          __style: {
-            ...(row as any).__style,
-            backgroundColor: activeTheme.__colors.orangeTransparent,
-          },
-        };
-      }),
-    [
-      activeTheme.__colors.orangeTransparent,
-      activeTheme.__colors.redTransparent,
-      data.rows,
-      droppedRows,
-      editedFieldsRows,
-    ],
+  const removedRowKeys = React.useMemo(
+    () => new Set(droppedRows.keys()),
+    [droppedRows],
   );
 
   const handleEditRow = React.useCallback(
@@ -1019,8 +990,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <div className={styles.tableWrapper}>
           <Table
             loading={!!data.loading}
-            rows={rowsWithPendingStyles}
+            rows={data.rows}
             editedRows={editedFieldsRows}
+            removedRows={removedRowKeys}
             sort={readOnly ? undefined : data.orderBy}
             onSort={readOnly ? undefined : onSort}
             onScrollEnd={readOnly ? undefined : onScrollEnd}

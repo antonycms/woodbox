@@ -141,7 +141,6 @@ const ModalNewReference = ({
 
       const reference: IPendingReferenceCreate = {
         __pendingId: generateHash(),
-        __pendingAction: 'create',
         constraint_name: getGeneratedConstraintName(
           table,
           data.column_name,

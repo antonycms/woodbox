@@ -1,7 +1,6 @@
 import React from 'react';
 
 import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
 import {
@@ -62,9 +61,6 @@ const hasColumnChanges = (originalColumn: IColumnInfo, changedColumn: IColumnInf
 
 const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   const {
-    activeTheme: { __colors },
-  } = useThemeContext();
-  const {
     getTableColumns,
     getTableReferences,
     getTableUsedAsReference,
@@ -79,18 +75,6 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   } = useStoreContext();
   const { t } = useI18n();
   const { showToast } = useToast();
-  const CREATE_STYLE = React.useMemo<React.CSSProperties>(
-    () => ({ backgroundColor: __colors.greenTransparent }),
-    [__colors.greenTransparent],
-  );
-  const DROP_STYLE = React.useMemo<React.CSSProperties>(
-    () => ({ backgroundColor: __colors.redTransparent, textDecoration: 'line-through' }),
-    [__colors.redTransparent],
-  );
-  const CHANGE_STYLE = React.useMemo<React.CSSProperties>(
-    () => ({ backgroundColor: __colors.orangeTransparent }),
-    [__colors.orangeTransparent],
-  );
 
   const getConnectionDialect = React.useCallback(
     (idConnection: string) =>
@@ -193,13 +177,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   );
 
   const addPendingColumn = React.useCallback((column: IPendingColumnCreate) => {
-    setPendingColumns((prevState) => [
-      ...prevState,
-      {
-        ...column,
-        __style: column.__style || CREATE_STYLE,
-      },
-    ]);
+    setPendingColumns((prevState) => [...prevState, column]);
   }, []);
 
   const updatePendingColumn = React.useCallback(
@@ -281,9 +259,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         const nextColumn: IPendingColumnChange = {
           ...originalColumn,
           ...changedColumn,
-          __pendingAction: 'change',
           __originalColumn: originalColumn,
-          __style: CHANGE_STYLE,
         };
 
         if (!hasColumnChanges(originalColumn, nextColumn)) {
@@ -329,11 +305,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         const currentColumnNames = new Set(prevState.map((column) => column.column_name));
         const nextColumns = columnsToDrop
           .filter((column) => !currentColumnNames.has(column.column_name))
-          .map<IPendingColumnDrop>((column) => ({
-            ...column,
-            __pendingAction: 'drop',
-            __style: DROP_STYLE,
-          }));
+          .map<IPendingColumnDrop>((column) => ({ ...column }));
 
         return [...prevState, ...nextColumns];
       });
@@ -350,13 +322,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   }, []);
 
   const addPendingIndex = React.useCallback((index: IPendingIndexCreate) => {
-    setPendingIndexes((prevState) => [
-      ...prevState,
-      {
-        ...index,
-        __style: index.__style || CREATE_STYLE,
-      },
-    ]);
+    setPendingIndexes((prevState) => [...prevState, index]);
   }, []);
 
   const removePendingIndex = React.useCallback((pendingId: string) => {
@@ -368,11 +334,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
       const currentIndexNames = new Set(prevState.map((index) => index.index_name));
       const nextIndexes = indexesToDrop
         .filter((index) => !currentIndexNames.has(index.index_name))
-        .map<IPendingIndexDrop>((index) => ({
-          ...index,
-          __pendingAction: 'drop',
-          __style: DROP_STYLE,
-        }));
+        .map<IPendingIndexDrop>((index) => ({ ...index }));
 
       return [...prevState, ...nextIndexes];
     });
@@ -387,13 +349,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   }, []);
 
   const addPendingRestriction = React.useCallback((restriction: IPendingRestrictionCreate) => {
-    setPendingRestrictions((prevState) => [
-      ...prevState,
-      {
-        ...restriction,
-        __style: restriction.__style || CREATE_STYLE,
-      },
-    ]);
+    setPendingRestrictions((prevState) => [...prevState, restriction]);
   }, []);
 
   const removePendingRestriction = React.useCallback((pendingId: string) => {
@@ -410,11 +366,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
         );
         const nextRestrictions = restrictionsToDrop
           .filter((restriction) => !currentConstraintNames.has(restriction.constraint_name))
-          .map<IPendingRestrictionDrop>((restriction) => ({
-            ...restriction,
-            __pendingAction: 'drop',
-            __style: DROP_STYLE,
-          }));
+          .map<IPendingRestrictionDrop>((restriction) => ({ ...restriction }));
 
         return [...prevState, ...nextRestrictions];
       });
@@ -431,13 +383,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
   }, []);
 
   const addPendingReference = React.useCallback((reference: IPendingReferenceCreate) => {
-    setPendingReferences((prevState) => [
-      ...prevState,
-      {
-        ...reference,
-        __style: reference.__style || CREATE_STYLE,
-      },
-    ]);
+    setPendingReferences((prevState) => [...prevState, reference]);
   }, []);
 
   const removePendingReference = React.useCallback((pendingId: string) => {
@@ -458,11 +404,7 @@ const TableInfoProvider = ({ children }: IThemeProviderProps) => {
           if (currentConstraintNames.has(reference.constraint_name)) return;
           if (nextReferencesByConstraint.has(reference.constraint_name)) return;
 
-          nextReferencesByConstraint.set(reference.constraint_name, {
-            ...reference,
-            __pendingAction: 'drop',
-            __style: DROP_STYLE,
-          });
+          nextReferencesByConstraint.set(reference.constraint_name, { ...reference });
         });
 
         return [...prevState, ...nextReferencesByConstraint.values()];

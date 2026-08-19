@@ -96,10 +96,21 @@
   user-select: none;
 }
 
+.table_row .table_column.new,
+.analysis_value.new {
+  background-color: var(--backgroundColorRowNew) !important;
+}
+
 .table_row .table_column.edited,
 .analysis_value.edited {
   background-color: var(--backgroundColorColumnEdited) !important;
   color: var(--colorColumnEdited) !important;
+}
+
+.table_row .table_column.removed,
+.analysis_value.removed {
+  background-color: var(--backgroundColorRowRemoved) !important;
+  text-decoration: line-through;
 }
 
 .table_row.selected .table_column,
@@ -109,6 +120,35 @@
 
 .table_row.selected .table_column {
   background-color: var(--selectedBackgroundColor) !important;
+}
+
+.table_row.selected .table_column.new {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorRowNew) !important;
+}
+
+.table_row.selected .table_column.edited {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorColumnEdited) !important;
+  color: var(--colorColumnEdited) !important;
+}
+
+.table_row.selected .table_column.removed {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorRowRemoved) !important;
+  text-decoration: line-through;
 }
 
 .table_row.selected .table_row_number {
@@ -163,6 +203,35 @@
   outline-offset: -2px;
   background-color: var(--selectedBackgroundColor);
   color: var(--selectedColor);
+}
+
+.analysis_value.cell_selected.new {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorRowNew);
+}
+
+.analysis_value.cell_selected.edited {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorColumnEdited);
+  color: var(--colorColumnEdited);
+}
+
+.analysis_value.cell_selected.removed {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent),
+      color-mix(in srgb, var(--selectedBackgroundColor) 56%, transparent)
+    ),
+    var(--backgroundColorRowRemoved);
+  text-decoration: line-through;
 }
 
 .analysis_container {

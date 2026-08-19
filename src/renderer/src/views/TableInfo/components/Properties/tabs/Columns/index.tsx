@@ -94,6 +94,30 @@ const serializeColumnBooleanLabels = (column: IColumnInfo): IColumnInfo => ({
 const getOriginalColumnName = (column: IColumnInfo) =>
   (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
 
+const getEditedColumnFields = (column: IPendingColumnChange) => {
+  const originalColumn = serializeColumnBooleanLabels(column.__originalColumn);
+  const changedColumn = serializeColumnBooleanLabels(column);
+  const editableAttributes = [
+    'column_name',
+    'data_type',
+    'is_nullable_label',
+    'is_auto_increment_label',
+    'column_default',
+    'description',
+  ] as const;
+
+  return editableAttributes.reduce<Record<string, any>>((acc, attribute) => {
+    const originalValue = originalColumn[attribute];
+    const changedValue = changedColumn[attribute];
+
+    if (String(originalValue ?? '') !== String(changedValue ?? '')) {
+      acc[attribute] = changedValue ?? '';
+    }
+
+    return acc;
+  }, {});
+};
+
 const getColumnSearchValues = (column: IColumnInfo) => [column.column_name, column.data_type];
 
 const Columns = ({
@@ -107,7 +131,6 @@ const Columns = ({
 }: ITableInfoProps) => {
   const {
     activeTheme: {
-      __colors,
       tableInfo: { properties: theme },
     },
   } = useThemeContext();
@@ -172,34 +195,30 @@ const Columns = ({
       new Map(pendingChangedColumns.map((column) => [column.__originalColumn.column_name, column])),
     [pendingChangedColumns],
   );
+  const existingColumns = React.useMemo(
+    () => columns.map(serializeColumnBooleanLabels),
+    [columns],
+  );
+  const editedColumnRows = React.useMemo(
+    () =>
+      new Map(
+        pendingChangedColumns.map((column) => [
+          column.__originalColumn.column_name,
+          getEditedColumnFields(column),
+        ]),
+      ),
+    [pendingChangedColumns],
+  );
+  const pendingColumnRows = React.useMemo(
+    () => pendingColumns.map(serializeColumnBooleanLabels),
+    [pendingColumns],
+  );
   const allColumns = React.useMemo(
     () => [
-      ...columns.map((column) => {
-        const currentColumn = changedColumnsByOriginalName.get(column.column_name) || column;
-        const columnWithBooleanLabels = serializeColumnBooleanLabels(currentColumn);
-
-        if (droppedColumnNames.has(column.column_name)) {
-          return {
-            ...columnWithBooleanLabels,
-            __pendingAction: 'drop',
-            __style: {
-              backgroundColor: __colors.redTransparent,
-              textDecoration: 'line-through',
-            },
-          };
-        }
-
-        return columnWithBooleanLabels;
-      }),
-      ...pendingColumns.map(serializeColumnBooleanLabels),
+      ...existingColumns.map((column) => changedColumnsByOriginalName.get(column.column_name) || column),
+      ...pendingColumnRows,
     ],
-    [
-      __colors.redTransparent,
-      changedColumnsByOriginalName,
-      columns,
-      droppedColumnNames,
-      pendingColumns,
-    ],
+    [changedColumnsByOriginalName, existingColumns, pendingColumnRows],
   );
   const hasPrimaryKey = React.useMemo(
     () =>
@@ -209,11 +228,28 @@ const Columns = ({
   );
 
   const filteredColumnsAndSortedColumns = useFilteredSortedRows({
-    rows: allColumns,
+    rows: existingColumns,
     filterText: columnFilterText,
     sort,
     getSearchValues: getColumnSearchValues,
   });
+
+  const filteredPendingColumnRows = useFilteredSortedRows({
+    rows: pendingColumnRows,
+    filterText: columnFilterText,
+    sort,
+    getSearchValues: getColumnSearchValues,
+  });
+  const newColumnRows = React.useMemo(
+    () =>
+      new Map(
+        filteredPendingColumnRows.map((column) => [
+          (column as IPendingColumnCreate).__pendingId,
+          column,
+        ]),
+      ),
+    [filteredPendingColumnRows],
+  );
 
   const handleSortColumns = React.useCallback(
     (column: IColumn<IColumnInfo>, sortType?: ISortDirection | null) => {
@@ -331,7 +367,6 @@ const Columns = ({
       if (options?.constraintType) {
         addPendingRestriction({
           __pendingId: generateHash(),
-          __pendingAction: 'create',
           constraint_name: getGeneratedConstraintName(table, options.constraintType, [
             column.column_name,
           ]),
@@ -367,11 +402,8 @@ const Columns = ({
     ],
   );
 
-  const handleEditColumn = React.useCallback(
-    (indexRow: number, attribute: string, value: unknown) => {
-      const column = filteredColumnsAndSortedColumns[indexRow];
-      if (!column) return;
-
+  const handleUpdateColumn = React.useCallback(
+    (column: IColumnInfo, attribute: string, value: unknown) => {
       let nextValue: unknown = value;
       let extraColumnChanges: Partial<IColumnInfo> = {};
 
@@ -465,7 +497,7 @@ const Columns = ({
       } as Partial<IColumnInfo>;
       const pendingId = (column as IPendingColumnCreate).__pendingId;
 
-      if (pendingId && (column as IPendingColumnCreate).__pendingAction === 'create') {
+      if (pendingId) {
         updatePendingColumn(pendingId, columnChanges);
         return;
       }
@@ -475,11 +507,32 @@ const Columns = ({
     [
       addPendingChangedColumn,
       allColumns,
-      filteredColumnsAndSortedColumns,
       showToast,
       updatePendingColumn,
       t,
     ],
+  );
+
+  const handleEditColumn = React.useCallback(
+    (indexRow: number, attribute: string, value: unknown) => {
+      const column = filteredColumnsAndSortedColumns[indexRow];
+      if (!column) return;
+
+      handleUpdateColumn(column, attribute, value);
+    },
+    [filteredColumnsAndSortedColumns, handleUpdateColumn],
+  );
+
+  const handleEditNewColumn = React.useCallback(
+    (rowKey: React.Key, attribute: string, value: unknown) => {
+      const column = pendingColumnRows.find(
+        (item) => (item as IPendingColumnCreate).__pendingId === rowKey,
+      );
+      if (!column) return;
+
+      handleUpdateColumn(column, attribute, value);
+    },
+    [handleUpdateColumn, pendingColumnRows],
   );
 
   const handleRemoveSelectedColumns = React.useCallback(() => {
@@ -529,15 +582,11 @@ const Columns = ({
 
   const handleUndoSelectedDroppedColumns = React.useCallback(() => {
     const droppedColumnNamesToUndo = selectedColumns
-      .filter(
-        (column) =>
-          (column as { __pendingAction?: string }).__pendingAction === 'drop' ||
-          droppedColumnNames.has(column.column_name),
-      )
+      .filter((column) => droppedColumnNames.has(column.column_name))
       .map((column) => column.column_name);
     const changedColumnNamesToUndo = selectedColumns
-      .filter((column) => (column as { __pendingAction?: string }).__pendingAction === 'change')
-      .map(getOriginalColumnName);
+      .map(getOriginalColumnName)
+      .filter((columnName) => changedColumnsByOriginalName.has(columnName));
 
     if (!droppedColumnNamesToUndo.length && !changedColumnNamesToUndo.length) return;
 
@@ -546,6 +595,7 @@ const Columns = ({
     setSelectedColumns([]);
   }, [
     selectedColumns,
+    changedColumnsByOriginalName,
     droppedColumnNames,
     removePendingDroppedColumns,
     removePendingChangedColumns,
@@ -683,6 +733,11 @@ const Columns = ({
         onSelectRow={setSelectedColumns}
         rows={filteredColumnsAndSortedColumns}
         onEditRow={isReadOnlyObject ? undefined : handleEditColumn}
+        onEditNewRow={isReadOnlyObject ? undefined : handleEditNewColumn}
+        editedRows={editedColumnRows}
+        newRows={newColumnRows}
+        newRowsPosition="end"
+        removedRows={droppedColumnNames}
         sort={sort}
         onSort={handleSortColumns}
         columns={tableColumns}
