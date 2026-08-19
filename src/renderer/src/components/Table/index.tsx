@@ -350,6 +350,23 @@ function Table<Row = any>(props: ITableProps<Row>) {
     () => columns.map((column) => String(column.attribute)).join('\0'),
     [columns],
   );
+
+  const getResolvedCellValue = React.useCallback(
+    (row: any, column?: IColumn<Row>) => {
+      if (!row || !column) return undefined;
+
+      const editedRow = editedRows?.get(row.__key_row);
+      const newRow = newRows?.get(row.__key_row);
+      const editedValue = editedRow?.[column.attribute];
+      const newValue = newRow?.[column.attribute];
+      const hasNewValue = newValue !== undefined;
+      const isEdited = editedValue !== undefined;
+
+      return hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+    },
+    [editedRows, newRows],
+  );
+
   const searchOccurrences = React.useMemo<TableSearchOccurrence[]>(() => {
     const query = searchState.query;
     if (!query) return [];
@@ -363,13 +380,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
     searchableRows.forEach((row: any) => {
       columns.forEach((column, colIndex) => {
-        const editedRow = editedRows?.get(row.__key_row);
-        const newRow = newRows?.get(row.__key_row);
-        const editedValue = editedRow?.[column.attribute];
-        const newValue = newRow?.[column.attribute];
-        const hasNewValue = newValue !== undefined;
-        const isEdited = editedValue !== undefined;
-        const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+        const value = getResolvedCellValue(row, column);
         const serializedValue = serializeSearchValue(value, column.type);
         const canReplace =
           !!column.editable &&
@@ -393,8 +404,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     analysisMode,
     analysisRows,
     columns,
-    editedRows,
-    newRows,
+    getResolvedCellValue,
     onEditNewRow,
     onEditRow,
     searchState.matchCase,
@@ -752,13 +762,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       if (!row || !column?.editable) return false;
       if (column.type === 'autocomplete' || column.type === 'autocomplete-multi') return false;
 
-      const editedRow = editedRows?.get(row.__key_row);
-      const newRow = newRows?.get(row.__key_row);
-      const editedValue = editedRow?.[column.attribute];
-      const newValue = newRow?.[column.attribute];
-      const hasNewValue = newValue !== undefined;
-      const isEdited = editedValue !== undefined;
-      const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+      const value = getResolvedCellValue(row, column);
       const serializedValue = serializeSearchValue(value, column.type);
       const nextValue = replaceSearchValue(
         serializedValue,
@@ -778,8 +782,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       return true;
     },
     [
-      editedRows,
-      newRows,
+      getResolvedCellValue,
       onSaveCell,
       searchState.matchCase,
       searchState.query,
@@ -830,13 +833,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
       if (!row || !column) return;
 
-      const editedRow = editedRows?.get(row.__key_row);
-      const newRow = newRows?.get(row.__key_row);
-      const editedValue = editedRow?.[column.attribute];
-      const newValue = newRow?.[column.attribute];
-      const hasNewValue = newValue !== undefined;
-      const isEdited = editedValue !== undefined;
-      const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+      const value = getResolvedCellValue(row, column);
 
       onSelectCellData?.({
         row,
@@ -846,7 +843,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         colIndex,
       });
     },
-    [editedRows, newRows, onSelectCellData],
+    [getResolvedCellValue, onSelectCellData],
   );
 
   const selectDefaultRange = React.useCallback(
@@ -1150,7 +1147,9 @@ function Table<Row = any>(props: ITableProps<Row>) {
         colIndices.sort((a, b) => a - b);
         return colIndices
           .map((ci) => {
-            const v = serializedRowsRef.current[rowIndex]?.[columnsRef.current[ci]?.attribute];
+            const row = serializedRowsRef.current[rowIndex];
+            const column = columnsRef.current[ci];
+            const v = getResolvedCellValue(row, column);
             return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
           })
           .join(', ');
@@ -1162,7 +1161,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         const row = serializedRowsRef.current[rowIndex];
         return columnsRef.current
           .map((col) => {
-            const v = row?.[col.attribute];
+            const v = getResolvedCellValue(row, col);
             return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
           })
           .join(', ');
@@ -1173,7 +1172,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     const rowObjects = sortedRowIndices.map((rowIndex) => {
       const row = serializedRowsRef.current[rowIndex];
       return Object.fromEntries(
-        columnsRef.current.map((col) => [col.attribute, row?.[col.attribute] ?? null]),
+        columnsRef.current.map((col) => [col.attribute, getResolvedCellValue(row, col) ?? null]),
       );
     });
 
@@ -1189,7 +1188,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
               const col = columnsRef.current[colIndex];
               if (!col) return null;
 
-              return [col.attribute, row?.[col.attribute] ?? null];
+              return [col.attribute, getResolvedCellValue(row, col) ?? null];
             })
             .filter((entry): entry is [string, any] => !!entry),
         );
@@ -1435,7 +1434,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
                 .map((colIndex) => {
                   const row = serializedRowsRef.current[rowIndex];
                   const col = columnsRef.current[colIndex];
-                  const value = row?.[col?.attribute];
+                  const value = getResolvedCellValue(row, col);
                   return value === undefined
                     ? ''
                     : typeof value === 'object'
@@ -1460,6 +1459,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     enterAnalysisMode,
     handleCloseTableSearch,
     handleOpenTableSearch,
+    getResolvedCellValue,
     handleSelectAllCells,
     scrollCellIntoView,
     searchState.open,
