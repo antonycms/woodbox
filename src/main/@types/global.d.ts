@@ -22,6 +22,10 @@ declare global {
     sslKey?: string;
   }
 
+  export interface IConnectionPublic extends Omit<IConnectionConfig, 'password'> {
+    hasPassword: boolean;
+  }
+
   export interface IConnection {
     id: string;
     instance: Knex<any, unknown[]>;

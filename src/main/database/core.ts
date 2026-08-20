@@ -1,5 +1,5 @@
 import knex, { Knex } from 'knex';
-import { getConnectionsSaved } from '@main/storage/store';
+import { getInternalConnectionSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
 import { getDialectAdapter, getDialectIds } from './dialects';
 import { serializeOrderBy, type IOrderBy } from './utils/orderBy';
@@ -157,12 +157,17 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 export const getDialects = () => getDialectIds();
 
 export const testConnection = async (config: IConnectionConfig) => {
-  const instance = await makeConnectionInstance(config, true);
+  const storedConfig =
+    config.id && !config.password ? getInternalConnectionSaved(config.id) : undefined;
+  const instance = await makeConnectionInstance(
+    { ...storedConfig, ...config, password: config.password || storedConfig?.password },
+    true,
+  );
   await instance.destroy();
 };
 
 const makeConnection = async (connectionId: string) => {
-  const config = await getConnectionsSaved(connectionId);
+  const config = await getInternalConnectionSaved(connectionId);
 
   if (!config) {
     throw new Error(`Connection config is not found. (${connectionId})`);

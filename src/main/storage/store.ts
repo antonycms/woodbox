@@ -1,6 +1,7 @@
 import Store from 'electron-store';
 import { initialValue as projects, getModule as getModuleProjects } from './modules/projects';
 import {
+  encodeConnectionSecretsForStore,
   initialValue as saved_connections,
   getModule as getModuleSavedConnections,
 } from './modules/saved_connections';
@@ -54,6 +55,7 @@ export const {
 export const {
   add: addConnectionSaved,
   get: getConnectionsSaved,
+  getInternal: getInternalConnectionSaved,
   remove: removeConnectionSaved,
   edit: editConnectionSaved,
 } = getModuleSavedConnections(store);
@@ -232,7 +234,10 @@ export const importConnectionsFromSource = async ({
   }
 
   store.set('projects', nextProjects);
-  store.set('saved_connections', nextConnections);
+  store.set(
+    'saved_connections',
+    nextConnections.map((connection) => encodeConnectionSecretsForStore(store, connection)),
+  );
 
   return {
     projectsCreated,
