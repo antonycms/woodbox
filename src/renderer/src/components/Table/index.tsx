@@ -13,6 +13,7 @@ import type { IColumn, ISortDirection, ITableSort } from './dtos';
 import { useTableLayout } from './hooks/useTableLayout';
 import { useTableColumnResize } from './hooks/useTableColumnResize';
 import { useAnalysisColumnsLayout } from './hooks/useAnalysisColumnsLayout';
+import { serializeTableCopyValue, serializeTableValue } from './utils';
 
 type TableCellEditValue = string | number | (string | number)[];
 type TableScrollState = { left: number; top: number };
@@ -91,14 +92,6 @@ const parseClipboardGrid = (text: string) => {
   const normalizedText = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
 
   return normalizedText.split('\n').map((line) => line.split('\t'));
-};
-
-const serializeSearchValue = (value: any, type?: IColumn['type']) => {
-  if (value === undefined || value === null) return '';
-  if (Array.isArray(value) && type === 'autocomplete-multi') return value.join(', ');
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
 };
 
 const isSearchWordChar = (char?: string) => {
@@ -381,7 +374,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     searchableRows.forEach((row: any) => {
       columns.forEach((column, colIndex) => {
         const value = getResolvedCellValue(row, column);
-        const serializedValue = serializeSearchValue(value, column.type);
+        const serializedValue = serializeTableValue(value, column.type, { nullAsEmpty: true });
         const canReplace =
           !!column.editable &&
           column.type !== 'autocomplete' &&
@@ -763,7 +756,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       if (column.type === 'autocomplete' || column.type === 'autocomplete-multi') return false;
 
       const value = getResolvedCellValue(row, column);
-      const serializedValue = serializeSearchValue(value, column.type);
+      const serializedValue = serializeTableValue(value, column.type, { nullAsEmpty: true });
       const nextValue = replaceSearchValue(
         serializedValue,
         searchState.query,
@@ -1150,7 +1143,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
             const row = serializedRowsRef.current[rowIndex];
             const column = columnsRef.current[ci];
             const v = getResolvedCellValue(row, column);
-            return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+            return serializeTableCopyValue(v);
           })
           .join(', ');
       });
@@ -1162,7 +1155,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         return columnsRef.current
           .map((col) => {
             const v = getResolvedCellValue(row, col);
-            return v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+            return serializeTableCopyValue(v);
           })
           .join(', ');
       });
@@ -1435,11 +1428,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
                   const row = serializedRowsRef.current[rowIndex];
                   const col = columnsRef.current[colIndex];
                   const value = getResolvedCellValue(row, col);
-                  return value === undefined
-                    ? ''
-                    : typeof value === 'object'
-                      ? JSON.stringify(value)
-                      : String(value);
+                  return serializeTableCopyValue(value);
                 })
                 .join(', ');
             });

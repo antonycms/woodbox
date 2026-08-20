@@ -7,6 +7,7 @@ import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { useI18n } from '@renderer/contexts/I18n';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { serializeTableValue } from '../../utils';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -44,14 +45,6 @@ interface ITableAnalysisViewProps<Row = any> {
   onCellLinkPreviewClick?(attribute: string, value: any): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
-
-const serializeTableValue = (value: any, type?: IColumn['type']) => {
-  if (value === undefined) return '';
-  if (Array.isArray(value) && type === 'autocomplete-multi') return value.join(', ');
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-};
 
 const analysisLinkStyle: React.CSSProperties = {
   textDecoration: 'underline dotted',

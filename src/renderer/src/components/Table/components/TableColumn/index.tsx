@@ -5,6 +5,7 @@ import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../../styles.module.css';
+import { serializeTableValue } from '../../utils';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -131,25 +132,21 @@ const TableColumn = ({
   ]);
 
   // minify string lenght in cell to improve performance
-  const serializedValue = React.useMemo(() => {
-    let v: any = value;
+  const serializedValue = React.useMemo<string | number | undefined>(() => {
+    if (value === undefined) return undefined;
+    if (typeof value === 'number') return value;
 
-    if (Array.isArray(v) && type === 'autocomplete-multi') v = v.join(', ');
-    else if (typeof v === 'boolean' || v === null) v = `${v}`;
-    else if (v instanceof Date) v = v.toISOString();
-    else if (typeof v === 'object') v = JSON.stringify(v);
-    else if (typeof v !== 'string') return v;
-
+    const serialized = serializeTableValue(value, type);
     const maxValueLenght = Math.ceil(width / 5);
-    const valueLenght = maxValueLenght > v.length ? v.length : maxValueLenght;
+    const valueLenght = maxValueLenght > serialized.length ? serialized.length : maxValueLenght;
 
-    return isEditing ? v : v.slice(0, valueLenght);
+    return isEditing ? serialized : serialized.slice(0, valueLenght);
   }, [isEditing, type, value, width]);
 
   const editedValue = React.useRef<string | number | null>(null);
   const cancelEditRef = React.useRef(false);
 
-  const inputInitialValue = editInitialValue ?? serializedValue;
+  const inputInitialValue: string | number | undefined = editInitialValue ?? serializedValue;
   const comparableInitialValue = [undefined, null].includes(serializedValue) ? '' : serializedValue;
 
   editedValue.current = [undefined, null].includes(inputInitialValue) ? '' : inputInitialValue;
