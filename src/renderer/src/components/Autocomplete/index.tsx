@@ -50,7 +50,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     ...gridSystem
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { autocomplete: theme },
   } = useThemeContext();
 
   const itemSize = 41;
@@ -180,22 +180,22 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     () =>
       ({
         ...dropdownPositionStyle,
-        backgroundColor: backgroundColor ?? __colors.darkLightDeep,
+        backgroundColor: backgroundColor ?? theme.backgroundColor,
         color,
         ...toCssProperties({ height: `${dropdownHeight}px` }),
-        '--autocomplete-hover-background-color': __colors.sideBarSelectedBackground,
-        '--autocomplete-selected-background-color': __colors.blueTransparent,
-        '--autocomplete-active-background-color': __colors.purpleDark,
-        '--autocomplete-border-color': __colors.lightGray,
-        '--autocomplete-shadow-color': __colors.shadow,
+        '--autocomplete-hover-background-color': theme.hoverBackgroundColor,
+        '--autocomplete-selected-background-color': theme.selectedBackgroundColor,
+        '--autocomplete-active-background-color': theme.activeBackgroundColor,
+        '--autocomplete-border-color': theme.borderColor,
+        '--autocomplete-shadow-color': theme.shadowColor,
       }) as React.CSSProperties,
     [
-      __colors.blueTransparent,
-      __colors.darkLightDeep,
-      __colors.purpleDark,
-      __colors.sideBarSelectedBackground,
-      __colors.lightGray,
-      __colors.shadow,
+      theme.selectedBackgroundColor,
+      theme.backgroundColor,
+      theme.activeBackgroundColor,
+      theme.hoverBackgroundColor,
+      theme.borderColor,
+      theme.shadowColor,
       backgroundColor,
       color,
       dropdownHeight,

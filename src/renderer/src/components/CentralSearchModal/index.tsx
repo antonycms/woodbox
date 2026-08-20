@@ -30,7 +30,7 @@ export const CentralSearchModal = React.memo(() => {
   const { scripts, connections, connectionsInfo, getTableColumns } = useStoreContext();
   const {
     activeTheme: {
-      __colors,
+      centralSearch,
       modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
     },
   } = useThemeContext();
@@ -592,20 +592,20 @@ export const CentralSearchModal = React.memo(() => {
       color,
       fieldBackgroundColor,
       fieldColor,
-      overlayColor: __colors.overlayStrong,
-      borderColor: __colors.lightGray,
-      shadowColor: __colors.shadowStrong,
-      subtleBackgroundColor: __colors.darkLight,
-      hoverBackgroundColor: __colors.darkLightDeep,
-      mutedColor: __colors.gray,
+      overlayColor: centralSearch.overlayColor,
+      borderColor: centralSearch.borderColor,
+      shadowColor: centralSearch.shadowColor,
+      subtleBackgroundColor: centralSearch.subtleBackgroundColor,
+      hoverBackgroundColor: centralSearch.hoverBackgroundColor,
+      mutedColor: centralSearch.mutedColor,
     });
   }, [
-    __colors.darkLight,
-    __colors.darkLightDeep,
-    __colors.gray,
-    __colors.lightGray,
-    __colors.overlayStrong,
-    __colors.shadowStrong,
+    centralSearch.subtleBackgroundColor,
+    centralSearch.hoverBackgroundColor,
+    centralSearch.mutedColor,
+    centralSearch.borderColor,
+    centralSearch.overlayColor,
+    centralSearch.shadowColor,
     backgroundColor,
     color,
     fieldBackgroundColor,
@@ -626,7 +626,7 @@ export const CentralSearchModal = React.memo(() => {
             placeholder={t('placeholder.searchAll')}
             onChange={handleSearchChange}
             dropdownBackgroundColor={fieldBackgroundColor}
-            dropdownBorderColor={__colors.lightGray}
+            dropdownBorderColor={centralSearch.dropdownBorderColor}
             dropdownColor={fieldColor}
             onKeyDown={(event) => {
               if (event.key === 'ArrowDown') {

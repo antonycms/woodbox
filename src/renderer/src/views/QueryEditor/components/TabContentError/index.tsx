@@ -15,13 +15,13 @@ export const TabcontentError = (props: ITabContentError) => {
   const { data } = props;
   const { t } = useI18n();
   const {
-    activeTheme: { __colors },
+    activeTheme: { queryEditor: theme },
   } = useThemeContext();
   const style = {
-    '--errorBorderColor': __colors.redDeep,
-    '--errorAccentColor': __colors.red,
-    '--errorBackgroundColor': __colors.darkLight,
-    '--errorMessageBackgroundColor': __colors.darkLight,
+    '--errorBorderColor': theme.error.borderColor,
+    '--errorAccentColor': theme.error.accentColor,
+    '--errorBackgroundColor': theme.error.backgroundColor,
+    '--errorMessageBackgroundColor': theme.error.messageBackgroundColor,
   } as React.CSSProperties;
 
   return (
@@ -30,16 +30,16 @@ export const TabcontentError = (props: ITabContentError) => {
         <div className={styles.resultHeader}>
           <IconMdiAlertCircle width={18} height={18} />
 
-          <Text bold color={__colors.red}>
+          <Text bold color={theme.error.accentColor}>
             {t('query.executionErrorTitle')}
           </Text>
         </div>
 
         <div className={styles.resultMessage}>
-          <Text color={__colors.white}>{data.message || t('common.unknownErrorNoDot')}</Text>
+          <Text color={theme.error.messageColor}>{data.message || t('common.unknownErrorNoDot')}</Text>
         </div>
 
-        <Text small color={__colors.gray}>
+        <Text small color={theme.error.mutedColor}>
           {t('query.executedAt', { date: toDateTime(data.date_run) })}
         </Text>
       </div>

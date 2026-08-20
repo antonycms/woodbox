@@ -61,7 +61,7 @@ const AIChat = ({
   } = useStoreContext();
   const { showToast } = useToast();
   const {
-    activeTheme: { __colors, mainTab: theme },
+    activeTheme: { aiChat: aiChatTheme, mainTab: theme },
   } = useThemeContext();
   const [draftMessage, setDraftMessage] = React.useState('');
   const [localMessages, setLocalMessages] = React.useState<IAIChatMessage[]>([]);
@@ -575,15 +575,15 @@ const AIChat = ({
           '--borderColor': theme.borderColor,
           '--color': theme.color,
           '--ascentColor': theme.ascentColor,
-          '--cardBackgroundColor': __colors.darkLightDeep,
-          '--mutedColor': __colors.gray,
-          '--sendBackgroundColor': __colors.green,
-          '--sendColor': __colors.dark,
-          '--sendDisabledBackgroundColor': __colors.gray,
-          '--sendDisabledColor': __colors.white,
-          '--queryPendingColor': __colors.orange,
-          '--queryApprovedColor': __colors.green,
-          '--queryRejectedColor': __colors.red,
+          '--cardBackgroundColor': aiChatTheme.cardBackgroundColor,
+          '--mutedColor': aiChatTheme.mutedColor,
+          '--sendBackgroundColor': aiChatTheme.sendBackgroundColor,
+          '--sendColor': aiChatTheme.sendColor,
+          '--sendDisabledBackgroundColor': aiChatTheme.sendDisabledBackgroundColor,
+          '--sendDisabledColor': aiChatTheme.sendDisabledColor,
+          '--queryPendingColor': aiChatTheme.queryPendingColor,
+          '--queryApprovedColor': aiChatTheme.queryApprovedColor,
+          '--queryRejectedColor': aiChatTheme.queryRejectedColor,
         } as React.CSSProperties
       }
     >
@@ -616,7 +616,7 @@ const AIChat = ({
             options={menuOptions}
             onSelect={onSelectMenuOption}
             align="right"
-            dropdownBackground={__colors.darkLightDeep}
+            dropdownBackground={aiChatTheme.dropdownBackgroundColor}
             dropdownColor={theme.color}
             dropdownHoverBackground={theme.backgroundColor}
           />

@@ -21,7 +21,7 @@ export const ModalServerOutput = React.memo(
   ({ show, id_connection, onClose }: IModalServerOutputProps) => {
     const { t } = useI18n();
     const {
-      activeTheme: { __colors, modal: colors },
+      activeTheme: { queryEditor, modal: colors },
     } = useThemeContext();
 
     const { getServerOutput, clearServerOutput } = useStoreContext();
@@ -90,7 +90,7 @@ export const ModalServerOutput = React.memo(
               className={styles.outputItem}
               style={
                 {
-                  '--server-output-background-color': __colors.darkLight,
+                  '--server-output-background-color': queryEditor.serverOutput.backgroundColor,
                 } as React.CSSProperties
               }
             >

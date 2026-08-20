@@ -152,9 +152,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const hasCapturedRows = !!data.capture?.rows.length;
 
   const captureButtonColor = data.capture?.active
-    ? activeTheme.__colors.red
+    ? activeTheme.queryEditor.capture.activeColor
     : hasCapturedRows
-      ? activeTheme.__colors.orange
+      ? activeTheme.queryEditor.capture.modifiedColor
       : activeTheme.queryEditor.bar.color;
 
   const stringifyCaptureValue = (value: unknown) =>
@@ -1179,7 +1179,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
             title={data.capture.active ? t('capture.activeTitle') : t('capture.stoppedTitle')}
             userSelect={false}
             color={
-              data.capture.active ? activeTheme.__colors.red : activeTheme.queryEditor.bar.color
+              data.capture.active ? activeTheme.queryEditor.capture.activeColor : activeTheme.queryEditor.bar.color
             }
           >
             {t('capture.status', {

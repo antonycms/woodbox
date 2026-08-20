@@ -8,7 +8,7 @@ import {
 } from '../constants';
 
 type TableScrollState = { left: number; top: number };
-type TableTheme = NonNullable<ITheme<string>['table']>;
+type TableTheme = NonNullable<ITheme['table']>;
 
 interface UseTableLayoutParams {
   theme: TableTheme;

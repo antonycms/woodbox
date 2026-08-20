@@ -9,9 +9,9 @@ interface IMultiplesBarLoadingProps {
 }
 const MultiplesBarLoading = (props: IMultiplesBarLoadingProps) => {
   const {
-    activeTheme: { __colors },
+    activeTheme: { loaders: theme },
   } = useThemeContext();
-  const { background = __colors.overlay, zIndex } = props;
+  const { background = theme.overlayBackgroundColor, zIndex } = props;
 
   return (
     <div
@@ -19,12 +19,12 @@ const MultiplesBarLoading = (props: IMultiplesBarLoadingProps) => {
         background,
         zIndex,
         ...toCssProperties({
-          barColor1: __colors.purple,
-          barColor2: __colors.blue,
-          barColor3: __colors.green,
-          barColor4: __colors.orange,
-          barColor5: __colors.orangeDeep,
-          barColor6: __colors.pink,
+          barColor1: theme.barColors[0],
+          barColor2: theme.barColors[1],
+          barColor3: theme.barColors[2],
+          barColor4: theme.barColors[3],
+          barColor5: theme.barColors[4],
+          barColor6: theme.barColors[5],
         }),
       }}
       className={styles.container}

@@ -12,39 +12,6 @@ export function toCssProperties(obj: object) {
   return cssProperties;
 }
 
-export const serializeTheme = (theme: ITheme): ITheme<string> => {
-  const { __colors } = theme;
-
-  const eachTheme = (t) => {
-    Object.keys(t).forEach((key) => {
-      let value: string | object = t[key];
-
-      if (typeof value === 'object') {
-        return eachTheme(value);
-      }
-
-      if (typeof value !== 'string') return;
-
-      const chunks = value.split('__colors.');
-
-      if (chunks.length > 1) {
-        const [, colorName] = chunks;
-        value = __colors[colorName];
-      }
-
-      t[key] = value;
-    });
-  };
-
-  const serializedTheme = JSON.parse(JSON.stringify(theme));
-
-  if (typeof __colors === 'object') {
-    eachTheme(serializedTheme);
-  }
-
-  return serializedTheme;
-};
-
 const isLightHexColor = (color?: string) => {
   if (!color) return false;
 
@@ -68,8 +35,8 @@ const withAlpha = (color: string, alpha: string) => {
 };
 
 export const applyMonacoTheme = (theme: ITheme = defaultTheme) => {
-  const { contextMenu, editor: colors } = serializeTheme(theme);
-  const { contextMenu: defaultContextMenu, editor: defaultColors } = serializeTheme(defaultTheme);
+  const { contextMenu, editor: colors } = theme;
+  const { contextMenu: defaultContextMenu, editor: defaultColors } = defaultTheme;
 
   const getColor = (colorName: keyof typeof colors) => {
     return colors[colorName] || defaultColors[colorName];

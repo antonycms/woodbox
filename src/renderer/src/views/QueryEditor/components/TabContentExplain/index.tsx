@@ -100,12 +100,12 @@ export const TabContentExplain = ({
       style={
         {
           '--explain-color': activeTheme.queryEditor.tab.color,
-          '--explain-muted-color': activeTheme.__colors.gray,
+          '--explain-muted-color': activeTheme.queryEditor.explain.mutedColor,
           '--explain-border-color': activeTheme.queryEditor.tab.borderColor,
-          '--explain-surface-color': activeTheme.__colors.darkLightDeep,
+          '--explain-surface-color': activeTheme.queryEditor.explain.surfaceColor,
           '--explain-accent-color': activeTheme.queryEditor.tab.ascentColor,
-          '--explain-warn-color': activeTheme.__colors.orange,
-          '--explain-danger-color': activeTheme.__colors.red,
+          '--explain-warn-color': activeTheme.queryEditor.explain.warnColor,
+          '--explain-danger-color': activeTheme.queryEditor.explain.dangerColor,
         } as React.CSSProperties
       }
     >

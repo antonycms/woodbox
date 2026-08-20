@@ -34,7 +34,7 @@ const TreeView = (props: ITreeViewProps) => {
   const openedItemsIdSet = React.useMemo(() => new Set(openedItemsId), [openedItemsId]);
   const defaultColor = activeTheme.sideBar.color;
   const focusBackgroundColor =
-    activeTheme.sideBar.selectedBackgroundColor || activeTheme.__colors.darkLightDeep;
+    activeTheme.sideBar.selectedBackgroundColor;
 
   const itemsById = React.useMemo(() => {
     const map = new Map<string, IItemTreeView>();

@@ -28,17 +28,17 @@ const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: T
 export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps) => {
   const { t } = useI18n();
   const {
-    activeTheme: { modal: colors, __colors },
+    activeTheme: { modal: colors, settings },
   } = useThemeContext();
 
   const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('general');
   const layoutStyle = React.useMemo(
     () =>
       ({
-        '--settings-menu-background-color': __colors.darkLightBar,
-        '--settings-menu-hover-background-color': __colors.darkLightDeep,
+        '--settings-menu-background-color': settings.menuBackgroundColor,
+        '--settings-menu-hover-background-color': settings.menuHoverBackgroundColor,
       }) as React.CSSProperties,
-    [__colors.darkLightBar, __colors.darkLightDeep],
+    [settings.menuBackgroundColor, settings.menuHoverBackgroundColor],
   );
 
   return (
@@ -61,15 +61,15 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
               style={{
                 color: activeMenu === item.id ? colors.saveButtonBackgroundColor : colors.color,
                 borderColor:
-                  activeMenu === item.id ? colors.saveButtonBackgroundColor : __colors.lightGray,
+                  activeMenu === item.id ? colors.saveButtonBackgroundColor : settings.inactiveMenuColor,
               }}
             >
               <strong>{t(item.labelKey)}</strong>
-              <span style={{ color: __colors.gray }}>{t(item.descriptionKey)}</span>
+              <span style={{ color: settings.mutedColor }}>{t(item.descriptionKey)}</span>
             </button>
           ))}
 
-          <div className={styles.version} style={{ color: __colors.gray }}>
+          <div className={styles.version} style={{ color: settings.mutedColor }}>
             v{appVersion}
           </div>
         </aside>

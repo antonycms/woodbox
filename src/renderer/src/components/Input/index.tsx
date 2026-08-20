@@ -50,7 +50,7 @@ export const Input = (props: IInputProps) => {
     ...gridSystem
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { field: theme },
   } = useThemeContext();
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
@@ -58,9 +58,9 @@ export const Input = (props: IInputProps) => {
   const wrapperStyle = React.useMemo(
     () =>
       ({
-        '--input-required-color': __colors.red,
+        '--input-required-color': theme.requiredColor,
       }) as React.CSSProperties,
-    [__colors.red],
+    [theme.requiredColor],
   );
 
   const inputContainerStyle = React.useMemo(() => ({ backgroundColor }), [backgroundColor]);

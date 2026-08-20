@@ -31,7 +31,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
   const { showToast } = useToast();
 
   const {
-    activeTheme: { __colors, modal: colors },
+    activeTheme: { settings, modal: colors },
   } = useThemeContext();
 
   const [source, setSource] = React.useState<ImportConnectionsSource>('dbeaver');
@@ -47,12 +47,12 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
   const themedPanelStyle = React.useMemo(
     () =>
       ({
-        '--settings-import-border-color': __colors.lightGray,
-        '--settings-import-background-color': __colors.darkLightBar,
+        '--settings-import-border-color': settings.importBorderColor,
+        '--settings-import-background-color': settings.importBackgroundColor,
         '--settings-import-color': colors.color,
-        '--settings-import-muted-color': __colors.gray,
+        '--settings-import-muted-color': settings.importMutedColor,
       }) as React.CSSProperties,
-    [__colors.darkLightBar, __colors.gray, __colors.lightGray, colors.color],
+    [settings.importBackgroundColor, settings.importMutedColor, settings.importBorderColor, colors.color],
   );
 
   const selectPreviewItems = React.useCallback((importPreview: IImportConnectionsPreview) => {
@@ -210,7 +210,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
 
       <Divider size={8} />
 
-      <Text small color={__colors.gray} userSelect={false}>
+      <Text small color={settings.importMutedColor} userSelect={false}>
         {t('settings.import.instructions')}
       </Text>
 
@@ -227,7 +227,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
               onChange={(event) => setMasterPassword(event.target.value)}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
-              placeholderColor={__colors.gray}
+              placeholderColor={settings.importMutedColor}
               xs={12}
               sm={8}
             />
@@ -326,14 +326,14 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
               })}
             </Text>
             {!!result.unsupportedConnections.length && (
-              <Text small color={__colors.orange}>
+              <Text small color={settings.importWarningColor}>
                 {t('settings.import.unsupportedConnections', {
                   count: result.unsupportedConnections.length,
                 })}
               </Text>
             )}
             {result.warnings.slice(0, 2).map((warning) => (
-              <Text key={warning} small color={__colors.orange}>
+              <Text key={warning} small color={settings.importWarningColor}>
                 {warning}
               </Text>
             ))}

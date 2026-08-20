@@ -39,7 +39,7 @@ const SnippetsMenu = () => {
   const { snippets, addSnippet, removeSnippet } = useStoreContext();
   const { showToast } = useToast();
   const {
-    activeTheme: { __colors, sideBar: colors },
+    activeTheme: { sideBar: colors },
   } = useThemeContext();
 
   const inputFileRef = React.useRef<HTMLInputElement>(null);
@@ -194,8 +194,8 @@ const SnippetsMenu = () => {
             xs={12}
             sm={6}
             onClick={() => setSnippetToRemove(undefined)}
-            color={__colors.white}
-            backgroundColor={__colors.gray}
+            color={colors.neutralButtonColor}
+            backgroundColor={colors.neutralButtonBackgroundColor}
           >
             {t('common.cancel')}
           </Button>
@@ -204,8 +204,8 @@ const SnippetsMenu = () => {
             xs={12}
             sm={6}
             onClick={confirmRemoveSnippet}
-            color={__colors.white}
-            backgroundColor={__colors.red}
+            color={colors.neutralButtonColor}
+            backgroundColor={colors.dangerButtonBackgroundColor}
           >
             {t('common.delete')}
           </Button>
@@ -286,7 +286,7 @@ const SnippetsMenu = () => {
               onClick={() => setEditingSnippet(snippet)}
               onKeyDown={(event) => handleSnippetCardKeyDown(event, snippet)}
               color={colors.color}
-              borderColor={__colors.lightGray}
+              borderColor={colors.borderMutedColor}
               backgroundColor={colors.cardBackgroundColor || colors.fieldBackgroundColor}
             >
               <div className={styles.cardHeader}>
@@ -316,8 +316,8 @@ const SnippetsMenu = () => {
                     key={dialect}
                     title={dialect}
                     color={colors.color}
-                    borderColor={__colors.lightGray}
-                    backgroundColor={__colors.darkLightBar}
+                    borderColor={colors.borderMutedColor}
+                    backgroundColor={colors.panelBackgroundColor}
                   >
                     {dialect}
                   </Chip>

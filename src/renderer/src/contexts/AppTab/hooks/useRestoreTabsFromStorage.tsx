@@ -18,7 +18,7 @@ export const useRestoreTabsFromStorage = (
   const { showToast } = useToast();
   const { t } = useI18n();
   const {
-    activeTheme: { __colors },
+    activeTheme: { mainTab: theme },
   } = useThemeContext();
 
   const [hasRestoredTabs, setHasRestoredTabs] = React.useState(false);
@@ -113,7 +113,7 @@ export const useRestoreTabsFromStorage = (
           storedGroupsById.get(groupId) || {
             id: groupId,
             title: t('tabs.group'),
-            color: __colors.blue,
+            color: theme.groupColors[0],
           },
       );
       const visibleTabs = restoredTabs.filter((tab) => {

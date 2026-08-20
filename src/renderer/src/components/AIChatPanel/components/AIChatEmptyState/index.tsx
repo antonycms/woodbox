@@ -54,7 +54,7 @@ export const AIChatEmptyState = React.memo(
     const { t } = useI18n();
     const { aiChats } = useStoreContext();
     const {
-      activeTheme: { __colors, mainTab: theme },
+      activeTheme: { aiChat: aiChatTheme, mainTab: theme },
     } = useThemeContext();
 
     const recentChats = React.useMemo(() => aiChats.slice(0, 4), [aiChats]);
@@ -92,7 +92,7 @@ export const AIChatEmptyState = React.memo(
             options={menuOptions}
             onSelect={onSelectMenuOption}
             align="right"
-            dropdownBackground={__colors.darkLightDeep}
+            dropdownBackground={aiChatTheme.dropdownBackgroundColor}
             dropdownColor={theme.color}
             dropdownHoverBackground={theme.backgroundColor}
           />

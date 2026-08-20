@@ -123,7 +123,7 @@ const getColorInputValue = (value: string, currentValue: string) => {
   return `${value}${alpha}`;
 };
 
-const cloneWithPathValue = (theme: ITheme<string>, path: string, value: string): ITheme => {
+const cloneWithPathValue = (theme: ITheme, path: string, value: string): ITheme => {
   const clonedTheme = JSON.parse(JSON.stringify(theme));
   const keys = path.split('.');
   const lastKey = keys.pop();
@@ -147,7 +147,7 @@ const formatPathPart = (value: string) => {
     .trim();
 };
 
-const getAdvancedThemeFields = (theme: ITheme<string>, t: TranslateFn) => {
+const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
   const groups = new Map<string, IAdvancedThemeField[]>();
 
   const walk = (target: unknown, path: string[] = []) => {
@@ -156,7 +156,7 @@ const getAdvancedThemeFields = (theme: ITheme<string>, t: TranslateFn) => {
     const themePart = target as Record<string, unknown>;
 
     for (const key in themePart) {
-      if (key === 'name' || key === '__colors') continue;
+      if (key === 'name') continue;
 
       const value = themePart[key];
       const nextPath = [...path, key];
@@ -208,7 +208,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const [showSaveNameInput, setShowSaveNameInput] = React.useState(false);
   const [themeToRemove, setThemeToRemove] = React.useState<string>();
 
-  const { modal: colors, __colors } = activeTheme;
+  const { modal: colors, settings } = activeTheme;
 
   const advancedGroups = React.useMemo(() => {
     return getAdvancedThemeFields(activeTheme, t);
@@ -216,9 +216,9 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const panelStyle = React.useMemo(
     () =>
       ({
-        '--settings-option-hover-background-color': __colors.darkLightDeep,
+        '--settings-option-hover-background-color': settings.optionHoverBackgroundColor,
       }) as React.CSSProperties,
-    [__colors.darkLightDeep],
+    [settings.optionHoverBackgroundColor],
   );
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
@@ -454,7 +454,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={12} />
 
-        <Text small color={__colors.gray} userSelect={false}>
+        <Text small color={settings.mutedColor} userSelect={false}>
           {t('settings.customization.currentCustomHelp', {
             themeName: t('settings.customization.currentCustomTheme'),
           })}
@@ -466,10 +466,10 @@ export const SettingsCustomizationPanel = React.memo(() => {
           className={styles.advancedGroups}
           style={
             {
-              '--theme-border-color': __colors.lightGray,
-              '--theme-panel-background-color': __colors.darkLightBar,
-              '--theme-hover-background-color': __colors.darkLightDeep,
-              '--theme-muted-color': __colors.gray,
+              '--theme-border-color': settings.themeBorderColor,
+              '--theme-panel-background-color': settings.themePanelBackgroundColor,
+              '--theme-hover-background-color': settings.themeHoverBackgroundColor,
+              '--theme-muted-color': settings.mutedColor,
             } as React.CSSProperties
           }
         >
@@ -504,10 +504,10 @@ export const SettingsCustomizationPanel = React.memo(() => {
                         }
                         color={colors.fieldColor}
                         backgroundColor={colors.fieldBackgroundColor}
-                        placeholderColor={__colors.gray}
+                        placeholderColor={settings.mutedColor}
                         xs={12}
                       />
-                      <span style={{ color: __colors.gray }}>{field.path}</span>
+                      <span style={{ color: settings.mutedColor }}>{field.path}</span>
                     </div>
                   );
                 })}
@@ -519,7 +519,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
       <div
         className={styles.floatingActions}
-        style={{ backgroundColor: colors.backgroundColor, borderColor: __colors.lightGray }}
+        style={{ backgroundColor: colors.backgroundColor, borderColor: settings.themeBorderColor }}
       >
         {showSaveNameInput && canSaveCurrentTheme && (
           <Input
@@ -533,7 +533,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
             }}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            placeholderColor={__colors.gray}
+            placeholderColor={settings.mutedColor}
             maxWidth="220px"
           />
         )}

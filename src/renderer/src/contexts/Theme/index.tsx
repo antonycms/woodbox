@@ -1,7 +1,7 @@
 import React from 'react';
 
 import useStorage from '@renderer/hooks/useStorage';
-import defaultTheme, { applyMonacoTheme, serializeTheme, ITheme } from '@renderer/styles/theme';
+import defaultTheme, { applyMonacoTheme, ITheme } from '@renderer/styles/theme';
 import { builtinThemes } from '@renderer/styles/theme/builtin';
 import { useCssProperties } from '@renderer/hooks/useCssProperties';
 import ThemeContext, { type IThemeProviderProps } from './context';
@@ -12,7 +12,7 @@ const ThemeProvider = ({ children }: IThemeProviderProps) => {
     '@theme:active',
     defaultTheme.name,
   );
-  const [storedThemes, setStoredThemes] = useStorage<ITheme<string>[]>('@theme:available', []);
+  const [storedThemes, setStoredThemes] = useStorage<ITheme[]>('@theme:available', []);
 
   const availableThemes = React.useMemo(() => {
     const builtinNames = new Set(builtinThemes.map((theme) => theme.name));
@@ -27,15 +27,10 @@ const ThemeProvider = ({ children }: IThemeProviderProps) => {
 
   const addTheme = React.useCallback(
     (theme: ITheme, options?: { activate?: boolean }) => {
-      const serializedTheme = serializeTheme(theme);
-
-      setStoredThemes((prevState) => [
-        ...prevState.filter((t) => t.name !== serializedTheme.name),
-        serializedTheme,
-      ]);
+      setStoredThemes((prevState) => [...prevState.filter((t) => t.name !== theme.name), theme]);
 
       if (options?.activate) {
-        setActiveThemeName(serializedTheme.name);
+        setActiveThemeName(theme.name);
       }
     },
     [setActiveThemeName, setStoredThemes],
@@ -83,7 +78,7 @@ export const useThemeContext = () => {
 };
 
 export const useCssPropertiesWithActiveTheme = (
-  callback: (activeTheme: ITheme<string>) => object,
+  callback: (activeTheme: ITheme) => object,
   arrDependencies?: React.DependencyList,
 ) => {
   const { activeTheme } = useThemeContext();

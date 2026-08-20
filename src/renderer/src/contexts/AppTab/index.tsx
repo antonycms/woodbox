@@ -46,7 +46,7 @@ const cleanupEmptyGroups = (groups: IAppTabGroup[], tabs: IAppTab[]) => {
 const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useI18n();
   const {
-    activeTheme: { __colors },
+    activeTheme: { mainTab: theme },
   } = useThemeContext();
   const [tabs, setTabs] = React.useState<IAppTab[]>([]);
   const [tabGroups, setTabGroups] = React.useState<IAppTabGroup[]>([]);
@@ -229,14 +229,14 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
   const createTabGroup = React.useCallback(
     (tabId: string) => {
       const tabGroupColors = [
-        __colors.blue,
-        __colors.red,
-        __colors.orange,
-        __colors.green,
-        __colors.purple,
-        __colors.pink,
-        __colors.orangeDeep,
-        __colors.greenDeep,
+        theme.groupColors[0],
+        theme.groupColors[1],
+        theme.groupColors[2],
+        theme.groupColors[3],
+        theme.groupColors[4],
+        theme.groupColors[5],
+        theme.groupColors[6],
+        theme.groupColors[7],
       ];
       const group: IAppTabGroup = {
         id: generateHash(),
@@ -251,7 +251,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
       return group.id;
     },
-    [__colors, tabGroups.length, t],
+    [theme.groupColors, tabGroups.length, t],
   );
 
   const addTabToGroup = React.useCallback(

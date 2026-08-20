@@ -51,7 +51,7 @@ export const AIChatPanel = React.memo(() => {
   } = useStoreContext();
   const { showToast } = useToast();
   const {
-    activeTheme: { __colors, mainTab: theme },
+    activeTheme: { aiChat: aiChatTheme, mainTab: theme },
   } = useThemeContext();
   const [width, _setWidth] = useStorage('ai_chat_panel_width', 430);
   const [emptyDraft, setEmptyDraft] = React.useState('');
@@ -497,16 +497,16 @@ export const AIChatPanel = React.memo(() => {
               {
                 '--borderColor': theme.bar.borderColor,
                 '--backgroundColor': theme.backgroundColor,
-                '--cardBackgroundColor': __colors.darkLightDeep,
+                '--cardBackgroundColor': aiChatTheme.cardBackgroundColor,
                 '--color': theme.color,
                 '--ascentColor': theme.ascentColor,
                 '--aiChatPanelWidth': `${width}px`,
-                '--mutedColor': __colors.gray,
-                '--sendBackgroundColor': __colors.green,
-                '--sendColor': __colors.dark,
-                '--sendDisabledBackgroundColor': __colors.gray,
-                '--sendDisabledColor': __colors.white,
-                '--queryRejectedColor': __colors.red,
+                '--mutedColor': aiChatTheme.mutedColor,
+                '--sendBackgroundColor': aiChatTheme.sendBackgroundColor,
+                '--sendColor': aiChatTheme.sendColor,
+                '--sendDisabledBackgroundColor': aiChatTheme.sendDisabledBackgroundColor,
+                '--sendDisabledColor': aiChatTheme.sendDisabledColor,
+                '--queryRejectedColor': aiChatTheme.queryRejectedColor,
               } as React.CSSProperties
             }
             onResize={(size) => {

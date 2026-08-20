@@ -42,7 +42,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     emptyMessage = 'Não há opções disponíveis',
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { autocomplete: theme },
   } = useThemeContext();
 
   const itemSize = 41;
@@ -184,17 +184,17 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         color,
         maxHeight: dropdownPlacement?.maxHeight,
         ...toCssProperties({ height: `${dropdownHeight}px` }),
-        '--autocomplete-hover-background-color': __colors.darkLight,
-        '--autocomplete-selected-background-color': __colors.darkLightDeep,
-        '--autocomplete-active-background-color': __colors.darkLightDeep,
-        '--autocomplete-border-color': __colors.lightGray,
-        '--autocomplete-shadow-color': __colors.shadow,
+        '--autocomplete-hover-background-color': theme.blank.hoverBackgroundColor,
+        '--autocomplete-selected-background-color': theme.blank.selectedBackgroundColor,
+        '--autocomplete-active-background-color': theme.blank.activeBackgroundColor,
+        '--autocomplete-border-color': theme.blank.borderColor,
+        '--autocomplete-shadow-color': theme.blank.shadowColor,
       }) as React.CSSProperties,
     [
-      __colors.darkLight,
-      __colors.darkLightDeep,
-      __colors.lightGray,
-      __colors.shadow,
+      theme.blank.hoverBackgroundColor,
+      theme.blank.selectedBackgroundColor,
+      theme.blank.borderColor,
+      theme.blank.shadowColor,
       backgroundColor,
       color,
       dropdownHeight,

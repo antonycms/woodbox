@@ -24,8 +24,7 @@ export const Modal = React.memo((props: IModalProps) => {
 
   const {
     activeTheme: {
-      __colors,
-      modal: { backgroundColor, color },
+      modal: { backgroundColor, color, overlayColor },
     },
   } = useThemeContext();
 
@@ -34,9 +33,9 @@ export const Modal = React.memo((props: IModalProps) => {
   const styleOverlay = React.useMemo(() => {
     return {
       display: justHide && !show ? 'none' : 'unset',
-      '--modal-overlay-color': __colors.overlay,
+      '--modal-overlay-color': overlayColor,
     } as React.CSSProperties;
-  }, [__colors.overlay, show, justHide]);
+  }, [overlayColor, show, justHide]);
 
   const styleContainer = React.useMemo(() => {
     return { backgroundColor, height, maxHeight, maxWidth: width };

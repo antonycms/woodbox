@@ -35,7 +35,7 @@ export const FilePicker = (props: IFilePickerProps) => {
     ...gridSystem
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { field: theme },
   } = useThemeContext();
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
@@ -43,9 +43,9 @@ export const FilePicker = (props: IFilePickerProps) => {
   const wrapperStyle = React.useMemo(
     () =>
       ({
-        '--file-picker-required-color': __colors.red,
+        '--file-picker-required-color': theme.requiredColor,
       }) as React.CSSProperties,
-    [__colors.red],
+    [theme.requiredColor],
   );
 
   const pickerStyle = React.useMemo(
@@ -53,11 +53,11 @@ export const FilePicker = (props: IFilePickerProps) => {
       ({
         '--file-picker-background-color': backgroundColor,
         '--file-picker-color': color,
-        '--file-picker-border-color': __colors.lightGray,
-        '--file-picker-muted-color': placeholderColor || __colors.gray,
+        '--file-picker-border-color': theme.borderColor,
+        '--file-picker-muted-color': placeholderColor || theme.mutedColor,
         ...(style || {}),
       }) as React.CSSProperties,
-    [__colors.gray, __colors.lightGray, backgroundColor, color, placeholderColor, style],
+    [theme.mutedColor, theme.borderColor, backgroundColor, color, placeholderColor, style],
   );
 
   return (

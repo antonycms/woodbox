@@ -46,7 +46,7 @@ export const RefreshButton = ({
   );
 
   const refreshTitle = autoRefreshMs ? `Cancelar auto-refresh (${selectedOption?.label})` : title;
-  const buttonColor = autoRefreshMs ? activeTheme.__colors.green : color;
+  const buttonColor = autoRefreshMs ? activeTheme.button.activeColor : color;
   const buttonDisabled = disabled && !autoRefreshMs;
 
   const runRefresh = React.useCallback(async () => {

@@ -6,8 +6,8 @@ export interface IThemeProviderProps {
 }
 
 export interface IThemeContext {
-  activeTheme: ITheme<string>;
-  availableThemes: ITheme<string>[];
+  activeTheme: ITheme;
+  availableThemes: ITheme[];
   addTheme(theme: ITheme, options?: IAddThemeOptions): void;
   removeTheme(themeName: string, fallbackThemeName?: string): void;
   changeTheme(themeName: string): void;

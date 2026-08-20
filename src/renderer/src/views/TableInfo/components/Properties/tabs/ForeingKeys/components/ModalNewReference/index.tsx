@@ -65,7 +65,7 @@ const ModalNewReference = ({
   onAdd,
 }: IModalNewReferenceProps) => {
   const {
-    activeTheme: { __colors, modal: colors },
+    activeTheme: { feedback, modal: colors },
   } = useThemeContext();
   const { getTableColumns, getTableRestrictions } = useStoreContext();
   const { t } = useI18n();
@@ -274,8 +274,8 @@ const ModalNewReference = ({
               style={
                 {
                   color: colors.color,
-                  '--warning-border-color': __colors.orangeDeep,
-                  '--warning-background-color': __colors.orangeTransparent,
+                  '--warning-border-color': feedback.warningBorderColor,
+                  '--warning-background-color': feedback.warningBackgroundColor,
                 } as React.CSSProperties
               }
             >

@@ -30,7 +30,7 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
     ...buttonProps
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { button: theme },
   } = useThemeContext();
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -65,7 +65,7 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
             {
               backgroundColor: dropdownBackground,
               '--dropdown-option-hover-background-color':
-                dropdownHoverBackground || __colors.darkLightDeep,
+                dropdownHoverBackground || theme.hoverBackgroundColor,
             } as React.CSSProperties
           }
         >

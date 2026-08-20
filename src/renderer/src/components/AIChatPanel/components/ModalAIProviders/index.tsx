@@ -72,7 +72,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     logoutCodexChatGPT,
   } = useStoreContext();
   const {
-    activeTheme: { __colors, modal: colors },
+    activeTheme: { modal: colors },
   } = useThemeContext();
   const [editingProvider, setEditingProvider] = React.useState<ProviderForm>();
   const [providerToRemove, setProviderToRemove] = React.useState<IAIProvider>();
@@ -328,8 +328,8 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
             xs={12}
             sm={6}
             onClick={() => setProviderToRemove(undefined)}
-            color={__colors.white}
-            backgroundColor={__colors.gray}
+            color={colors.neutralButtonColor}
+            backgroundColor={colors.neutralButtonBackgroundColor}
           >
             {t('common.cancel')}
           </Button>
@@ -338,8 +338,8 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
             xs={12}
             sm={6}
             onClick={confirmRemoveProvider}
-            color={__colors.white}
-            backgroundColor={__colors.red}
+            color={colors.neutralButtonColor}
+            backgroundColor={colors.dangerButtonBackgroundColor}
           >
             {t('common.delete')}
           </Button>
@@ -389,8 +389,8 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   tabIndex={0}
                   className={styles.providerCard}
                   color={colors.color}
-                  borderColor={__colors.lightGray}
-                  backgroundColor={__colors.darkLightDeep}
+                  borderColor={colors.borderColor}
+                  backgroundColor={colors.panelBackgroundColor}
                   onClick={() => setEditingProvider(toProviderForm(provider))}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') setEditingProvider(toProviderForm(provider));
@@ -462,7 +462,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   color={colors.color}
                   borderColor="transparent"
                   style={{ padding: '0 0 0 8px' }}
-                  backgroundColor={__colors.darkLightDeep}
+                  backgroundColor={colors.panelBackgroundColor}
                   className={styles.codexCard}
                 >
                   <div className={styles.codexStatusRow}>

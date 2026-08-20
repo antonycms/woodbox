@@ -18,7 +18,7 @@ export const ModalDeleteAIChat = React.memo(
   ({ chat, onClose, onConfirm }: IModalDeleteAIChatProps) => {
     const { t } = useI18n();
     const {
-      activeTheme: { __colors, mainTab: theme },
+      activeTheme: { aiChat: aiChatTheme, mainTab: theme },
     } = useThemeContext();
 
     return (
@@ -34,8 +34,8 @@ export const ModalDeleteAIChat = React.memo(
             xs={12}
             sm={6}
             onClick={onClose}
-            color={__colors.white}
-            backgroundColor={__colors.gray}
+            color={aiChatTheme.neutralButtonColor}
+            backgroundColor={aiChatTheme.neutralButtonBackgroundColor}
           >
             {t('common.cancel')}
           </Button>
@@ -44,8 +44,8 @@ export const ModalDeleteAIChat = React.memo(
             xs={12}
             sm={6}
             onClick={onConfirm}
-            color={__colors.white}
-            backgroundColor={__colors.red}
+            color={aiChatTheme.neutralButtonColor}
+            backgroundColor={aiChatTheme.dangerButtonBackgroundColor}
           >
             {t('common.delete')}
           </Button>

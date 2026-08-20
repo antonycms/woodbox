@@ -26,7 +26,7 @@ export const Button = React.memo((props: IButtonProps) => {
     ...gridProps
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { button: theme },
   } = useThemeContext();
 
   const classesButton = classes(
@@ -44,9 +44,9 @@ export const Button = React.memo((props: IButtonProps) => {
       backgroundColor,
       width,
       justifyContent,
-      '--button-hover-background-color': __colors.darkLightDeep,
+      '--button-hover-background-color': theme.hoverBackgroundColor,
     } as React.CSSProperties;
-  }, [__colors.darkLightDeep, color, backgroundColor, width, justifyContent]);
+  }, [theme.hoverBackgroundColor, color, backgroundColor, width, justifyContent]);
 
   return (
     <Column {...gridProps}>

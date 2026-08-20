@@ -46,7 +46,7 @@ const TabsBar = (props: ITabsBarProps) => {
     padding,
   } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { mainTab: theme },
   } = useThemeContext();
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -164,14 +164,14 @@ const TabsBar = (props: ITabsBarProps) => {
       backgroundColorBar,
       backgroundColor,
       colorWhite: color,
-      tabHoverBackgroundColor: __colors.darkLightDeep,
-      tabDraggingBackgroundColor: __colors.darkLightDeep,
-      tabEditorShadowColor: __colors.shadowStrong,
+      tabHoverBackgroundColor: theme.hoverBackgroundColor,
+      tabDraggingBackgroundColor: theme.draggingBackgroundColor,
+      tabEditorShadowColor: theme.editorShadowColor,
     });
     return { ...cssProperties, height: vertical ? undefined : height };
   }, [
-    __colors.darkLightDeep,
-    __colors.shadowStrong,
+    theme.hoverBackgroundColor,
+    theme.editorShadowColor,
     tabs.length,
     color,
     borderColor,
@@ -478,20 +478,11 @@ const TabGroupEditor = (props: ITabGroupEditorProps) => {
   const { t } = useI18n();
   const { context, onUpdateGroup, onUngroup, onCloseGroup } = props;
   const {
-    activeTheme: { __colors },
+    activeTheme: { mainTab: theme },
   } = useThemeContext();
   const { group, position } = context;
   const [title, setTitle] = React.useState(group.title);
-  const tabGroupColors = [
-    __colors.blue,
-    __colors.red,
-    __colors.orange,
-    __colors.green,
-    __colors.purple,
-    __colors.pink,
-    __colors.orangeDeep,
-    __colors.greenDeep,
-  ];
+  const tabGroupColors = theme.groupColors;
 
   React.useEffect(() => {
     setTitle(group.title);

@@ -182,7 +182,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   } = props;
 
   const {
-    activeTheme: { __colors, table: theme },
+    activeTheme: { table: theme },
   } = useThemeContext();
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
@@ -309,12 +309,12 @@ function Table<Row = any>(props: ITableProps<Row>) {
         ...cssVars,
         '--tableSearchTop': `${searchOverlayPosition.top}px`,
         '--tableSearchRight': `${searchOverlayPosition.right}px`,
-        '--backgroundColorRowNew': `color-mix(in srgb, ${__colors.green} 24%, transparent)`,
-        '--backgroundColorRowRemoved': __colors.redTransparent,
+        '--backgroundColorRowNew': theme.backgroundColorRowNew,
+        '--backgroundColorRowRemoved': theme.backgroundColorRowRemoved,
       }) as React.CSSProperties,
     [
-      __colors.green,
-      __colors.redTransparent,
+      theme.backgroundColorRowNew,
+      theme.backgroundColorRowRemoved,
       cssVars,
       searchOverlayPosition.right,
       searchOverlayPosition.top,

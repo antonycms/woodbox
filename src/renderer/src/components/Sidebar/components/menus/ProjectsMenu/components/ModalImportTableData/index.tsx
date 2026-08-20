@@ -198,7 +198,7 @@ export const ModalImportTableData = React.memo(
     const { t, language } = useI18n();
     const { showToast } = useToast();
     const {
-      activeTheme: { __colors, modal: colors },
+      activeTheme: { settings, modal: colors },
     } = useThemeContext();
 
     const [loadingColumns, setLoadingColumns] = React.useState(false);
@@ -421,8 +421,8 @@ export const ModalImportTableData = React.memo(
           onSubmit={handleImport}
           style={
             {
-              '--import-border-color': __colors.lightGray,
-              '--import-muted-color': __colors.gray,
+              '--import-border-color': settings.importBorderColor,
+              '--import-muted-color': settings.importMutedColor,
               '--import-field-background-color': colors.fieldBackgroundColor,
               '--import-field-color': colors.fieldColor,
             } as React.CSSProperties
@@ -443,7 +443,7 @@ export const ModalImportTableData = React.memo(
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
               labelColor={colors.fieldLabelColor}
-              placeholderColor={__colors.gray}
+              placeholderColor={settings.importMutedColor}
               disabled={loadingColumns || loadingFile || importing}
               onChange={handleFileChange}
               md={selectedFileIsCsv ? 10 : 12}

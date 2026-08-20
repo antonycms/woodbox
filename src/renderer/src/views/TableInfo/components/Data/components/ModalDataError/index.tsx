@@ -16,13 +16,13 @@ interface IModalDataErrorProps {
 const ModalDataError = ({ message, onClose }: IModalDataErrorProps) => {
   const { t } = useI18n();
   const {
-    activeTheme: { __colors, modal: colors },
+    activeTheme: { feedback, modal: colors },
   } = useThemeContext();
   const style = {
-    '--errorBorderColor': __colors.redDeep,
-    '--errorAccentColor': __colors.red,
-    '--errorBackgroundColor': __colors.darkLight,
-    '--errorMessageBackgroundColor': __colors.darkLight,
+    '--errorBorderColor': feedback.errorBorderColor,
+    '--errorAccentColor': feedback.errorAccentColor,
+    '--errorBackgroundColor': feedback.errorBackgroundColor,
+    '--errorMessageBackgroundColor': feedback.errorMessageBackgroundColor,
   } as React.CSSProperties;
 
   return (
