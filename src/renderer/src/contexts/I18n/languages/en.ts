@@ -53,7 +53,7 @@ export const en = {
   'settings.customization.group.table': 'Table',
   'settings.customization.group.modal': 'Modal',
   'settings.customization.group.tableInfo': 'Table information',
-  'settings.customization.group.queryEditor': 'Query editor',
+  'settings.customization.group.queryEditor': 'Main editor',
 
   'settings.customization.attribute.color': 'Text',
   'settings.customization.attribute.backgroundColor': 'Background',

@@ -55,7 +55,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.customization.group.table': 'Tabela',
   'settings.customization.group.modal': 'Modal',
   'settings.customization.group.tableInfo': 'Informações da tabela',
-  'settings.customization.group.queryEditor': 'Editor de query',
+  'settings.customization.group.queryEditor': 'Editor principal',
 
   'settings.customization.attribute.color': 'Texto',
   'settings.customization.attribute.backgroundColor': 'Fundo',
