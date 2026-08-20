@@ -40,6 +40,32 @@ const themeGroupLabelKeys: Record<string, TranslationKey> = {
   modal: 'settings.customization.group.modal',
   tableInfo: 'settings.customization.group.tableInfo',
   queryEditor: 'settings.customization.group.queryEditor',
+  button: 'settings.customization.group.button',
+  autocomplete: 'settings.customization.group.autocomplete',
+  field: 'settings.customization.group.field',
+  loaders: 'settings.customization.group.loaders',
+  settings: 'settings.customization.group.settings',
+  centralSearch: 'settings.customization.group.centralSearch',
+  aiChat: 'settings.customization.group.aiChat',
+  feedback: 'settings.customization.group.feedback',
+};
+
+const themePathLabelKeys: Record<string, TranslationKey> = {
+  menuBar: 'settings.customization.path.menuBar',
+  bar: 'settings.customization.path.bar',
+  success: 'settings.customization.path.success',
+  warn: 'settings.customization.path.warn',
+  error: 'settings.customization.path.error',
+  blank: 'settings.customization.path.blank',
+  tab: 'settings.customization.path.tab',
+  properties: 'settings.customization.path.properties',
+  header: 'settings.customization.path.header',
+  data: 'settings.customization.path.data',
+  explain: 'settings.customization.path.explain',
+  serverOutput: 'settings.customization.path.serverOutput',
+  capture: 'settings.customization.path.capture',
+  groupColors: 'settings.customization.path.groupColors',
+  barColors: 'settings.customization.path.barColors',
 };
 
 const themeAttributeLabelKeys: Record<string, TranslationKey> = {
@@ -48,8 +74,10 @@ const themeAttributeLabelKeys: Record<string, TranslationKey> = {
   fieldColor: 'settings.customization.attribute.fieldColor',
   fieldPlaceholderColor: 'settings.customization.attribute.fieldPlaceholderColor',
   fieldBackgroundColor: 'settings.customization.attribute.fieldBackgroundColor',
+  cardBackgroundColor: 'settings.customization.attribute.cardBackgroundColor',
   fieldLabelColor: 'settings.customization.attribute.fieldLabelColor',
   borderColor: 'settings.customization.attribute.borderColor',
+  borderMutedColor: 'settings.customization.attribute.borderMutedColor',
   ascentColor: 'settings.customization.attribute.ascentColor',
   saveButtonColor: 'settings.customization.attribute.saveButtonColor',
   saveButtonBackgroundColor: 'settings.customization.attribute.saveButtonBackgroundColor',
@@ -57,6 +85,10 @@ const themeAttributeLabelKeys: Record<string, TranslationKey> = {
   cancelButtonBackgroundColor: 'settings.customization.attribute.cancelButtonBackgroundColor',
   testButtonColor: 'settings.customization.attribute.testButtonColor',
   testButtonBackgroundColor: 'settings.customization.attribute.testButtonBackgroundColor',
+  neutralButtonColor: 'settings.customization.attribute.neutralButtonColor',
+  neutralButtonBackgroundColor: 'settings.customization.attribute.neutralButtonBackgroundColor',
+  dangerButtonColor: 'settings.customization.attribute.dangerButtonColor',
+  dangerButtonBackgroundColor: 'settings.customization.attribute.dangerButtonBackgroundColor',
   lineNumberColor: 'settings.customization.attribute.lineNumberColor',
   currentLineNumberColor: 'settings.customization.attribute.currentLineNumberColor',
   cursorColor: 'settings.customization.attribute.cursorColor',
@@ -78,6 +110,55 @@ const themeAttributeLabelKeys: Record<string, TranslationKey> = {
   selectedColor: 'settings.customization.attribute.selectedColor',
   selectedBackgroundColor: 'settings.customization.attribute.selectedBackgroundColor',
   selectedBorderColor: 'settings.customization.attribute.selectedBorderColor',
+  backgroundColorRowNew: 'settings.customization.attribute.backgroundColorRowNew',
+  backgroundColorRowRemoved: 'settings.customization.attribute.backgroundColorRowRemoved',
+  panelBackgroundColor: 'settings.customization.attribute.panelBackgroundColor',
+  overlayColor: 'settings.customization.attribute.overlayColor',
+  shadowColor: 'settings.customization.attribute.shadowColor',
+  iconBackgroundColor: 'settings.customization.attribute.iconBackgroundColor',
+  hoverBackgroundColor: 'settings.customization.attribute.hoverBackgroundColor',
+  activeColor: 'settings.customization.attribute.activeColor',
+  activeBackgroundColor: 'settings.customization.attribute.activeBackgroundColor',
+  draggingBackgroundColor: 'settings.customization.attribute.draggingBackgroundColor',
+  editorShadowColor: 'settings.customization.attribute.editorShadowColor',
+  requiredColor: 'settings.customization.attribute.requiredColor',
+  mutedColor: 'settings.customization.attribute.mutedColor',
+  overlayBackgroundColor: 'settings.customization.attribute.overlayBackgroundColor',
+  spinnerBackgroundColor: 'settings.customization.attribute.spinnerBackgroundColor',
+  menuBackgroundColor: 'settings.customization.attribute.menuBackgroundColor',
+  menuHoverBackgroundColor: 'settings.customization.attribute.menuHoverBackgroundColor',
+  inactiveMenuColor: 'settings.customization.attribute.inactiveMenuColor',
+  optionHoverBackgroundColor: 'settings.customization.attribute.optionHoverBackgroundColor',
+  themeBorderColor: 'settings.customization.attribute.themeBorderColor',
+  themePanelBackgroundColor: 'settings.customization.attribute.themePanelBackgroundColor',
+  themeHoverBackgroundColor: 'settings.customization.attribute.themeHoverBackgroundColor',
+  importBorderColor: 'settings.customization.attribute.importBorderColor',
+  importBackgroundColor: 'settings.customization.attribute.importBackgroundColor',
+  importMutedColor: 'settings.customization.attribute.importMutedColor',
+  importWarningColor: 'settings.customization.attribute.importWarningColor',
+  subtleBackgroundColor: 'settings.customization.attribute.subtleBackgroundColor',
+  dropdownBorderColor: 'settings.customization.attribute.dropdownBorderColor',
+  sendBackgroundColor: 'settings.customization.attribute.sendBackgroundColor',
+  sendColor: 'settings.customization.attribute.sendColor',
+  sendDisabledBackgroundColor: 'settings.customization.attribute.sendDisabledBackgroundColor',
+  sendDisabledColor: 'settings.customization.attribute.sendDisabledColor',
+  queryPendingColor: 'settings.customization.attribute.queryPendingColor',
+  queryApprovedColor: 'settings.customization.attribute.queryApprovedColor',
+  queryRejectedColor: 'settings.customization.attribute.queryRejectedColor',
+  dropdownBackgroundColor: 'settings.customization.attribute.dropdownBackgroundColor',
+  errorBorderColor: 'settings.customization.attribute.errorBorderColor',
+  errorAccentColor: 'settings.customization.attribute.errorAccentColor',
+  errorBackgroundColor: 'settings.customization.attribute.errorBackgroundColor',
+  errorMessageBackgroundColor: 'settings.customization.attribute.errorMessageBackgroundColor',
+  warningBorderColor: 'settings.customization.attribute.warningBorderColor',
+  warningBackgroundColor: 'settings.customization.attribute.warningBackgroundColor',
+  accentColor: 'settings.customization.attribute.accentColor',
+  messageBackgroundColor: 'settings.customization.attribute.messageBackgroundColor',
+  messageColor: 'settings.customization.attribute.messageColor',
+  surfaceColor: 'settings.customization.attribute.surfaceColor',
+  warnColor: 'settings.customization.attribute.warnColor',
+  dangerColor: 'settings.customization.attribute.dangerColor',
+  modifiedColor: 'settings.customization.attribute.modifiedColor',
 };
 
 const themeLabels = {
@@ -147,6 +228,32 @@ const formatPathPart = (value: string) => {
     .trim();
 };
 
+const translatePathPart = (value: string, t: TranslateFn) => {
+  const labelKey = themePathLabelKeys[value];
+
+  return labelKey ? t(labelKey) : formatPathPart(value);
+};
+
+const getThemeFieldLabel = (fieldName: string, parentName: string | undefined, t: TranslateFn) => {
+  if (/^\d+$/.test(fieldName)) {
+    const index = Number(fieldName) + 1;
+
+    if (parentName === 'groupColors') {
+      return t('settings.customization.attribute.groupColor', { index });
+    }
+
+    if (parentName === 'barColors') {
+      return t('settings.customization.attribute.barColor', { index });
+    }
+
+    return t('settings.customization.attribute.colorIndex', { index });
+  }
+
+  const labelKey = themeAttributeLabelKeys[fieldName];
+
+  return labelKey ? t(labelKey) : formatPathPart(fieldName);
+};
+
 const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
   const groups = new Map<string, IAdvancedThemeField[]>();
 
@@ -171,9 +278,12 @@ const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
       const groupName = nextPath[0];
       const groupFields = groups.get(groupName) || [];
       const fieldName = nextPath[nextPath.length - 1];
-      const parentPath = nextPath.slice(1, -1).map(formatPathPart).join(' / ');
-      const labelKey = themeAttributeLabelKeys[fieldName];
-      const label = labelKey ? t(labelKey) : formatPathPart(fieldName);
+      const parentName = nextPath[nextPath.length - 2];
+      const parentPath = nextPath
+        .slice(1, -1)
+        .map((pathPart) => translatePathPart(pathPart, t))
+        .join(' / ');
+      const label = getThemeFieldLabel(fieldName, parentName, t);
 
       groupFields.push({
         path: nextPath.join('.'),
