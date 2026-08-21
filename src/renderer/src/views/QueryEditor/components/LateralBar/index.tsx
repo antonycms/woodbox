@@ -11,6 +11,7 @@ import {
 } from '@renderer/styles/icons';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { getPrimaryShortcutKeyLabel } from '@renderer/utils/keyboard';
+import styles from './styles.module.css';
 
 interface ILateralBarProps {
   runCurrentSQL(openNewTab?: boolean): void;
@@ -18,6 +19,7 @@ interface ILateralBarProps {
   runAllSQL(): void;
   explainCurrentSQL(): void;
   showServerOutput(): void;
+  hasUnreadServerOutput?: boolean;
 }
 
 export const LateralBar = (props: ILateralBarProps) => {
@@ -25,8 +27,14 @@ export const LateralBar = (props: ILateralBarProps) => {
   const { activeTheme } = useThemeContext();
   const shortcutKey = getPrimaryShortcutKeyLabel();
 
-  const { runAllSQL, runSelectionsSQL, runCurrentSQL, explainCurrentSQL, showServerOutput } =
-    props;
+  const {
+    runAllSQL,
+    runSelectionsSQL,
+    runCurrentSQL,
+    explainCurrentSQL,
+    showServerOutput,
+    hasUnreadServerOutput,
+  } = props;
 
   return (
     <Bar
@@ -81,7 +89,17 @@ export const LateralBar = (props: ILateralBarProps) => {
         onClick={showServerOutput}
         color={activeTheme.queryEditor.bar.color}
       >
-        <IconFileWrited size={16} />
+        <span
+          className={styles.outputIconWrapper}
+          style={
+            {
+              '--server-output-badge-color': activeTheme.queryEditor.bar.color,
+            } as React.CSSProperties
+          }
+        >
+          <IconFileWrited size={16} />
+          {!!hasUnreadServerOutput && <span className={styles.outputBadge} />}
+        </span>
       </Button>
     </Bar>
   );

@@ -16,7 +16,12 @@ import useStorage from '@renderer/hooks/useStorage';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
-import { IColumnInfo, IColumnReferenceInfo, useStoreContext } from '@renderer/contexts/Store';
+import {
+  IColumnInfo,
+  IColumnReferenceInfo,
+  IServerOutputMessage,
+  useStoreContext,
+} from '@renderer/contexts/Store';
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
 import { isSnippetAvailableForDialect } from '@renderer/utils/snippets';
 import { getNextSort } from '@renderer/utils/tableSort';
@@ -107,6 +112,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
     React.useState<IExecuteQueryParams>();
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
+  const [hasUnreadServerOutput, setHasUnreadServerOutput] = React.useState(false);
   const {
     cancelingQueryIds,
     forgetCanceledQuery,
@@ -457,6 +463,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   }, [pendingProductionQueryExecution]);
 
   const showServerOutput = React.useCallback(() => {
+    setHasUnreadServerOutput(false);
     setShowServerOutputModal(true);
   }, []);
 
@@ -1114,6 +1121,19 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   }, [loadTableReferences]);
 
   React.useEffect(() => {
+    const removeListener = window.electron.ipcRenderer.on(
+      '@event:server_output',
+      (_event, message: IServerOutputMessage) => {
+        if (message.connectionId !== id_connection || showServerOutputModal) return;
+
+        setHasUnreadServerOutput(true);
+      },
+    );
+
+    return removeListener;
+  }, [id_connection, showServerOutputModal]);
+
+  React.useEffect(() => {
     if (!isActiveTab) return;
 
     let secondFrameId: number | undefined;
@@ -1144,6 +1164,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           runCurrentSQL={runCurrentSQL}
           explainCurrentSQL={explainCurrentSQL}
           showServerOutput={showServerOutput}
+          hasUnreadServerOutput={hasUnreadServerOutput}
         />
 
         <Editor

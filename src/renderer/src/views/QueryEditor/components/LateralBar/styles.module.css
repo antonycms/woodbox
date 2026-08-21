@@ -1,0 +1,15 @@
+.outputIconWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.outputBadge {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--server-output-badge-color);
+  box-shadow: 0 0 8px var(--server-output-badge-color);
+}

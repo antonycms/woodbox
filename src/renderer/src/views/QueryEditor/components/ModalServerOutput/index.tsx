@@ -26,7 +26,6 @@ export const ModalServerOutput = React.memo(
 
     const { getServerOutput, clearServerOutput } = useStoreContext();
 
-    const [showLocal, setShowLocal] = React.useState(false);
     const [messages, setMessages] = React.useState<IServerOutputMessage[]>([]);
     const listRef = React.useRef<HTMLDivElement>(null);
 
@@ -41,7 +40,6 @@ export const ModalServerOutput = React.memo(
     }, [clearServerOutput, id_connection]);
 
     const handleClose = React.useCallback(() => {
-      setShowLocal(false);
       onClose?.();
     }, [onClose]);
 
@@ -62,10 +60,6 @@ export const ModalServerOutput = React.memo(
             if (prevState.some(({ id }) => id === message.id)) return prevState;
             return [...prevState, message].slice(-1000);
           });
-
-          if (message.severity?.toUpperCase?.() === 'NOTICE') {
-            setShowLocal(true);
-          }
         },
       );
 
@@ -78,7 +72,7 @@ export const ModalServerOutput = React.memo(
         title={t('modal.serverOutput')}
         width="900px"
         height="520px"
-        show={show || showLocal}
+        show={show}
         onClose={handleClose}
       >
         <div ref={listRef} className={styles.outputList} style={{ color: colors.color }}>
