@@ -289,6 +289,7 @@ export const en = {
   'field.database': 'Database',
   'field.user': 'User',
   'field.password': 'Password',
+  'field.passwordSavedPlaceholder': 'Password saved; leave blank to keep it',
   'field.ssl': 'Use SSL',
   'field.sslRejectUnauthorized': 'Validate SSL certificate',
   'field.sslCaCert': 'CA certificate',

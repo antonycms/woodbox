@@ -189,8 +189,9 @@ export interface IConnectionCreate {
   sslKey?: string;
 }
 
-export interface IConnection extends IConnectionCreate {
+export interface IConnection extends Omit<IConnectionCreate, 'password'> {
   id: string;
+  hasPassword: boolean;
 }
 
 export type ImportConnectionsSource = 'dbeaver';

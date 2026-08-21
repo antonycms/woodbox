@@ -292,6 +292,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'field.database': 'Base de dados',
   'field.user': 'Usuário',
   'field.password': 'Senha',
+  'field.passwordSavedPlaceholder': 'Senha salva; deixe em branco para manter',
   'field.ssl': 'Usar SSL',
   'field.sslRejectUnauthorized': 'Validar certificado SSL',
   'field.sslCaCert': 'Certificado CA',

@@ -81,6 +81,11 @@ export const ModalNewConnection = React.memo(
 
     const selectedDialect = getRendererDialect(state.dialect);
     const isFileConnection = selectedDialect.connectionMode === 'file';
+    const connectionSavedData = React.useMemo(
+      () =>
+        idConnection ? connections.find((connection) => connection.id === idConnection) : undefined,
+      [connections, idConnection],
+    );
 
     const registerDialect = register('dialect');
 
@@ -164,12 +169,11 @@ export const ModalNewConnection = React.memo(
     const loadConnectionEditingData = async () => {
       if (!idConnection) return;
 
-      const connectionSavedData = connections.find((connection) => connection.id === idConnection);
-
       setState((prevState) => ({
         ...prevState,
         ...connectionSavedData,
         environment: connectionSavedData?.environment || 'development',
+        password: '',
         ssl: !!connectionSavedData?.ssl,
         sslRejectUnauthorized: !!connectionSavedData?.sslRejectUnauthorized,
         sslCaCert: connectionSavedData?.sslCaCert || '',
@@ -203,7 +207,7 @@ export const ModalNewConnection = React.memo(
 
     React.useEffect(() => {
       loadConnectionEditingData();
-    }, [idConnection]);
+    }, [connectionSavedData, idConnection]);
 
     return (
       <Modal
@@ -315,6 +319,11 @@ export const ModalNewConnection = React.memo(
                   type="password"
                   xs={12}
                   md={6}
+                  placeholder={
+                    idConnection && connectionSavedData?.hasPassword
+                      ? t('field.passwordSavedPlaceholder')
+                      : undefined
+                  }
                   backgroundColor={colors.fieldBackgroundColor}
                   color={colors.fieldColor}
                   {...register('password')}
