@@ -1,11 +1,9 @@
-import { safeStorage } from 'electron';
 import Store from 'electron-store';
+import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '@main/storage/secret';
 
 const ISSUER = 'https://auth.openai.com';
 const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const STORE_KEY = 'codex_chatgpt_auth';
-const SAFE_PREFIX = 'safe:';
-const PLAIN_PREFIX = 'plain:';
 
 type TokenResponse = {
   id_token?: string;
@@ -54,26 +52,6 @@ type JwtClaims = {
 
 const store = new Store<Record<string, unknown>>({ name: 'codex_auth' });
 
-const encodeSecret = (secret: string) => {
-  if (safeStorage.isEncryptionAvailable()) {
-    return `${SAFE_PREFIX}${safeStorage.encryptString(secret).toString('base64')}`;
-  }
-
-  return `${PLAIN_PREFIX}${Buffer.from(secret, 'utf8').toString('base64')}`;
-};
-
-const decodeSecret = (secret: string) => {
-  if (secret.startsWith(SAFE_PREFIX)) {
-    return safeStorage.decryptString(Buffer.from(secret.slice(SAFE_PREFIX.length), 'base64'));
-  }
-
-  if (secret.startsWith(PLAIN_PREFIX)) {
-    return Buffer.from(secret.slice(PLAIN_PREFIX.length), 'base64').toString('utf8');
-  }
-
-  return secret;
-};
-
 export const parseJwtClaims = (token: string): JwtClaims | undefined => {
   const [, payload] = token.split('.');
 
@@ -111,8 +89,8 @@ const toCredential = (tokens: TokenResponse): StoredCodexCredential => {
 const saveCredential = (credential: StoredCodexCredential) => {
   store.set(STORE_KEY, {
     ...credential,
-    accessToken: encodeSecret(credential.accessToken),
-    refreshToken: encodeSecret(credential.refreshToken),
+    accessToken: encodeSecret(store, credential.accessToken),
+    refreshToken: encodeSecret(store, credential.refreshToken),
   });
 };
 
@@ -121,11 +99,22 @@ export const getStoredCodexCredential = (): StoredCodexCredential | undefined =>
 
   if (!raw?.accessToken || !raw.refreshToken || !raw.expiresAt) return undefined;
 
-  return {
-    ...raw,
-    accessToken: decodeSecret(raw.accessToken),
-    refreshToken: decodeSecret(raw.refreshToken),
-  };
+  try {
+    const credential = {
+      ...raw,
+      accessToken: decodeSecret(store, raw.accessToken),
+      refreshToken: decodeSecret(store, raw.refreshToken),
+    };
+
+    if (!isLocalEncryptedSecret(raw.accessToken) || !isLocalEncryptedSecret(raw.refreshToken)) {
+      saveCredential(credential);
+    }
+
+    return credential;
+  } catch {
+    clearStoredCodexCredential();
+    return undefined;
+  }
 };
 
 export const clearStoredCodexCredential = () => {

@@ -1,10 +1,13 @@
-import { safeStorage } from 'electron';
 import type Store from 'electron-store';
+import {
+  decodeSecret,
+  encodeSecret,
+  isLegacySafeSecret,
+  isLocalEncryptedSecret,
+} from '@main/storage/secret';
 import { generateHash } from '@main/utils/methods';
 
 const STORE_KEY = 'ai_providers';
-const SAFE_PREFIX = 'safe:';
-const PLAIN_PREFIX = 'plain:';
 
 export const initialValue = {
   type: 'array',
@@ -13,32 +16,6 @@ export const initialValue = {
 
 const getProviders = (store: Store<Record<string, unknown>>) =>
   (store.get(STORE_KEY) as IAIProviderConfig[] | undefined) ?? [];
-
-const encodeSecret = (secret?: string) => {
-  const value = secret?.trim();
-
-  if (!value) return undefined;
-
-  if (safeStorage.isEncryptionAvailable()) {
-    return `${SAFE_PREFIX}${safeStorage.encryptString(value).toString('base64')}`;
-  }
-
-  return `${PLAIN_PREFIX}${Buffer.from(value, 'utf8').toString('base64')}`;
-};
-
-export const decodeAIProviderSecret = (secret?: string) => {
-  if (!secret) return '';
-
-  if (secret.startsWith(SAFE_PREFIX)) {
-    return safeStorage.decryptString(Buffer.from(secret.slice(SAFE_PREFIX.length), 'base64'));
-  }
-
-  if (secret.startsWith(PLAIN_PREFIX)) {
-    return Buffer.from(secret.slice(PLAIN_PREFIX.length), 'base64').toString('utf8');
-  }
-
-  return secret;
-};
 
 const toPublicProvider = (provider: IAIProviderConfig): IAIProviderPublic => {
   const { apiKey: _, ...publicProvider } = provider;
@@ -55,11 +32,12 @@ const normalizeProviderModels = (data: IAIProviderInput) =>
     .filter((model, index, allModels) => !!model && allModels.indexOf(model) === index);
 
 const normalizeProvider = (
+  store: Store<Record<string, unknown>>,
   data: IAIProviderInput,
   previous?: IAIProviderConfig,
 ): IAIProviderConfig => {
   const now = new Date().toISOString();
-  const apiKey = encodeSecret(data.apiKey) ?? previous?.apiKey;
+  const apiKey = encodeSecret(store, data.apiKey) ?? previous?.apiKey;
   const models = normalizeProviderModels(data);
 
   if (!models.length) {
@@ -78,18 +56,53 @@ const normalizeProvider = (
   };
 };
 
+const decodeProvider = (
+  store: Store<Record<string, unknown>>,
+  provider: IAIProviderConfig,
+): IAIProviderConfig => ({
+  ...provider,
+  apiKey: decodeSecret(store, provider.apiKey) || undefined,
+});
+
+const migrateProviders = (store: Store<Record<string, unknown>>) => {
+  const providers = getProviders(store);
+  const hasLegacySecret = providers.some(
+    (provider) =>
+      !!provider.apiKey &&
+      !isLocalEncryptedSecret(provider.apiKey) &&
+      !isLegacySafeSecret(provider.apiKey),
+  );
+
+  if (!hasLegacySecret) return;
+
+  store.set(
+    STORE_KEY,
+    providers.map((provider) =>
+      provider.apiKey &&
+      !isLocalEncryptedSecret(provider.apiKey) &&
+      !isLegacySafeSecret(provider.apiKey)
+        ? { ...provider, apiKey: encodeSecret(store, decodeSecret(store, provider.apiKey)) }
+        : provider,
+    ),
+  );
+};
+
 export const getModule = (store: Store<Record<string, unknown>>) => {
+  migrateProviders(store);
+
   const get = () => getProviders(store).map(toPublicProvider);
 
   const getInternal = (id?: string) => {
     if (!id) return undefined;
 
-    return getProviders(store).find((provider) => provider.id === id);
+    const provider = getProviders(store).find((provider) => provider.id === id);
+
+    return provider ? decodeProvider(store, provider) : undefined;
   };
 
   const add = (data: IAIProviderInput) => {
     const providers = getProviders(store);
-    const provider = normalizeProvider(data);
+    const provider = normalizeProvider(store, data);
 
     store.set(STORE_KEY, [...providers, provider]);
   };
@@ -102,7 +115,7 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
       throw new Error(`Provedor de IA não encontrado: ${id}`);
     }
 
-    providers[index] = normalizeProvider({ ...data, id }, providers[index]);
+    providers[index] = normalizeProvider(store, { ...data, id }, providers[index]);
     store.set(STORE_KEY, providers);
   };
 

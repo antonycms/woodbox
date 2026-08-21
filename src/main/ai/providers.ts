@@ -4,10 +4,9 @@ import { createGoogle } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { decodeAIProviderSecret } from '@main/storage/modules/ai_providers';
 
 export const resolveAIModel = (provider: IAIProviderConfig, model: string): LanguageModel => {
-  const apiKey = decodeAIProviderSecret(provider.apiKey);
+  const apiKey = provider.apiKey || '';
   const baseURL = provider.baseURL || undefined;
 
   if (!apiKey && provider.type !== 'openai-compatible') {
