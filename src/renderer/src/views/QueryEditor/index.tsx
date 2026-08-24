@@ -1156,7 +1156,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   return (
     <div className={styles.queryEditorContainer}>
       <div
-        style={{ flex: 1, display: 'flex', backgroundColor: activeTheme.editor.backgroundColor }}
+        className={styles.editorPane}
+        style={{ backgroundColor: activeTheme.editor.backgroundColor }}
       >
         <LateralBar
           runAllSQL={runAllSQL}

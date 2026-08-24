@@ -223,6 +223,9 @@
   display: none;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tabContent.active {
@@ -232,6 +235,9 @@
 .tabWindow {
   display: flex;
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tabIsDragging {

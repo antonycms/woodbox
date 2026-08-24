@@ -568,6 +568,7 @@ const Editor = ({
   React.useEffect(() => {
     // Inicializa uma vez por montagem; mudanças de props são sincronizadas nos efeitos abaixo.
     let currentEditor: monaco.editor.IStandaloneCodeEditor;
+    let frameId: number | undefined;
 
     // fix startup freeze
     const timeoutId = setTimeout(() => {
@@ -576,10 +577,12 @@ const Editor = ({
       currentEditor = initEditor();
       setEditor(currentEditor);
       if (props.autoFocus) currentEditor.focus();
+      frameId = window.requestAnimationFrame(resize);
     });
 
     return () => {
       clearTimeout(timeoutId);
+      if (frameId) window.cancelAnimationFrame(frameId);
       currentEditor?.dispose?.();
     };
   }, []);
