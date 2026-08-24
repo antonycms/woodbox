@@ -10,6 +10,5 @@
 
 .propertiesContent {
   display: flex;
-  border-top: 2px solid var(--color-border);
   flex: 1;
 }

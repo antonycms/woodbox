@@ -150,12 +150,9 @@ const Properties = (props: IPropertiesProps) => {
         </Row>
       </div>
 
-      <div
+      <div 
         className={styles.propertiesContent}
-        style={{
-          border: `1px 1px 1px 0 solid ${theme.bar.borderColor}`,
-          backgroundColor: theme.tab.backgroundColor,
-        }}
+        style={{ borderTop: `2px solid ${theme.bar.borderColor}` }}
       >
         <TabBar
           vertical
