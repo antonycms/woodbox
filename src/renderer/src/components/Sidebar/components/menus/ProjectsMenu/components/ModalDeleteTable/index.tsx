@@ -63,7 +63,7 @@ export const ModalDeleteTable = React.memo(
 
     return (
       <Modal width="520px" show={show} title={t('modal.deleteTable')}>
-        <Text color={colors.color}>{t('message.deleteTableQuestion', { table: tableName })}</Text>
+        <Text userSelect={false} color={colors.color}>{t('message.deleteTableQuestion', { table: tableName })}</Text>
 
         <Divider />
 

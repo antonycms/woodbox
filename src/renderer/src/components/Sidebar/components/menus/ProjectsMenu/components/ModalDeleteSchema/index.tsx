@@ -81,7 +81,7 @@ export const ModalDeleteSchema = React.memo(
 
     return (
       <Modal width="520px" show={show} title={t('modal.deleteSchema')}>
-        <Text color={colors.color}>{t('message.deleteSchemaQuestion', { schema })}</Text>
+        <Text userSelect={false} color={colors.color}>{t('message.deleteSchemaQuestion', { schema })}</Text>
 
         <Divider />
 

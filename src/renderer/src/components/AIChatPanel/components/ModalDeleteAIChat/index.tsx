@@ -23,7 +23,7 @@ export const ModalDeleteAIChat = React.memo(
 
     return (
       <Modal title={t('aiChat.delete')} width="420px" show={!!chat} closeOutside onClose={onClose}>
-        <Text small color={theme.color}>
+        <Text userSelect={false} small color={theme.color}>
           {t('aiChat.deleteQuestion', { name: chat?.title || '' })}
         </Text>
 
