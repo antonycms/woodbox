@@ -901,7 +901,8 @@ const ProjectsMenu = () => {
   }, [activeSidebarRevealTarget, activeTabId, sidebarRevealIndex]);
 
   const closeContextMenu = React.useCallback(() => {
-    setContextMenuItemSelected(null);
+    setContextMenuPosition(undefined);
+    setContextMenuItemSelected(undefined);
   }, []);
 
   const openNewProject = React.useCallback(() => {
