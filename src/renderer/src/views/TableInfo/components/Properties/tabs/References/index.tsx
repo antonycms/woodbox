@@ -13,7 +13,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
-import styles from '../Columns/styles.module.css';
+import FilterBar from '../../components/FilterBar';
 
 interface IReferencesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -108,22 +108,11 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
 
   return (
     <>
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterReferences')}
-          value={referenceFilterText}
-          onChange={(event) => setReferenceFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterReferences')}
+        value={referenceFilterText}
+        onChange={setReferenceFilterText}
+      />
 
       <Table
         rowKeyExtractor={getReferenceRowKey}

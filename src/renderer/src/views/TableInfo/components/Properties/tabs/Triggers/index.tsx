@@ -18,9 +18,9 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import FilterBar from '../../components/FilterBar';
 import { generateTriggersDdl } from '../Columns/ddl';
 import { getRendererDialect } from '@renderer/database/dialects';
-import styles from '../Columns/styles.module.css';
 
 const getTriggerSearchValues = (trigger: ITriggerInfo) => [
   trigger.trigger_name,
@@ -174,22 +174,11 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
         onClose={() => setShowDdlModal(false)}
       />
 
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterTriggers')}
-          value={triggerFilterText}
-          onChange={(event) => setTriggerFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterTriggers')}
+        value={triggerFilterText}
+        onChange={setTriggerFilterText}
+      />
 
       <Table
         rowKeyExtractor={getTriggerRowKey}

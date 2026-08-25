@@ -21,11 +21,11 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import FilterBar from '../../components/FilterBar';
 import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { formatSizeFromBytes } from '@renderer/utils/methods';
-import styles from '../Columns/styles.module.css';
 
 const getIndexSelectionKey = (index: IIndexInfo) =>
   (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
@@ -388,22 +388,11 @@ const Indexes = ({
         onAdd={handleAddPendingIndex}
       />
 
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterIndexes')}
-          value={indexFilterText}
-          onChange={(event) => setIndexFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterIndexes')}
+        value={indexFilterText}
+        onChange={setIndexFilterText}
+      />
 
       <Table
         rowKeyExtractor={getIndexSelectionKey}

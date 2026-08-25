@@ -27,10 +27,10 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import FilterBar from '../../components/FilterBar';
 import { generateAddColumnsDdl } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
-import styles from './styles.module.css';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
   (column as IColumnInfo & { __pendingId?: string }).__pendingId ||
@@ -709,22 +709,11 @@ const Columns = ({
         onAdd={handleAddPendingColumn}
       />
 
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterColumns')}
-          value={columnFilterText}
-          onChange={(event) => setColumnFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterColumns')}
+        value={columnFilterText}
+        onChange={setColumnFilterText}
+      />
 
       <Table
         loading={loading.columns}

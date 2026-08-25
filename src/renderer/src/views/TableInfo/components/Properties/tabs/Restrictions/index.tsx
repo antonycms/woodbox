@@ -24,10 +24,10 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import FilterBar from '../../components/FilterBar';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRendererDialect } from '@renderer/database/dialects';
-import styles from '../Columns/styles.module.css';
 
 const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
   (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||
@@ -353,22 +353,11 @@ const Restrictios = ({
         onAdd={handleAddPendingRestriction}
       />
 
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterConstraints')}
-          value={restrictionFilterText}
-          onChange={(event) => setRestrictionFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterConstraints')}
+        value={restrictionFilterText}
+        onChange={setRestrictionFilterText}
+      />
 
       <Table
         rows={filteredAndSortedRestrictions}

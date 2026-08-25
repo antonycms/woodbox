@@ -24,10 +24,10 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
+import FilterBar from '../../components/FilterBar';
 import { generateReferencesDdl } from '../Columns/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
-import styles from '../Columns/styles.module.css';
 
 interface IForeingKeysProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
@@ -405,22 +405,11 @@ const ForeingKeys = ({
         onAdd={handleAddPendingReference}
       />
 
-      <div
-        className={styles.filterBar}
-        style={{
-          backgroundColor: theme.bar.backgroundColor,
-          borderColor: theme.bar.borderColor,
-        }}
-      >
-        <input
-          className={styles.filterInput}
-          placeholder={t('placeholder.filterKeys')}
-          value={referenceFilterText}
-          onChange={(event) => setReferenceFilterText(event.target.value)}
-          style={{ color: theme.bar.color }}
-          spellCheck={false}
-        />
-      </div>
+      <FilterBar
+        placeholder={t('placeholder.filterKeys')}
+        value={referenceFilterText}
+        onChange={setReferenceFilterText}
+      />
 
       <Table<IReferenceSerialized>
         rowKeyExtractor={getReferenceSelectionKey}
