@@ -36,6 +36,7 @@ import { ModalRenameTable } from './components/ModalRenameTable';
 import { ModalImportTableData } from './components/ModalImportTableData';
 import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
+import { ModalDeleteProject } from './components/ModalDeleteProject';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { ModalImportProjects } from './components/ModalImportProjects';
@@ -136,7 +137,6 @@ const ProjectsMenu = () => {
   const {
     connectionsGroupPerProject,
     removeConnection,
-    removeProject,
     removeScript,
     loadConnectionInfo,
     closeConnection,
@@ -162,6 +162,7 @@ const ProjectsMenu = () => {
 
   const [isNewProject, setIsNewProject] = React.useState(false);
   const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
+  const [projectToDelete, setProjectToDelete] = React.useState<IItemTreeViewData>();
   const [showImportProjects, setShowImportProjects] = React.useState(false);
 
   const [isNewConnection, setIsNewConnection] = React.useState(false);
@@ -262,6 +263,10 @@ const ProjectsMenu = () => {
     setProjectEditing(null);
   }, []);
 
+  const closeDeleteProjectModal = React.useCallback(() => {
+    setProjectToDelete(null);
+  }, []);
+
   const onCloseModalConnection = React.useCallback(() => {
     setIsNewConnection(false);
     setConnectionEditing(null);
@@ -322,21 +327,6 @@ const ProjectsMenu = () => {
       }
     },
     [removeTab, tabs],
-  );
-
-  const handleRemoveProject = React.useCallback(
-    async (id?: string) => {
-      if (!id) return;
-
-      const connectionIds =
-        connectionsGroupPerProject
-          .find((project) => project.id === id)
-          ?.connections.map((connection) => connection.id) || [];
-
-      await removeProject(id);
-      removeTabsFromConnections(connectionIds);
-    },
-    [connectionsGroupPerProject, removeProject, removeTabsFromConnections],
   );
 
   const handleRemoveConnection = React.useCallback(
@@ -482,7 +472,7 @@ const ProjectsMenu = () => {
         },
         {
           text: t('context.deleteProject'),
-          onClick: () => handleRemoveProject(contextMenuItemSelected?.id),
+          onClick: () => setProjectToDelete(contextMenuItemSelected),
         },
       ],
 
@@ -619,7 +609,6 @@ const ProjectsMenu = () => {
     closeConnection,
     contextMenuItemSelected,
     handleRemoveConnection,
-    handleRemoveProject,
     refreshConnectionInfo,
     removeScript,
     removeTab,
@@ -941,6 +930,13 @@ const ProjectsMenu = () => {
         idProject={projectEditing?.id}
       />
 
+      <ModalDeleteProject
+        show={!!projectToDelete}
+        idProject={projectToDelete?.id}
+        project={projectToDelete?.label}
+        onClose={closeDeleteProjectModal}
+      />
+
       <ModalNewConnection
         show={showModalNewConnection}
         onClose={onCloseModalConnection}
@@ -1058,7 +1054,6 @@ const ProjectsMenu = () => {
       />
 
       <Divider />
-
       <div className={styles.containerTreeViewProjects}>
         {!treeViewItems.length && (
           <Text small color={colors.color} userSelect={false}>
