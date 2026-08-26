@@ -258,6 +258,20 @@ const ProjectsMenu = () => {
     [],
   );
 
+  const onContextMenuProjectsContainer = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      const target = event.target as HTMLElement;
+
+      if (target.closest('[id^="item_treeview_id_"]')) return;
+
+      event.preventDefault();
+
+      setContextMenuPosition({ x: event.clientX, y: event.clientY });
+      setContextMenuItemSelected(undefined);
+    },
+    [],
+  );
+
   const onCloseModalProject = React.useCallback(() => {
     setIsNewProject(false);
     setProjectEditing(null);
@@ -460,6 +474,17 @@ const ProjectsMenu = () => {
   }, [addTab, getTab, openTabScriptSql, setActiveTabId]);
 
   const contextOptions = React.useMemo(() => {
+    const rootOptions: IContextMenuOption[] = [
+      {
+        text: t('project.add'),
+        onClick: () => setIsNewProject(true),
+      },
+      {
+        text: t('project.import'),
+        onClick: () => setShowImportProjects(true),
+      },
+    ];
+
     const optionsAvailable: Record<string, IContextMenuOption[]> = {
       project: [
         {
@@ -602,7 +627,9 @@ const ProjectsMenu = () => {
       ],
     };
 
-    return optionsAvailable[contextMenuItemSelected?.type] || [];
+    return contextMenuItemSelected
+      ? optionsAvailable[contextMenuItemSelected.type] || []
+      : rootOptions;
   }, [
     addTab,
     checkHasConnection,
@@ -1054,7 +1081,11 @@ const ProjectsMenu = () => {
       />
 
       <Divider />
-      <div className={styles.containerTreeViewProjects}>
+
+      <div
+        className={styles.containerTreeViewProjects}
+        onContextMenu={onContextMenuProjectsContainer}
+      >
         {!treeViewItems.length && (
           <Text small color={colors.color} userSelect={false}>
             {t('project.empty')}
