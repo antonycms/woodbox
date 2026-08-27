@@ -8,7 +8,7 @@ import IconMdiDotsHorizontal from '~icons/mdi/dots-horizontal';
 import IconMdiArrowLeft from '~icons/mdi/arrow-left';
 import IconMdiSquareEditOutline from '~icons/mdi/square-edit-outline';
 import IconMdiRefresh from '~icons/mdi/refresh';
-import IconMdiCounter from '~icons/mdi/counter';
+import IconTablerHash from '~icons/tabler/hash';
 import IconMdiRecordCircleOutline from '~icons/mdi/record-circle-outline';
 import IconMdiClipboardTextSearchOutline from '~icons/mdi/clipboard-text-search-outline';
 import IconMdiContentCopy from '~icons/mdi/content-copy';
@@ -50,7 +50,7 @@ function makeIconWithSize(
 export const AddIcon = makeIconWithSize(IconFaSolidPlus);
 export const BackIcon = makeIconWithSize(IconMdiArrowLeft);
 export const CancelIcon = makeIconWithSize(IconMdiCloseCircleOutline);
-export const CountIcon = makeIconWithSize(IconMdiCounter);
+export const CountIcon = makeIconWithSize(IconTablerHash);
 export const CopyIcon = makeIconWithSize(IconMdiContentCopy);
 export const ExplainIcon = makeIconWithSize(IconMdiClipboardTextSearchOutline);
 export const FileSqlIcon = makeIconWithSize(IconBiFiletypeSql);
