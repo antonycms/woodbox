@@ -1347,7 +1347,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         return;
       }
 
-      const isFind = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'f';
+      const isFind = isPrimaryShortcutPressed(ev) && !ev.shiftKey && ev.key?.toLowerCase() === 'f';
       if (isFind) {
         ev.preventDefault();
         handleOpenTableSearch();
