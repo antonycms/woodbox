@@ -293,7 +293,6 @@ const TableColumn = ({
         title={title}
         style={style}
         width={width}
-        height={rowHeight}
         minWidth={minWidth}
         onResize={onResize}
         onContextMenu={onContextMenu}
