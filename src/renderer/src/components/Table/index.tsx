@@ -1476,10 +1476,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
       if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
 
-      const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(ev.key);
+      const isNavigationKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key);
 
       if (analysisModeRef.current) {
-        if (cellEditingKeyRef.current || !isArrow) return;
+        if (cellEditingKeyRef.current || !isNavigationKey) return;
 
         ev.preventDefault();
 
@@ -1498,7 +1498,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
         let rowPosition = rowsToAnalyze.findIndex((row) => row.__index_row === cursor.rowIndex);
         if (rowPosition === -1) rowPosition = 0;
 
-        if (ev.key === 'ArrowUp') fieldIndex = Math.max(0, fieldIndex - 1);
+        if (ev.key === 'Home') {
+          rowPosition = 0;
+        } else if (ev.key === 'End') {
+          rowPosition = totalRows - 1;
+        } else if (ev.key === 'ArrowUp') fieldIndex = Math.max(0, fieldIndex - 1);
         else if (ev.key === 'ArrowDown') fieldIndex = Math.min(totalFields - 1, fieldIndex + 1);
         else if (ev.key === 'ArrowLeft') rowPosition = Math.max(0, rowPosition - 1);
         else if (ev.key === 'ArrowRight') rowPosition = Math.min(totalRows - 1, rowPosition + 1);
@@ -1526,7 +1530,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const anchor = lastSelectedCellRef.current;
       if (!anchor || cellEditingKeyRef.current) return;
 
-      if (!isArrow) return;
+      if (!isNavigationKey) return;
 
       ev.preventDefault();
 
@@ -1535,7 +1539,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
       const cursor = arrowCursorRef.current ?? anchor;
       let { rowIndex, colIndex } = cursor;
 
-      if (ev.key === 'ArrowUp') rowIndex = Math.max(0, rowIndex - 1);
+      if (ev.key === 'Home') {
+        colIndex = 0;
+      } else if (ev.key === 'End') {
+        colIndex = totalCols - 1;
+      } else if (ev.key === 'ArrowUp') rowIndex = Math.max(0, rowIndex - 1);
       else if (ev.key === 'ArrowDown') rowIndex = Math.min(totalRows - 1, rowIndex + 1);
       else if (ev.key === 'ArrowLeft') colIndex = Math.max(0, colIndex - 1);
       else if (ev.key === 'ArrowRight') colIndex = Math.min(totalCols - 1, colIndex + 1);
@@ -1550,27 +1558,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       }
 
       notifySelectedCell(rowIndex, colIndex);
-
-      const container = refScrollContainer.current;
-      if (!container) return;
-
-      const cellTop = rowIndex * rowHeight;
-      const cellBottom = cellTop + rowHeight;
-      if (cellTop < container.scrollTop) {
-        container.scrollTop = cellTop;
-      } else if (cellBottom > container.scrollTop + container.clientHeight) {
-        container.scrollTop = cellBottom - container.clientHeight;
-      }
-
-      const sizes = columnsSizeRef.current;
-      let colStart = rowNumberColumnWidth;
-      for (let i = 0; i < colIndex; i++) colStart += sizes[i] || 0;
-      const colEnd = colStart + (sizes[colIndex] || 0);
-      if (colStart < container.scrollLeft) {
-        container.scrollLeft = Math.max(0, colStart - rowNumberColumnWidth);
-      } else if (colEnd > container.scrollLeft + container.clientWidth) {
-        container.scrollLeft = colEnd - container.clientWidth;
-      }
+      scrollDefaultCellIntoView(rowIndex, colIndex);
     };
 
     refScrollContainer.current?.addEventListener?.('keydown', cb);
@@ -1579,8 +1567,8 @@ function Table<Row = any>(props: ITableProps<Row>) {
     };
   }, [
     notifySelectedCell,
-    rowNumberColumnWidth,
     scrollAnalysisCellIntoView,
+    scrollDefaultCellIntoView,
     selectAnalysisRange,
     selectDefaultRange,
   ]);
