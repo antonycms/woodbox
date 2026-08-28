@@ -1477,6 +1477,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
 
       const isNavigationKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key);
+      const isTableBoundaryShortcut = isPrimaryShortcutPressed(ev) && ['Home', 'End'].includes(ev.key);
 
       if (analysisModeRef.current) {
         if (cellEditingKeyRef.current || !isNavigationKey) return;
@@ -1499,8 +1500,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
         if (rowPosition === -1) rowPosition = 0;
 
         if (ev.key === 'Home') {
+          if (isTableBoundaryShortcut) fieldIndex = 0;
           rowPosition = 0;
         } else if (ev.key === 'End') {
+          if (isTableBoundaryShortcut) fieldIndex = totalFields - 1;
           rowPosition = totalRows - 1;
         } else if (ev.key === 'ArrowUp') fieldIndex = Math.max(0, fieldIndex - 1);
         else if (ev.key === 'ArrowDown') fieldIndex = Math.min(totalFields - 1, fieldIndex + 1);
@@ -1540,8 +1543,10 @@ function Table<Row = any>(props: ITableProps<Row>) {
       let { rowIndex, colIndex } = cursor;
 
       if (ev.key === 'Home') {
+        if (isTableBoundaryShortcut) rowIndex = 0;
         colIndex = 0;
       } else if (ev.key === 'End') {
+        if (isTableBoundaryShortcut) rowIndex = totalRows - 1;
         colIndex = totalCols - 1;
       } else if (ev.key === 'ArrowUp') rowIndex = Math.max(0, rowIndex - 1);
       else if (ev.key === 'ArrowDown') rowIndex = Math.min(totalRows - 1, rowIndex + 1);
