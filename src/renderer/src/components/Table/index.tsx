@@ -24,8 +24,12 @@ import type {
 import { useTableLayout } from './hooks/useTableLayout';
 import { useTableColumnResize } from './hooks/useTableColumnResize';
 import { useAnalysisColumnsLayout } from './hooks/useAnalysisColumnsLayout';
+import { useTableAnalysisModeEffects } from './hooks/useTableAnalysisModeEffects';
+import { useTableCellDragEnd } from './hooks/useTableCellDragEnd';
 import { useTableClipboardPaste } from './hooks/useTableClipboardPaste';
+import { useTableColumnSizing } from './hooks/useTableColumnSizing';
 import { useTableKeyboardEvents } from './hooks/useTableKeyboardEvents';
+import { useTableSearchEffects } from './hooks/useTableSearchEffects';
 import {
   cellKey,
   findSearchIndex,
@@ -117,8 +121,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
   } = useThemeContext();
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
-  const [columnsSize, setColumnsSize] = React.useState<number[]>([]);
-  const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [cellEditInitialValue, setCellEditInitialValue] = React.useState<string | number>();
   const [analysisMode, setAnalysisMode] = React.useState(false);
@@ -161,6 +163,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     HTMLElement: refScrollContainer.current,
     ignoreZeroValue: true,
   });
+  const { columnsSize, minColumnsSize, setColumnsSize } = useTableColumnSizing({ columns });
 
   const cellEditingKeyRef = React.useRef(cellEditingKey);
   cellEditingKeyRef.current = cellEditingKey;
@@ -1013,19 +1016,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [notifySelectedCell, selectAnalysisRange],
   );
 
-  const handleEndCellDrag = React.useCallback((event?: MouseEvent) => {
-    const targetElement = event?.target instanceof HTMLElement ? event.target : null;
-    const endedOverCell = !!targetElement?.closest(
-      `.${styles.table_column}, .${styles.analysis_value}`,
-    );
-
-    if (dragSelectionRef.current?.hasMoved && endedOverCell) {
-      ignoreNextClickRef.current = true;
-    }
-
-    dragSelectionRef.current = null;
-  }, []);
-
   const handleSelectAllCells = React.useCallback(() => {
     const totalColumns = columnsRef.current.length;
     if (!totalColumns) return false;
@@ -1219,6 +1209,11 @@ function Table<Row = any>(props: ITableProps<Row>) {
     analysisArrowCursorRef.current = null;
   }, []);
 
+  useTableCellDragEnd({
+    dragSelectionRef,
+    ignoreNextClickRef,
+  });
+
   useTableKeyboardEvents<Row>({
     scrollContainerRef: refScrollContainer,
     searchOpen: searchState.open,
@@ -1267,75 +1262,33 @@ function Table<Row = any>(props: ITableProps<Row>) {
     onSaveCell,
   });
 
-  React.useEffect(() => {
-    const nextActiveIndex = searchOccurrences.length
-      ? Math.min(searchState.activeIndex, searchOccurrences.length - 1)
-      : 0;
-
-    if (nextActiveIndex === searchState.activeIndex) return;
-
-    setSearchState((prevState) => ({ ...prevState, activeIndex: nextActiveIndex }));
-  }, [searchOccurrences.length, searchState.activeIndex]);
-
-  React.useEffect(() => {
-    if (!searchState.open) return;
-
-    updateSearchOverlayPosition();
-    window.addEventListener('resize', updateSearchOverlayPosition);
-
-    return () => {
-      window.removeEventListener('resize', updateSearchOverlayPosition);
-    };
-  }, [
+  useTableSearchEffects({
+    activeIndex: searchState.activeIndex,
+    activeOccurrence: activeSearchOccurrence,
     heightBodyContainer,
-    searchState.open,
-    updateSearchOverlayPosition,
+    occurrencesLength: searchOccurrences.length,
+    open: searchState.open,
+    searchCloseTimeoutRef,
     widthBodyContainer,
-  ]);
+    scrollCellIntoView,
+    setSearchState,
+    updateSearchOverlayPosition,
+  });
 
-  React.useEffect(() => {
-    if (!searchState.open || !activeSearchOccurrence) return;
-
-    scrollCellIntoView(activeSearchOccurrence.rowIndex, activeSearchOccurrence.colIndex);
-  }, [activeSearchOccurrence, scrollCellIntoView, searchState.open]);
-
-  React.useEffect(() => {
-    window.addEventListener('mouseup', handleEndCellDrag);
-
-    return () => {
-      window.removeEventListener('mouseup', handleEndCellDrag);
-    };
-  }, [handleEndCellDrag]);
-
-  React.useEffect(() => {
-    return () => {
-      if (searchCloseTimeoutRef.current) {
-        window.clearTimeout(searchCloseTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  React.useEffect(() => {
-    const defaultColumnsSize = columns.map((column) => {
-      return Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40);
-    });
-
-    setColumnsSize((prevState) => {
-      if (prevState.length === columns.length) return prevState;
-
-      return defaultColumnsSize.map((size) =>
-        size > defaultColumnSize ? size : defaultColumnSize,
-      );
-    });
-
-    setMinColumnsSize((prevState) => {
-      const isSameState =
-        prevState.length === defaultColumnsSize.length &&
-        prevState.every((size, index) => size === defaultColumnsSize[index]);
-
-      return isSameState ? prevState : defaultColumnsSize;
-    });
-  }, [columns, defaultColumnSize]);
+  useTableAnalysisModeEffects<Row>({
+    analysisMode,
+    analysisModeRef,
+    analysisRowsRef,
+    columnsLength: columns.length,
+    columnsSignature,
+    initialAnalysisMode,
+    initialAnalysisModeAppliedRef,
+    serializedRows,
+    serializedRowsRef,
+    enterAnalysisMode,
+    resetAnalysisMode,
+    setAnalysisRows,
+  });
 
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
@@ -1346,50 +1299,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
     restoreDefaultScroll();
   }, [analysisMode, restoreDefaultScroll]);
-
-  React.useEffect(() => {
-    resetAnalysisMode();
-  }, [columnsSignature, resetAnalysisMode]);
-
-  React.useEffect(() => {
-    if (
-      !initialAnalysisMode ||
-      initialAnalysisModeAppliedRef.current ||
-      analysisMode ||
-      !serializedRows.length ||
-      !columns.length
-    )
-      return;
-
-    initialAnalysisModeAppliedRef.current = true;
-
-    const firstCell = { rowIndex: serializedRows[0].__index_row, colIndex: 0 };
-
-    enterAnalysisMode(
-      serializedRows,
-      new Set([cellKey(firstCell.rowIndex, firstCell.colIndex)]),
-      firstCell,
-    );
-  }, [analysisMode, columns.length, enterAnalysisMode, initialAnalysisMode, serializedRows]);
-
-  React.useEffect(() => {
-    if (!analysisModeRef.current || !analysisRowsRef.current.length) return;
-
-    const nextAnalysisRows = analysisRowsRef.current.flatMap((analysisRow) => {
-      const nextRow = serializedRowsRef.current.find(
-        (row) => row.__key_row === analysisRow.__key_row,
-      );
-
-      return nextRow ? [nextRow] : [];
-    });
-
-    if (nextAnalysisRows.length !== analysisRowsRef.current.length) {
-      resetAnalysisMode();
-      return;
-    }
-
-    setAnalysisRows(nextAnalysisRows);
-  }, [resetAnalysisMode, serializedRows]);
 
   return (
     <div
