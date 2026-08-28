@@ -1,7 +1,7 @@
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
 import useDebounce from '@renderer/hooks/useDebounce';
-import { calculateTextHtmlWidth, copyToClipboard } from '@renderer/utils/methods';
+import { calculateTextHtmlWidth } from '@renderer/utils/methods';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
 import TableAnalysisView from './components/TableAnalysisView';
@@ -9,30 +9,30 @@ import TableDefaultView from './components/TableDefaultView';
 import TableSearchBar from './components/TableSearchBar';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import type { IColumn, ISortDirection, ITableSort } from './dtos';
+import type {
+  IColumn,
+  ISortDirection,
+  ITableSort,
+  TableCellEditValue,
+  TableCellPosition,
+  TableDragSelectionState,
+  TableScrollState,
+  TableSearchOccurrence,
+  TableSearchOverlayPosition,
+  TableSearchState,
+} from './dtos';
 import { useTableLayout } from './hooks/useTableLayout';
 import { useTableColumnResize } from './hooks/useTableColumnResize';
 import { useAnalysisColumnsLayout } from './hooks/useAnalysisColumnsLayout';
-import { serializeTableCopyValue, serializeTableValue } from './utils';
-
-type TableCellEditValue = string | number | (string | number)[];
-type TableScrollState = { left: number; top: number };
-type TableCellPosition = { rowIndex: number; colIndex: number };
-type TableSearchOverlayPosition = { top: number; right: number };
-type TableSearchOptions = { matchCase: boolean; wholeWord: boolean };
-type TableSearchOccurrence = TableCellPosition & { key: string; canReplace: boolean };
-type TableSearchState = TableSearchOptions & {
-  open: boolean;
-  replaceOpen: boolean;
-  query: string;
-  replace: string;
-  activeIndex: number;
-};
-type TableDragSelectionState = {
-  mode: 'default' | 'analysis';
-  anchor: TableCellPosition;
-  hasMoved: boolean;
-};
+import { useTableClipboardPaste } from './hooks/useTableClipboardPaste';
+import { useTableKeyboardEvents } from './hooks/useTableKeyboardEvents';
+import {
+  cellKey,
+  findSearchIndex,
+  replaceSearchValue,
+  serializeTableCopyValue,
+  serializeTableValue,
+} from './utils';
 
 const TABLE_SEARCH_CLOSE_ANIMATION_MS = 120;
 
@@ -87,75 +87,6 @@ interface ITableProps<Row = any> {
 }
 
 const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
-
-const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
-
-const parseClipboardGrid = (text: string) => {
-  const normalizedText = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');
-
-  return normalizedText.split('\n').map((line) => line.split('\t'));
-};
-
-const isSearchWordChar = (char?: string) => {
-  if (!char) return false;
-
-  return /[\p{L}\p{N}_]/u.test(char);
-};
-
-const findSearchIndex = (
-  value: string,
-  query: string,
-  { matchCase, wholeWord }: TableSearchOptions,
-  startIndex = 0,
-) => {
-  if (!query) return -1;
-
-  const searchableValue = matchCase ? value : value.toLocaleLowerCase();
-  const searchableQuery = matchCase ? query : query.toLocaleLowerCase();
-  let index = searchableValue.indexOf(searchableQuery, startIndex);
-
-  while (index !== -1) {
-    const before = value[index - 1];
-    const after = value[index + query.length];
-    const isWholeWord = !isSearchWordChar(before) && !isSearchWordChar(after);
-
-    if (!wholeWord || isWholeWord) return index;
-
-    index = searchableValue.indexOf(searchableQuery, index + query.length);
-  }
-
-  return -1;
-};
-
-const replaceSearchValue = (
-  value: string,
-  query: string,
-  replace: string,
-  options: TableSearchOptions,
-  replaceAll: boolean,
-) => {
-  let nextValue = '';
-  let startIndex = 0;
-
-  while (startIndex <= value.length) {
-    const foundIndex = findSearchIndex(value, query, options, startIndex);
-
-    if (foundIndex === -1) {
-      nextValue += value.slice(startIndex);
-      break;
-    }
-
-    nextValue += value.slice(startIndex, foundIndex) + replace;
-    startIndex = foundIndex + query.length;
-
-    if (!replaceAll) {
-      nextValue += value.slice(startIndex);
-      break;
-    }
-  }
-
-  return nextValue;
-};
 
 function Table<Row = any>(props: ITableProps<Row>) {
   const {
@@ -1288,6 +1219,54 @@ function Table<Row = any>(props: ITableProps<Row>) {
     analysisArrowCursorRef.current = null;
   }, []);
 
+  useTableKeyboardEvents<Row>({
+    scrollContainerRef: refScrollContainer,
+    searchOpen: searchState.open,
+    analysisMode,
+    analysisModeRef,
+    analysisModeEnterRef,
+    cellEditingKeyRef,
+    selectedCellsRef,
+    analysisSelectedCellsRef,
+    selectedRowsRef,
+    serializedRowsRef,
+    analysisRowsRef,
+    columnsRef,
+    lastSelectedCellRef,
+    lastAnalysisSelectedCellRef,
+    arrowCursorRef,
+    analysisArrowCursorRef,
+    handleCloseTableSearch,
+    handleOpenTableSearch,
+    handleSelectAllCells,
+    enterAnalysisMode,
+    getResolvedCellValue,
+    notifySelectedCell,
+    scrollCellIntoView,
+    scrollDefaultCellIntoView,
+    scrollAnalysisCellIntoView,
+    selectDefaultRange,
+    selectAnalysisRange,
+    setAnalysisMode,
+    setCellEditInitialValue,
+    setCellEditingKey,
+    setSelectedCells,
+    setAnalysisSelectedCells,
+  });
+
+  useTableClipboardPaste<Row>({
+    scrollContainerRef: refScrollContainer,
+    analysisModeRef,
+    cellEditingKeyRef,
+    selectedCellsRef,
+    analysisSelectedCellsRef,
+    serializedRowsRef,
+    columnsRef,
+    onEditRow,
+    onEditNewRow,
+    onSaveCell,
+  });
+
   React.useEffect(() => {
     const nextActiveIndex = searchOccurrences.length
       ? Math.min(searchState.activeIndex, searchOccurrences.length - 1)
@@ -1337,248 +1316,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
   }, []);
 
   React.useEffect(() => {
-    const cb = (ev: KeyboardEvent) => {
-      const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
-      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
-
-      if (ev.key === 'Escape' && searchState.open && !cellEditingKeyRef.current) {
-        ev.preventDefault();
-        handleCloseTableSearch();
-        return;
-      }
-
-      const isFind = isPrimaryShortcutPressed(ev) && !ev.shiftKey && !ev.altKey && ev.key?.toLowerCase() === 'f';
-
-      if (isFind) {
-        ev.preventDefault();
-        handleOpenTableSearch();
-        return;
-      }
-
-      const isSelectAll = isPrimaryShortcutPressed(ev) && ev.key?.toLowerCase() === 'a';
-
-      if (isSelectAll && !cellEditingKeyRef.current && handleSelectAllCells()) {
-        ev.preventDefault();
-        return;
-      }
-
-      if (ev.key === 'Tab' && !cellEditingKeyRef.current) {
-        const hasSelectedRows = selectedRowsRef.current.size > 0;
-        if (analysisMode) {
-          ev.preventDefault();
-          setAnalysisMode(false);
-        } else if (hasSelectedRows) {
-          ev.preventDefault();
-          const rowsToAnalyze = [...selectedRowsRef.current.values()].sort(
-            (a, b) => a.__index_row - b.__index_row,
-          );
-          enterAnalysisMode(rowsToAnalyze, selectedCellsRef.current, lastSelectedCellRef.current);
-        }
-      }
-
-      if (ev.key === 'Enter' && !cellEditingKeyRef.current) {
-        const anchor = analysisModeEnterRef.current
-          ? lastAnalysisSelectedCellRef.current
-          : lastSelectedCellRef.current;
-        if (!anchor) return;
-
-        ev.preventDefault();
-
-        const row = analysisModeEnterRef.current
-          ? analysisRowsRef.current.find((item) => item.__index_row === anchor.rowIndex)
-          : serializedRowsRef.current[anchor.rowIndex];
-        const column = columnsRef.current[anchor.colIndex];
-
-        if (!row || row.__is_removed || !column?.editable) return;
-
-        scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
-        setCellEditInitialValue(undefined);
-        setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
-      }
-
-      const isTypingEditKey =
-        ev.key.length === 1 &&
-        ev.key !== ' ' &&
-        !isPrimaryShortcutPressed(ev) &&
-        !ev.altKey &&
-        !ev.isComposing &&
-        !cellEditingKeyRef.current;
-
-      if (isTypingEditKey) {
-        const anchor = analysisModeEnterRef.current
-          ? lastAnalysisSelectedCellRef.current
-          : lastSelectedCellRef.current;
-        if (!anchor) return;
-
-        const row = analysisModeEnterRef.current
-          ? analysisRowsRef.current.find((item) => item.__index_row === anchor.rowIndex)
-          : serializedRowsRef.current[anchor.rowIndex];
-        const column = columnsRef.current[anchor.colIndex];
-
-        if (!row || row.__is_removed || !column?.editable) return;
-
-        ev.preventDefault();
-        scrollCellIntoView(anchor.rowIndex, anchor.colIndex);
-        setCellEditInitialValue(ev.key);
-        setCellEditingKey(`${row.__key_row}:${String(column.attribute)}`);
-      }
-
-      const isCopy = isPrimaryShortcutPressed() && ev.key?.toLowerCase() === 'c';
-
-      if (isCopy) {
-        const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
-        if (cells.size > 0) {
-          const rowMap = new Map<number, number[]>();
-
-          cells.forEach((key) => {
-            const [r, c] = key.split(':').map(Number);
-            if (!rowMap.has(r)) rowMap.set(r, []);
-            rowMap.get(r)!.push(c);
-          });
-
-          const lines = [...rowMap.entries()]
-            .sort((a, b) => a[0] - b[0])
-            .map(([rowIndex, colIndices]) => {
-              colIndices.sort((a, b) => a - b);
-              return colIndices
-                .map((colIndex) => {
-                  const row = serializedRowsRef.current[rowIndex];
-                  const col = columnsRef.current[colIndex];
-                  const value = getResolvedCellValue(row, col);
-                  return serializeTableCopyValue(value);
-                })
-                .join(', ');
-            });
-
-          copyToClipboard(lines.join('\n'));
-        }
-      }
-    };
-
-    refScrollContainer.current?.addEventListener?.('keydown', cb);
-
-    return () => {
-      refScrollContainer.current?.removeEventListener?.('keydown', cb);
-    };
-  }, [
-    analysisMode,
-    enterAnalysisMode,
-    handleCloseTableSearch,
-    handleOpenTableSearch,
-    getResolvedCellValue,
-    handleSelectAllCells,
-    scrollCellIntoView,
-    searchState.open,
-  ]);
-
-  React.useEffect(() => {
-    const cb = (ev: KeyboardEvent) => {
-      const targetElement = ev.target instanceof HTMLElement ? ev.target : null;
-      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
-
-      const isNavigationKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key);
-      const isTableBoundaryShortcut = isPrimaryShortcutPressed(ev) && ['Home', 'End'].includes(ev.key);
-
-      if (analysisModeRef.current) {
-        if (cellEditingKeyRef.current || !isNavigationKey) return;
-
-        ev.preventDefault();
-
-        const rowsToAnalyze = analysisRowsRef.current;
-        const totalRows = rowsToAnalyze.length;
-        const totalFields = columnsRef.current.length;
-        if (!totalRows || !totalFields) return;
-
-        const anchor = lastAnalysisSelectedCellRef.current;
-        const fallbackCell = {
-          rowIndex: rowsToAnalyze[0].__index_row,
-          colIndex: 0,
-        };
-        const cursor = analysisArrowCursorRef.current ?? anchor ?? fallbackCell;
-        let fieldIndex = cursor.colIndex;
-        let rowPosition = rowsToAnalyze.findIndex((row) => row.__index_row === cursor.rowIndex);
-        if (rowPosition === -1) rowPosition = 0;
-
-        if (ev.key === 'Home') {
-          if (isTableBoundaryShortcut) fieldIndex = 0;
-          rowPosition = 0;
-        } else if (ev.key === 'End') {
-          if (isTableBoundaryShortcut) fieldIndex = totalFields - 1;
-          rowPosition = totalRows - 1;
-        } else if (ev.key === 'ArrowUp') fieldIndex = Math.max(0, fieldIndex - 1);
-        else if (ev.key === 'ArrowDown') fieldIndex = Math.min(totalFields - 1, fieldIndex + 1);
-        else if (ev.key === 'ArrowLeft') rowPosition = Math.max(0, rowPosition - 1);
-        else if (ev.key === 'ArrowRight') rowPosition = Math.min(totalRows - 1, rowPosition + 1);
-
-        const target = {
-          rowIndex: rowsToAnalyze[rowPosition].__index_row,
-          colIndex: fieldIndex,
-        };
-
-        analysisArrowCursorRef.current = target;
-
-        if (ev.shiftKey && anchor) {
-          selectAnalysisRange(anchor, target);
-        } else {
-          lastAnalysisSelectedCellRef.current = target;
-          setAnalysisSelectedCells(new Set([cellKey(target.rowIndex, target.colIndex)]));
-        }
-
-        notifySelectedCell(target.rowIndex, target.colIndex);
-        scrollAnalysisCellIntoView(target.rowIndex, target.colIndex);
-
-        return;
-      }
-
-      const anchor = lastSelectedCellRef.current;
-      if (!anchor || cellEditingKeyRef.current) return;
-
-      if (!isNavigationKey) return;
-
-      ev.preventDefault();
-
-      const totalRows = serializedRowsRef.current.length;
-      const totalCols = columnsRef.current.length;
-      const cursor = arrowCursorRef.current ?? anchor;
-      let { rowIndex, colIndex } = cursor;
-
-      if (ev.key === 'Home') {
-        if (isTableBoundaryShortcut) rowIndex = 0;
-        colIndex = 0;
-      } else if (ev.key === 'End') {
-        if (isTableBoundaryShortcut) rowIndex = totalRows - 1;
-        colIndex = totalCols - 1;
-      } else if (ev.key === 'ArrowUp') rowIndex = Math.max(0, rowIndex - 1);
-      else if (ev.key === 'ArrowDown') rowIndex = Math.min(totalRows - 1, rowIndex + 1);
-      else if (ev.key === 'ArrowLeft') colIndex = Math.max(0, colIndex - 1);
-      else if (ev.key === 'ArrowRight') colIndex = Math.min(totalCols - 1, colIndex + 1);
-
-      arrowCursorRef.current = { rowIndex, colIndex };
-
-      if (ev.shiftKey) {
-        selectDefaultRange(anchor, { rowIndex, colIndex });
-      } else {
-        lastSelectedCellRef.current = { rowIndex, colIndex };
-        setSelectedCells(new Set([cellKey(rowIndex, colIndex)]));
-      }
-
-      notifySelectedCell(rowIndex, colIndex);
-      scrollDefaultCellIntoView(rowIndex, colIndex);
-    };
-
-    refScrollContainer.current?.addEventListener?.('keydown', cb);
-    return () => {
-      refScrollContainer.current?.removeEventListener?.('keydown', cb);
-    };
-  }, [
-    notifySelectedCell,
-    scrollAnalysisCellIntoView,
-    scrollDefaultCellIntoView,
-    selectAnalysisRange,
-    selectDefaultRange,
-  ]);
-
-  React.useEffect(() => {
     const defaultColumnsSize = columns.map((column) => {
       return Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40);
     });
@@ -1599,53 +1336,6 @@ function Table<Row = any>(props: ITableProps<Row>) {
       return isSameState ? prevState : defaultColumnsSize;
     });
   }, [columns, defaultColumnSize]);
-
-  React.useEffect(() => {
-    const container = refScrollContainer.current;
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const targetElement = event.target instanceof HTMLElement ? event.target : null;
-      if (targetElement?.closest(`.${styles.table_search_bar}`)) return;
-      if (cellEditingKeyRef.current) return;
-
-      const cells = analysisModeRef.current
-        ? analysisSelectedCellsRef.current
-        : selectedCellsRef.current;
-
-      if (!cells.size) return;
-
-      const grid = parseClipboardGrid(event.clipboardData?.getData('text/plain') ?? '');
-      const isMatrix = grid.length > 1 || grid[0].length > 1;
-      const coordinates = [...cells].map((key) => key.split(':').map(Number));
-      const firstRow = Math.min(...coordinates.map(([row]) => row));
-      const firstColumn = Math.min(...coordinates.map(([, column]) => column));
-
-      const edits = coordinates.flatMap(([rowIndex, colIndex]) => {
-        const row = serializedRowsRef.current[rowIndex];
-        const column = columnsRef.current[colIndex];
-        const value = isMatrix ? grid[rowIndex - firstRow]?.[colIndex - firstColumn] : grid[0][0];
-
-        if (!row || row.__is_removed || !column?.editable || value === undefined) return [];
-        if (column.type === 'autocomplete' && !column.dataAutocomplete?.includes(value)) return [];
-        if (row.__is_new_row ? !onEditNewRow : !onEditRow) return [];
-
-        return [{ rowIndex, attribute: String(column.attribute), value }];
-      });
-
-      if (!edits.length) return;
-
-      event.preventDefault();
-      edits.forEach(({ rowIndex, attribute, value }) => {
-        onSaveCell(rowIndex, attribute, value, true, false);
-      });
-    };
-
-    container?.addEventListener('paste', handlePaste);
-
-    return () => {
-      container?.removeEventListener('paste', handlePaste);
-    };
-  }, [onEditNewRow, onEditRow, onSaveCell]);
 
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
