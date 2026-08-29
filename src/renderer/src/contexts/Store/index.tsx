@@ -35,6 +35,8 @@ import StoreContext, {
   type IAIChatAppendMessages,
   type ICodexChatGPTAccount,
   type ICodexChatGPTLoginStart,
+  type IReactNativeBridgeSession,
+  type IReactNativeBridgeStatus,
 } from './context';
 
 export type * from './context';
@@ -226,6 +228,29 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
   const logoutCodexChatGPT = React.useCallback(async () => {
     await call<void>('@post:codex_chatgpt_logout');
+  }, []);
+
+  const getReactNativeBridgeStatus = React.useCallback(async () => {
+    return await call<IReactNativeBridgeStatus>('@get:react_native_bridge_status');
+  }, []);
+
+  const getReactNativeBridgeSessions = React.useCallback(async () => {
+    return await call<IReactNativeBridgeSession[]>('@get:react_native_bridge_sessions');
+  }, []);
+
+  const startReactNativeBridgeGateway = React.useCallback(
+    async (source?: string, options?: { host?: string; port?: number }) => {
+      return await call<IReactNativeBridgeStatus>(
+        '@post:react_native_bridge_start_gateway',
+        source,
+        options,
+      );
+    },
+    [],
+  );
+
+  const stopReactNativeBridgeGateway = React.useCallback(async (source?: string) => {
+    await call<void>('@post:react_native_bridge_stop_gateway', source);
   }, []);
 
   const addProject = React.useCallback(async (data: IProjectCreate) => {
@@ -590,6 +615,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getCodexChatGPTAccount,
       startCodexChatGPTLogin,
       logoutCodexChatGPT,
+      getReactNativeBridgeStatus,
+      getReactNativeBridgeSessions,
+      startReactNativeBridgeGateway,
+      stopReactNativeBridgeGateway,
     }),
     [
       addConnection,
@@ -614,6 +643,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       editSnippet,
       getColumnTypes,
       getCodexChatGPTAccount,
+      getReactNativeBridgeSessions,
+      getReactNativeBridgeStatus,
       getFunctionDefinition,
       getQueryRowsCount,
       getScriptContent,
@@ -647,6 +678,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       sendAIChatMessage,
       snippets,
       startCodexChatGPTLogin,
+      startReactNativeBridgeGateway,
+      stopReactNativeBridgeGateway,
       testAIProvider,
       testConnection,
       appendAIChatMessages,

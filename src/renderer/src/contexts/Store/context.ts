@@ -171,6 +171,43 @@ export interface IConnectionInfo {
 }
 
 export type ConnectionEnvironment = 'development' | 'production';
+export type ReactNativeBridgePlatform = 'android' | 'ios' | 'unknown';
+
+export interface IReactNativeBridgeConnectionConfig {
+  appId?: string;
+  appName?: string;
+  adapterId: string;
+  adapterLabel?: string;
+  port?: number;
+  platform?: ReactNativeBridgePlatform;
+  deviceName?: string;
+}
+
+export interface IReactNativeBridgeAdapter {
+  id: string;
+  label: string;
+  kind: string;
+  dialect: string;
+  model: 'relational';
+}
+
+export interface IReactNativeBridgeSession {
+  id: string;
+  appId?: string;
+  appName?: string;
+  platform?: ReactNativeBridgePlatform;
+  deviceName?: string;
+  connectedAt: string;
+  lastSeenAt: string;
+  adapters: IReactNativeBridgeAdapter[];
+}
+
+export interface IReactNativeBridgeStatus {
+  running: boolean;
+  host: string;
+  port: number;
+  sessions: IReactNativeBridgeSession[];
+}
 
 export interface IConnectionCreate {
   id_project: string;
@@ -187,6 +224,7 @@ export interface IConnectionCreate {
   sslCaCert?: string;
   sslCert?: string;
   sslKey?: string;
+  reactNativeBridge?: IReactNativeBridgeConnectionConfig;
 }
 
 export interface IConnection extends Omit<IConnectionCreate, 'password'> {
@@ -408,6 +446,13 @@ export interface IStoreContext {
   getCodexChatGPTAccount(): Promise<ICodexChatGPTAccount>;
   startCodexChatGPTLogin(): Promise<ICodexChatGPTLoginStart>;
   logoutCodexChatGPT(): Promise<void>;
+  getReactNativeBridgeStatus(): Promise<IReactNativeBridgeStatus>;
+  getReactNativeBridgeSessions(): Promise<IReactNativeBridgeSession[]>;
+  startReactNativeBridgeGateway(
+    source?: string,
+    options?: { host?: string; port?: number },
+  ): Promise<IReactNativeBridgeStatus>;
+  stopReactNativeBridgeGateway(source?: string): Promise<void>;
 
   connectionsGroupPerProject: IConnectionsGroupPerProject[];
 

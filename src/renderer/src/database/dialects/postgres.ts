@@ -224,6 +224,7 @@ const postgres: RendererDialect = {
   id: 'postgres',
   label: 'PostgreSQL',
   editorDialect: 'postgres',
+  connectionMode: 'network',
   defaultPort: 5432,
   supportsSsl: true,
   supportsSchemas: true,

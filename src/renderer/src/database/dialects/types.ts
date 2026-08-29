@@ -1,4 +1,4 @@
-export type Dialect = 'postgres' | 'mysql' | 'sqlite';
+export type Dialect = 'postgres' | 'mysql' | 'sqlite' | 'react-native-sqlite';
 
 export interface DdlColumnInfo {
   column_name: string;
@@ -180,7 +180,7 @@ export interface RendererDialect {
   label: string;
   editorDialect: Dialect;
   defaultPort?: number;
-  connectionMode?: 'network' | 'file';
+  connectionMode?: 'network' | 'file' | 'react-native-bridge';
   supportsSsl?: boolean;
   supportsSchemas: boolean;
   supportsFunctions: boolean;

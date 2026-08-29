@@ -797,6 +797,8 @@ const ProjectsMenu = () => {
             labelInfo:
               dialect.connectionMode === 'file'
                 ? connection.database
+                : dialect.connectionMode === 'react-native-bridge'
+                ? connection.reactNativeBridge?.appName || connection.reactNativeBridge?.appId
                 : `${connection.host}:${connection.port}`,
             loading: loadingConnectionsIdSet.has(connection.id),
             icon: 'database' as const,

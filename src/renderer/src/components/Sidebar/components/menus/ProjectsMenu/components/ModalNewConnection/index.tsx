@@ -11,35 +11,43 @@ import { useI18n } from '@renderer/contexts/I18n';
 import { useToast } from '@renderer/contexts/Toast';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
-import type { ConnectionEnvironment } from '@renderer/contexts/Store';
-import call from '@renderer/utils/call';
+import type { ConnectionEnvironment, IConnectionCreate } from '@renderer/contexts/Store';
 import {
   getRendererDialect,
   getRendererDialectOptions,
   type Dialect,
 } from '@renderer/database/dialects';
-import styles from './styles.module.css';
+import { ConnectionModeFileFields } from './components/ConnectionModeFileFields';
+import { ConnectionModeNetworkFields } from './components/ConnectionModeNetworkFields';
+import { ReactNativeBridgeFields } from './components/ReactNativeBridgeFields';
+import type { IDataNewConnection } from './types';
 
 const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironment }[] = [
   { label: 'Desenvolvimento', value: 'development' },
   { label: 'Produção', value: 'production' },
 ];
 
-type SslFileField = 'sslCaCert' | 'sslCert' | 'sslKey';
-
-const getConnectionData = (data: IDataNewConnection, idProject?: string) => {
+const getConnectionData = (data: IDataNewConnection, idProject?: string): IConnectionCreate => {
   const dialect = getRendererDialect(data.dialect);
+  const isReactNativeBridge = dialect.connectionMode === 'react-native-bridge';
+  const isNetworkConnection = dialect.connectionMode === 'network';
   const useSsl = !!(dialect.supportsSsl && data.ssl);
 
   return {
     ...data,
-    host: dialect.connectionMode === 'file' ? '' : data.host,
-    port: dialect.connectionMode === 'file' ? 0 : Number(data.port),
+    host: isNetworkConnection ? data.host : '',
+    port: isNetworkConnection ? Number(data.port) : 0,
+    database: isReactNativeBridge
+      ? data.reactNativeBridge?.adapterLabel || data.reactNativeBridge?.adapterId || ''
+      : data.database,
+    username: isReactNativeBridge ? '' : data.username,
+    password: isReactNativeBridge ? '' : data.password,
     ssl: useSsl,
     sslRejectUnauthorized: useSsl ? !!data.sslRejectUnauthorized : false,
     sslCaCert: useSsl ? data.sslCaCert : '',
     sslCert: useSsl ? data.sslCert : '',
     sslKey: useSsl ? data.sslKey : '',
+    reactNativeBridge: isReactNativeBridge ? data.reactNativeBridge : undefined,
     id_project: idProject || data.id_project,
   };
 };
@@ -77,10 +85,13 @@ export const ModalNewConnection = React.memo(
         sslCaCert: '',
         sslCert: '',
         sslKey: '',
+        reactNativeBridge: undefined,
       });
 
     const selectedDialect = getRendererDialect(state.dialect);
+    const isReactNativeBridge = selectedDialect.connectionMode === 'react-native-bridge';
     const isFileConnection = selectedDialect.connectionMode === 'file';
+    const isNetworkConnection = selectedDialect.connectionMode === 'network';
     const connectionSavedData = React.useMemo(
       () =>
         idConnection ? connections.find((connection) => connection.id === idConnection) : undefined,
@@ -95,6 +106,7 @@ export const ModalNewConnection = React.memo(
         const spec = getRendererDialect(dialect);
 
         registerDialect.onChange(event);
+
         setState((prevState) => ({
           ...prevState,
           dialect,
@@ -110,16 +122,6 @@ export const ModalNewConnection = React.memo(
       [registerDialect],
     );
 
-    const selectSqliteFile = React.useCallback(async () => {
-      if (!isFileConnection) return;
-
-      const filePath = await call<string | null>('@dialog:select_sqlite_file');
-
-      if (!filePath) return;
-
-      setState((prevState) => ({ ...prevState, database: filePath }));
-    }, [isFileConnection]);
-
     const close = React.useCallback(() => {
       reset();
       onClose?.();
@@ -127,6 +129,17 @@ export const ModalNewConnection = React.memo(
 
     const onSubmit = React.useCallback(
       handleSubmit(async (data) => {
+        const isReactNativeBridgeConnection =
+          getRendererDialect(data.dialect).connectionMode === 'react-native-bridge';
+
+        if (isReactNativeBridgeConnection && !data.reactNativeBridge?.adapterId) {
+          showToast({
+            type: 'error',
+            title: t('reactNativeBridge.adapterRequired'),
+          });
+          return;
+        }
+
         const connection = getConnectionData(data, idProject);
 
         if (idConnection) {
@@ -138,7 +151,7 @@ export const ModalNewConnection = React.memo(
 
         close();
       }),
-      [idProject, idConnection],
+      [idProject, idConnection, showToast, t],
     );
 
     const checkConnection = useCallback(async () => {
@@ -181,29 +194,6 @@ export const ModalNewConnection = React.memo(
         sslKey: connectionSavedData?.sslKey || '',
       }));
     };
-
-    const handleSslChange = React.useCallback((ssl: boolean) => {
-      setState((prevState) => ({
-        ...prevState,
-        ssl,
-        sslRejectUnauthorized: ssl ? prevState.sslRejectUnauthorized : false,
-        sslCaCert: ssl ? prevState.sslCaCert : '',
-        sslCert: ssl ? prevState.sslCert : '',
-        sslKey: ssl ? prevState.sslKey : '',
-      }));
-    }, []);
-
-    const handleSslRejectUnauthorizedChange = React.useCallback((sslRejectUnauthorized: boolean) => {
-      setState((prevState) => ({ ...prevState, sslRejectUnauthorized }));
-    }, []);
-
-    const selectSslFile = React.useCallback(async (field: SslFileField) => {
-      const filePath = await call<string | null>('@dialog:select_ssl_file');
-
-      if (!filePath) return;
-
-      setState((prevState) => ({ ...prevState, [field]: filePath }));
-    }, []);
 
     React.useEffect(() => {
       loadConnectionEditingData();
@@ -260,138 +250,36 @@ export const ModalNewConnection = React.memo(
               {...registerDialect}
               onChange={handleDialectChange}
             />
-            {!isFileConnection && (
-              <>
-                <Input
-                  required
-                  label={t('field.host')}
-                  sm={8}
-                  md={6}
-                  color={colors.fieldColor}
-                  backgroundColor={colors.fieldBackgroundColor}
-                  {...register('host')}
-                />
-                <Input
-                  required
-                  label={t('field.port')}
-                  sm={4}
-                  md={2}
-                  type="number"
-                  color={colors.fieldColor}
-                  backgroundColor={colors.fieldBackgroundColor}
-                  {...register('port')}
-                />
-              </>
-            )}
 
-            {isFileConnection ? (
-              <Input
-                required
-                label={t('field.file')}
-                md={8}
+            {isReactNativeBridge && (
+              <ReactNativeBridgeFields
+                state={state}
+                setState={setState}
                 color={colors.fieldColor}
                 backgroundColor={colors.fieldBackgroundColor}
-                {...register('database')}
-                readOnly
-                onClick={isFileConnection ? selectSqliteFile : undefined}
               />
-            ) : (
-              <>
-                <Input
-                  required
-                  label={t('field.database')}
-                  md={12}
-                  color={colors.fieldColor}
-                  backgroundColor={colors.fieldBackgroundColor}
-                  {...register('database')}
-                  onClick={isFileConnection ? selectSqliteFile : undefined}
-                />
-                <Input
-                  label={t('field.user')}
-                  xs={12}
-                  md={6}
-                  backgroundColor={colors.fieldBackgroundColor}
-                  color={colors.fieldColor}
-                  {...register('username')}
-                />
-                <Input
-                  label={t('field.password')}
-                  type="password"
-                  xs={12}
-                  md={6}
-                  placeholder={
-                    idConnection && connectionSavedData?.hasPassword
-                      ? t('field.passwordSavedPlaceholder')
-                      : undefined
-                  }
-                  backgroundColor={colors.fieldBackgroundColor}
-                  color={colors.fieldColor}
-                  {...register('password')}
-                />
-                {!!selectedDialect.supportsSsl && (
-                  <>
-                    <div className={styles.checkboxes}>
-                      <label className={styles.checkbox} style={{ color: colors.color }}>
-                        <input
-                          type="checkbox"
-                          name="ssl"
-                          checked={!!state.ssl}
-                          onChange={(event) => handleSslChange(event.target.checked)}
-                        />
-                        {t('field.ssl')}
-                      </label>
+            )}
 
-                      <label className={styles.checkbox} style={{ color: colors.color }}>
-                        <input
-                          type="checkbox"
-                          name="sslRejectUnauthorized"
-                          checked={!!state.sslRejectUnauthorized}
-                          disabled={!state.ssl}
-                          onChange={(event) =>
-                            handleSslRejectUnauthorizedChange(event.target.checked)
-                          }
-                        />
-                        {t('field.sslRejectUnauthorized')}
-                      </label>
-                    </div>
+            {isFileConnection && (
+              <ConnectionModeFileFields
+                register={register}
+                setState={setState}
+                color={colors.fieldColor}
+                backgroundColor={colors.fieldBackgroundColor}
+              />
+            )}
 
-                    {!!state.ssl && (
-                      <>
-                        <Input
-                          label={t('field.sslCaCert')}
-                          xs={12}
-                          md={4}
-                          backgroundColor={colors.fieldBackgroundColor}
-                          color={colors.fieldColor}
-                          {...register('sslCaCert')}
-                          readOnly
-                          onClick={() => selectSslFile('sslCaCert')}
-                        />
-                        <Input
-                          label={t('field.sslCert')}
-                          xs={12}
-                          md={4}
-                          backgroundColor={colors.fieldBackgroundColor}
-                          color={colors.fieldColor}
-                          {...register('sslCert')}
-                          readOnly
-                          onClick={() => selectSslFile('sslCert')}
-                        />
-                        <Input
-                          label={t('field.sslKey')}
-                          xs={12}
-                          md={4}
-                          backgroundColor={colors.fieldBackgroundColor}
-                          color={colors.fieldColor}
-                          {...register('sslKey')}
-                          readOnly
-                          onClick={() => selectSslFile('sslKey')}
-                        />
-                      </>
-                    )}
-                  </>
-                )}
-              </>
+            {isNetworkConnection && (
+              <ConnectionModeNetworkFields
+                register={register}
+                state={state}
+                setState={setState}
+                color={colors.fieldColor}
+                backgroundColor={colors.fieldBackgroundColor}
+                textColor={colors.color}
+                hasSavedPassword={!!(idConnection && connectionSavedData?.hasPassword)}
+                supportsSsl={!!selectedDialect.supportsSsl}
+              />
             )}
           </Row>
 
@@ -452,23 +340,4 @@ export interface IModalNewConnectionProps {
 
   show?: boolean;
   onClose?: () => void;
-}
-
-interface IDataNewConnection {
-  id?: string;
-  id_project?: string;
-
-  description: string;
-  dialect: Dialect;
-  environment?: ConnectionEnvironment;
-  host: string;
-  port: string | number;
-  database: string;
-  username?: string;
-  password?: string;
-  ssl?: boolean;
-  sslRejectUnauthorized?: boolean;
-  sslCaCert?: string;
-  sslCert?: string;
-  sslKey?: string;
 }

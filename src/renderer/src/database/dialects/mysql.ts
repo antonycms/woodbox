@@ -336,6 +336,7 @@ const mysql: RendererDialect = {
   id: 'mysql',
   label: 'MySQL',
   editorDialect: 'mysql',
+  connectionMode: 'network',
   defaultPort: 3306,
   supportsSsl: true,
   supportsSchemas: false,
