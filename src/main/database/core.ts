@@ -1,6 +1,10 @@
 import knex, { Knex } from 'knex';
 import { getInternalConnectionSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
+import {
+  releaseReactNativeBridgeGateway,
+  retainReactNativeBridgeGateway,
+} from '@main/reactNativeBridge/gateway';
 import { getDialectAdapter, getDialectIds } from './dialects';
 import { getSslConfig } from './ssl';
 import type { IOrderBy } from './types';
@@ -20,6 +24,14 @@ const activeRunSqlQueries = new Map<
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
+
+const isReactNativeBridgeDialect = (dialect: Dialect) => dialect === 'react-native-sqlite';
+const getReactNativeBridgeConnectionSource = (connectionId: string) => `connection:${connectionId}`;
+const getReactNativeBridgeTestSource = (connectionId?: string) =>
+  `test:${connectionId || Date.now().toString(36)}`;
+const getReactNativeBridgeGatewayOptions = (config: IConnectionConfig) => ({
+  port: config.reactNativeBridge?.port,
+});
 
 interface IServerOutputMessage {
   id: string;
@@ -79,7 +91,18 @@ export const cancelRunSql = async (connectionId: string, queryExecutionId: strin
 
 export const closeAllConnections = async () => {
   await Promise.allSettled(pendingConnections.values());
-  await Promise.all(activeConnections.map((connection) => connection?.instance?.destroy?.()));
+  await Promise.all(
+    activeConnections.map(async (connection) => {
+      try {
+        await connection?.instance?.destroy?.();
+      } finally {
+        if (isReactNativeBridgeDialect(connection.dialect)) {
+          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+        }
+      }
+    }),
+  );
+  activeConnections.splice(0);
 };
 
 const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
@@ -166,11 +189,25 @@ export const getDialects = () => getDialectIds();
 export const testConnection = async (config: IConnectionConfig) => {
   const storedConfig =
     config.id && !config.password ? getInternalConnectionSaved(config.id) : undefined;
-  const instance = await makeConnectionInstance(
-    { ...storedConfig, ...config, password: config.password || storedConfig?.password },
-    true,
-  );
-  await instance.destroy();
+  const mergedConfig = {
+    ...storedConfig,
+    ...config,
+    password: config.password || storedConfig?.password,
+  };
+  const bridgeSource = isReactNativeBridgeDialect(mergedConfig.dialect)
+    ? getReactNativeBridgeTestSource(mergedConfig.id)
+    : undefined;
+
+  if (bridgeSource) {
+    await retainReactNativeBridgeGateway(bridgeSource, getReactNativeBridgeGatewayOptions(mergedConfig));
+  }
+
+  try {
+    const instance = await makeConnectionInstance(mergedConfig, true);
+    await instance.destroy();
+  } finally {
+    if (bridgeSource) await releaseReactNativeBridgeGateway(bridgeSource);
+  }
 };
 
 const makeConnection = async (connectionId: string) => {
@@ -181,18 +218,30 @@ const makeConnection = async (connectionId: string) => {
   }
 
   const { id, dialect } = config;
+  const bridgeSource = isReactNativeBridgeDialect(dialect)
+    ? getReactNativeBridgeConnectionSource(id)
+    : undefined;
 
-  const instance = await makeConnectionInstance(config);
+  if (bridgeSource) {
+    await retainReactNativeBridgeGateway(bridgeSource, getReactNativeBridgeGatewayOptions(config));
+  }
 
-  const connection: IConnection = {
-    id,
-    instance,
-    dialect,
-  };
+  try {
+    const instance = await makeConnectionInstance(config);
 
-  activeConnections.push(connection);
+    const connection: IConnection = {
+      id,
+      instance,
+      dialect,
+    };
 
-  return connection;
+    activeConnections.push(connection);
+
+    return connection;
+  } catch (error) {
+    if (bridgeSource) await releaseReactNativeBridgeGateway(bridgeSource);
+    throw error;
+  }
 };
 
 export const closeConnection = async (connectionId: string) => {
@@ -222,6 +271,10 @@ export const closeConnection = async (connectionId: string) => {
         const index = activeConnections.indexOf(connection);
 
         if (index >= 0) activeConnections.splice(index, 1);
+
+        if (isReactNativeBridgeDialect(connection.dialect)) {
+          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+        }
       }
     }),
   );

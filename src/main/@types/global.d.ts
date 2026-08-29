@@ -1,8 +1,19 @@
 import type { Knex } from 'knex';
 
 declare global {
-  export type Dialect = 'postgres' | 'mysql' | 'sqlite';
+  export type Dialect = 'postgres' | 'mysql' | 'sqlite' | 'react-native-sqlite';
   export type ConnectionEnvironment = 'development' | 'production';
+  export type ReactNativeBridgePlatform = 'android' | 'ios' | 'unknown';
+
+  export interface IReactNativeBridgeConnectionConfig {
+    appId?: string;
+    appName?: string;
+    adapterId: string;
+    adapterLabel?: string;
+    port?: number;
+    platform?: ReactNativeBridgePlatform;
+    deviceName?: string;
+  }
 
   export interface IConnectionConfig {
     id: string;
@@ -20,6 +31,7 @@ declare global {
     sslCaCert?: string;
     sslCert?: string;
     sslKey?: string;
+    reactNativeBridge?: IReactNativeBridgeConnectionConfig;
   }
 
   export interface IConnectionPublic extends Omit<IConnectionConfig, 'password'> {

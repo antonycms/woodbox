@@ -47,7 +47,7 @@ export interface ResolveRunSqlColumnsInfoContext {
 
 export interface DatabaseDialectAdapter {
   id: Dialect;
-  client: string;
+  client: Knex.Config['client'];
   queries: DatabaseDialectQueries;
   getConnectionConfig(config: IConnectionConfig): object;
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
