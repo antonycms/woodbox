@@ -2,7 +2,9 @@ import knex, { Knex } from 'knex';
 import { getInternalConnectionSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
 import { getDialectAdapter, getDialectIds } from './dialects';
-import { serializeOrderBy, type IOrderBy } from './utils/orderBy';
+import { getSslConfig } from './ssl';
+import type { IOrderBy } from './types';
+import { serializeOrderBy } from './utils/orderBy';
 import {
   hasSqlStatementSeparator,
   isReadOnlySelectQuery,
@@ -83,6 +85,8 @@ export const closeAllConnections = async () => {
 const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolean) => {
   const { id, dialect } = config;
   const adapter = getDialectAdapter(dialect);
+  const connectionConfig = adapter.getConnectionConfig(config);
+  const sslConfig = getSslConfig(config);
 
   let instance: null | Knex<any, unknown[]>;
 
@@ -107,7 +111,10 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
     pool,
     debug: process.env.NODE_ENV === 'development',
     client: adapter.client,
-    connection: adapter.getConnectionConfig(config),
+    connection: {
+      ...connectionConfig,
+      ...(sslConfig ? { ssl: sslConfig } : {}),
+    },
     ...adapter.getKnexConfig?.(config),
   });
 

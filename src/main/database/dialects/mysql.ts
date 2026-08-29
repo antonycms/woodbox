@@ -1,6 +1,5 @@
-import queries from '@main/database/querys/mysql';
-import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
-import { getSslConfig } from './ssl';
+import queries from '@main/database/queries/mysql';
+import type { DatabaseDialectAdapter, SerializedRunSqlResult } from '../types';
 
 const quoteIdentifier = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
@@ -139,7 +138,6 @@ const mysql: DatabaseDialectAdapter = {
     password: config.password,
     database: config.database,
     dateStrings: true,
-    ssl: getSslConfig(config),
   }),
   getRows,
   splitStatements,

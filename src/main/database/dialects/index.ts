@@ -1,9 +1,9 @@
 import postgres from './postgres';
 import mysql from './mysql';
 import sqlite from './sqlite';
-import type { DatabaseDialectAdapter } from './types';
+import type { DatabaseDialectAdapter } from '../types';
 
-export type * from './types';
+export type * from '../types';
 
 export const dialectAdapters = {
   postgres,

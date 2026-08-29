@@ -1,6 +1,4 @@
-import type { IOrderBy } from '../dialects/types';
-
-export type { IOrderBy };
+import type { IOrderBy } from '../types';
 
 export const serializeOrderBy = (
   orderBy: IOrderBy[] | undefined,

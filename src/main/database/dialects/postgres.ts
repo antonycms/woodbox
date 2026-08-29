@@ -1,7 +1,6 @@
 import pg from 'pg';
-import queries from '@main/database/querys/postgres';
-import type { DatabaseDialectAdapter, SerializedRunSqlResult } from './types';
-import { getSslConfig } from './ssl';
+import queries from '@main/database/queries/postgres';
+import type { DatabaseDialectAdapter, SerializedRunSqlResult } from '../types';
 
 pg.types.setTypeParser(1114, (val) => val);
 pg.types.setTypeParser(1184, (val) => val);
@@ -24,7 +23,6 @@ const postgres: DatabaseDialectAdapter = {
     password: config.password,
     database: config.database,
     dateStrings: true,
-    ssl: getSslConfig(config),
     application_name: `Woodbox (${config.description})`,
   }),
   getRows: (raw) => raw?.rows || [],

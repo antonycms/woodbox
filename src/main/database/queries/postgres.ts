@@ -3,6 +3,8 @@
   https://marketplace.visualstudio.com/items?itemName=jtladeiras.vscode-inline-sql
 */
 
+import type { IGetTableDataParams, IOrderBy, ITableWithSchema } from '@main/database/types';
+
 /* postgres only */
 const getAllSchemas = () => /* sql */ `
   SELECT schema_name FROM information_schema.schemata
@@ -163,7 +165,7 @@ const getTableUsedAsReference = ({ schema, table }: ITableWithSchema) => /* sql 
   AND t_ref.relname  = '${table}';
 `;
 
-const getTableRestrictions = ({ schema, table }) => /* sql */ `
+const getTableRestrictions = ({ schema, table }: ITableWithSchema) => /* sql */ `
   SELECT
     con.conname AS constraint_name,
     (CASE
@@ -220,7 +222,7 @@ const selectWithOffset = ({
   orderBy,
   limit = 50,
   actualPage = 1,
-}: IGetTotalRowsCountInTableData) => {
+}: IGetTableDataParams) => {
   const offset = limit * (actualPage - 1);
   const orderByQuery = serializeOrderBy(orderBy);
   const whereQuery = where ? `WHERE ${where}` : '';
@@ -405,22 +407,3 @@ export default {
   getFunctions,
   getFunctionDefinition,
 };
-
-export interface ITableWithSchema {
-  table: string;
-  schema: string;
-}
-
-export interface IGetTotalRowsCountInTableData {
-  table: string;
-  schema: string;
-  limit?: number;
-  actualPage?: number;
-  where?: string;
-  orderBy?: IOrderBy[];
-}
-
-export interface IOrderBy {
-  columnName: string;
-  sortType: 'DESC' | 'ASC';
-}

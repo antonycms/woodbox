@@ -2,7 +2,7 @@ import type {
   IGetTableDataParams,
   IOrderBy,
   ITableWithSchema,
-} from '@main/database/dialects/types';
+} from '@main/database/types';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
