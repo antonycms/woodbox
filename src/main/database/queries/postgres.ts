@@ -5,6 +5,11 @@
 
 import type { IGetTableDataParams, IOrderBy, ITableWithSchema } from '@main/database/types';
 
+const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+const quoteLiteral = (value?: string) => `'${String(value ?? '').replace(/'/g, "''")}'`;
+const getTableName = ({ schema, table }: ITableWithSchema) =>
+  schema ? `${quoteIdent(schema)}.${quoteIdent(table)}` : quoteIdent(table);
+
 /* postgres only */
 const getAllSchemas = () => /* sql */ `
   SELECT schema_name FROM information_schema.schemata
@@ -62,7 +67,7 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
       pgd.objoid = st.relid AND
       pgd.objsubid = c.ordinal_position
     )
-    WHERE c.table_name = '${table}' AND c.table_schema = '${schema}'
+    WHERE c.table_name = ${quoteLiteral(table)} AND c.table_schema = ${quoteLiteral(schema)}
   )
   SELECT * FROM info_columns
   UNION ALL
@@ -85,8 +90,8 @@ const getTableColumns = ({ schema, table }: ITableWithSchema) => /* sql */ `
     pgd.objoid = c.oid AND
     pgd.objsubid = a.attnum
   )
-  WHERE c.relname = '${table}'
-  AND n.nspname = '${schema}'
+  WHERE c.relname = ${quoteLiteral(table)}
+  AND n.nspname = ${quoteLiteral(schema)}
   AND c.relkind = 'm'
   AND NOT EXISTS (SELECT 1 FROM info_columns);
 `;
@@ -138,8 +143,8 @@ const getTableReferences = ({ schema, table }: ITableWithSchema) => /* sql */ `
   JOIN pg_catalog.pg_attribute a     ON a.attrelid     = c.conrelid  AND a.attnum     = cols.src_col
   JOIN pg_catalog.pg_attribute a_ref ON a_ref.attrelid = c.confrelid AND a_ref.attnum = cols.ref_col
   WHERE c.contype = 'f'
-  AND ns.nspname = '${schema}'
-  AND t.relname  = '${table}'
+  AND ns.nspname = ${quoteLiteral(schema)}
+  AND t.relname  = ${quoteLiteral(table)}
   ORDER BY c.conname, cols.ordinality;
 `;
 
@@ -161,8 +166,8 @@ const getTableUsedAsReference = ({ schema, table }: ITableWithSchema) => /* sql 
   JOIN pg_catalog.pg_attribute a     ON a.attrelid     = c.conrelid  AND a.attnum     = cols.src_col
   JOIN pg_catalog.pg_attribute a_ref ON a_ref.attrelid = c.confrelid AND a_ref.attnum = cols.ref_col
   WHERE c.contype = 'f'
-  AND ns_ref.nspname = '${schema}'
-  AND t_ref.relname  = '${table}';
+  AND ns_ref.nspname = ${quoteLiteral(schema)}
+  AND t_ref.relname  = ${quoteLiteral(table)};
 `;
 
 const getTableRestrictions = ({ schema, table }: ITableWithSchema) => /* sql */ `
@@ -187,8 +192,8 @@ const getTableRestrictions = ({ schema, table }: ITableWithSchema) => /* sql */ 
   LEFT JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ordinality) ON TRUE
   LEFT JOIN pg_catalog.pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = cols.attnum
   WHERE con.contype IN ('p', 'u', 'c')
-  AND nsp.nspname = '${schema}'
-  AND rel.relname = '${table}'
+  AND nsp.nspname = ${quoteLiteral(schema)}
+  AND rel.relname = ${quoteLiteral(table)}
   GROUP BY con.oid, con.conname, con.contype, con.conbin, con.conrelid
   ORDER BY con.conname
 `;
@@ -199,7 +204,7 @@ const getTotalRowsCountInTable = ({
   where,
 }: ITableWithSchema & { where?: string }) => {
   const whereQuery = where ? `WHERE ${where}` : '';
-  return /* sql */ `SELECT count(*) as total_rows FROM "${schema}"."${table}" ${whereQuery};`;
+  return /* sql */ `SELECT count(*) as total_rows FROM ${getTableName({ schema, table })} ${whereQuery};`;
 };
 
 const serializeOrderBy = (orderBy?: IOrderBy[]) => {
@@ -228,7 +233,7 @@ const selectWithOffset = ({
   const whereQuery = where ? `WHERE ${where}` : '';
 
   return /* sql */ `
-    SELECT * FROM "${schema}"."${table}" ${whereQuery} ${orderByQuery} LIMIT ${limit} OFFSET ${offset};
+    SELECT * FROM ${getTableName({ schema, table })} ${whereQuery} ${orderByQuery} LIMIT ${limit} OFFSET ${offset};
   `;
 };
 
@@ -237,7 +242,7 @@ const getTableDefinition = ({ schema, table }: ITableWithSchema) => /* sql */ `
     SELECT c.oid, c.relkind, n.nspname AS schema_name, c.relname AS table_name
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE c.relname = '${table}' AND n.nspname = '${schema}' AND c.relkind IN ('r', 'p', 'v', 'm')
+    WHERE c.relname = ${quoteLiteral(table)} AND n.nspname = ${quoteLiteral(schema)} AND c.relkind IN ('r', 'p', 'v', 'm')
   ),
   columns AS (
     SELECT
@@ -321,8 +326,8 @@ const getTableIndexes = ({ schema, table }: ITableWithSchema) => /* sql */ `
   LEFT JOIN LATERAL unnest(ix.indoption) WITH ORDINALITY AS opts(indoption, ordinality)
     ON opts.ordinality = cols.ordinality
   LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = cols.attnum
-  WHERE n.nspname = '${schema}'
-  AND t.relname = '${table}'
+  WHERE n.nspname = ${quoteLiteral(schema)}
+  AND t.relname = ${quoteLiteral(table)}
   GROUP BY i.relname, am.amname, ix.indisunique, ix.indisprimary, ix.indisvalid, ix.indexrelid, ix.indexprs, ix.indpred, ix.indrelid
   ORDER BY i.relname;
 `;
@@ -359,8 +364,8 @@ const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
   JOIN pg_catalog.pg_proc p      ON p.oid = t.tgfoid
   JOIN pg_catalog.pg_namespace n_func ON n_func.oid = p.pronamespace
   WHERE NOT t.tgisinternal
-  AND c.relname  = '${table}'
-  AND n.nspname  = '${schema}'
+  AND c.relname  = ${quoteLiteral(table)}
+  AND n.nspname  = ${quoteLiteral(schema)}
   ORDER BY t.tgname;
 `;
 
@@ -387,8 +392,8 @@ const getFunctionDefinition = ({
   SELECT pg_get_functiondef(p.oid) AS definition
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE p.proname = '${functionName}'
-    AND n.nspname = '${schema}';
+  WHERE p.proname = ${quoteLiteral(functionName)}
+    AND n.nspname = ${quoteLiteral(schema)};
 `;
 
 export default {
