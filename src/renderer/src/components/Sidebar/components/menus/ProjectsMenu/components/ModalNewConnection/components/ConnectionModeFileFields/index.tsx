@@ -27,7 +27,8 @@ export const ConnectionModeFileFields = React.memo(
       <Input
         required
         label={t('field.file')}
-        md={8}
+        md={7}
+        xs={12}
         color={color}
         backgroundColor={backgroundColor}
         {...register('database')}

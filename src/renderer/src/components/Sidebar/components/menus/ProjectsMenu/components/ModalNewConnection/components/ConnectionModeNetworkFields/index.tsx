@@ -71,8 +71,8 @@ export const ConnectionModeNetworkFields = React.memo(
         <Input
           required
           label={t('field.host')}
-          sm={8}
-          md={6}
+          xs={8}
+          md={5}
           color={color}
           backgroundColor={backgroundColor}
           {...register('host')}
@@ -80,7 +80,7 @@ export const ConnectionModeNetworkFields = React.memo(
         <Input
           required
           label={t('field.port')}
-          sm={4}
+          xs={4}
           md={2}
           type="number"
           color={color}

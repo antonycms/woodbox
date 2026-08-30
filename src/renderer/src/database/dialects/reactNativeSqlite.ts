@@ -4,7 +4,7 @@ import type { RendererDialect } from './types';
 const reactNativeSqlite: RendererDialect = {
   ...sqlite,
   id: 'react-native-sqlite',
-  label: 'RN Sqlite Storage',
+  label: 'React Native SQLite',
   editorDialect: 'sqlite',
   connectionMode: 'react-native-bridge',
 };

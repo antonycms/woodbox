@@ -178,8 +178,8 @@ export const ReactNativeBridgeFields = React.memo(
         <Input
           required
           label={t('reactNativeBridge.port')}
-          sm={8}
-          md={6}
+          md={7}
+          xs={12}
           type="number"
           color={color}
           backgroundColor={backgroundColor}
@@ -202,7 +202,8 @@ export const ReactNativeBridgeFields = React.memo(
           extractValue={(item) => item.id}
           color={color}
           backgroundColor={backgroundColor}
-          md={12}
+          md={6}
+          xs={12}
           value={selectedSessionId}
           onChange={handleSessionChange}
         />
@@ -217,7 +218,8 @@ export const ReactNativeBridgeFields = React.memo(
           extractValue={(item) => item.id}
           color={color}
           backgroundColor={backgroundColor}
-          md={12}
+          md={6}
+          xs={12}
           value={value?.adapterId || ''}
           onChange={handleAdapterChange}
         />
