@@ -23,6 +23,8 @@ import type {
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = 8123;
+const HEARTBEAT_INTERVAL_MS = 5000;
+const HEARTBEAT_TIMEOUT_MS = 15000;
 
 let server: Server | undefined;
 let currentHost = DEFAULT_HOST;
@@ -34,20 +36,27 @@ interface SocketState {
   id: string;
   buffer: Buffer;
   helloReceived: boolean;
+  lastSeenAt: number;
+  heartbeatInterval?: NodeJS.Timeout;
 }
 
 const socketStates = new WeakMap<Socket, SocketState>();
+
+interface DecodedFrame {
+  opcode: number;
+  payload: Buffer;
+}
 
 const getAcceptKey = (key: string) => {
   return createHash('sha1').update(key + WS_GUID).digest('base64');
 };
 
-const encodeFrame = (text: string) => {
-  const payload = Buffer.from(text);
+const encodeFrame = (data: Buffer | string, opcode = 0x1) => {
+  const payload = Buffer.isBuffer(data) ? data : Buffer.from(data);
   const headerLength = payload.length < 126 ? 2 : payload.length <= 65535 ? 4 : 10;
   const frame = Buffer.alloc(headerLength + payload.length);
 
-  frame[0] = 0x81;
+  frame[0] = 0x80 | opcode;
 
   if (payload.length < 126) {
     frame[1] = payload.length;
@@ -66,7 +75,7 @@ const encodeFrame = (text: string) => {
 };
 
 const decodeFrames = (state: SocketState) => {
-  const messages: string[] = [];
+  const frames: DecodedFrame[] = [];
 
   while (state.buffer.length >= 2) {
     const secondByte = state.buffer[1];
@@ -90,11 +99,6 @@ const decodeFrames = (state: SocketState) => {
 
     if (state.buffer.length < frameLength) break;
 
-    if (opcode === 0x8) {
-      state.buffer = state.buffer.slice(frameLength);
-      break;
-    }
-
     const mask = masked ? state.buffer.subarray(offset, offset + 4) : undefined;
     const payload = Buffer.from(
       state.buffer.subarray(offset + maskOffset, offset + maskOffset + payloadLength),
@@ -106,16 +110,68 @@ const decodeFrames = (state: SocketState) => {
       }
     }
 
-    if (opcode === 0x1) messages.push(payload.toString('utf8'));
+    if (opcode === 0x1 || opcode === 0x8 || opcode === 0x9 || opcode === 0xa) {
+      frames.push({ opcode, payload });
+    }
 
     state.buffer = state.buffer.slice(frameLength);
+
+    if (opcode === 0x8) break;
   }
 
-  return messages;
+  return frames;
+};
+
+const isIgnoredSocketError = (error: unknown) => {
+  const code = (error as NodeJS.ErrnoException).code;
+
+  return code === 'EPIPE' || code === 'ECONNRESET' || code === 'ERR_STREAM_DESTROYED';
+};
+
+const writeSocket = (socket: Socket, data: Buffer | string) => {
+  if (socket.destroyed || !socket.writable || socket.writableEnded) return false;
+
+  try {
+    socket.write(data);
+    return true;
+  } catch (error) {
+    if (!isIgnoredSocketError(error)) console.error(error);
+    return false;
+  }
 };
 
 const sendJson = (socket: Socket, data: unknown) => {
-  socket.write(encodeFrame(JSON.stringify(data)));
+  const sent = writeSocket(socket, encodeFrame(JSON.stringify(data)));
+
+  if (!sent) socket.destroy();
+
+  return sent;
+};
+
+const sendPong = (socket: Socket, payload: Buffer) => {
+  if (!writeSocket(socket, encodeFrame(payload, 0xa))) socket.destroy();
+};
+
+const sendClose = (socket: Socket) => {
+  writeSocket(socket, encodeFrame(Buffer.alloc(0), 0x8));
+  socket.destroy();
+};
+
+const startSocketHeartbeat = (socket: Socket, state: SocketState) => {
+  state.heartbeatInterval = setInterval(() => {
+    if (socket.destroyed) return;
+
+    const inactiveMs = Date.now() - state.lastSeenAt;
+
+    if (inactiveMs > HEARTBEAT_TIMEOUT_MS) {
+      socket.destroy();
+      return;
+    }
+
+    if (!writeSocket(socket, encodeFrame(Buffer.alloc(0), 0x9))) socket.destroy();
+  }, HEARTBEAT_INTERVAL_MS);
+
+  state.heartbeatInterval.unref?.();
 };
 
 const handleBridgeMessage = (socket: Socket, state: SocketState, raw: string) => {
@@ -142,6 +198,27 @@ const handleBridgeMessage = (socket: Socket, state: SocketState, raw: string) =>
 
   if (message.type === 'event') {
     emitEvent('@event:react_native_bridge_event', message);
+  }
+};
+
+const handleBridgeFrame = (socket: Socket, state: SocketState, frame: DecodedFrame) => {
+  state.lastSeenAt = Date.now();
+  touchReactNativeBridgeSession(state.id);
+
+  if (frame.opcode === 0x8) {
+    sendClose(socket);
+    return;
+  }
+
+  if (frame.opcode === 0x9) {
+    sendPong(socket, frame.payload);
+    return;
+  }
+
+  if (frame.opcode === 0xa) return;
+
+  if (frame.opcode === 0x1) {
+    handleBridgeMessage(socket, state, frame.payload.toString('utf8'));
   }
 };
 
@@ -174,7 +251,12 @@ export const ensureReactNativeBridgeGateway = async ({
 
     const id = createSessionId();
     sockets.add(netSocket);
-    netSocket.write(
+    netSocket.on('error', (error) => {
+      if (!isIgnoredSocketError(error)) console.error(error);
+    });
+
+    const accepted = writeSocket(
+      netSocket,
       [
         'HTTP/1.1 101 Switching Protocols',
         'Upgrade: websocket',
@@ -185,20 +267,34 @@ export const ensureReactNativeBridgeGateway = async ({
       ].join('\r\n'),
     );
 
-    socketStates.set(netSocket, { id, buffer: Buffer.alloc(0), helloReceived: false });
+    if (!accepted) {
+      sockets.delete(netSocket);
+      netSocket.destroy();
+      return;
+    }
+
+    const state: SocketState = {
+      id,
+      buffer: Buffer.alloc(0),
+      helloReceived: false,
+      lastSeenAt: Date.now(),
+    };
+
+    socketStates.set(netSocket, state);
+    startSocketHeartbeat(netSocket, state);
 
     netSocket.on('data', (chunk) => {
-      const state = socketStates.get(netSocket);
-      if (!state) return;
+      const currentState = socketStates.get(netSocket);
+      if (!currentState) return;
 
-      state.buffer = Buffer.concat([
-        state.buffer,
+      currentState.buffer = Buffer.concat([
+        currentState.buffer,
         Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk),
       ]);
 
       try {
-        for (const raw of decodeFrames(state)) {
-          handleBridgeMessage(netSocket, state, raw);
+        for (const frame of decodeFrames(currentState)) {
+          handleBridgeFrame(netSocket, currentState, frame);
         }
       } catch (error) {
         console.error(error);
@@ -207,6 +303,8 @@ export const ensureReactNativeBridgeGateway = async ({
     });
 
     netSocket.on('close', () => {
+      const currentState = socketStates.get(netSocket);
+      if (currentState?.heartbeatInterval) clearInterval(currentState.heartbeatInterval);
       sockets.delete(netSocket);
       removeReactNativeBridgeSession(id);
       rejectReactNativeBridgeSessionRequests(id);
@@ -239,7 +337,11 @@ export const stopReactNativeBridgeGateway = async () => {
 
   const currentServer = server;
   server = undefined;
-  sockets.forEach((socket) => socket.destroy());
+  sockets.forEach((socket) => {
+    const state = socketStates.get(socket);
+    if (state?.heartbeatInterval) clearInterval(state.heartbeatInterval);
+    socket.destroy();
+  });
   sockets.clear();
 
   await new Promise<void>((resolve, reject) => {

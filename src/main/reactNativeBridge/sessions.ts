@@ -6,7 +6,7 @@ import type {
 } from './protocol';
 
 export interface ReactNativeBridgeSession extends ReactNativeBridgeSessionInfo {
-  send(data: unknown): void;
+  send(data: unknown): boolean;
 }
 
 const sessions = new Map<string, ReactNativeBridgeSession>();
@@ -44,7 +44,7 @@ export const findReactNativeBridgeSession = ({
 export const registerReactNativeBridgeSession = (
   id: string,
   hello: BridgeHelloMessage,
-  send: (data: unknown) => void,
+  send: (data: unknown) => boolean,
 ) => {
   const now = new Date().toISOString();
   const session: ReactNativeBridgeSession = {

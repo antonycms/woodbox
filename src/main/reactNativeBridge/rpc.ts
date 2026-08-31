@@ -35,7 +35,13 @@ export const requestReactNativeBridge = async (
       timeout,
     });
 
-    session.send({ type: 'request', id, adapterId, method, params });
+    const sent = session.send({ type: 'request', id, adapterId, method, params });
+
+    if (!sent) {
+      clearTimeout(timeout);
+      pendingRequests.delete(id);
+      reject(new Error('A conexão com o app React Native foi encerrada.'));
+    }
   });
 };
 
