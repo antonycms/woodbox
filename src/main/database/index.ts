@@ -7,6 +7,7 @@ import {
   getTableData,
   getTableRowsCount,
   getQueryRowsCount,
+  getExportDataPreview,
   getTableColumns,
   getColumnTypes,
   getTableReferences,
@@ -18,6 +19,7 @@ import {
   getFunctionDefinition,
   runSql,
   runExplainSql,
+  exportData,
   importTableData,
   cancelRunSql,
   getServerOutput,
@@ -32,6 +34,7 @@ addListener('@get:connection_info', getConnectionInfo);
 addListener('@get:table_data', getTableData);
 addListener('@get:table_rows_count', getTableRowsCount);
 addListener('@get:query_rows_count', getQueryRowsCount);
+addListener('@get:export_data_preview', getExportDataPreview);
 addListener('@get:table_columns', getTableColumns);
 addListener('@get:column_types', getColumnTypes);
 addListener('@get:table_references', getTableReferences);
@@ -43,6 +46,7 @@ addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
 addListener('@post:run_explain_sql', runExplainSql);
+addListener('@post:export_data', exportData);
 addListener('@post:import_table_data', importTableData);
 addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
