@@ -25,6 +25,9 @@ import StoreContext, {
   type IImportConnectionsResult,
   type IImportTableDataParams,
   type IImportTableDataResult,
+  type IExportDataParams,
+  type IExportDataPreview,
+  type IExportDataResult,
   type IAIProvider,
   type IAIProviderCreate,
   type IAIChatRequest,
@@ -502,6 +505,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     return await call<number>('@get:query_rows_count', idConnection, sql);
   }, []);
 
+  const getExportDataPreview = React.useCallback(
+    async (idConnection: string, params: Pick<IExportDataParams, 'source'>) => {
+      return await call<IExportDataPreview>('@get:export_data_preview', idConnection, params);
+    },
+    [],
+  );
+
   const getServerOutput = React.useCallback(async (idConnection: string) => {
     return await call<IServerOutputMessage[]>('@get:server_output', idConnection);
   }, []);
@@ -531,6 +541,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
   const importTableData = React.useCallback(
     async (idConnection: string, params: IImportTableDataParams) => {
       return await call<IImportTableDataResult>('@post:import_table_data', idConnection, params);
+    },
+    [],
+  );
+
+  const exportData = React.useCallback(
+    async (idConnection: string, params: IExportDataParams) => {
+      return await call<IExportDataResult>('@post:export_data', idConnection, params);
     },
     [],
   );
@@ -569,6 +586,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getTableData,
       getTableRowsCount,
       getQueryRowsCount,
+      getExportDataPreview,
+      exportData,
 
       getTableColumns,
       getColumnTypes,
@@ -643,6 +662,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       editSnippet,
       getColumnTypes,
       getCodexChatGPTAccount,
+      getExportDataPreview,
       getReactNativeBridgeSessions,
       getReactNativeBridgeStatus,
       getFunctionDefinition,
@@ -658,6 +678,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getTableRowsCount,
       getTableTriggers,
       getTableUsedAsReference,
+      exportData,
       importConnectionsFromSource,
       importTableData,
       loadConnectionInfo,

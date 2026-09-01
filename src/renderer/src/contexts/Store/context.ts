@@ -382,6 +382,31 @@ export interface IOptionsRunSql {
   queryExecutionId?: string;
 }
 
+export type ExportDataFormat = 'csv' | 'json' | 'jsonl' | 'xlsx';
+
+export type ExportDataSource =
+  | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }
+  | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
+
+export interface IExportDataParams {
+  source: ExportDataSource;
+  columns: string[];
+  format: ExportDataFormat;
+  batchSize?: number;
+  fileName?: string;
+}
+
+export interface IExportDataPreview {
+  columns: string[];
+  rows: any[];
+}
+
+export interface IExportDataResult {
+  canceled: boolean;
+  filePath?: string;
+  rows: number;
+}
+
 export interface IServerOutputMessage {
   id: string;
   connectionId: string;
@@ -468,6 +493,11 @@ export interface IStoreContext {
     params: Omit<IParamsGetTableData, 'page' | 'limit' | 'orderBy'>,
   ): Promise<number>;
   getQueryRowsCount(idConnection: string, sql: string): Promise<number>;
+  getExportDataPreview(
+    idConnection: string,
+    params: Pick<IExportDataParams, 'source'>,
+  ): Promise<IExportDataPreview>;
+  exportData(idConnection: string, params: IExportDataParams): Promise<IExportDataResult>;
 
   getTableColumns(
     idConnection: string,
