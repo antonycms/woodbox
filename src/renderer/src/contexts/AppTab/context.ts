@@ -27,6 +27,7 @@ export type IAppTabMovePlacement = 'before' | 'after';
 
 export interface IRemoveAppTabOptions {
   keepHistory?: boolean;
+  force?: boolean;
 }
 
 export interface IAppTabGroup {

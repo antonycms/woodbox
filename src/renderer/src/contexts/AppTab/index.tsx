@@ -172,7 +172,7 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
       const tabsIdToRemove = new Set(Array.isArray(tabId) ? tabId : [tabId]);
       const hasUnsavedTab = tabs.some((tab) => tabsIdToRemove.has(tab.id) && tab.unsaved);
 
-      if (hasUnsavedTab) {
+      if (!options?.force && hasUnsavedTab) {
         setPendingRemoveTabs({ tabId, options });
         return;
       }

@@ -16,7 +16,7 @@ export const ModalDeleteTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalDeleteTableProps) => {
     const { t } = useI18n();
     const { runSql, loadConnectionInfo, connections } = useStoreContext();
-    const { removeTab } = useAppTabContext();
+    const { tabs, removeTab } = useAppTabContext();
     const { showToast } = useToast();
     const {
       activeTheme: { modal: colors },
@@ -40,7 +40,23 @@ export const ModalDeleteTable = React.memo(
 
         await runSql(idConnection, `DROP TABLE ${dialect.getQualifiedName(schema, table)};`);
 
-        removeTab(`${idConnection}_${schema}_${table}`);
+        const tabsToRemove = tabs
+          .filter((tab) => {
+            const { data } = tab;
+
+            return (
+              data?.type === 'table-info' &&
+              data.id_connection === idConnection &&
+              data.schema == schema &&
+              data.table === table
+            );
+          })
+          .map((tab) => tab.id);
+
+        if (tabsToRemove.length) {
+          removeTab(tabsToRemove, { keepHistory: false, force: true });
+        }
+
         await loadConnectionInfo(idConnection);
 
         showToast({
