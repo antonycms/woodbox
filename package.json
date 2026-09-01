@@ -34,6 +34,7 @@
     "ai": "^7.0.55",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0",
     "knex": "^3.3.0",
     "leaflet": "^1.9.4",
     "mysql2": "^3.23.1",
@@ -72,7 +73,6 @@
     "typescript": "^7.0.2",
     "unplugin-icons": "^23.0.1",
     "vite": "^8.1.5",
-    "vite-plugin-svgr": "^5.2.0",
-    "xlsx": "^0.18.5"
+    "vite-plugin-svgr": "^5.2.0"
   }
 }

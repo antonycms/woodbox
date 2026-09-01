@@ -1,5 +1,5 @@
 import React from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -101,6 +101,53 @@ const parseMatrix = (
 
 const isCsvFile = (file: File) => file.name.toLowerCase().endsWith('.csv');
 
+const getExcelCellValue = (value: ExcelJS.CellValue): unknown => {
+  const valueType = typeof value;
+
+  if (
+    !value ||
+    value instanceof Date ||
+    valueType === 'string' ||
+    valueType === 'number' ||
+    valueType === 'boolean'
+  ) {
+    return value;
+  }
+
+  const cellValue = value as Record<string, any>;
+
+  if ('result' in cellValue) return cellValue.result;
+  if ('text' in cellValue) return cellValue.text;
+  if ('richText' in cellValue) return cellValue.richText.map((item) => item.text).join('');
+  if ('hyperlink' in cellValue) return cellValue.hyperlink;
+
+  return String(value);
+};
+
+const parseXlsxRows = async (buffer: ArrayBuffer, messages: ImportParserMessages) => {
+  const workbook = new ExcelJS.Workbook();
+
+  await workbook.xlsx.load(buffer);
+
+  const worksheet = workbook.worksheets[0];
+
+  if (!worksheet) throw new Error(messages.noSheets);
+
+  const matrix: unknown[][] = [];
+
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    const values: unknown[] = [];
+
+    for (let columnIndex = 1; columnIndex <= row.cellCount; columnIndex += 1) {
+      values.push(getExcelCellValue(row.getCell(columnIndex).value));
+    }
+
+    matrix.push(values);
+  });
+
+  return matrix;
+};
+
 const decodeCsv = (buffer: ArrayBuffer) => {
   const utf8Text = new TextDecoder('utf-8').decode(buffer);
 
@@ -176,20 +223,7 @@ const parseImportFile = async (
     return parseMatrix(file.name, parseCsvRows(decodeCsv(buffer), separator), messages);
   }
 
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-  const firstSheetName = workbook.SheetNames[0];
-
-  if (!firstSheetName) throw new Error(messages.noSheets);
-
-  const sheet = workbook.Sheets[firstSheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: '',
-    blankrows: false,
-    raw: true,
-  });
-
-  return parseMatrix(file.name, matrix, messages);
+  return parseMatrix(file.name, await parseXlsxRows(buffer, messages), messages);
 };
 
 export const ModalImportTableData = React.memo(
@@ -438,7 +472,7 @@ export const ModalImportTableData = React.memo(
             <FilePicker
               label={t('field.excelOrCsvFile')}
               required
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.csv"
               fileName={selectedFile?.name}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
