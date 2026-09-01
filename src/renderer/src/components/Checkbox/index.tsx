@@ -10,6 +10,8 @@ interface ICheckboxProps extends IGridSystem {
   label?: string;
   required?: boolean;
   checked?: boolean;
+  disabled?: boolean;
+  title?: string;
   onChecked?(checked: boolean): void;
   backgroundColor: string;
   color: string;
@@ -21,6 +23,8 @@ export const Checkbox = (props: ICheckboxProps) => {
     label,
     required,
     checked,
+    disabled,
+    title,
     onChecked,
     backgroundColor,
     color,
@@ -38,15 +42,18 @@ export const Checkbox = (props: ICheckboxProps) => {
 
   return (
     <Column {...gridSystem}>
-      <div className={classes(required && styles.isRequired)}>
+      <div className={classes(styles.container, required && styles.isRequired)}>
         {!!label && (
           <Label htmlFor={id} color={labelColor}>
             {label}
           </Label>
         )}
         <input
+          id={id}
+          title={title}
           style={{ backgroundColor, color }}
           checked={checked}
+          disabled={disabled}
           type="checkbox"
           onChange={handleChecked}
         />

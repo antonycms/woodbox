@@ -41,6 +41,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     placeholder,
     className,
     loading,
+    disabled,
     id,
     clearable = true,
     extractLabel = defaultExtractLabel,
@@ -254,6 +255,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
       name={name}
       className={className}
       required={required}
+      disabled={disabled}
       title={title}
       labelColor={labelColor}
       color={color}
@@ -359,6 +361,7 @@ export interface IAutocompleteProps<T> extends IGridSystem {
   ref?: React.Ref<IAutoCompleteRef>;
   data: T[];
   loading?: boolean;
+  disabled?: boolean;
   placeholder?: string;
   registerable?: boolean;
   onInput?(e: React.ChangeEvent<HTMLInputElement>): void;
