@@ -23,6 +23,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
+import { ModalExportData } from '@renderer/components/ModalExportData';
 import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { QueryEditor } from '@renderer/views/QueryEditor';
@@ -142,6 +143,7 @@ const ProjectsMenu = () => {
     closeConnection,
     connectionsInfo,
     scripts,
+    getTableColumns,
   } = useStoreContext();
 
   const { showToast } = useToast();
@@ -177,6 +179,8 @@ const ProjectsMenu = () => {
   const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
   const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
   const [tableToImport, setTableToImport] = React.useState<IItemTreeViewData>();
+  const [tableToExport, setTableToExport] = React.useState<IItemTreeViewData>();
+  const [tableToExportColumns, setTableToExportColumns] = React.useState<string[]>([]);
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
@@ -314,6 +318,23 @@ const ProjectsMenu = () => {
   const closeImportTableModal = React.useCallback(() => {
     setTableToImport(null);
   }, []);
+
+  const closeExportTableModal = React.useCallback(() => {
+    setTableToExport(null);
+    setTableToExportColumns([]);
+  }, []);
+
+  const tableExportSource = React.useMemo(() => {
+    const data = tableToExport?.data;
+
+    if (!data?.id_connection || !data?.table_name) return;
+
+    return {
+      type: 'table' as const,
+      schema: data.table_schema,
+      table: data.table_name,
+    };
+  }, [tableToExport]);
 
   const removeTabsFromConnections = React.useCallback(
     (connectionIds: string[]) => {
@@ -556,6 +577,10 @@ const ProjectsMenu = () => {
             const data = contextMenuItemSelected?.data;
             copyToClipboard([data.table_schema, data.table_name].filter(Boolean).join('.'));
           },
+        },
+        {
+          text: t('modal.exportData'),
+          onClick: () => setTableToExport(contextMenuItemSelected),
         },
         contextMenuItemSelected?.data?.object_type !== 'view' &&
           contextMenuItemSelected?.data?.object_type !== 'materialized_view' && {
@@ -895,6 +920,40 @@ const ProjectsMenu = () => {
   }, [activeTabId, tabs]);
 
   React.useEffect(() => {
+    const data = tableToExport?.data;
+
+    if (!data?.id_connection || !data?.table_name) return;
+
+    let canceled = false;
+
+    const loadColumns = async () => {
+      try {
+        const columns = await getTableColumns(data.id_connection, {
+          schema: data.table_schema,
+          table: data.table_name,
+        });
+
+        if (!canceled) setTableToExportColumns(columns.map((column) => column.column_name));
+      } catch (error) {
+        if (canceled) return;
+
+        showToast({
+          type: 'error',
+          title: t('toast.loadTableColumnsError'),
+          description: error instanceof Error ? error.message : undefined,
+          delay: 8000,
+        });
+      }
+    };
+
+    loadColumns();
+
+    return () => {
+      canceled = true;
+    };
+  }, [getTableColumns, showToast, tableToExport, t]);
+
+  React.useEffect(() => {
     if (!activeSidebarRevealTarget) {
       lastRevealKeyRef.current = '';
       return;
@@ -1023,6 +1082,17 @@ const ProjectsMenu = () => {
         schema={tableToImport?.data?.table_schema}
         table={tableToImport?.data?.table_name}
         onClose={closeImportTableModal}
+      />
+
+      <ModalExportData
+        show={!!tableToExport}
+        idConnection={tableToExport?.data?.id_connection}
+        source={tableExportSource}
+        columns={tableToExportColumns}
+        fileName={[tableToExport?.data?.table_schema, tableToExport?.data?.table_name]
+          .filter(Boolean)
+          .join('.')}
+        onClose={closeExportTableModal}
       />
 
       <ModalImportProjects show={showImportProjects} onClose={closeImportProjectsModal} />

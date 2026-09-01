@@ -521,12 +521,14 @@ const Editor = ({
           setEditorContextMenu(undefined);
         },
       },
+      ...(props.contextMenuOptions || []),
     ],
     [
       activeChatId,
       editorContextMenu?.selectedText,
       executeEditorClipboardAction,
       language,
+      props.contextMenuOptions,
       props.readonly,
       t,
     ],
@@ -680,6 +682,7 @@ const Editor = ({
 
       <ContextMenu
         position={editorContextMenu?.position}
+        activeContextInfo={editorContextMenu}
         options={editorContextMenuOptions}
         onClose={() => setEditorContextMenu(undefined)}
       />
@@ -704,6 +707,7 @@ export interface IEditorProps {
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
   onCtrlClick?: IEditorCtrlClickHandler;
+  contextMenuOptions?: IContextMenuOption<IEditorContextMenu>[];
   readonly?: boolean;
   hidePreview?: boolean;
   autoFocus?: boolean;
@@ -730,6 +734,11 @@ interface IAddMarkerParams {
   endLineNumber: number;
   endColumn: number;
   severity: 'Warning' | 'Error' | 'Hint' | 'Info';
+}
+
+export interface IEditorContextMenu {
+  position: IContextMenuPosition;
+  selectedText: string;
 }
 
 type IEditorCtrlClickHandler = ((word: string, schema?: string) => void) & {

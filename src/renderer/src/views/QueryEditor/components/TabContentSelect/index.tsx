@@ -23,6 +23,7 @@ import {
   AddIcon,
   CancelIcon,
   CountIcon,
+  ExportIcon,
   PanelFile,
   RecordIcon,
   SaveIcon,
@@ -50,6 +51,7 @@ import { getRendererDialect } from '@renderer/database/dialects';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { prepareQueryVariables } from '../../utils/queryVariables';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { ModalExportData } from '@renderer/components/ModalExportData';
 import styles from './styles.module.css';
 
 import IconMdiClose from '~icons/mdi/close';
@@ -126,6 +128,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+  const [showExportModal, setShowExportModal] = React.useState(false);
   const [now, setNow] = React.useState(Date.now());
   const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
   const [rowsCount, setRowsCount] = React.useState<number>();
@@ -389,6 +392,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const closeDdlModal = React.useCallback(() => {
     setShowDdlModal(false);
+  }, []);
+
+  const openExportModal = React.useCallback(() => {
+    setShowExportModal(true);
+    setContextMenuTable(undefined);
+  }, []);
+
+  const closeExportModal = React.useCallback(() => {
+    setShowExportModal(false);
   }, []);
 
   const closeContextMenuTable = React.useCallback(() => {
@@ -904,6 +916,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     }));
   }, [data.columns, editableTable, readOnly, resultColumnsInfo, tabFkMap]);
 
+  const exportSource = React.useMemo(
+    () => ({
+      type: 'query' as const,
+      sql: prepareQueryVariables(data.query, data.variableValues),
+      orderBy: data.orderBy,
+    }),
+    [data.orderBy, data.query, data.variableValues],
+  );
+
   const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
     return [
       {
@@ -917,6 +938,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       {
         text: t('context.copyRowJson'),
         onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+      },
+      {
+        text: t('modal.exportData'),
+        onClick: openExportModal,
       },
       {
         text: t('context.setSelectedCellsNull'),
@@ -972,6 +997,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     editableTable,
     handleRemoveSelectedRows,
     handleSetSelectedCellsNull,
+    openExportModal,
     singleResultTable,
     t,
   ]);
@@ -1135,6 +1161,17 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         <Button
           text
           smallIcon
+          title={t('modal.exportData')}
+          onClick={openExportModal}
+          disabled={data.loading}
+          color={activeTheme.queryEditor.bar.color}
+        >
+          <ExportIcon size={16} />
+        </Button>
+
+        <Button
+          text
+          smallIcon
           title={t('tooltip.captureOptions')}
           onClick={openCaptureMenu}
           disabled={data.loading}
@@ -1222,6 +1259,16 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         sql={ddlSql}
         dialect={dialect}
         onClose={closeDdlModal}
+      />
+
+      <ModalExportData
+        show={showExportModal}
+        idConnection={id_connection}
+        source={exportSource}
+        columns={data.columns}
+        previewRows={data.rows?.slice(0, 10)}
+        fileName="query-result"
+        onClose={closeExportModal}
       />
 
       <ContextMenu

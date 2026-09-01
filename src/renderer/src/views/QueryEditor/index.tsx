@@ -1,5 +1,5 @@
 import React from 'react';
-import Editor, { IEditorRef } from '@renderer/components/Editor';
+import Editor, { IEditorRef, type IEditorContextMenu } from '@renderer/components/Editor';
 import styles from './styles.module.css';
 import {
   TabBar,
@@ -20,6 +20,7 @@ import {
   IColumnInfo,
   IColumnReferenceInfo,
   IServerOutputMessage,
+  type ExportDataSource,
   useStoreContext,
 } from '@renderer/contexts/Store';
 import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
@@ -61,6 +62,7 @@ import { ModalServerOutput } from './components/ModalServerOutput';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { useQueryCancellation } from './hooks/useQueryCancellation';
 import { TabContentExplain } from './components/TabContentExplain';
+import { ModalExportData } from '@renderer/components/ModalExportData';
 
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const { t } = useI18n();
@@ -109,6 +111,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   );
   const [pendingQueryExecution, setPendingQueryExecution] =
     React.useState<IPendingQueryExecution>();
+  const [pendingExportQuery, setPendingExportQuery] = React.useState<string>();
+  const [exportQuerySource, setExportQuerySource] = React.useState<ExportDataSource>();
   const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
     React.useState<IExecuteQueryParams>();
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
@@ -440,6 +444,14 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     setPendingQueryExecution(undefined);
   }, []);
 
+  const closeExportVariablesModal = React.useCallback(() => {
+    setPendingExportQuery(undefined);
+  }, []);
+
+  const closeExportModal = React.useCallback(() => {
+    setExportQuerySource(undefined);
+  }, []);
+
   const closeProductionConfirmModal = React.useCallback(() => {
     setPendingProductionQueryExecution(undefined);
   }, []);
@@ -452,6 +464,10 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const pendingQueryVariables = React.useMemo(() => {
     return getQueryVariables(pendingQueryExecution?.query || '');
   }, [pendingQueryExecution?.query]);
+
+  const pendingExportQueryVariables = React.useMemo(() => {
+    return getQueryVariables(pendingExportQuery || '');
+  }, [pendingExportQuery]);
 
   const pendingProductionSql = React.useMemo(() => {
     return pendingProductionQueryExecution
@@ -485,6 +501,34 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const params = { ...pendingQueryExecution, variableValues };
     setPendingQueryExecution(undefined);
     confirmOrExecuteQuery(params);
+  };
+
+  const openExportModalFromQuery = React.useCallback((query: string) => {
+    if (!query?.trim?.()) return;
+
+    const variables = getQueryVariables(query);
+
+    if (variables.length) {
+      setPendingExportQuery(query);
+      return;
+    }
+
+    setExportQuerySource({ type: 'query', sql: query });
+  }, []);
+
+  const exportPendingQuery = (variableValues: Record<string, string>) => {
+    if (!pendingExportQuery) return;
+
+    setQueryVariableValuesByConnection((prevState) => ({
+      ...prevState,
+      [id_connection]: {
+        ...(prevState[id_connection] || {}),
+        ...variableValues,
+      },
+    }));
+
+    setExportQuerySource({ type: 'query', sql: prepareQueryVariables(pendingExportQuery, variableValues) });
+    setPendingExportQuery(undefined);
   };
 
   const executePendingProductionQuery = () => {
@@ -1035,6 +1079,17 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     [removeTabResult, setActiveTabId, tabsResult],
   );
 
+  const editorContextMenuOptions = React.useMemo<IContextMenuOption<IEditorContextMenu>[]>(
+    () => [
+      {
+        text: t('context.exportSelectedSqlResult'),
+        show: (info) => !!info?.selectedText,
+        onClick: (info) => openExportModalFromQuery(info?.selectedText || ''),
+      },
+    ],
+    [openExportModalFromQuery, t],
+  );
+
   const handleRemoveResultTab = React.useCallback(
     (tab: ITab) => {
       removeTabResult(tab.idTab);
@@ -1177,6 +1232,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           onDidChangeContent={clearEditorErrorMarkers}
           autocomplete={autocomplete}
           onCtrlClick={handleEditorCtrlClick}
+          contextMenuOptions={editorContextMenuOptions}
         />
       </div>
 
@@ -1186,6 +1242,22 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         initialValues={queryVariableInitialValues}
         onCancel={closeVariablesModal}
         onExecute={executePendingQuery}
+      />
+
+      <ModalQueryVariables
+        show={!!pendingExportQuery}
+        variables={pendingExportQueryVariables}
+        initialValues={queryVariableInitialValues}
+        onCancel={closeExportVariablesModal}
+        onExecute={exportPendingQuery}
+      />
+
+      <ModalExportData
+        show={!!exportQuerySource}
+        idConnection={id_connection}
+        source={exportQuerySource}
+        fileName="query-result"
+        onClose={closeExportModal}
       />
 
       <ModalServerOutput

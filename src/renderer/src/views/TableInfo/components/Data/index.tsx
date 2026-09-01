@@ -15,6 +15,7 @@ import {
   AddIcon,
   CountIcon,
   DuplicateIcon,
+  ExportIcon,
   PanelFile,
   RemoveIcon,
   SaveIcon,
@@ -46,6 +47,7 @@ import ModalDataError from './components/ModalDataError';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import { ModalExportData } from '@renderer/components/ModalExportData';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 
@@ -129,6 +131,7 @@ const Data = ({
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
+  const [showExportModal, setShowExportModal] = React.useState(false);
   const [showValuePreview, setShowValuePreview] = React.useState(false);
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
@@ -247,6 +250,15 @@ const Data = ({
     setShowDdlModal(false);
   }, []);
 
+  const openExportModal = React.useCallback(() => {
+    setShowExportModal(true);
+    setContextMenuTable(undefined);
+  }, []);
+
+  const closeExportModal = React.useCallback(() => {
+    setShowExportModal(false);
+  }, []);
+
   const closeDataErrorModal = React.useCallback(() => {
     setDataErrorMessage(undefined);
   }, []);
@@ -304,6 +316,17 @@ const Data = ({
   );
 
   const columnNames = React.useMemo(() => columns.map((column) => column.column_name), [columns]);
+
+  const exportSource = React.useMemo(
+    () => ({
+      type: 'table' as const,
+      schema,
+      table,
+      where: appliedWhere || undefined,
+      orderBy: sort,
+    }),
+    [appliedWhere, schema, sort, table],
+  );
 
   const primaryKeyColumns = React.useMemo(
     () =>
@@ -907,6 +930,10 @@ const Data = ({
         onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
       },
       {
+        text: t('modal.exportData'),
+        onClick: openExportModal,
+      },
+      {
         text: t('context.setSelectedCellsNull'),
         onClick: handleSetSelectedCellsNull,
         show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
@@ -953,6 +980,7 @@ const Data = ({
     handleRemoveSelectedRows,
     handleSetSelectedCellsNull,
     isReadOnlyObject,
+    openExportModal,
     schema,
     table,
     t,
@@ -1143,6 +1171,16 @@ const Data = ({
         <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={handleRefresh} />
 
         <Button
+          title={t('modal.exportData')}
+          text
+          smallIcon
+          color={theme.bar.color}
+          onClick={openExportModal}
+        >
+          <ExportIcon size={16} />
+        </Button>
+
+        <Button
           title={t('common.countTotalRows')}
           text
           smallIcon
@@ -1169,6 +1207,16 @@ const Data = ({
         sql={ddlSql}
         dialect={dialect}
         onClose={closeDdlModal}
+      />
+
+      <ModalExportData
+        show={showExportModal}
+        idConnection={id_connection}
+        source={exportSource}
+        columns={columnNames}
+        previewRows={items.slice(0, 10)}
+        fileName={[schema, table].filter(Boolean).join('.')}
+        onClose={closeExportModal}
       />
 
       <ModalDataError message={dataErrorMessage} onClose={closeDataErrorModal} />
