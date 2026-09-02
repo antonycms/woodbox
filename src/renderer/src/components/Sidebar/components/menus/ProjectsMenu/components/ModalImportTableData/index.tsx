@@ -449,7 +449,7 @@ export const ModalImportTableData = React.memo(
     }, [loadColumns]);
 
     return (
-      <Modal title={t('modal.importData')} width="640px" show={show}>
+      <Modal title={t('modal.importData')} width="680px" show={show}>
         <form
           className={styles.container}
           onSubmit={handleImport}
