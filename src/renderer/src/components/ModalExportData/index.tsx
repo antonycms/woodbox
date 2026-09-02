@@ -25,8 +25,6 @@ interface IModalExportDataProps {
   show?: boolean;
   idConnection?: string;
   source?: ExportDataSource;
-  columns?: string[];
-  previewRows?: Record<string, any>[];
   fileName?: string;
   onClose?(): void;
 }
@@ -39,23 +37,11 @@ const FORMAT_LABELS: Record<ExportDataFormat, TranslationKey> = {
   jsonl: 'exportData.format.jsonl',
 };
 const FORMAT_ITEMS = FORMAT_OPTIONS.map((value) => ({ value }));
-const EMPTY_COLUMNS: string[] = [];
-const EMPTY_PREVIEW_ROWS: Record<string, any>[] = [];
 
 const uniqueColumns = (columns: string[] = []) => [...new Set(columns.filter(Boolean))];
 
 export const ModalExportData = React.memo((props: IModalExportDataProps) => {
-  const {
-    show,
-    idConnection,
-    source,
-    columns: columnsProp,
-    previewRows: previewRowsProp,
-    fileName,
-    onClose,
-  } = props;
-  const columns = columnsProp ?? EMPTY_COLUMNS;
-  const previewRows = previewRowsProp ?? EMPTY_PREVIEW_ROWS;
+  const { show, idConnection, source, fileName, onClose } = props;
   const { t, language } = useI18n();
   const { getExportDataPreview, exportData } = useStoreContext();
   const { showToast } = useToast();
@@ -190,18 +176,16 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   React.useEffect(() => {
     if (!show) return;
 
-    const nextColumns = uniqueColumns(columns);
-    setAvailableColumns(nextColumns);
-    setSelectedColumns(nextColumns);
-    setRowsPreview(previewRows?.slice(0, 10) || []);
+    setAvailableColumns([]);
+    setSelectedColumns([]);
+    setRowsPreview([]);
     setFormat('csv');
     setBatchSize(1000);
     setShowColumnsModal(false);
-  }, [columns, previewRows, show]);
+  }, [show, source]);
 
   React.useEffect(() => {
     if (!show || !idConnection || !source) return;
-    if (previewRows && columns.length) return;
 
     let canceled = false;
 
@@ -212,7 +196,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         const preview = await getExportDataPreview(idConnection, { source });
         if (canceled) return;
 
-        const nextColumns = uniqueColumns(columns.length ? columns : preview.columns);
+        const nextColumns = uniqueColumns(preview.columns);
         setAvailableColumns(nextColumns);
         setSelectedColumns(nextColumns);
         setRowsPreview(preview.rows || []);
@@ -235,7 +219,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
     return () => {
       canceled = true;
     };
-  }, [columns, getExportDataPreview, idConnection, previewRows, show, showToast, source, t]);
+  }, [getExportDataPreview, idConnection, show, showToast, source, t]);
 
   return (
     <>

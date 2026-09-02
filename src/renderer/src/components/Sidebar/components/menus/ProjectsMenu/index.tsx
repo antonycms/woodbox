@@ -143,7 +143,6 @@ const ProjectsMenu = () => {
     closeConnection,
     connectionsInfo,
     scripts,
-    getTableColumns,
   } = useStoreContext();
 
   const { showToast } = useToast();
@@ -180,7 +179,6 @@ const ProjectsMenu = () => {
   const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
   const [tableToImport, setTableToImport] = React.useState<IItemTreeViewData>();
   const [tableToExport, setTableToExport] = React.useState<IItemTreeViewData>();
-  const [tableToExportColumns, setTableToExportColumns] = React.useState<string[]>([]);
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
@@ -321,7 +319,6 @@ const ProjectsMenu = () => {
 
   const closeExportTableModal = React.useCallback(() => {
     setTableToExport(null);
-    setTableToExportColumns([]);
   }, []);
 
   const tableExportSource = React.useMemo(() => {
@@ -920,40 +917,6 @@ const ProjectsMenu = () => {
   }, [activeTabId, tabs]);
 
   React.useEffect(() => {
-    const data = tableToExport?.data;
-
-    if (!data?.id_connection || !data?.table_name) return;
-
-    let canceled = false;
-
-    const loadColumns = async () => {
-      try {
-        const columns = await getTableColumns(data.id_connection, {
-          schema: data.table_schema,
-          table: data.table_name,
-        });
-
-        if (!canceled) setTableToExportColumns(columns.map((column) => column.column_name));
-      } catch (error) {
-        if (canceled) return;
-
-        showToast({
-          type: 'error',
-          title: t('toast.loadTableColumnsError'),
-          description: error instanceof Error ? error.message : undefined,
-          delay: 8000,
-        });
-      }
-    };
-
-    loadColumns();
-
-    return () => {
-      canceled = true;
-    };
-  }, [getTableColumns, showToast, tableToExport, t]);
-
-  React.useEffect(() => {
     if (!activeSidebarRevealTarget) {
       lastRevealKeyRef.current = '';
       return;
@@ -1088,7 +1051,6 @@ const ProjectsMenu = () => {
         show={!!tableToExport}
         idConnection={tableToExport?.data?.id_connection}
         source={tableExportSource}
-        columns={tableToExportColumns}
         fileName={[tableToExport?.data?.table_schema, tableToExport?.data?.table_name]
           .filter(Boolean)
           .join('.')}

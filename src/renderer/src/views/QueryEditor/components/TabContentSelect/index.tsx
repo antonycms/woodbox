@@ -1265,8 +1265,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         show={showExportModal}
         idConnection={id_connection}
         source={exportSource}
-        columns={data.columns}
-        previewRows={data.rows?.slice(0, 10)}
         fileName="query-result"
         onClose={closeExportModal}
       />

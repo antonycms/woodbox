@@ -1213,8 +1213,6 @@ const Data = ({
         show={showExportModal}
         idConnection={id_connection}
         source={exportSource}
-        columns={columnNames}
-        previewRows={items.slice(0, 10)}
         fileName={[schema, table].filter(Boolean).join('.')}
         onClose={closeExportModal}
       />
