@@ -1,6 +1,6 @@
 {
   "name": "woodbox",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "An application to manage databases",
   "main": "./out/main/index.js",
   "author": "https://github.com/antonycms",
