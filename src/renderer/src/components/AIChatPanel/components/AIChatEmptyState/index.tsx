@@ -1,5 +1,6 @@
 import React from 'react';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
+import { Button } from '@renderer/components/Button';
 import { useI18n } from '@renderer/contexts/I18n';
 import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -12,6 +13,8 @@ import type {
   IAIChatReferenceOption,
 } from '../../types';
 import styles from '../../styles.module.css';
+
+import IconMdiClose from '~icons/mdi/close';
 
 interface IAIChatEmptyStateProps {
   value: string;
@@ -97,15 +100,16 @@ export const AIChatEmptyState = React.memo(
             dropdownHoverBackground={theme.backgroundColor}
           />
 
-          <button
-            className={[styles.iconButton, styles.closePanelButton].join(' ')}
-            type="button"
+          <Button
+            text
+            smallIcon
+            color={theme.color}
             title={t('aiChat.closePanel')}
             aria-label={t('aiChat.closePanel')}
             onClick={onClose}
           >
-            ×
-          </button>
+            <IconMdiClose />
+          </Button>
         </div>
 
         <div className={styles.recentList}>

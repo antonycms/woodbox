@@ -1,6 +1,7 @@
 import React from 'react';
 import { AIChatComposer } from '../AIChatComposer';
 import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
+import { Button } from '@renderer/components/Button';
 import { useI18n } from '@renderer/contexts/I18n';
 import {
   type IAIChatMessage,
@@ -30,6 +31,8 @@ import {
   serializeQueryResultForAI,
 } from './utils/messages';
 import { buildAIChatMessageContent, getAIChatUserContent } from '../../utils/draftContexts';
+
+import IconMdiClose from '~icons/mdi/close';
 
 const AIChat = ({
   id_chat,
@@ -622,17 +625,16 @@ const AIChat = ({
           />
         )}
 
-        {!!onClose && (
-          <button
-            className={[styles.iconButton, styles.closePanelButton].join(' ')}
-            type="button"
-            title={t('aiChat.closePanel')}
-            aria-label={t('aiChat.closePanel')}
-            onClick={onClose}
-          >
-            ×
-          </button>
-        )}
+        <Button
+          text
+          smallIcon
+          color={theme.color}
+          title={t('aiChat.closePanel')}
+          aria-label={t('aiChat.closePanel')}
+          onClick={onClose}
+        >
+          <IconMdiClose />
+        </Button>
       </header>
 
       <main className={styles.content}>
