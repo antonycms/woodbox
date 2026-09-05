@@ -3,6 +3,7 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  gap: 2px;
 }
 
 .input {
