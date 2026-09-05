@@ -25,9 +25,9 @@ const SpatialMap = ({ geoJson }: ISpatialMapProps) => {
       preferCanvas: true,
       zoomControl: true,
     });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      maxZoom: 30,
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      subdomains: ['mt0','mt1','mt2','mt3'],
+      maxZoom: 22,
     }).addTo(map);
 
     const layer = L.geoJSON(geoJson, {
