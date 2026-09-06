@@ -79,6 +79,19 @@ pnpm run build:mac    # macOS
 pnpm run build:linux  # Linux
 ```
 
+## macOS: first launch warning
+
+The macOS build is not notarized by Apple yet because Apple requires a paid Apple Developer Program account to create a Developer ID certificate and notarize apps distributed outside the Mac App Store. Because of that, Gatekeeper may block the first launch after installation.
+
+This is expected and only needs to be done once after installing the app:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Woodbox.app
+open /Applications/Woodbox.app
+```
+
+After the first successful launch, Woodbox can be opened normally from Applications.
+
 ## Project Structure
 
 ```
