@@ -23,14 +23,10 @@ jobs:
             os: windows-latest
             script: build:win
             artifact: windows
-          - name: macOS
-            os: macos-26-intel
-            script: build:mac:x64
-            artifact: macos-x64
-          - name: macOS Apple Silicon
+          - name: macOS Universal
             os: macos-26
-            script: build:mac:arm64
-            artifact: macos-arm64
+            script: build:mac
+            artifact: macos-universal
           - name: Linux
             os: ubuntu-latest
             script: build:linux
@@ -66,7 +62,7 @@ jobs:
             gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "Release $TAG_NAME"
 
           shopt -s nullglob
-          assets=(dist/*.AppImage dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap)
+          assets=(dist/*.AppImage dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/*.yml)
 
           if [ ${#assets[@]} -eq 0 ]; then
             echo "No release assets found"
