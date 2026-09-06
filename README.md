@@ -19,6 +19,10 @@
 
 Woodbox is a desktop application for managing database connections and executing SQL queries. Organize your connections into projects, explore schemas, browse table data, and run custom queries — all from a clean, focused interface.
 
+![Woodbox interface](screenshots/1.readme.png)
+
+[View all screenshots](screenshots)
+
 ## Features
 
 - **Multi-database support** — Connect to PostgreSQL, MySQL, and SQLite
