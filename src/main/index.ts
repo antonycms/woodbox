@@ -9,6 +9,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
 import { closeAllConnections } from '@main/database';
 import { getWindowState, saveWindowState } from '@main/storage/store';
+import { initAutoUpdater } from './updater';
 
 // fix Wayland color bug
 if (process.platform === 'linux') {
@@ -86,7 +87,8 @@ app.whenReady().then(() => {
   // Disable shortcut to close application
   globalShortcut.register('Control+Q', () => {});
 
-  createWindow();
+  const mainWindow = createWindow();
+  initAutoUpdater(mainWindow);
 });
 
 /**
