@@ -7,6 +7,7 @@ import { Sidebar } from '@renderer/components/Sidebar';
 import { MainContent } from '@renderer/components/MainContent';
 import { CentralSearchModal } from '@renderer/components/CentralSearchModal';
 import { AIChatPanel } from '@renderer/components/AIChatPanel';
+import { UpdateAvailableModal } from '@renderer/components/UpdateAvailableModal';
 
 import AIChatPanelProvider from '@renderer/contexts/AIChatPanel';
 import AppTabProvider from '@renderer/contexts/AppTab';
@@ -31,6 +32,8 @@ const App = () => {
                   <AIChatPanel />
 
                   <CentralSearchModal />
+
+                  <UpdateAvailableModal />
                 </AIChatPanelProvider>
               </AppTabProvider>
             </ToastProvider>
