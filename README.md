@@ -7,9 +7,9 @@
 **A modern, cross-platform database management application**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Electron](https://img.shields.io/badge/Electron-35-47848F?logo=electron&logoColor=white)](https://electronjs.org)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://reactjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)](https://electronjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://reactjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
 
 </div>
 
@@ -35,9 +35,9 @@ Woodbox is a desktop application for managing database connections and executing
 
 | Category | Technology |
 |---|---|
-| Desktop | Electron 35 |
-| Frontend | React 18, TypeScript 5 |
-| Build | electron-vite, Vite 6 |
+| Desktop | Electron 43 |
+| Frontend | React 19, TypeScript 7 |
+| Build | electron-vite, Vite 8 |
 | Editor | Monaco Editor |
 | Database | Knex, pg, mysql2, sqlite3 |
 | Storage | electron-store |
