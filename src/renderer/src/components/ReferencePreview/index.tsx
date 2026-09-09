@@ -21,6 +21,13 @@ interface IReferencePreviewProps {
   idConnection: string;
   initialReference?: IColumnReferenceInfo;
   initialValue: any;
+  onOpenTable?: (
+    idConnection: string,
+    schema: string,
+    table: string,
+    filterColumn: string,
+    filterValue: string,
+  ) => void;
 }
 
 interface IReferenceHistoryItem {
@@ -50,6 +57,7 @@ const ReferencePreview = ({
   idConnection,
   initialReference,
   initialValue,
+  onOpenTable,
 }: IReferencePreviewProps) => {
   const {
     activeTheme: {
@@ -216,6 +224,23 @@ const ReferencePreview = ({
     [currentFkMap, historyIndex],
   );
 
+  const handleOpenReferencedTable = React.useCallback(
+    (attribute: string, value: any) => {
+      const reference = currentFkMap.get(attribute);
+
+      if (!reference || value === null || value === undefined) return;
+
+      onOpenTable?.(
+        idConnection,
+        reference.reference_table_schema,
+        reference.reference_table_name,
+        reference.reference_column_name,
+        String(value),
+      );
+    },
+    [currentFkMap, idConnection, onOpenTable],
+  );
+
   React.useEffect(() => {
     if (!initialReference || initialValue === null || initialValue === undefined) {
       setHistory([]);
@@ -315,8 +340,9 @@ const ReferencePreview = ({
             rows={currentRows}
             initialAnalysisMode
             rowKeyExtractor={() => currentReferenceKey}
-            onCellLinkClick={handleOpenNestedReference}
-            cellLinkClickMode="single"
+            onCellLinkClick={onOpenTable ? handleOpenReferencedTable : handleOpenNestedReference}
+            onCellLinkPreviewClick={handleOpenNestedReference}
+            cellLinkClickMode={onOpenTable ? 'ctrl' : 'single'}
           />
         )}
       </div>

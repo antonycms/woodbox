@@ -844,23 +844,37 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     [addTab, getTab, setActiveTabId],
   );
 
+  const handleOpenReferenceTable = React.useCallback(
+    (
+      idConnection: string,
+      schema: string,
+      table: string,
+      filterColumn: string,
+      filterValue: string,
+    ) => {
+      const escapedValue = filterValue.replace(/'/g, "''");
+      const initialWhere = `${dialect.quoteIdent(filterColumn)} = '${escapedValue}'`;
+
+      openTableDataTabWithFilter({ idConnection, schema, table, initialWhere });
+    },
+    [dialect, openTableDataTabWithFilter],
+  );
+
   const onCellLinkClick = React.useCallback(
     (attribute: string, value: any) => {
       const ref = tabFkMap.get(attribute);
 
       if (!ref || value === null || value === undefined) return;
 
-      const escapedValue = String(value).replace(/'/g, "''");
-      const initialWhere = `${dialect.quoteIdent(ref.reference_column_name)} = '${escapedValue}'`;
-
-      openTableDataTabWithFilter({
-        idConnection: id_connection,
-        schema: ref.reference_table_schema,
-        table: ref.reference_table_name,
-        initialWhere,
-      });
+      handleOpenReferenceTable(
+        id_connection,
+        ref.reference_table_schema,
+        ref.reference_table_name,
+        ref.reference_column_name,
+        String(value),
+      );
     },
-    [dialect, id_connection, openTableDataTabWithFilter, tabFkMap],
+    [handleOpenReferenceTable, id_connection, tabFkMap],
   );
 
   const handleFkPreviewClick = React.useCallback(
@@ -1088,6 +1102,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                       idConnection={id_connection}
                       initialReference={selectedReference}
                       initialValue={selectedCellValue}
+                      onOpenTable={handleOpenReferenceTable}
                     />
                   </TabContent>
                 )}

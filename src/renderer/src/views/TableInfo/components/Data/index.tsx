@@ -1091,6 +1091,7 @@ const Data = ({
                       idConnection={id_connection}
                       initialReference={selectedReference}
                       initialValue={selectedCellValue}
+                      onOpenTable={onOpenTable}
                     />
                   </TabContent>
                 )}
