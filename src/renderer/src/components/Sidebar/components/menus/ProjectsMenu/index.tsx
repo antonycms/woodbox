@@ -23,6 +23,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
+import ProcessList from '@renderer/views/ProcessList';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -39,9 +40,11 @@ import { ModalNewSchema } from './components/ModalNewSchema';
 import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import { ModalDeleteProject } from './components/ModalDeleteProject';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
-import { getRendererDialect } from '@renderer/database/dialects';
+import { getRendererDialect, type Dialect } from '@renderer/database/dialects';
 import { ModalImportProjects } from './components/ModalImportProjects';
 import styles from './styles.module.css';
+
+const PROCESS_LIST_DIALECTS = new Set<Dialect>(['postgres', 'mysql']);
 
 type SidebarRevealTarget = {
   type: 'table' | 'function';
@@ -222,6 +225,19 @@ const ProjectsMenu = () => {
       return !!id && connectionsInfo.has(id);
     },
     [connectionsInfo],
+  );
+
+  const checkSupportsProcessList = React.useCallback(
+    (id?: string) => {
+      if (!id) return false;
+
+      return connectionsGroupPerProject.some((project) =>
+        project.connections.some(
+          (connection) => connection.id === id && PROCESS_LIST_DIALECTS.has(connection.dialect),
+        ),
+      );
+    },
+    [connectionsGroupPerProject],
   );
 
   const refreshConnectionInfo = React.useCallback(async (id?: string, force?: boolean) => {
@@ -419,6 +435,35 @@ const ProjectsMenu = () => {
     script ? openTabScriptSql(script) : setIsNewScript(true);
   }, [idConnectionSelected, openTabScriptSql, scriptsByConnectionId]);
 
+  const openProcessList = React.useCallback(
+    async (idConnection?: string) => {
+      if (!idConnection) return;
+
+      const connected = await refreshConnectionInfo(idConnection);
+
+      if (connected === false) return;
+
+      const tabId = `process_list_${idConnection}`;
+      const tab = getTab(tabId);
+
+      if (tab) {
+        setActiveTabId(tabId);
+        return;
+      }
+
+      addTab({
+        id: tabId,
+        title: t('processList.title'),
+        data: {
+          type: 'process-list',
+          id_connection: idConnection,
+        },
+        component: () => <ProcessList id_connection={idConnection} />,
+      });
+    },
+    [addTab, getTab, refreshConnectionInfo, setActiveTabId, t],
+  );
+
   const handleDoubleClickItemThreeView = React.useCallback((item: IItemTreeViewData) => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
@@ -534,6 +579,10 @@ const ProjectsMenu = () => {
         checkHasConnection(contextMenuItemSelected?.id) && {
           text: t('context.reload'),
           onClick: () => refreshConnectionInfo(contextMenuItemSelected?.id, true),
+        },
+        checkSupportsProcessList(contextMenuItemSelected?.id) && {
+          text: t('context.openProcessList'),
+          onClick: () => openProcessList(contextMenuItemSelected?.id),
         },
         {
           text: t('context.editConnection'),
@@ -655,9 +704,11 @@ const ProjectsMenu = () => {
   }, [
     addTab,
     checkHasConnection,
+    checkSupportsProcessList,
     closeConnection,
     contextMenuItemSelected,
     handleRemoveConnection,
+    openProcessList,
     refreshConnectionInfo,
     removeScript,
     removeTab,

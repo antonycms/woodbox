@@ -7,6 +7,7 @@ import { useToast } from '@renderer/contexts/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
+import ProcessList from '@renderer/views/ProcessList';
 import { APP_TABS_SESSION_STORAGE_KEY, IAppTabsSession } from '../context';
 
 export const useRestoreTabsFromStorage = (
@@ -100,6 +101,15 @@ export const useRestoreTabsFromStorage = (
           });
         }
 
+        if (tab.data?.type === 'process-list') {
+          const { id_connection } = tab.data;
+
+          restoredTabs.push({
+            ...tab,
+            title: t('processList.title'),
+            component: () => <ProcessList id_connection={id_connection} />,
+          });
+        }
       }
 
       const groupIdsWithTabs = [

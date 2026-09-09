@@ -1,0 +1,79 @@
+.container {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.filterBar {
+  width: 100%;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--data-border-color);
+}
+
+.filterInput {
+  width: 100%;
+  height: 24px;
+  border: 0;
+  padding: 0 8px;
+  background-color: transparent;
+  font-family: monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.filterInput::placeholder {
+  opacity: 0.5;
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tableContainer {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.previewResizable {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  border-left: 2px solid var(--data-border-color);
+}
+
+.previewHeader {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.previewHeader > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+}
+
+.actionButton {
+  vertical-align: middle;
+}

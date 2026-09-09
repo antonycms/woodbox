@@ -9,7 +9,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { IconRefresh } from '@renderer/styles/icons';
 
-const AUTO_REFRESH_OPTIONS = [
+export const AUTO_REFRESH_OPTIONS = [
   { label: '1s', value: 1000 },
   { label: '5s', value: 5000 },
   { label: '15s', value: 15000 },

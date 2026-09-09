@@ -51,7 +51,8 @@ export type IAppTabData =
       supportsIndexes?: boolean;
       supportsTriggers?: boolean;
     }
-  | { type: 'function-info'; id_connection: string; schema: string; function_name: string };
+  | { type: 'function-info'; id_connection: string; schema: string; function_name: string }
+  | { type: 'process-list'; id_connection: string };
 
 export interface INewAppTab {
   id?: string;

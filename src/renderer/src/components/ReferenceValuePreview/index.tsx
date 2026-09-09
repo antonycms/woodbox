@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@renderer/components/Button';
-import Editor from '@renderer/components/Editor';
+import Editor, { type IEditorProps } from '@renderer/components/Editor';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -17,6 +17,7 @@ interface IReferenceValuePreviewProps {
   dialect: Dialect;
   readonly?: boolean;
   value: unknown;
+  language?: IEditorProps['language'];
   onChange?(value: string): void;
 }
 
@@ -26,6 +27,7 @@ const ReferenceValuePreview = ({
   readonly,
   value,
   onChange,
+  language = 'json',
 }: IReferenceValuePreviewProps) => {
   const {
     activeTheme: {
@@ -83,7 +85,7 @@ const ReferenceValuePreview = ({
         ) : (
           <Editor
             dialect={dialect}
-            language="json"
+            language={language}
             readonly={readonly}
             hidePreview
             value={previewValue}

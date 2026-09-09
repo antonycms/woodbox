@@ -21,6 +21,7 @@ export const Button = React.memo((props: IButtonProps) => {
     form,
     loading,
     disabled,
+    onContextMenu,
     icon: Icon,
     type = 'button',
     ...gridProps
@@ -51,6 +52,7 @@ export const Button = React.memo((props: IButtonProps) => {
   return (
     <Column {...gridProps}>
       <button
+        onContextMenu={onContextMenu}
         title={title}
         type={type}
         onClick={onClick}
@@ -92,6 +94,7 @@ export interface IButtonProps extends IGridSystem {
   form?: string;
   disabled?: boolean;
   loading?: boolean;
+  onContextMenu?: React.MouseEventHandler<HTMLButtonElement>
 
   text?: boolean;
   backgroundColor?: string;
