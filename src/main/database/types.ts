@@ -15,6 +15,8 @@ export interface DatabaseDialectQueries {
   getTableIndexes(params: ITableWithSchema): string;
   getTableTriggers(params: ITableWithSchema): string;
   getFunctionDefinition?(params: { schema: string; functionName: string }): string;
+  getProcessList?(): string;
+  cancelProcess?(pid: number): string;
 }
 
 export interface SerializedRunSqlColumn {

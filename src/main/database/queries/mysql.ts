@@ -213,6 +213,23 @@ const getTableTriggers = ({ table }: ITableWithSchema) => /* sql */ `
   ORDER BY trigger_name;
 `;
 
+const getProcessList = () => /* sql */ `
+  SELECT
+    ID AS pid,
+    USER AS username,
+    DB AS database,
+    HOST AS client,
+    NULL AS application,
+    COMMAND AS state,
+    STATE AS wait,
+    TIME AS duration_seconds,
+    INFO AS query
+  FROM information_schema.PROCESSLIST
+  ORDER BY duration_seconds DESC, pid;
+`;
+
+const cancelProcess = (pid: number) => /* sql */ `KILL QUERY ${pid};`;
+
 export default {
   getTables,
   getTableColumns,
@@ -225,4 +242,6 @@ export default {
   getTableDefinition,
   getTableIndexes,
   getTableTriggers,
+  getProcessList,
+  cancelProcess,
 };

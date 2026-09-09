@@ -396,6 +396,25 @@ const getFunctionDefinition = ({
     AND n.nspname = ${quoteLiteral(schema)};
 `;
 
+const getProcessList = () => /* sql */ `
+  SELECT
+    pid,
+    usename AS username,
+    datname AS database,
+    COALESCE(host(client_addr), 'local') AS client,
+    application_name AS application,
+    state,
+    concat_ws(':', wait_event_type, wait_event) AS wait,
+    COALESCE(EXTRACT(EPOCH FROM now() - query_start)::bigint, 0) AS duration_seconds,
+    query
+  FROM pg_stat_activity
+  ORDER BY duration_seconds DESC, pid;
+`;
+
+const cancelProcess = (pid: number) => /* sql */ `
+  SELECT pg_cancel_backend(${pid}) AS canceled;
+`;
+
 export default {
   getAllSchemas,
   getTables,
@@ -411,4 +430,6 @@ export default {
   getTableTriggers,
   getFunctions,
   getFunctionDefinition,
+  getProcessList,
+  cancelProcess,
 };

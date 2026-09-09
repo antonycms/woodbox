@@ -24,6 +24,8 @@ import {
   cancelRunSql,
   getServerOutput,
   clearServerOutput,
+  getProcessList,
+  cancelProcess,
 } from './core';
 
 // dialect
@@ -51,5 +53,7 @@ addListener('@post:import_table_data', importTableData);
 addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
 addListener('@delete:server_output', clearServerOutput);
+addListener('@get:process_list', getProcessList);
+addListener('@post:cancel_process', cancelProcess);
 
 export { closeAllConnections } from './core';

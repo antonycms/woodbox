@@ -40,6 +40,7 @@ import StoreContext, {
   type ICodexChatGPTLoginStart,
   type IReactNativeBridgeSession,
   type IReactNativeBridgeStatus,
+  type IDatabaseProcess,
 } from './context';
 
 export type * from './context';
@@ -520,6 +521,14 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     await call<void>('@delete:server_output', idConnection);
   }, []);
 
+  const getProcessList = React.useCallback(async (idConnection: string) => {
+    return await call<IDatabaseProcess[]>('@get:process_list', idConnection);
+  }, []);
+
+  const cancelProcess = React.useCallback(async (idConnection: string, pid: string | number) => {
+    return await call<boolean>('@post:cancel_process', idConnection, pid);
+  }, []);
+
   const runSql = React.useCallback(
     async (idConnection: string, sql: string, options?: IOptionsRunSql) => {
       return await call<RunSqlResult>('@post:run_sql', idConnection, sql, options);
@@ -600,6 +609,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getFunctionDefinition,
       getServerOutput,
       clearServerOutput,
+      getProcessList,
+      cancelProcess,
       runSql,
       runExplainSql,
       importTableData,
@@ -646,6 +657,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       addProject,
       addScript,
       addSnippet,
+      cancelProcess,
       cancelRunSql,
       cancelAIChatMessage,
       clearServerOutput,
@@ -678,6 +690,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getTableRowsCount,
       getTableTriggers,
       getTableUsedAsReference,
+      getProcessList,
       exportData,
       importConnectionsFromSource,
       importTableData,

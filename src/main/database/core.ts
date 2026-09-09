@@ -110,6 +110,37 @@ export const clearServerOutput = async (connectionId: string) => {
   serverOutputByConnection.delete(connectionId);
 };
 
+export const getProcessList = async (connectionId: string) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
+
+  if (!query.getProcessList) return [];
+
+  const raw = await instance.raw(query.getProcessList());
+
+  return adapter.getRows(raw);
+};
+
+export const cancelProcess = async (connectionId: string, pid: string | number) => {
+  const connection = await getConnection(connectionId);
+  const { instance, dialect } = connection;
+  const adapter = getDialectAdapter(dialect);
+  const query = adapter.queries;
+
+  if (!query.cancelProcess) return false;
+
+  const safePid = Number(pid);
+
+  if (!Number.isInteger(safePid) || safePid <= 0) throw new Error('PID inválido.');
+
+  const raw = await instance.raw(query.cancelProcess(safePid));
+  const [row] = adapter.getRows(raw);
+
+  return row?.canceled === undefined ? true : Boolean(row.canceled);
+};
+
 const normalizeExportFileName = (value?: string) => {
   const name = value?.trim?.() || `woodbox-export-${new Date().toISOString().replace(/[:.]/g, '-')}`;
 

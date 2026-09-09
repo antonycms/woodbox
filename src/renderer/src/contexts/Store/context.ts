@@ -418,6 +418,18 @@ export interface IServerOutputMessage {
   where?: string;
 }
 
+export interface IDatabaseProcess {
+  pid: string | number;
+  username?: string;
+  database?: string;
+  client?: string;
+  application?: string;
+  state?: string;
+  wait?: string;
+  duration_seconds?: string | number;
+  query?: string;
+}
+
 export type DbCellValue = string | number | boolean | Date | null;
 
 export interface IImportTableDataParams {
@@ -543,6 +555,8 @@ export interface IStoreContext {
 
   getServerOutput(idConnection: string): Promise<IServerOutputMessage[]>;
   clearServerOutput(idConnection: string): Promise<void>;
+  getProcessList(idConnection: string): Promise<IDatabaseProcess[]>;
+  cancelProcess(idConnection: string, pid: string | number): Promise<boolean>;
 
   runSql(
     idConnection: string,
