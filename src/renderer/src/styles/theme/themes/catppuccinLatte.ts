@@ -250,6 +250,30 @@ const catppuccinLatteTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#e6e9ef',
+        borderColor: '#ccd0da',
+      },
+      color: '#4c4f69',
+      backgroundColor: '#e6e9ef',
+      ascentColor: '#8839ef',
+      borderColor: '#ccd0da',
+    },
+    bar: {
+      color: '#4c4f69',
+      backgroundColor: '#dce0e8',
+      fieldColor: '#4c4f69',
+      fieldBackgroundColor: '#eff1f5',
+      borderColor: '#ccd0da',
+    },
+    capture: {
+      activeColor: '#d20f39',
+      modifiedColor: '#fe640b',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

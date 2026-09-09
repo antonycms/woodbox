@@ -250,6 +250,30 @@ const githubLightTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#e9eef5',
+        borderColor: '#c6ced8',
+      },
+      color: '#24292f',
+      backgroundColor: '#e9eef5',
+      ascentColor: '#8250df',
+      borderColor: '#c6ced8',
+    },
+    bar: {
+      color: '#24292f',
+      backgroundColor: '#dfe6ef',
+      fieldColor: '#24292f',
+      fieldBackgroundColor: '#f3f6fa',
+      borderColor: '#c6ced8',
+    },
+    capture: {
+      activeColor: '#cf222e',
+      modifiedColor: '#9a6700',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

@@ -136,6 +136,24 @@ interface TableInfo {
   };
 }
 
+interface ProcessList {
+  tab?: Tab;
+
+  bar?: {
+    backgroundColor?: string;
+    color?: string;
+    fieldBackgroundColor?: string;
+    fieldColor?: string;
+    fieldPlaceholderColor?: string;
+    borderColor?: string;
+  };
+
+  capture?: {
+    activeColor?: string;
+    modifiedColor?: string;
+  };
+}
+
 interface QueryEditor {
   tab?: {
     bar?: {
@@ -291,6 +309,7 @@ export interface ITheme {
   modal?: Modal;
   mainTab?: Tab;
   tableInfo?: TableInfo;
+  processList?: ProcessList;
   queryEditor?: QueryEditor;
   contextMenu?: ContextMenu;
   button?: ButtonTheme;

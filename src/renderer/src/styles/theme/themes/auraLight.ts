@@ -250,6 +250,30 @@ const auraLightTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#f3effc',
+        borderColor: '#d8d1e8',
+      },
+      color: '#20212a',
+      backgroundColor: '#f3effc',
+      ascentColor: '#7c3aed',
+      borderColor: '#d8d1e8',
+    },
+    bar: {
+      color: '#20212a',
+      backgroundColor: '#ece8f7',
+      fieldColor: '#20212a',
+      fieldBackgroundColor: '#f7f4ff',
+      borderColor: '#d8d1e8',
+    },
+    capture: {
+      activeColor: '#d14343',
+      modifiedColor: '#b87513',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

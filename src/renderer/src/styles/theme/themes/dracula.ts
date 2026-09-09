@@ -250,6 +250,30 @@ const draculaTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#282a36',
+        borderColor: '#191a21',
+      },
+      color: '#f8f8f2',
+      backgroundColor: '#282a36',
+      ascentColor: '#bd93f9',
+      borderColor: '#191a21',
+    },
+    bar: {
+      color: '#f8f8f2',
+      backgroundColor: '#21222c',
+      fieldColor: '#f8f8f2',
+      fieldBackgroundColor: '#343746',
+      borderColor: '#191a21',
+    },
+    capture: {
+      activeColor: '#ff5555',
+      modifiedColor: '#ffb86c',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

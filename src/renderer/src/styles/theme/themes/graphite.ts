@@ -250,6 +250,30 @@ const graphiteTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#17191d',
+        borderColor: '#101217',
+      },
+      color: '#edecee',
+      backgroundColor: '#17191d',
+      ascentColor: '#9ba7ff',
+      borderColor: '#101217',
+    },
+    bar: {
+      color: '#edecee',
+      backgroundColor: '#202329',
+      fieldColor: '#edecee',
+      fieldBackgroundColor: '#252932',
+      borderColor: '#101217',
+    },
+    capture: {
+      activeColor: '#ff6767',
+      modifiedColor: '#d7b377',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

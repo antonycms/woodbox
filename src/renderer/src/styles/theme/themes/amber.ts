@@ -250,6 +250,30 @@ const amberTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#1f1b17',
+        borderColor: '#17120d',
+      },
+      color: '#edecee',
+      backgroundColor: '#1f1b17',
+      ascentColor: '#d6a45f',
+      borderColor: '#17120d',
+    },
+    bar: {
+      color: '#edecee',
+      backgroundColor: '#29231c',
+      fieldColor: '#edecee',
+      fieldBackgroundColor: '#302820',
+      borderColor: '#17120d',
+    },
+    capture: {
+      activeColor: '#ff6767',
+      modifiedColor: '#ffcf8a',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

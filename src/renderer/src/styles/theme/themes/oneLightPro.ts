@@ -250,6 +250,30 @@ const oneLightProTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#f0f0f0',
+        borderColor: '#d0d0d0',
+      },
+      color: '#383a42',
+      backgroundColor: '#f0f0f0',
+      ascentColor: '#a626a4',
+      borderColor: '#d0d0d0',
+    },
+    bar: {
+      color: '#383a42',
+      backgroundColor: '#e5e5e6',
+      fieldColor: '#383a42',
+      fieldBackgroundColor: '#fafafa',
+      borderColor: '#d0d0d0',
+    },
+    capture: {
+      activeColor: '#e45649',
+      modifiedColor: '#c18401',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

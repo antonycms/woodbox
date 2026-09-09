@@ -252,6 +252,31 @@ const omniTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#15121E',
+        borderColor: '#15121E',
+      },
+      color: '#E1E1E6',
+      backgroundColor: '#191622',
+      ascentColor: '#78D1E1',
+      borderColor: '#15121E',
+    },
+    bar: {
+      color: '#E1E1E6',
+      backgroundColor: '#201B2D',
+      fieldColor: '#E1E1E6',
+      fieldBackgroundColor: '#191622',
+      borderColor: '#15121E',
+      fieldPlaceholderColor: '#5A4B81',
+    },
+    capture: {
+      activeColor: '#E96379',
+      modifiedColor: '#E89E64',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

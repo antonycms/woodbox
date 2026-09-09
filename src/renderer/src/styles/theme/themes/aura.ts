@@ -250,6 +250,30 @@ const defaultTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#1c1b22',
+        borderColor: '#191622',
+      },
+      color: '#edecee',
+      backgroundColor: '#1c1b22',
+      ascentColor: '#a277ff',
+      borderColor: '#191622',
+    },
+    bar: {
+      color: '#edecee',
+      backgroundColor: '#1f1f26',
+      fieldColor: '#edecee',
+      fieldBackgroundColor: '#242329',
+      borderColor: '#191622',
+    },
+    capture: {
+      activeColor: '#ff6767',
+      modifiedColor: '#ffca85',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

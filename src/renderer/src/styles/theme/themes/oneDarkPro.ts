@@ -250,6 +250,30 @@ const oneDarkProTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#282c34',
+        borderColor: '#181a1f',
+      },
+      color: '#abb2bf',
+      backgroundColor: '#282c34',
+      ascentColor: '#c678dd',
+      borderColor: '#181a1f',
+    },
+    bar: {
+      color: '#abb2bf',
+      backgroundColor: '#21252b',
+      fieldColor: '#abb2bf',
+      fieldBackgroundColor: '#2c313a',
+      borderColor: '#181a1f',
+    },
+    capture: {
+      activeColor: '#e06c75',
+      modifiedColor: '#d19a66',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {

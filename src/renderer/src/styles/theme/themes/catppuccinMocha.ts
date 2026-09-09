@@ -250,6 +250,30 @@ const catppuccinMochaTheme: ITheme = {
       },
     },
   },
+
+  processList: {
+    tab: {
+      bar: {
+        backgroundColor: '#1e1e2e',
+        borderColor: '#11111b',
+      },
+      color: '#cdd6f4',
+      backgroundColor: '#1e1e2e',
+      ascentColor: '#cba6f7',
+      borderColor: '#11111b',
+    },
+    bar: {
+      color: '#cdd6f4',
+      backgroundColor: '#181825',
+      fieldColor: '#cdd6f4',
+      fieldBackgroundColor: '#313244',
+      borderColor: '#11111b',
+    },
+    capture: {
+      activeColor: '#f38ba8',
+      modifiedColor: '#fab387',
+    },
+  },
   queryEditor: {
     tab: {
       bar: {
