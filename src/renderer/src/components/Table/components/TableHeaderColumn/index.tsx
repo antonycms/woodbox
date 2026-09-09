@@ -32,6 +32,7 @@ const TableHeaderColumn = <Row,>({
   onSortContextMenu,
 }: ITableHeaderColumnProps<Row>) => {
   const canSort = !!column.sortable && !!onSort;
+  const canResize = column.resizable !== false;
 
   const style = React.useMemo(
     () => ({ cursor: canSort ? 'pointer' : undefined }),
@@ -65,12 +66,12 @@ const TableHeaderColumn = <Row,>({
 
   return (
     <TableColumn
-      resizable
       title={column.title}
       columnIndex={columnIndex}
       rowHeight={rowHeight}
+      resizable={canResize}
       width={width}
-      onResize={handleResize}
+      onResize={canResize ? handleResize : undefined}
       onClick={handleClick}
       onContextMenu={canSort ? handleContextMenu : undefined}
       style={style}

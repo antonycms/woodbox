@@ -10,6 +10,8 @@ export interface IColumn<ColumnType = any> {
   label: string;
   info?: string;
   attribute: Extract<keyof ColumnType, string>;
+  width?: number;
+  minWidth?: number;
   resizable?: boolean;
   sortable?: boolean;
   editable?: boolean;
@@ -17,6 +19,7 @@ export interface IColumn<ColumnType = any> {
   type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
   dataAutocomplete?: string[];
   renderIcon?(): React.ReactElement;
+  render?(row: TableSerializedRow<ColumnType>, column: IColumn<ColumnType>): React.ReactNode;
 }
 
 export type TableCellEditValue = string | number | (string | number)[];

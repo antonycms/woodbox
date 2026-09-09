@@ -14,24 +14,33 @@ export const useTableColumnSizing = <Row,>({
   const [minColumnsSize, setMinColumnsSize] = React.useState<number[]>([]);
 
   React.useEffect(() => {
-    const defaultColumnsSize = columns.map((column) => {
-      return Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40);
+    const minColumnsSize = columns.map((column) => {
+      return (
+        column.minWidth ??
+        Math.ceil(calculateTextHtmlWidth(`${column.label} ${column.info ?? ''}`) + 40)
+      );
+    });
+
+    const defaultColumnsSize = columns.map((column, index) => {
+      return column.width ?? minColumnsSize[index];
     });
 
     setColumnsSize((prevState) => {
       if (prevState.length === columns.length) return prevState;
 
-      return defaultColumnsSize.map((size) =>
-        size > DEFAULT_COLUMN_SIZE ? size : DEFAULT_COLUMN_SIZE,
-      );
+      return defaultColumnsSize.map((size, index) => {
+        if (columns[index].width !== undefined) return size;
+
+        return size > DEFAULT_COLUMN_SIZE ? size : DEFAULT_COLUMN_SIZE;
+      });
     });
 
     setMinColumnsSize((prevState) => {
       const isSameState =
-        prevState.length === defaultColumnsSize.length &&
-        prevState.every((size, index) => size === defaultColumnsSize[index]);
+        prevState.length === minColumnsSize.length &&
+        prevState.every((size, index) => size === minColumnsSize[index]);
 
-      return isSameState ? prevState : defaultColumnsSize;
+      return isSameState ? prevState : minColumnsSize;
     });
   }, [columns]);
 

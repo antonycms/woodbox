@@ -5,6 +5,7 @@ import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../../styles.module.css';
+import type { IColumn, TableSerializedRow } from '../../dtos';
 import { serializeTableValue } from '../../utils';
 
 type TableCellEditValue = string | number | (string | number)[];
@@ -65,6 +66,8 @@ interface ITableColumnProps {
     event: React.MouseEvent<HTMLElement, MouseEvent>,
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
+  row?: TableSerializedRow;
+  column?: IColumn;
 }
 
 const TableColumn = ({
@@ -103,6 +106,8 @@ const TableColumn = ({
   onSelectCell,
   onStartCellDrag,
   onMoveCellDrag,
+  row,
+  column,
 }: ITableColumnProps) => {
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
@@ -273,7 +278,9 @@ const TableColumn = ({
     [indexRow, name, onEditCell],
   );
 
-  const content = isEditing ? null : isLinkClickable ? (
+  const content = !isHeaderColumn && !isEditing && row && column?.render ? (
+    column.render(row, column)
+  ) : isEditing ? null : isLinkClickable ? (
     <span style={linkStyle} title={linkTitle} onClick={handleLinkClick}>
       {serializedValue}
     </span>

@@ -215,6 +215,8 @@ const TableDefaultView = <Row,>({
                   onSelectCell={onSelectCell}
                   onStartCellDrag={onStartCellDrag}
                   onMoveCellDrag={onMoveCellDrag}
+                  row={row}
+                  column={column}
                 />
               );
             })}
