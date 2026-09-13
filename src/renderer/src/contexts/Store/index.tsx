@@ -41,6 +41,8 @@ import StoreContext, {
   type IReactNativeBridgeSession,
   type IReactNativeBridgeStatus,
   type IDatabaseProcess,
+  type IDatabaseCompareParams,
+  type IDatabaseCompareResult,
 } from './context';
 
 export type * from './context';
@@ -561,6 +563,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     [],
   );
 
+  const compareDatabases = React.useCallback(async (params: IDatabaseCompareParams) => {
+    return await call<IDatabaseCompareResult>('@post:compare_databases', params);
+  }, []);
+
   const cancelRunSql = React.useCallback(
     async (idConnection: string, queryExecutionId: string) => {
       return await call<boolean>('@post:cancel_run_sql', idConnection, queryExecutionId);
@@ -597,6 +603,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getQueryRowsCount,
       getExportDataPreview,
       exportData,
+      compareDatabases,
 
       getTableColumns,
       getColumnTypes,
@@ -662,6 +669,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       cancelAIChatMessage,
       clearServerOutput,
       closeConnection,
+      compareDatabases,
       connectionTypes,
       connections,
       connectionsGroupPerProject,

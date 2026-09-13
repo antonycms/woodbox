@@ -1,0 +1,114 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+}
+
+.warning {
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  background: rgba(255, 193, 7, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.resultList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resultGroup {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.resultHeader {
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.resultHeader:hover {
+  filter: brightness(1.08);
+}
+
+.resultHeaderInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.resultHeaderIcon {
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  opacity: 0.8;
+  user-select: none;
+}
+
+.modify .resultHeader {
+  background: rgba(70, 130, 255, 0.16);
+}
+
+.create .resultHeader {
+  background: rgba(28, 185, 95, 0.16);
+}
+
+.delete .resultHeader {
+  background: rgba(255, 76, 90, 0.16);
+}
+
+.none .resultHeader {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.resultItem {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+  width: 100%;
+  padding: 8px 12px;
+}
+
+.resultItem:hover:not(:disabled) {
+  background: var(--database-compare-row-background-color);
+}
+
+.resultItem:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.resultItem span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultItem small {
+  opacity: 0.7;
+  flex: none;
+}

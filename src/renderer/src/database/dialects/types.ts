@@ -20,7 +20,7 @@ export interface DdlColumnChange extends DdlColumnInfo {
 
 export interface DdlRestrictionInfo {
   constraint_name: string;
-  constraint_type?: 'primary_key' | 'unique_key' | 'check';
+  constraint_type?: 'primary_key' | 'unique_key' | 'check' | 'exclusion';
   constraint_definition?: string;
   column_names?: string[];
   expression?: string;

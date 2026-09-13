@@ -806,6 +806,27 @@ export const en = {
   'aiProvider.codexLogoutFailed': 'Failed to sign out of ChatGPT',
   'aiChat.sendFailed': 'Failed to send message',
   'aiChat.sending': 'Thinking...',
+
+  'databaseCompare.title': 'Compare databases',
+  'databaseCompare.sourceConnection': 'Source connection',
+  'databaseCompare.targetConnection': 'Target connection',
+  'databaseCompare.selectConnection': 'Select a connection',
+  'databaseCompare.selectObjects': 'Select objects',
+  'databaseCompare.selectedObjects': 'Objects: {{selected}}/{{total}}',
+  'databaseCompare.noObjects': 'No objects found.',
+  'databaseCompare.noSchema': 'Objects',
+  'databaseCompare.compare': 'Compare',
+  'databaseCompare.viewAllDdl': 'View all DDLs',
+  'databaseCompare.allDdlTitle': 'All DDLs',
+  'databaseCompare.selectObjectsWarning': 'Select at least one object.',
+  'databaseCompare.compareFailed': 'Failed to compare databases',
+  'databaseCompare.ddlTitle': 'DDL',
+  'databaseCompare.generatedDdl': 'Generated DDL',
+  'databaseCompare.rollbackDdl': 'Rollback DDL',
+  'databaseCompare.result.modify': 'Objects to modify',
+  'databaseCompare.result.create': 'Objects to create',
+  'databaseCompare.result.delete': 'Objects to delete',
+  'databaseCompare.resultCount': '{{count}} items',
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -162,6 +162,7 @@ export interface ITable {
 export interface IFunctionDb {
   function_name: string;
   function_schema?: string;
+  function_identity_arguments?: string;
 }
 
 export interface IConnectionInfo {
@@ -318,7 +319,7 @@ export interface IColumnReferenceInfo {
   update_rule?: string;
 }
 
-export type ConstraintType = 'primary_key' | 'unique_key' | 'check';
+export type ConstraintType = 'primary_key' | 'unique_key' | 'check' | 'exclusion';
 
 export interface IColumnRestrictionsInfo {
   constraint_name: string;
@@ -355,6 +356,89 @@ export interface ITriggerInfo {
   function_name: string;
   status: string;
   trigger_definition?: string;
+}
+
+
+export type DatabaseCompareOperation = 'create' | 'modify' | 'delete' | 'none';
+
+export type DatabaseCompareKind =
+  | 'table'
+  | 'view'
+  | 'materialized_view'
+  | 'column'
+  | 'primary_key'
+  | 'foreign_key'
+  | 'unique_key'
+  | 'check'
+  | 'exclusion'
+  | 'index'
+  | 'trigger'
+  | 'rule'
+  | 'function'
+  | 'sequence'
+  | 'owner';
+
+export interface IDatabaseCompareOptions {
+  compareTables: boolean;
+  comparePrimaryKeys: boolean;
+  compareForeignKeys: boolean;
+  compareUniqueKeys: boolean;
+  compareCheckConstraints: boolean;
+  compareExclusionConstraints: boolean;
+  compareViews: boolean;
+  compareFunctions: boolean;
+  compareIndexes: boolean;
+  compareSequences: boolean;
+  compareTriggers: boolean;
+  compareRules: boolean;
+  compareOwners: boolean;
+  useCascadeDelete: boolean;
+  compareSequenceLastValues: boolean;
+  compareColumnOrder: boolean;
+  ignoreTableNameCase: boolean;
+  ignoreColumnNameCase: boolean;
+  detectRenames: boolean;
+  detectTableRenames: boolean;
+  enableRollback: boolean;
+}
+
+export interface IDatabaseCompareObjectSelection {
+  type?: 'table' | 'function';
+  schema?: string;
+  table?: string;
+  name?: string;
+  functionIdentityArguments?: string;
+}
+
+export interface IDatabaseCompareParams {
+  sourceConnectionId: string;
+  targetConnectionId: string;
+  selectedObjects: IDatabaseCompareObjectSelection[];
+  options: IDatabaseCompareOptions;
+}
+
+export interface IDatabaseCompareItemEndpoint {
+  schema?: string;
+  name: string;
+  parentName?: string;
+}
+
+export interface IDatabaseCompareItem {
+  id: string;
+  operation: DatabaseCompareOperation;
+  kind: DatabaseCompareKind;
+  label: string;
+  source?: IDatabaseCompareItemEndpoint;
+  target?: IDatabaseCompareItemEndpoint;
+  ddl?: string;
+  rollbackDdl?: string;
+  details?: string[];
+}
+
+export interface IDatabaseCompareResult {
+  items: IDatabaseCompareItem[];
+  warnings: string[];
+  summary: Record<DatabaseCompareOperation, number>;
 }
 
 export interface IDataTable {
@@ -510,6 +594,7 @@ export interface IStoreContext {
     params: Pick<IExportDataParams, 'source'>,
   ): Promise<IExportDataPreview>;
   exportData(idConnection: string, params: IExportDataParams): Promise<IExportDataResult>;
+  compareDatabases(params: IDatabaseCompareParams): Promise<IDatabaseCompareResult>;
 
   getTableColumns(
     idConnection: string,

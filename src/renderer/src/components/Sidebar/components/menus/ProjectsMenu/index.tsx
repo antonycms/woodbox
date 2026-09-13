@@ -24,6 +24,7 @@ import { useAppTabContext } from '@renderer/contexts/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import ProcessList from '@renderer/views/ProcessList';
+import { ModalDatabaseCompare } from '@renderer/components/ModalDatabaseCompare';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import WholeWordIcon from '@renderer/assets/icons/whole-word.svg?react';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -182,6 +183,7 @@ const ProjectsMenu = () => {
   const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
   const [tableToImport, setTableToImport] = React.useState<IItemTreeViewData>();
   const [tableToExport, setTableToExport] = React.useState<IItemTreeViewData>();
+  const [showDatabaseCompare, setShowDatabaseCompare] = React.useState(false);
 
   const showModalNewProject = !!(isNewProject || projectEditing);
   const showModalNewConnection = !!(isNewConnection || connectionEditing);
@@ -435,6 +437,10 @@ const ProjectsMenu = () => {
     script ? openTabScriptSql(script) : setIsNewScript(true);
   }, [idConnectionSelected, openTabScriptSql, scriptsByConnectionId]);
 
+  const openDatabaseCompare = React.useCallback(() => {
+    setShowDatabaseCompare(true);
+  }, []);
+
   const openProcessList = React.useCallback(
     async (idConnection?: string) => {
       if (!idConnection) return;
@@ -545,6 +551,10 @@ const ProjectsMenu = () => {
       {
         text: t('project.import'),
         onClick: () => setShowImportProjects(true),
+      },
+      {
+        text: t('databaseCompare.title'),
+        onClick: () => openDatabaseCompare(),
       },
     ];
 
@@ -708,6 +718,7 @@ const ProjectsMenu = () => {
     closeConnection,
     contextMenuItemSelected,
     handleRemoveConnection,
+    openDatabaseCompare,
     openProcessList,
     refreshConnectionInfo,
     removeScript,
@@ -1004,10 +1015,15 @@ const ProjectsMenu = () => {
     setShowImportProjects(false);
   }, []);
 
+  const closeDatabaseCompareModal = React.useCallback(() => {
+    setShowDatabaseCompare(false);
+  }, []);
+
   const projectOptions = React.useMemo(
     () => [
       { id: 'add', label: t('project.add') },
       { id: 'import-projects', label: t('project.import') },
+      { id: 'database-compare', label: t('databaseCompare.title') },
     ],
     [t],
   );
@@ -1016,8 +1032,9 @@ const ProjectsMenu = () => {
     (option: IButtonDropdownOption) => {
       if (option.id === 'add') openNewProject();
       if (option.id === 'import-projects') setShowImportProjects(true);
+      if (option.id === 'database-compare') openDatabaseCompare();
     },
-    [openNewProject],
+    [openDatabaseCompare, openNewProject],
   );
 
   const toggleWholeWordFilter = React.useCallback(() => {
@@ -1109,6 +1126,11 @@ const ProjectsMenu = () => {
       />
 
       <ModalImportProjects show={showImportProjects} onClose={closeImportProjectsModal} />
+
+      <ModalDatabaseCompare
+        show={showDatabaseCompare}
+        onClose={closeDatabaseCompareModal}
+      />
 
       <Row>
         <Text bold color={colors.color} userSelect={false}>

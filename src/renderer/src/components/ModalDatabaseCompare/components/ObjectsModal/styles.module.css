@@ -1,0 +1,106 @@
+.objectList {
+  margin-top: 8px;
+  height: 420px;
+  min-height: 280px;
+  max-height: 420px;
+  overflow: hidden;
+  padding: 10px 0;
+  color: inherit;
+}
+
+.schemaHeader,
+.schemaButton,
+.tableButton {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+}
+
+.schemaHeader {
+  width: 100%;
+  padding: 0 2px 0;
+}
+
+.schemaButton {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  padding: 4px 2px 5px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.86;
+  text-transform: uppercase;
+}
+
+.schemaDivider {
+  flex: 1;
+  height: 1px;
+  background: var(--database-compare-border-color);
+  opacity: 0.9;
+}
+
+.schemaLabel {
+  flex: none;
+  max-width: 62%;
+  font-weight: 700;
+}
+
+.tableButton {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  opacity: 0.94;
+}
+
+.tableButton.selected {
+  background: color-mix(in srgb, var(--database-compare-accent-color) 14%, transparent);
+}
+
+.schemaButton:hover:not(:disabled),
+.tableButton:hover:has(input:not(:disabled)) {
+  background: var(--database-compare-row-background-color);
+}
+
+.schemaButton:disabled,
+.tableButton:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.schemaButton span,
+.tableButton span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schemaButton small,
+.tableButton small {
+  opacity: 0.7;
+  flex: none;
+}
+
+.schemaButton .schemaLabel {
+  flex: none;
+}
+
+.schemaHeader input,
+.tableButton input {
+  accent-color: var(--database-compare-accent-color);
+  flex: none;
+}
+
+.tableButton small {
+  padding: 2px 5px;
+  border: 1px solid var(--database-compare-border-color);
+  border-radius: 4px;
+  font-size: 10px;
+}
