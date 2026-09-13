@@ -14,6 +14,7 @@ type UpdateAvailablePayload = {
   releaseName?: string | null;
   releaseNotes?: string | null;
   releaseDate?: string;
+  manualDownloadUrl?: string;
 };
 
 type UpdateProgressPayload = {
@@ -26,6 +27,10 @@ type UpdateProgressPayload = {
 let initialized = false;
 let downloadStarted = false;
 let latestUpdateVersion: string | undefined;
+
+const githubReleaseUrl = (version: string) => {
+  return `https://github.com/antonycms/woodbox/releases/tag/v${version}`;
+};
 
 const normalizeReleaseNotes = (releaseNotes: UpdateInfo['releaseNotes']) => {
   if (!releaseNotes) return null;
@@ -44,6 +49,7 @@ const toUpdateAvailablePayload = (info: UpdateInfo): UpdateAvailablePayload => {
     releaseName: info.releaseName,
     releaseNotes: normalizeReleaseNotes(info.releaseNotes),
     releaseDate: info.releaseDate,
+    manualDownloadUrl: process.platform === 'darwin' ? githubReleaseUrl(info.version) : undefined,
   };
 };
 

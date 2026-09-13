@@ -226,6 +226,8 @@ export const en = {
   'update.ignore': 'Ignore update',
   'update.downloadFailed': 'Could not download the update. Try again later.',
   'update.updateFailedWithMessage': 'Update error: {{message}}',
+  'update.manualDownload': 'Download update manually',
+  'update.manualInstallNotice': 'On macOS, download the release DMG and install it manually.',
   'common.unselect': 'Unselect',
   'common.noOptions': 'No options available',
   'common.modified': 'Modified',

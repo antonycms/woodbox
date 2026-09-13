@@ -15,6 +15,7 @@ type UpdateInfo = {
   currentVersion: string;
   releaseNotes?: string | null;
   releaseDate?: string;
+  manualDownloadUrl?: string;
 };
 
 type UpdateProgress = {
@@ -57,6 +58,7 @@ export const UpdateAvailableModal = React.memo(() => {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const show = !!update;
+  const requiresManualInstall = !!update?.manualDownloadUrl;
   const formattedDate = React.useMemo(() => formatDate(update?.releaseDate), [update?.releaseDate]);
 
   const closeModal = React.useCallback(() => {
@@ -76,6 +78,11 @@ export const UpdateAvailableModal = React.memo(() => {
 
   const handleUpdate = React.useCallback(async () => {
     try {
+      if (update?.manualDownloadUrl) {
+        window.open(update.manualDownloadUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
       if (status === 'downloaded') {
         setErrorMessage(null);
         await call('@post:quit_and_install_update');
@@ -89,7 +96,7 @@ export const UpdateAvailableModal = React.memo(() => {
       setErrorMessage(error instanceof Error ? error.message : null);
       setStatus('error');
     }
-  }, [status]);
+  }, [status, update?.manualDownloadUrl]);
 
   React.useEffect(() => {
     const removeAvailableListener = window.electron.ipcRenderer.on(
@@ -178,6 +185,12 @@ export const UpdateAvailableModal = React.memo(() => {
           </pre>
         </div>
 
+        {requiresManualInstall && (
+          <Text userSelect={false} color={modal.color} small>
+            {t('update.manualInstallNotice')}
+          </Text>
+        )}
+
         {status === 'downloading' && (
           <div className={styles.progressTrack} style={{ color: modal.color }}>
             <div className={styles.progressBar} style={{ width: `${progress}%` }} />
@@ -224,7 +237,11 @@ export const UpdateAvailableModal = React.memo(() => {
             loading={status === 'downloading'}
             onClick={handleUpdate}
           >
-            {status === 'downloaded' ? t('update.restartAndInstall') : t('update.install')}
+            {requiresManualInstall
+              ? t('update.manualDownload')
+              : status === 'downloaded'
+                ? t('update.restartAndInstall')
+                : t('update.install')}
           </Button>
         </Row>
       </div>

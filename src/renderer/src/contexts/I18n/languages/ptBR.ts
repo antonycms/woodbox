@@ -229,6 +229,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'update.ignore': 'Ignorar atualização',
   'update.downloadFailed': 'Não foi possível baixar a atualização. Tente novamente depois.',
   'update.updateFailedWithMessage': 'Erro ao atualizar: {{message}}',
+  'update.manualDownload': 'Baixar atualização manualmente',
+  'update.manualInstallNotice': 'No macOS, baixe o DMG da release e instale manualmente.',
   'common.unselect': 'Desmarcar',
   'common.noOptions': 'Não há opções disponíveis',
   'common.modified': 'Modificado',
