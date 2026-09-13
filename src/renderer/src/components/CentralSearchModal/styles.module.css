@@ -39,7 +39,6 @@
   font-size: 14px;
 }
 
-.shortcut,
 .badge {
   flex: none;
   border: 1px solid var(--borderColor);
@@ -48,10 +47,7 @@
   background: var(--subtleBackgroundColor);
   font-size: 11px;
   line-height: 1;
-}
-
-.shortcut {
-  padding: 6px 8px;
+  user-select: none;
 }
 
 .results {
@@ -137,6 +133,7 @@
   color: var(--mutedColor);
   font-size: 13px;
   text-align: center;
+  user-select: none;
 }
 
 @keyframes enter {

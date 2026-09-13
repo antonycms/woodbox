@@ -646,7 +646,6 @@ export const CentralSearchModal = React.memo(() => {
               }
             }}
           />
-          <span className={styles.shortcut}>Esc</span>
         </div>
 
         <div className={styles.results}>
