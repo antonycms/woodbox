@@ -274,13 +274,13 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
     loadInfo(targetConnectionId);
   }, [loadInfo, targetConnectionId]);
 
-  // React.useEffect(() => {
-  //   setSelectedObjectsKeys([]);
-  //   setCollapsedSchemas([]);
-  //   setFilterText('');
-  //   setResult(undefined);
-  //   setSelectedResultItem(undefined);
-  // }, [sourceConnectionId, targetConnectionId]);
+  React.useEffect(() => {
+    setSelectedObjectsKeys([]);
+    setCollapsedSchemas([]);
+    setFilterText('');
+    setResult(undefined);
+    setSelectedResultItem(undefined);
+  }, [sourceConnectionId, targetConnectionId]);
 
   return (
     <>
