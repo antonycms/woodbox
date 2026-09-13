@@ -24,7 +24,6 @@ export const createPostgresCompareDdlBuilder = (
 
     if (changes.typeChanged) {
       ddl.push(
-        '-- Revise antes de executar: alteração de tipo pode exigir conversão manual.',
         `ALTER TABLE ${tableName}\n  ALTER COLUMN ${column} TYPE ${makeColumnType(sourceColumn)};`,
       );
     }
