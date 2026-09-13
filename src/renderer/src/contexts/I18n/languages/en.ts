@@ -225,6 +225,7 @@ export const en = {
   'update.restartAndInstall': 'Restart and install',
   'update.ignore': 'Ignore update',
   'update.downloadFailed': 'Could not download the update. Try again later.',
+  'update.updateFailedWithMessage': 'Update error: {{message}}',
   'common.unselect': 'Unselect',
   'common.noOptions': 'No options available',
   'common.modified': 'Modified',

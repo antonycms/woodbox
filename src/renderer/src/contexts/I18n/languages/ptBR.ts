@@ -228,6 +228,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'update.restartAndInstall': 'Reiniciar e instalar',
   'update.ignore': 'Ignorar atualização',
   'update.downloadFailed': 'Não foi possível baixar a atualização. Tente novamente depois.',
+  'update.updateFailedWithMessage': 'Erro ao atualizar: {{message}}',
   'common.unselect': 'Desmarcar',
   'common.noOptions': 'Não há opções disponíveis',
   'common.modified': 'Modificado',

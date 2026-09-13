@@ -24,6 +24,10 @@ type UpdateProgress = {
   total: number;
 };
 
+type UpdateError = {
+  message?: string;
+};
+
 type UpdateStatus = 'available' | 'downloading' | 'downloaded' | 'error';
 
 const ignoredUpdateStorageKey = '@update:ignored_version';
@@ -50,6 +54,7 @@ export const UpdateAvailableModal = React.memo(() => {
   const [update, setUpdate] = React.useState<UpdateInfo | null>(null);
   const [status, setStatus] = React.useState<UpdateStatus>('available');
   const [progress, setProgress] = React.useState(0);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const show = !!update;
   const formattedDate = React.useMemo(() => formatDate(update?.releaseDate), [update?.releaseDate]);
@@ -58,6 +63,7 @@ export const UpdateAvailableModal = React.memo(() => {
     setUpdate(null);
     setStatus('available');
     setProgress(0);
+    setErrorMessage(null);
   }, []);
 
   const ignoreUpdate = React.useCallback(() => {
@@ -71,13 +77,16 @@ export const UpdateAvailableModal = React.memo(() => {
   const handleUpdate = React.useCallback(async () => {
     try {
       if (status === 'downloaded') {
+        setErrorMessage(null);
         await call('@post:quit_and_install_update');
         return;
       }
 
       setStatus('downloading');
+      setErrorMessage(null);
       await call('@post:download_update');
-    } catch (_error) {
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : null);
       setStatus('error');
     }
   }, [status]);
@@ -93,6 +102,7 @@ export const UpdateAvailableModal = React.memo(() => {
         setUpdate(nextUpdate);
         setStatus('available');
         setProgress(0);
+        setErrorMessage(null);
       },
     );
 
@@ -112,9 +122,13 @@ export const UpdateAvailableModal = React.memo(() => {
       },
     );
 
-    const removeErrorListener = window.electron.ipcRenderer.on('@event:update_error', () => {
-      setStatus('error');
-    });
+    const removeErrorListener = window.electron.ipcRenderer.on(
+      '@event:update_error',
+      (_event, error: UpdateError) => {
+        setErrorMessage(error.message || null);
+        setStatus('error');
+      },
+    );
 
     return () => {
       removeAvailableListener();
@@ -172,7 +186,9 @@ export const UpdateAvailableModal = React.memo(() => {
 
         {status === 'error' && (
           <Text userSelect={false} color={modal.cancelButtonBackgroundColor} small>
-            {t('update.downloadFailed')}
+            {errorMessage
+              ? t('update.updateFailedWithMessage', { message: errorMessage })
+              : t('update.downloadFailed')}
           </Text>
         )}
 
