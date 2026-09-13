@@ -20,4 +20,5 @@
 
 .text.removeUserSelect {
   user-select: none;
+  pointer-events: none;
 }
