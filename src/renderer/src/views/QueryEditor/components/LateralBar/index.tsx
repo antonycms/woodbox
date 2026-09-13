@@ -5,6 +5,7 @@ import { useI18n } from '@renderer/contexts/I18n';
 import {
   ExplainIcon,
   IconFileWrited,
+  ListIcon,
   RunFileIcon,
   RunIcon,
   RunSelectionIcon,
@@ -19,6 +20,7 @@ interface ILateralBarProps {
   runAllSQL(): void;
   explainCurrentSQL(): void;
   showServerOutput(): void;
+  openProcessList?(): void;
   hasUnreadServerOutput?: boolean;
 }
 
@@ -33,6 +35,7 @@ export const LateralBar = (props: ILateralBarProps) => {
     runCurrentSQL,
     explainCurrentSQL,
     showServerOutput,
+    openProcessList,
     hasUnreadServerOutput,
   } = props;
 
@@ -81,6 +84,18 @@ export const LateralBar = (props: ILateralBarProps) => {
       >
         <ExplainIcon size={16} />
       </Button>
+
+      {!!openProcessList && (
+        <Button
+          text
+          smallIcon
+          title={t('context.openProcessList')}
+          onClick={openProcessList}
+          color={activeTheme.queryEditor.bar.color}
+        >
+          <ListIcon size={16} />
+        </Button>
+      )}
 
       <Button
         text

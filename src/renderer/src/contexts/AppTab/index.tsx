@@ -104,7 +104,8 @@ const AppTabProvider = ({ children }: { children: React.ReactNode }) => {
 
         return newState;
       });
-      setActiveTabId(tab.id);
+
+      setTimeout(() => setActiveTabId(tab.id));
     },
     [activeTabId],
   );

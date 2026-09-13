@@ -13,6 +13,7 @@ import { generateHash } from '@renderer/utils/string';
 import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
+import { useAppTabContext } from '@renderer/contexts/AppTab';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { ITab } from '@renderer/components/Tabs/components/TabBar';
@@ -63,6 +64,7 @@ import { getRendererDialect } from '@renderer/database/dialects';
 import { useQueryCancellation } from './hooks/useQueryCancellation';
 import { TabContentExplain } from './components/TabContentExplain';
 import { ModalExportData } from '@renderer/components/ModalExportData';
+import ProcessList from '@renderer/views/ProcessList';
 
 export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
   const { t } = useI18n();
@@ -81,12 +83,15 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
   const { activeTheme } = useThemeContext();
   const { isActiveTab } = useTabContentContext();
+  const { addTab, getTab, setActiveTabId: setActiveAppTabId } = useAppTabContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const currentConnection = React.useMemo(
     () => connections.find((connection) => connection.id === id_connection),
     [connections, id_connection],
   );
   const dialect = getRendererDialect(currentConnection?.dialect);
+  const supportsProcessList =
+    currentConnection?.dialect === 'postgres' || currentConnection?.dialect === 'mysql';
   const isProductionConnection = currentConnection?.environment === 'production';
 
   const id = React.useMemo(() => generateHash(), []);
@@ -482,6 +487,28 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     setHasUnreadServerOutput(false);
     setShowServerOutputModal(true);
   }, []);
+
+  const openProcessList = React.useCallback(() => {
+    if (!supportsProcessList) return;
+
+    const tabId = `process_list_${id_connection}`;
+    const tab = getTab(tabId);
+
+    if (tab) {
+      setActiveAppTabId(tabId);
+      return;
+    }
+
+    addTab({
+      id: tabId,
+      title: t('processList.title'),
+      data: {
+        type: 'process-list',
+        id_connection,
+      },
+      component: () => <ProcessList id_connection={id_connection} />,
+    });
+  }, [addTab, getTab, id_connection, setActiveAppTabId, supportsProcessList, t]);
 
   const closeServerOutput = React.useCallback(() => {
     setShowServerOutputModal(false);
@@ -1220,6 +1247,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           runCurrentSQL={runCurrentSQL}
           explainCurrentSQL={explainCurrentSQL}
           showServerOutput={showServerOutput}
+          openProcessList={supportsProcessList ? openProcessList : undefined}
           hasUnreadServerOutput={hasUnreadServerOutput}
         />
 
