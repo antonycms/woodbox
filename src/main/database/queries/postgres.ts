@@ -177,6 +177,7 @@ const getTableRestrictions = ({ schema, table }: ITableWithSchema) => /* sql */ 
       WHEN con.contype = 'p' THEN 'primary_key'
       WHEN con.contype = 'u' THEN 'unique_key'
       WHEN con.contype = 'c' THEN 'check'
+      WHEN con.contype = 'x' THEN 'exclusion'
       ELSE NULL END
     ) AS constraint_type,
     pg_catalog.pg_get_constraintdef(con.oid) AS constraint_definition,
@@ -191,7 +192,7 @@ const getTableRestrictions = ({ schema, table }: ITableWithSchema) => /* sql */ 
   INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
   LEFT JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS cols(attnum, ordinality) ON TRUE
   LEFT JOIN pg_catalog.pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = cols.attnum
-  WHERE con.contype IN ('p', 'u', 'c')
+  WHERE con.contype IN ('p', 'u', 'c', 'x')
   AND nsp.nspname = ${quoteLiteral(schema)}
   AND rel.relname = ${quoteLiteral(table)}
   GROUP BY con.oid, con.conname, con.contype, con.conbin, con.conrelid
@@ -372,7 +373,8 @@ const getTableTriggers = ({ schema, table }: ITableWithSchema) => /* sql */ `
 const getFunctions = () => /* sql */ `
   SELECT
     p.proname  AS function_name,
-    n.nspname  AS function_schema
+    n.nspname  AS function_schema,
+    pg_get_function_identity_arguments(p.oid) AS function_identity_arguments
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
@@ -385,15 +387,80 @@ const getFunctions = () => /* sql */ `
 const getFunctionDefinition = ({
   schema,
   functionName,
+  functionIdentityArguments,
 }: {
   schema: string;
   functionName: string;
+  functionIdentityArguments?: string;
 }) => /* sql */ `
   SELECT pg_get_functiondef(p.oid) AS definition
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid = p.pronamespace
   WHERE p.proname = ${quoteLiteral(functionName)}
-    AND n.nspname = ${quoteLiteral(schema)};
+    AND n.nspname = ${quoteLiteral(schema)}
+    AND (${quoteLiteral(functionIdentityArguments)} = '' OR pg_get_function_identity_arguments(p.oid) = ${quoteLiteral(functionIdentityArguments)});
+`;
+
+const getTableRules = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  SELECT
+    r.rulename AS rule_name,
+    pg_catalog.pg_get_ruledef(r.oid, true) AS rule_definition
+  FROM pg_catalog.pg_rewrite r
+  JOIN pg_catalog.pg_class c ON c.oid = r.ev_class
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE r.rulename <> '_RETURN'
+  AND c.relname = ${quoteLiteral(table)}
+  AND n.nspname = ${quoteLiteral(schema)}
+  ORDER BY r.rulename;
+`;
+
+const getTableOwner = ({ schema, table }: ITableWithSchema) => /* sql */ `
+  SELECT pg_catalog.pg_get_userbyid(c.relowner) AS owner_name
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relname = ${quoteLiteral(table)}
+  AND n.nspname = ${quoteLiteral(schema)};
+`;
+
+const getSequences = () => /* sql */ `
+  SELECT
+    schemaname AS sequence_schema,
+    sequencename AS sequence_name,
+    sequenceowner AS owner_name,
+    data_type,
+    start_value,
+    min_value,
+    max_value,
+    increment_by,
+    cycle,
+    last_value,
+    'CREATE SEQUENCE ' || quote_ident(schemaname) || '.' || quote_ident(sequencename) ||
+      ' AS ' || data_type ||
+      ' INCREMENT BY ' || increment_by ||
+      ' MINVALUE ' || min_value ||
+      ' MAXVALUE ' || max_value ||
+      ' START WITH ' || start_value ||
+      CASE WHEN cycle THEN ' CYCLE' ELSE ' NO CYCLE' END AS sequence_definition
+  FROM pg_catalog.pg_sequences
+  WHERE schemaname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+  ORDER BY schemaname, sequencename;
+`;
+
+const getFunctionOwner = ({
+  schema,
+  functionName,
+  functionIdentityArguments,
+}: {
+  schema: string;
+  functionName: string;
+  functionIdentityArguments?: string;
+}) => /* sql */ `
+  SELECT pg_catalog.pg_get_userbyid(p.proowner) AS owner_name
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE p.proname = ${quoteLiteral(functionName)}
+    AND n.nspname = ${quoteLiteral(schema)}
+    AND (${quoteLiteral(functionIdentityArguments)} = '' OR pg_get_function_identity_arguments(p.oid) = ${quoteLiteral(functionIdentityArguments)});
 `;
 
 const getProcessList = () => /* sql */ `
@@ -428,8 +495,12 @@ export default {
   getTableDefinition,
   getTableIndexes,
   getTableTriggers,
+  getTableRules,
+  getTableOwner,
+  getSequences,
   getFunctions,
   getFunctionDefinition,
+  getFunctionOwner,
   getProcessList,
   cancelProcess,
 };

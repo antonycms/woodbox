@@ -26,6 +26,7 @@ import {
   clearServerOutput,
   getProcessList,
   cancelProcess,
+  compareDatabases,
 } from './core';
 
 // dialect
@@ -55,5 +56,6 @@ addListener('@get:server_output', getServerOutput);
 addListener('@delete:server_output', clearServerOutput);
 addListener('@get:process_list', getProcessList);
 addListener('@post:cancel_process', cancelProcess);
+addListener('@post:compare_databases', compareDatabases);
 
 export { closeAllConnections } from './core';

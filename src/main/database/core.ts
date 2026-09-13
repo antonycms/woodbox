@@ -10,6 +10,7 @@ import {
   retainReactNativeBridgeGateway,
 } from '@main/reactNativeBridge/gateway';
 import { getDialectAdapter, getDialectIds } from './dialects';
+import { compareDatabases as compareDatabasesCore, type DatabaseCompareParams } from './compare';
 import { getSslConfig } from './ssl';
 import type { IOrderBy } from './types';
 import { serializeOrderBy } from './utils/orderBy';
@@ -629,6 +630,11 @@ export const getFunctionDefinition = async (
   const raw = await instance.raw(query.getFunctionDefinition({ schema, functionName }));
 
   return adapter.getRows(raw);
+};
+
+
+export const compareDatabases = async (params: DatabaseCompareParams) => {
+  return compareDatabasesCore(params, getConnection);
 };
 
 /**

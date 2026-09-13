@@ -14,7 +14,15 @@ export interface DatabaseDialectQueries {
   getTableDefinition(params: ITableWithSchema): string;
   getTableIndexes(params: ITableWithSchema): string;
   getTableTriggers(params: ITableWithSchema): string;
-  getFunctionDefinition?(params: { schema: string; functionName: string }): string;
+  getTableRules?(params: ITableWithSchema): string;
+  getTableOwner?(params: ITableWithSchema): string;
+  getSequences?(): string;
+  getFunctionDefinition?(params: {
+    schema: string;
+    functionName: string;
+    functionIdentityArguments?: string;
+  }): string;
+  getFunctionOwner?(params: { schema: string; functionName: string; functionIdentityArguments?: string }): string;
   getProcessList?(): string;
   cancelProcess?(pid: number): string;
 }
