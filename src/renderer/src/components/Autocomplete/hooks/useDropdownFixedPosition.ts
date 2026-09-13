@@ -36,7 +36,8 @@ export function useDropdownFixedPosition({
       return;
     }
 
-    let animationFrameId: number;
+    let animationFrameId: number | undefined;
+    let resizeObserver: ResizeObserver | undefined;
 
     const updatePosition = () => {
       const anchor = anchorRef.current;
@@ -77,21 +78,25 @@ export function useDropdownFixedPosition({
     };
 
     const requestPositionUpdate = () => {
-      animationFrameId = window.requestAnimationFrame(() => {
-        updatePosition();
-        requestPositionUpdate();
-      });
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(updatePosition);
     };
 
     updatePosition();
     requestPositionUpdate();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', requestPositionUpdate);
+    window.addEventListener('scroll', requestPositionUpdate, true);
+
+    if (window.ResizeObserver && anchorRef.current) {
+      resizeObserver = new ResizeObserver(requestPositionUpdate);
+      resizeObserver.observe(anchorRef.current);
+    }
 
     return () => {
-      window.cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', requestPositionUpdate);
+      window.removeEventListener('scroll', requestPositionUpdate, true);
     };
   }, [anchorRef, dropdownHeight, isOpen, maxHeight, offset]);
 
