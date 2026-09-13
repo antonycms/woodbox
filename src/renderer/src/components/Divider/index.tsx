@@ -14,7 +14,7 @@ export const Divider = React.memo((props: IDividerProps) => {
   const height = `${size}px`;
 
   const style = React.useMemo(() => {
-    return { height, maxHeight: height, backgroundColor: color };
+    return { height, minHeight: height, maxHeight: height, backgroundColor: color };
   }, [height, color]);
 
   return <div className={styles.divider} style={style} />;
