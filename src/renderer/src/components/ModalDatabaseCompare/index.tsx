@@ -288,7 +288,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
         show={show}
         title={t('databaseCompare.title')}
         width="900px"
-        maxHeight="86vh"
+        maxHeight="800px"
         closeOutside={!loadingCompare}
         onClose={handleClose}
       >
@@ -307,6 +307,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
                 xs={12}
                 sm={6}
                 md={6}
+                required
                 label={t('databaseCompare.sourceConnection')}
                 data={connections}
                 value={sourceConnectionId}
@@ -324,6 +325,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
                 xs={12}
                 sm={6}
                 md={6}
+                required
                 label={t('databaseCompare.targetConnection')}
                 data={connections}
                 value={targetConnectionId}
@@ -336,40 +338,6 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
                 extractValue={(connection) => connection.id}
                 onChange={({ value }) => setTargetConnectionId(value as string)}
               />
-            </Row>
-
-            <Divider />
-
-            <Row>
-              <Button
-                xs={12}
-                sm={6}
-                md={3}
-                color={modalTheme.neutralButtonColor || modalTheme.color}
-                backgroundColor={modalTheme.fieldBackgroundColor}
-                disabled={loadingCompare}
-                onClick={openObjectsModal}
-              >
-                {t('databaseCompare.selectedObjects', {
-                  selected: selectedObjects.length,
-                  total: selectableObjects.length,
-                })}
-              </Button>
-
-              <Spacer />
-
-              <Button
-                type="submit"
-                form="modal_database_compare_form"
-                loading={loadingCompare}
-                disabled={!sourceConnectionId || !targetConnectionId || sourceConnectionId === targetConnectionId}
-                backgroundColor={modalTheme.saveButtonBackgroundColor || mainTab.ascentColor}
-                color={modalTheme.saveButtonColor || mainTab.color}
-                md={3}
-                sm={12}
-              >
-                {t('databaseCompare.compare')}
-              </Button>
             </Row>
 
             {!!result && (
@@ -459,7 +427,55 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
                 )}
               </div>
             )}
+
+            {!!result && (
+              <Divider color={modalTheme.fieldBackgroundColor} />
+            )}
           </div>
+
+          <Row>
+              <Button
+                xs={12}
+                sm={3}
+                md={3}
+                color={modalTheme.neutralButtonColor || modalTheme.color}
+                backgroundColor={modalTheme.fieldBackgroundColor}
+                disabled={loadingCompare}
+                onClick={openObjectsModal}
+              >
+                {t('databaseCompare.selectedObjects', {
+                  selected: selectedObjects.length,
+                  total: selectableObjects.length,
+                })}
+              </Button>
+
+              <Spacer />
+
+              <Button
+                text
+                color={modalTheme.cancelButtonColor}
+                backgroundColor={modalTheme.cancelButtonBackgroundColor}
+                onClick={onClose}
+                xs={12}
+                sm={3}
+                md={3}
+              >
+                {t('common.close')}
+              </Button>
+
+              <Button
+                type="submit"
+                form="modal_database_compare_form"
+                loading={loadingCompare}
+                backgroundColor={modalTheme.saveButtonBackgroundColor}
+                color={modalTheme.saveButtonColor}
+                xs={12}
+                md={3}
+                sm={3}
+              >
+                {t('databaseCompare.compare')}
+              </Button>
+            </Row>
         </Form>
       </Modal>
 
