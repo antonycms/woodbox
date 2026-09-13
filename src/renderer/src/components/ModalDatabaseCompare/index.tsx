@@ -11,6 +11,7 @@ import { useI18n } from '@renderer/contexts/I18n';
 import {
   type IConnection,
   type IDatabaseCompareItem,
+  type IDatabaseCompareMessage,
   type IDatabaseCompareObjectSelection,
   type IDatabaseCompareResult,
   useStoreContext,
@@ -18,7 +19,7 @@ import {
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { DEFAULT_OPTIONS, OPERATION_LABEL_KEY } from './constants';
+import { DEFAULT_OPTIONS, KIND_LABEL_KEY, MESSAGE_LABEL_KEY, OPERATION_LABEL_KEY } from './constants';
 import { DdlModal } from './components/DdlModal';
 import { ObjectsModal } from './components/ObjectsModal';
 import type { DatabaseCompareSelectableObject, IModalDatabaseCompareProps } from './types';
@@ -190,6 +191,30 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
     );
   }, []);
 
+  const getResultItemLabel = React.useCallback(
+    (item: IDatabaseCompareItem) => {
+      if (item.label) return item.label;
+
+      const data = item.display || item.source || item.target;
+      if (!data?.name) return t('databaseCompare.noDifferencesFound');
+
+      const name = [data.schema, data.parentName, data.name].filter(Boolean).join('.');
+      if (item.display?.targetName) {
+        const targetName = [data.schema, data.parentName, item.display.targetName].filter(Boolean).join('.');
+        return `${targetName} → ${name}`;
+      }
+      return name;
+    },
+    [t],
+  );
+
+  const getCompareMessage = React.useCallback(
+    (message: IDatabaseCompareMessage) => {
+      return t(MESSAGE_LABEL_KEY[message.code], message.values);
+    },
+    [t],
+  );
+
   const viewAllDdl = React.useCallback(() => {
     if (!allResultDdl) return;
 
@@ -248,6 +273,14 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
   React.useEffect(() => {
     loadInfo(targetConnectionId);
   }, [loadInfo, targetConnectionId]);
+
+  // React.useEffect(() => {
+  //   setSelectedObjectsKeys([]);
+  //   setCollapsedSchemas([]);
+  //   setFilterText('');
+  //   setResult(undefined);
+  //   setSelectedResultItem(undefined);
+  // }, [sourceConnectionId, targetConnectionId]);
 
   return (
     <>
@@ -345,9 +378,9 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
 
             {!!result?.warnings.length && (
               <div className={styles.warning}>
-                {result.warnings.map((warning) => (
-                  <Text key={warning} small color={modalTheme.color} userSelect={false}>
-                    {warning}
+                {result.warnings.map((warning, index) => (
+                  <Text key={`${warning.code}_${index}`} small color={modalTheme.color} userSelect={false}>
+                    {getCompareMessage(warning)}
                   </Text>
                 ))}
               </div>
@@ -391,8 +424,8 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
                             disabled={!item.ddl}
                             onClick={() => setSelectedResultItem(item)}
                           >
-                            <span>{item.label}</span>
-                            <small>{item.kind}</small>
+                            <span>{getResultItemLabel(item)}</span>
+                            <small>{t(KIND_LABEL_KEY[item.kind])}</small>
                           </button>
                         ))}
                     </div>
@@ -421,7 +454,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
 
                 {result.items.every((item) => item.operation === 'none') && (
                   <Text small color={modalTheme.color} userSelect={false}>
-                    {result.items[0]?.label}
+                    {t('databaseCompare.noDifferencesFound')}
                   </Text>
                 )}
               </div>
@@ -447,6 +480,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
 
       <DdlModal
         item={show ? selectedResultItem : undefined}
+        title={selectedResultItem ? getResultItemLabel(selectedResultItem) : undefined}
         onClose={() => setSelectedResultItem(undefined)}
       />
     </>

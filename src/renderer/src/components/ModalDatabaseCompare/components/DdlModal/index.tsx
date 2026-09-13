@@ -13,7 +13,7 @@ import { copyToClipboard } from '@renderer/utils/methods';
 import type { IDdlModalProps } from '../../types';
 import styles from './styles.module.css';
 
-export const DdlModal = React.memo(({ item, onClose }: IDdlModalProps) => {
+export const DdlModal = React.memo(({ item, title, onClose }: IDdlModalProps) => {
   const { t } = useI18n();
   const { showToast } = useToast();
   const {
@@ -33,9 +33,9 @@ export const DdlModal = React.memo(({ item, onClose }: IDdlModalProps) => {
     <Modal
       show={!!item}
       closeOutside
-      width="800px"
-      height="480px"
-      title={item ? `${t('databaseCompare.ddlTitle')} — ${item.label}` : ''}
+      width="840px"
+      height="640px"
+      title={item ? `${t('databaseCompare.ddlTitle')} — ${title || item.label || ''}` : ''}
       onClose={onClose}
     >
       <div className={styles.ddlModalContent}>

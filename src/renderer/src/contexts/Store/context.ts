@@ -423,21 +423,43 @@ export interface IDatabaseCompareItemEndpoint {
   parentName?: string;
 }
 
+export interface IDatabaseCompareItemDisplay {
+  schema?: string;
+  name?: string;
+  parentName?: string;
+  targetName?: string;
+}
+
+export type DatabaseCompareMessageCode =
+  | 'different_dialects'
+  | 'column_type_changed'
+  | 'column_nullable_changed'
+  | 'column_default_changed'
+  | 'object_definition_changed'
+  | 'owner_changed'
+  | 'selected_objects_equivalent';
+
+export interface IDatabaseCompareMessage {
+  code: DatabaseCompareMessageCode;
+  values?: Record<string, string | number>;
+}
+
 export interface IDatabaseCompareItem {
   id: string;
   operation: DatabaseCompareOperation;
   kind: DatabaseCompareKind;
-  label: string;
+  label?: string;
+  display?: IDatabaseCompareItemDisplay;
   source?: IDatabaseCompareItemEndpoint;
   target?: IDatabaseCompareItemEndpoint;
   ddl?: string;
   rollbackDdl?: string;
-  details?: string[];
+  details?: IDatabaseCompareMessage[];
 }
 
 export interface IDatabaseCompareResult {
   items: IDatabaseCompareItem[];
-  warnings: string[];
+  warnings: IDatabaseCompareMessage[];
   summary: Record<DatabaseCompareOperation, number>;
 }
 

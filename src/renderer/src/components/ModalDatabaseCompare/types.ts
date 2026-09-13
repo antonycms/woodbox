@@ -32,6 +32,7 @@ export type ObjectGroup = {
 
 export interface IDdlModalProps {
   item?: IDatabaseCompareItem;
+  title?: string;
   onClose(): void;
 }
 

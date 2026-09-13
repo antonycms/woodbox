@@ -65,21 +65,43 @@ export interface DatabaseCompareItemEndpoint {
   parentName?: string;
 }
 
+export interface DatabaseCompareItemDisplay {
+  schema?: string;
+  name?: string;
+  parentName?: string;
+  targetName?: string;
+}
+
+export type DatabaseCompareMessageCode =
+  | 'different_dialects'
+  | 'column_type_changed'
+  | 'column_nullable_changed'
+  | 'column_default_changed'
+  | 'object_definition_changed'
+  | 'owner_changed'
+  | 'selected_objects_equivalent';
+
+export interface DatabaseCompareMessage {
+  code: DatabaseCompareMessageCode;
+  values?: Record<string, string | number>;
+}
+
 export interface DatabaseCompareItem {
   id: string;
   operation: DatabaseCompareOperation;
   kind: DatabaseCompareKind;
-  label: string;
+  label?: string;
+  display?: DatabaseCompareItemDisplay;
   source?: DatabaseCompareItemEndpoint;
   target?: DatabaseCompareItemEndpoint;
   ddl?: string;
   rollbackDdl?: string;
-  details?: string[];
+  details?: DatabaseCompareMessage[];
 }
 
 export interface DatabaseCompareResult {
   items: DatabaseCompareItem[];
-  warnings: string[];
+  warnings: DatabaseCompareMessage[];
   summary: Record<DatabaseCompareOperation, number>;
 }
 
@@ -180,12 +202,6 @@ type Snapshot = {
   sequences: Map<string, SequenceInfo>;
 };
 
-const objectTypeLabel: Record<DbObjectType, string> = {
-  table: 'tabela',
-  view: 'view',
-  materialized_view: 'view materializada',
-};
-
 const normalizeName = (value: string | undefined, ignoreCase?: boolean) => {
   const normalized = value || '';
   return ignoreCase ? normalized.toLowerCase() : normalized;
@@ -207,6 +223,18 @@ const endpoint = (schema: string | undefined, name: string, parentName?: string)
   schema,
   name,
   parentName,
+});
+
+const display = (
+  schema: string | undefined,
+  name: string,
+  parentName?: string,
+  targetName?: string,
+): DatabaseCompareItemDisplay => ({
+  schema,
+  name,
+  parentName,
+  targetName,
 });
 
 const normalizeSql = (value: unknown) =>
@@ -525,10 +553,10 @@ const compareNamedList = <T extends Row>(params: {
   getName(row: T): string;
   getSignature(row: T): string;
   getLabelName?(row: T, name: string): string;
+  getDisplay?(row: T, name: string): DatabaseCompareItemDisplay;
   getKind?(row: T): DatabaseCompareKind;
   createDdl(row: T): string;
   deleteDdl(row: T): string;
-  label: string;
   kind: DatabaseCompareKind;
   schema?: string;
   parentName?: string;
@@ -541,17 +569,19 @@ const compareNamedList = <T extends Row>(params: {
   names.forEach((name) => {
     const source = sourceByName.get(name);
     const target = targetByName.get(name);
-    const displayRow = source || target;
-    const displayName = displayRow && params.getLabelName ? params.getLabelName(displayRow, name) : name;
-    const objectLabel = `${params.label} ${displayName}`;
+    const getDisplay = (row: T) => {
+      const displayName = params.getLabelName ? params.getLabelName(row, name) : name;
+      return params.getDisplay?.(row, name) || display(params.schema, displayName, params.parentName);
+    };
 
     if (source && !target) {
+      const itemDisplay = getDisplay(source);
       params.items.push(
         params.addItem({
           operation: 'create',
           kind: params.getKind?.(source) || params.kind,
-          label: objectLabel,
-          source: endpoint(params.schema, displayName, params.parentName),
+          display: itemDisplay,
+          source: endpoint(itemDisplay.schema, itemDisplay.name || name, itemDisplay.parentName),
           ddl: params.createDdl(source),
           rollbackDdl: params.enableRollback ? params.deleteDdl(source) : undefined,
         }),
@@ -560,12 +590,13 @@ const compareNamedList = <T extends Row>(params: {
     }
 
     if (!source && target) {
+      const itemDisplay = getDisplay(target);
       params.items.push(
         params.addItem({
           operation: 'delete',
           kind: params.getKind?.(target) || params.kind,
-          label: objectLabel,
-          target: endpoint(params.schema, displayName, params.parentName),
+          display: itemDisplay,
+          target: endpoint(itemDisplay.schema, itemDisplay.name || name, itemDisplay.parentName),
           ddl: params.deleteDdl(target),
           rollbackDdl: params.enableRollback ? params.createDdl(target) : undefined,
         }),
@@ -574,21 +605,15 @@ const compareNamedList = <T extends Row>(params: {
     }
 
     if (source && target && params.getSignature(source) !== params.getSignature(target)) {
+      const sourceDisplay = getDisplay(source);
+      const targetDisplay = getDisplay(target);
       params.items.push(
         params.addItem({
           operation: 'modify',
           kind: params.getKind?.(source) || params.kind,
-          label: objectLabel,
-          source: endpoint(
-            params.schema,
-            params.getLabelName ? params.getLabelName(source, name) : name,
-            params.parentName,
-          ),
-          target: endpoint(
-            params.schema,
-            params.getLabelName ? params.getLabelName(target, name) : name,
-            params.parentName,
-          ),
+          display: sourceDisplay,
+          source: endpoint(sourceDisplay.schema, sourceDisplay.name || name, sourceDisplay.parentName),
+          target: endpoint(targetDisplay.schema, targetDisplay.name || name, targetDisplay.parentName),
           ddl: [params.deleteDdl(target), params.createDdl(source)].filter(Boolean).join('\n\n'),
           rollbackDdl: params.enableRollback
             ? [params.deleteDdl(source), params.createDdl(target)].filter(Boolean).join('\n\n')
@@ -651,7 +676,12 @@ const compareColumns = (
         addItem({
           operation: 'modify',
           kind: 'column',
-          label: `${tableName}.${source.column.column_name}: renomear coluna`,
+          display: display(
+            sourceTable.table_schema,
+            source.column.column_name,
+            sourceTable.table_name,
+            target.column.column_name,
+          ),
           source: endpoint(sourceTable.table_schema, source.column.column_name, sourceTable.table_name),
           target: endpoint(targetTable.table_schema, target.column.column_name, targetTable.table_name),
           ddl: `ALTER TABLE ${tableName}\n  RENAME COLUMN ${params.quoteIdentifier(
@@ -674,7 +704,7 @@ const compareColumns = (
       addItem({
         operation: 'create',
         kind: 'column',
-        label: `${tableName}.${source.column.column_name}`,
+        display: display(sourceTable.table_schema, source.column.column_name, sourceTable.table_name),
         source: endpoint(sourceTable.table_schema, source.column.column_name, sourceTable.table_name),
         ddl: params.ddl.addColumn(tableName, source.column),
         rollbackDdl: params.options.enableRollback
@@ -691,7 +721,7 @@ const compareColumns = (
       addItem({
         operation: 'delete',
         kind: 'column',
-        label: `${tableName}.${target.column.column_name}`,
+        display: display(targetTable.table_schema, target.column.column_name, targetTable.table_name),
         target: endpoint(targetTable.table_schema, target.column.column_name, targetTable.table_name),
         ddl: params.ddl.dropColumn(tableName, target.column.column_name),
         rollbackDdl: params.options.enableRollback
@@ -712,22 +742,22 @@ const compareColumns = (
       return;
     }
 
-    const details: string[] = [];
+    const details: DatabaseCompareMessage[] = [];
     const typeChanged = columnTypeSignature(source.column) !== columnTypeSignature(target.column);
     const nullableChanged = Boolean(source.column.is_nullable) !== Boolean(target.column.is_nullable);
     const defaultChanged = columnDefaultSignature(source.column) !== columnDefaultSignature(target.column);
     const changes: CompareColumnChanges = { typeChanged, nullableChanged, defaultChanged };
 
     if (typeChanged) {
-      details.push('O tipo da coluna difere entre origem e destino.');
+      details.push({ code: 'column_type_changed' });
     }
 
     if (nullableChanged) {
-      details.push('A nulabilidade da coluna difere entre origem e destino.');
+      details.push({ code: 'column_nullable_changed' });
     }
 
     if (defaultChanged) {
-      details.push('O valor padrão da coluna difere entre origem e destino.');
+      details.push({ code: 'column_default_changed' });
     }
 
     const ddlParts = params.ddl.alterColumn(
@@ -751,7 +781,7 @@ const compareColumns = (
       addItem({
         operation: 'modify',
         kind: 'column',
-        label: `${tableName}.${source.column.column_name}`,
+        display: display(sourceTable.table_schema, source.column.column_name, sourceTable.table_name),
         source: endpoint(sourceTable.table_schema, source.column.column_name, sourceTable.table_name),
         target: endpoint(targetTable.table_schema, target.column.column_name, targetTable.table_name),
         ddl: ddlParts.filter(Boolean).join('\n\n'),
@@ -900,10 +930,10 @@ const compareTableParts = (
     getName: (row) => restrictionSignature(row, params.options),
     getSignature: (row) => restrictionSignature(row, params.options),
     getLabelName: (row) => String(row.constraint_name),
+    getDisplay: (row) => display(sourceTable.table_schema, String(row.constraint_name), sourceTable.table_name),
     getKind: (row) => restrictionKind(row.constraint_type),
     createDdl: (row) => params.ddl.addConstraint(tableName, row),
     deleteDdl: (row) => params.ddl.dropConstraint(tableName, row),
-    label: `${tableName}: constraint`,
     kind: 'check',
     schema: sourceTable.table_schema,
     parentName: sourceTable.table_name,
@@ -919,6 +949,7 @@ const compareTableParts = (
       getName: (row) => foreignKeySignature(row, params.options),
       getSignature: (row) => foreignKeySignature(row, params.options),
       getLabelName: (row) => String(row.constraint_name),
+      getDisplay: (row) => display(sourceTable.table_schema, String(row.constraint_name), sourceTable.table_name),
       createDdl: (row) =>
         params.ddl.addForeignKey(
           tableName,
@@ -926,7 +957,6 @@ const compareTableParts = (
           foreignKeyDefinition(params.quoteIdentifier, row),
         ),
       deleteDdl: (row) => params.ddl.dropForeignKey(tableName, row),
-      label: `${tableName}: FK`,
       kind: 'foreign_key',
       schema: sourceTable.table_schema,
       parentName: sourceTable.table_name,
@@ -943,9 +973,9 @@ const compareTableParts = (
       getName: (row) => indexSignature(row, params.options),
       getSignature: (row) => indexSignature(row, params.options),
       getLabelName: (row) => String(row.index_name),
+      getDisplay: (row) => display(sourceTable.table_schema, String(row.index_name), sourceTable.table_name),
       createDdl: (row) => params.ddl.createIndex(tableName, row),
       deleteDdl: (row) => params.ddl.dropIndex(tableName, sourceTable.table_schema, row),
-      label: `${tableName}: índice`,
       kind: 'index',
       schema: sourceTable.table_schema,
       parentName: sourceTable.table_name,
@@ -961,9 +991,9 @@ const compareTableParts = (
       targetRows: targetTable.triggers || [],
       getName: (row) => String(row.trigger_name),
       getSignature: (row) => stableStringify(row),
+      getDisplay: (row) => display(sourceTable.table_schema, String(row.trigger_name), sourceTable.table_name),
       createDdl: (row) => pushSemicolon(row.trigger_definition || ''),
       deleteDdl: (row) => params.ddl.dropTrigger(tableName, row),
-      label: `${tableName}: trigger`,
       kind: 'trigger',
       schema: sourceTable.table_schema,
       parentName: sourceTable.table_name,
@@ -979,9 +1009,9 @@ const compareTableParts = (
       targetRows: targetTable.rules || [],
       getName: (row) => String(row.rule_name),
       getSignature: (row) => normalizeSql(row.rule_definition),
+      getDisplay: (row) => display(sourceTable.table_schema, String(row.rule_name), sourceTable.table_name),
       createDdl: (row) => pushSemicolon(row.rule_definition || ''),
       deleteDdl: (row) => params.ddl.dropRule(tableName, row),
-      label: `${tableName}: regra`,
       kind: 'rule',
       schema: sourceTable.table_schema,
       parentName: sourceTable.table_name,
@@ -999,14 +1029,19 @@ const compareTableParts = (
       addItem({
         operation: 'modify',
         kind: 'owner',
-        label: `${tableName}: owner`,
+        display: display(sourceTable.table_schema, sourceTable.table_name),
         source: endpoint(sourceTable.table_schema, sourceTable.table_name),
         target: endpoint(targetTable.table_schema, targetTable.table_name),
         ddl: `ALTER TABLE ${tableName} OWNER TO ${params.quoteIdentifier(sourceTable.owner_name)};`,
         rollbackDdl: params.options.enableRollback
           ? `ALTER TABLE ${tableName} OWNER TO ${params.quoteIdentifier(targetTable.owner_name)};`
           : undefined,
-        details: [`Origem: ${sourceTable.owner_name}`, `Destino: ${targetTable.owner_name}`],
+        details: [
+          {
+            code: 'owner_changed',
+            values: { source: sourceTable.owner_name, target: targetTable.owner_name },
+          },
+        ],
       }),
     );
   }
@@ -1055,7 +1090,12 @@ const compareTables = (
         addItem({
           operation: 'modify',
           kind: sourceTable.object_type || 'table',
-          label: `${sourceName}: renomear ${objectTypeLabel[sourceTable.object_type || 'table']}`,
+          display: display(
+            sourceTable.table_schema,
+            sourceTable.table_name,
+            undefined,
+            targetTable.table_name,
+          ),
           source: endpoint(sourceTable.table_schema, sourceTable.table_name),
           target: endpoint(targetTable.table_schema, targetTable.table_name),
           ddl: `ALTER TABLE ${targetName} RENAME TO ${adapter.quoteIdentifier(sourceTable.table_name)};`,
@@ -1077,7 +1117,7 @@ const compareTables = (
       addItem({
         operation: 'create',
         kind: type,
-        label: `${objectTypeLabel[type]} ${name}`,
+        display: display(sourceTable.table_schema, sourceTable.table_name),
         source: endpoint(sourceTable.table_schema, sourceTable.table_name),
         ddl: pushSemicolon(sourceTable.definition || `-- Definição não disponível para ${name}`),
         rollbackDdl: options.enableRollback
@@ -1091,13 +1131,12 @@ const compareTables = (
     if (handledTargetOnly.has(key)) return;
 
     const type = targetTable.object_type || 'table';
-    const name = ddl.qualifiedName(targetTable.table_schema, targetTable.table_name);
 
     items.push(
       addItem({
         operation: 'delete',
         kind: type,
-        label: `${objectTypeLabel[type]} ${name}`,
+        display: display(targetTable.table_schema, targetTable.table_name),
         target: endpoint(targetTable.table_schema, targetTable.table_name),
         ddl: ddl.dropObject(type, targetTable.table_schema, targetTable.table_name, options.useCascadeDelete),
         rollbackDdl: options.enableRollback ? pushSemicolon(targetTable.definition || '') : undefined,
@@ -1110,7 +1149,6 @@ const compareTables = (
     if (!targetTable) return;
 
     const type = sourceTable.object_type || 'table';
-    const name = ddl.qualifiedName(sourceTable.table_schema, sourceTable.table_name);
 
     if (type === 'view' || type === 'materialized_view') {
       if (normalizeSql(sourceTable.definition) !== normalizeSql(targetTable.definition)) {
@@ -1118,12 +1156,12 @@ const compareTables = (
           addItem({
             operation: 'modify',
             kind: type,
-            label: `${objectTypeLabel[type]} ${name}`,
+            display: display(sourceTable.table_schema, sourceTable.table_name),
             source: endpoint(sourceTable.table_schema, sourceTable.table_name),
             target: endpoint(targetTable.table_schema, targetTable.table_name),
             ddl: pushSemicolon(sourceTable.definition || ''),
             rollbackDdl: options.enableRollback ? pushSemicolon(targetTable.definition || '') : undefined,
-            details: ['A definição do objeto difere entre origem e destino.'],
+            details: [{ code: 'object_definition_changed' }],
           }),
         );
       }
@@ -1159,6 +1197,11 @@ const compareFunctions = (
       `${row.function_schema ? `${row.function_schema}.` : ''}${row.function_name}(${
         row.function_identity_arguments || ''
       })`,
+    getDisplay: (row) =>
+      display(
+        row.function_schema,
+        `${row.function_name}(${row.function_identity_arguments || ''})`,
+      ),
     getSignature: (row) =>
       stableStringify({
         definition: normalizeSql(row.definition),
@@ -1172,7 +1215,6 @@ const compareFunctions = (
         row.function_identity_arguments,
         options.useCascadeDelete,
       ),
-    label: 'função',
     kind: 'function',
     enableRollback: options.enableRollback,
   });
@@ -1196,6 +1238,7 @@ const compareSequences = (
     sourceRows: [...source.sequences.values()],
     targetRows: [...target.sequences.values()],
     getName: (row) => `${row.sequence_schema ? `${row.sequence_schema}.` : ''}${row.sequence_name}`,
+    getDisplay: (row) => display(row.sequence_schema, row.sequence_name),
     getSignature: (row) =>
       stableStringify({
         definition: normalizeSql(row.sequence_definition),
@@ -1209,7 +1252,6 @@ const compareSequences = (
       ),
     deleteDdl: (row) =>
       ddl.dropSequence(row.sequence_schema, row.sequence_name, options.useCascadeDelete),
-    label: 'sequência',
     kind: 'sequence',
     enableRollback: options.enableRollback,
   });
@@ -1220,14 +1262,14 @@ export const compareDatabases = async (
   getConnection: ConnectionGetter,
 ): Promise<DatabaseCompareResult> => {
   const addItem = makeItemFactory();
-  const warnings: string[] = [];
+  const warnings: DatabaseCompareMessage[] = [];
   const [source, target] = await Promise.all([
     getSnapshot(params.sourceConnectionId, params.selectedObjects, params.options, getConnection),
     getSnapshot(params.targetConnectionId, params.selectedObjects, params.options, getConnection),
   ]);
 
   if (source.connection.dialect !== target.connection.dialect) {
-    warnings.push('Origem e destino usam dialetos diferentes. A comparação pode exigir revisão manual.');
+    warnings.push({ code: 'different_dialects' });
   }
 
   const items: DatabaseCompareItem[] = [];
@@ -1253,8 +1295,7 @@ export const compareDatabases = async (
       addItem({
         operation: 'none',
         kind: 'table',
-        label: 'Nenhuma diferença encontrada',
-        details: ['Os objetos selecionados estão equivalentes para as opções marcadas.'],
+        details: [{ code: 'selected_objects_equivalent' }],
       }),
     );
   }
