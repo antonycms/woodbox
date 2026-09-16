@@ -129,13 +129,13 @@ const catppuccinLatteTheme: ITheme = {
   },
   autocomplete: {
     backgroundColor: '#dce0e8',
-    hoverBackgroundColor: '#302d3a',
+    hoverBackgroundColor: '#ced1d7',
     selectedBackgroundColor: '#1e66f533',
     activeBackgroundColor: '#cba6f77f',
     borderColor: '#ccd0da7f',
     shadowColor: '#00000033',
     blank: {
-      hoverBackgroundColor: '#dce0e83d',
+      hoverBackgroundColor: '#ced1d7',
       selectedBackgroundColor: '#dce0e8',
       activeBackgroundColor: '#dce0e8',
       borderColor: '#ccd0da7f',

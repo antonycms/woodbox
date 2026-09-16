@@ -129,13 +129,13 @@ const githubLightTheme: ITheme = {
   },
   autocomplete: {
     backgroundColor: '#dfe6ef',
-    hoverBackgroundColor: '#302d3a',
+    hoverBackgroundColor: '#cfd7e0',
     selectedBackgroundColor: '#0969da33',
     activeBackgroundColor: '#d8b9ff7f',
     borderColor: '#c6ced87f',
     shadowColor: '#00000033',
     blank: {
-      hoverBackgroundColor: '#cfd8e33d',
+      hoverBackgroundColor: '#cfd7e0',
       selectedBackgroundColor: '#dfe6ef',
       activeBackgroundColor: '#dfe6ef',
       borderColor: '#c6ced87f',

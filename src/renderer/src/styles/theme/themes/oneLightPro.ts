@@ -129,13 +129,13 @@ const oneLightProTheme: ITheme = {
   },
   autocomplete: {
     backgroundColor: '#e5e5e6',
-    hoverBackgroundColor: '#302d3a',
+    hoverBackgroundColor: '#d8d8da',
     selectedBackgroundColor: '#4078f233',
     activeBackgroundColor: '#d7b8f37f',
     borderColor: '#d0d0d07f',
     shadowColor: '#00000033',
     blank: {
-      hoverBackgroundColor: '#e5e5e63d',
+      hoverBackgroundColor: '#d8d8da',
       selectedBackgroundColor: '#e5e5e6',
       activeBackgroundColor: '#e5e5e6',
       borderColor: '#d0d0d07f',
