@@ -43,6 +43,12 @@ rtk npm run typecheck:web
 
 Atenção: `npm run lint` executa ESLint com `--fix`. Só rode se for pedido ou combinado.
 
+## Versões e tags
+
+- Ao gerar uma nova tag de versão, atualize antes o `version` do `package.json`.
+- Faça commit da mudança de versão antes de criar a tag.
+- Depois crie a tag e faça push do commit e da tag.
+
 ## Estrutura do projeto
 
 ```txt
