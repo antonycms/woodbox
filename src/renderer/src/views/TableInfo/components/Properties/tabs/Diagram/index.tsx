@@ -46,6 +46,7 @@ type TableNodeData = {
 };
 
 const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
+  const { t } = useI18n();
   const { label, isCurrent, columns, accentColor, secondaryAccentColor, color } = data;
   const nodeAccent = isCurrent ? accentColor : secondaryAccentColor;
   return (
@@ -69,7 +70,9 @@ const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
       <div style={{ fontWeight: isCurrent ? 700 : 500, fontSize: 13, wordBreak: 'break-all' }}>
         {label}
       </div>
-      {isCurrent && <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>tabela atual</div>}
+      {isCurrent && (
+        <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>{t('diagram.currentTable')}</div>
+      )}
       {columns.length > 0 && (
         <>
           <div
@@ -161,11 +164,22 @@ const Diagram = ({
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Copiar',
+        text: t('common.copy'),
         onClick: () => copyToClipboard(contextMenuTableName),
       },
     ];
-  }, [contextMenuTableName]);
+  }, [contextMenuTableName, t]);
+
+  const diagramAriaLabelConfig = React.useMemo(
+    () => ({
+      'controls.ariaLabel': t('diagram.controls'),
+      'controls.zoomIn.ariaLabel': t('diagram.zoomIn'),
+      'controls.zoomOut.ariaLabel': t('diagram.zoomOut'),
+      'controls.fitView.ariaLabel': t('diagram.fitView'),
+      'controls.interactive.ariaLabel': t('diagram.toggleInteractivity'),
+    }),
+    [t],
+  );
 
   const onNodeContextMenu = (event: React.MouseEvent, node: Node<TableNodeData>) => {
     event.preventDefault();
@@ -372,6 +386,7 @@ const Diagram = ({
           colorMode="dark"
           nodesConnectable={false}
           proOptions={{ hideAttribution: true }}
+          ariaLabelConfig={diagramAriaLabelConfig}
           style={{ background: theme.tab.backgroundColor }}
         >
           <FlowController nodeCount={nodes.length} active={active} />
@@ -390,8 +405,8 @@ const Diagram = ({
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {totalItems > 1 ? `${totalItems} Itens` : `${totalItems} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(totalItems > 1 ? 'common.itemsCount' : 'common.itemCount', { count: totalItems })}
         </Text>
 
         <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>
