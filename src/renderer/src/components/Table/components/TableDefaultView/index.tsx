@@ -182,6 +182,7 @@ const TableDefaultView = <Row,>({
               const isNew = !!row.__is_new_row;
               const hasNewValue = newValue !== undefined;
               const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
+              const displayRow = editedRow || newRow ? { ...row, ...editedRow, ...newRow } : row;
 
               return (
                 <TableColumn
@@ -195,7 +196,9 @@ const TableDefaultView = <Row,>({
                   isRemoved={isRemoved}
                   isEditing={rowColumnKey === cellEditingKey}
                   editInitialValue={
-                    rowColumnKey === cellEditingKey ? cellEditInitialValue : undefined
+                    rowColumnKey === cellEditingKey
+                      ? (cellEditInitialValue ?? column.getEditValue?.(displayRow, column))
+                      : undefined
                   }
                   onDoubleClick={onDoubleClick}
                   onEditCell={onEditCell}
@@ -215,7 +218,7 @@ const TableDefaultView = <Row,>({
                   onSelectCell={onSelectCell}
                   onStartCellDrag={onStartCellDrag}
                   onMoveCellDrag={onMoveCellDrag}
-                  row={row}
+                  row={displayRow}
                   column={column}
                 />
               );

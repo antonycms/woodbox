@@ -28,6 +28,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     required,
     name,
     value,
+    defaultValue,
     onChange,
     color,
     backgroundColor,
@@ -55,7 +56,9 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
   const [idContainer] = React.useState(generateHash(10));
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  const [textInput, setTextInput] = useStateWithDebounce('');
+  const [textInput, setTextInput] = useStateWithDebounce(
+    defaultValue === undefined ? '' : String(defaultValue),
+  );
 
   const extractLabelRef = React.useRef(extractLabel);
   extractLabelRef.current = extractLabel;
@@ -185,6 +188,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     if (!isEnter && !isUp && !isDown) return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     if (!dataFiltered.length) return;
 
@@ -366,6 +370,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
 
 export interface IAutocompleteMultiBlankProps<T> extends IGridSystem {
   value?: (string | number)[];
+  defaultValue?: string | number;
   name?: string;
   id?: string;
   maxWidth?: string;

@@ -16,8 +16,9 @@ export interface IColumn<ColumnType = any> {
   sortable?: boolean;
   editable?: boolean;
   isLink?: boolean;
-  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
+  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-free' | 'autocomplete-multi';
   dataAutocomplete?: string[];
+  getEditValue?: TableCellValueResolver<ColumnType>;
   renderIcon?(): React.ReactElement;
   render?(row: TableSerializedRow<ColumnType>, column: IColumn<ColumnType>): React.ReactNode;
 }

@@ -4,6 +4,7 @@ import styles from '../../styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
+import { Autocomplete as AutocompleteFree } from '@renderer/components/AutocompleteFreeBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { useI18n } from '@renderer/contexts/I18n';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
@@ -250,10 +251,15 @@ const TableAnalysisInput = ({
   const handleAutocompleteChange = React.useCallback(
     ({ value: newValue }: { value: string | number }) => {
       onBlurCell?.();
-      if (newValue === null || value === newValue) return;
+      if (newValue === null) return;
+      if (column.type === 'autocomplete-free') {
+        if (String(inputInitialValue ?? '') === String(newValue)) return;
+      } else if (value === newValue) {
+        return;
+      }
       onEditCell?.(rowIndex, attribute, newValue);
     },
-    [attribute, onBlurCell, onEditCell, rowIndex, value],
+    [attribute, column.type, inputInitialValue, onBlurCell, onEditCell, rowIndex, value],
   );
 
   const handleAutocompleteMultiChange = React.useCallback(
@@ -286,11 +292,31 @@ const TableAnalysisInput = ({
         color={'white'}
         data={column.dataAutocomplete ?? []}
         value={value}
+        defaultValue={editInitialValue}
         name={attribute}
         containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
         className={styles.table_autocomplete_input}
         placeholder={editedValue.current === undefined ? '' : String(editedValue.current)}
         onBlurWithoutChange={onBlurCell}
+        onChange={handleAutocompleteChange}
+      />
+    );
+  }
+
+  if (column.type === 'autocomplete-free') {
+    return (
+      <AutocompleteFree
+        autoFocus
+        backgroundColor={'var(--backgroundColor)'}
+        color={'white'}
+        data={column.dataAutocomplete ?? []}
+        value={value}
+        name={attribute}
+        containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
+        className={styles.table_autocomplete_input}
+        placeholder={editedValue.current === undefined ? '' : String(editedValue.current)}
+        onBlurWithoutChange={onBlurCell}
+        onKeyDown={handleInputKeyDown}
         onChange={handleAutocompleteChange}
       />
     );
@@ -304,6 +330,7 @@ const TableAnalysisInput = ({
         color={'white'}
         data={column.dataAutocomplete ?? []}
         value={Array.isArray(value) ? value : []}
+        defaultValue={editInitialValue}
         name={attribute}
         containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
         className={styles.table_autocomplete_input}
@@ -433,7 +460,9 @@ const TableAnalysisView = ({
               const isNew = !!row.__is_new_row;
               const hasNewValue = newValue !== undefined;
               const value = hasNewValue ? newValue : isEdited ? editedValue : row[column.attribute];
-              const serializedValue = serializeTableValue(value, column.type);
+              const displayRow = editedRow || newRow ? { ...row, ...editedRow, ...newRow } : row;
+              const displayValue = column.getEditValue?.(displayRow, column) ?? value;
+              const serializedValue = serializeTableValue(displayValue, column.type);
               const isEditing = rowColumnKey === cellEditingKey;
               const isSelected = selectedCells?.has(selectedCellKey);
               const isSearchMatch = searchMatches?.has(selectedCellKey);
@@ -449,7 +478,7 @@ const TableAnalysisView = ({
                     value={value}
                     rowIndex={row.__index_row}
                     attribute={attribute}
-                    editInitialValue={cellEditInitialValue}
+                    editInitialValue={cellEditInitialValue ?? column.getEditValue?.(displayRow, column)}
                     onBlurCell={onBlurCell}
                     onEditCell={onEditCell}
                   />

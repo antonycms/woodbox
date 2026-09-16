@@ -2,6 +2,7 @@ import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
+import { Autocomplete as AutocompleteFree } from '@renderer/components/AutocompleteFreeBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from '../../styles.module.css';
@@ -51,7 +52,7 @@ interface ITableColumnProps {
   rowColumnKey?: string;
   width?: number;
   isLink?: boolean;
-  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-multi';
+  type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-free' | 'autocomplete-multi';
   dataAutocomplete?: string[];
   onFkCellClick?(name: string, value: any): void;
   onFkCellPreviewClick?(name: string, value: any): void;
@@ -264,11 +265,21 @@ const TableColumn = ({
     ({ value: newValue }: { value: string | number }) => {
       onBlurCell?.();
 
-      if (newValue === null || value === newValue) return;
+      if (newValue === null) return;
+      if (type === 'autocomplete-free') {
+        const currentEditValue =
+          !isHeaderColumn && row && column?.getEditValue
+            ? column.getEditValue(row, column)
+            : inputInitialValue;
+
+        if (String(currentEditValue ?? '') === String(newValue)) return;
+      } else if (value === newValue) {
+        return;
+      }
 
       onEditCell?.(indexRow, name, newValue);
     },
-    [indexRow, name, onBlurCell, onEditCell, value],
+    [column, indexRow, inputInitialValue, isHeaderColumn, name, onBlurCell, onEditCell, row, type, value],
   );
 
   const handleAutocompleteMultiChange = React.useCallback(
@@ -320,11 +331,32 @@ const TableColumn = ({
           color={'white'}
           data={dataAutocomplete ?? []}
           value={Array.isArray(value) ? null : value}
+          defaultValue={editInitialValue}
           name={name}
           containerClassName={classes(className, styles.autocomplete_cell)}
           containerStyle={style}
           className={styles.table_autocomplete_input}
-          placeholder={serializedValue === undefined ? '' : String(serializedValue)}
+          placeholder={inputInitialValue === undefined ? '' : String(inputInitialValue)}
+          onBlurWithoutChange={onBlurCell}
+          onKeyDown={handleEditEscapeKeyDown}
+          onChange={handleAutocompleteChange}
+        />
+      );
+    }
+
+    if (type === 'autocomplete-free') {
+      return (
+        <AutocompleteFree
+          autoFocus
+          backgroundColor={'var(--backgroundColor)'}
+          color={'white'}
+          data={dataAutocomplete ?? []}
+          value={Array.isArray(value) ? null : value}
+          name={name}
+          containerClassName={classes(className, styles.autocomplete_cell)}
+          containerStyle={style}
+          className={styles.table_autocomplete_input}
+          placeholder={inputInitialValue === undefined ? '' : String(inputInitialValue)}
           onBlurWithoutChange={onBlurCell}
           onKeyDown={handleEditEscapeKeyDown}
           onChange={handleAutocompleteChange}
@@ -340,6 +372,7 @@ const TableColumn = ({
           color={'white'}
           data={dataAutocomplete ?? []}
           value={Array.isArray(value) ? value : []}
+          defaultValue={editInitialValue}
           name={name}
           containerClassName={classes(className, styles.autocomplete_cell)}
           containerStyle={style}

@@ -26,6 +26,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     required,
     name,
     value,
+    defaultValue,
     onChange,
     color,
     backgroundColor,
@@ -52,7 +53,9 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
   const [idContainer] = React.useState(generateHash(10));
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  const [textInput, setTextInput] = useStateWithDebounce('');
+  const [textInput, setTextInput] = useStateWithDebounce(
+    defaultValue === undefined ? '' : String(defaultValue),
+  );
 
   const extractLabelRef = React.useRef(extractLabel);
   extractLabelRef.current = extractLabel;
@@ -148,6 +151,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     if (!isEnter && !isUp && !isDown) return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     if (!dataFiltered.length) return;
 
@@ -256,6 +260,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         required={required}
         title={title}
         data-value={value}
+        defaultValue={defaultValue}
         placeholder={selected ? selectedLabel : placeholder}
         ref={refInput}
         onChange={onInput}
@@ -329,6 +334,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
 
 export interface IAutocompleteProps<T> extends IGridSystem {
   value?: string | number | boolean | null;
+  defaultValue?: string | number;
   name?: string;
   id?: string;
   maxWidth?: string;

@@ -644,6 +644,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
         setCellEditingKey(null);
         setCellEditInitialValue(undefined);
         refScrollContainer.current?.focus();
+        window.requestAnimationFrame(() => refScrollContainer.current?.focus());
       }
 
       const saveCell = (rowIndex: number, attribute: string) => {
