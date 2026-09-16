@@ -20,7 +20,8 @@ import type {
 } from '@renderer/contexts/TableInfoContext';
 import { useForm } from '@renderer/hooks/useForm';
 import { generateHash } from '@renderer/utils/string';
-import { Autocomplete } from '@renderer/components/Autocomplete';
+import { Autocomplete } from '@renderer/components/AutocompleteFree';
+import { parseColumnTypeInput } from '../../utils';
 import styles from './styles.module.css';
 
 interface ITableOption extends ITable {
@@ -149,7 +150,8 @@ const ModalNewColumn = ({
   const onSubmit = React.useCallback(
     handleSubmit((data) => {
       const columnName = data.column_name.trim();
-      const dataType = data.data_type.trim();
+      const parsedColumnType = parseColumnTypeInput(data.data_type);
+      const dataType = parsedColumnType.data_type;
 
       if (!columnName || !dataType) return;
       if (data.is_foreign_key && (!selectedReferenceTable || !data.reference_column_name)) return;
@@ -184,6 +186,7 @@ const ModalNewColumn = ({
       const column: IPendingColumnCreate = {
         __pendingId: generateHash(),
         column_name: columnName,
+        ...parsedColumnType,
         data_type: dataType,
         is_nullable: data.is_auto_increment ? false : !data.required,
         column_default: data.is_auto_increment

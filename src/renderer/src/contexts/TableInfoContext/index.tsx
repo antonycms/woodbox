@@ -40,6 +40,10 @@ export type * from './context';
 const COLUMN_COMPARE_ATTRIBUTES: Array<keyof IColumnInfo> = [
   'column_name',
   'data_type',
+  'character_maximum_length',
+  'numeric_precision',
+  'numeric_scale',
+  'datetime_precision',
   'is_nullable',
   'column_default',
   'is_auto_increment',

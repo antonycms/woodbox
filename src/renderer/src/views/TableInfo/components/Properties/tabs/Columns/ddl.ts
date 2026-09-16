@@ -54,19 +54,13 @@ const normalizeOptionalString = (value?: string) => {
   return trimmedValue || undefined;
 };
 
-const getColumnType = (column: IColumnInfo) => {
+export const getColumnType = (column: IColumnInfo) => {
   if (column.character_maximum_length) {
     return `${column.data_type}(${column.character_maximum_length})`;
   }
 
-  if (column.numeric_precision) {
-    return column.numeric_scale !== undefined && column.numeric_scale !== null
-      ? `${column.data_type}(${column.numeric_precision},${column.numeric_scale})`
-      : `${column.data_type}(${column.numeric_precision})`;
-  }
-
-  if (column.datetime_precision !== undefined && column.datetime_precision !== null) {
-    return `${column.data_type}(${column.datetime_precision})`;
+  if (column.numeric_precision && column.numeric_scale) {
+    return `${column.data_type}(${column.numeric_precision},${column.numeric_scale})`;
   }
 
   if (column.data_type === 'USER-DEFINED' && column.udt_name) {

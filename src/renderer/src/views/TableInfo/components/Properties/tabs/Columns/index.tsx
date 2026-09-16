@@ -28,9 +28,10 @@ import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboar
 import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateAddColumnsDdl } from './ddl';
+import { generateAddColumnsDdl, getColumnType } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { parseColumnTypeInput } from './utils';
 
 const getColumnSelectionKey = (column: IColumnInfo) =>
   (column as IColumnInfo & { __pendingId?: string }).__pendingId ||
@@ -100,6 +101,10 @@ const getEditedColumnFields = (column: IPendingColumnChange) => {
   const editableAttributes = [
     'column_name',
     'data_type',
+    'character_maximum_length',
+    'numeric_precision',
+    'numeric_scale',
+    'datetime_precision',
     'is_nullable_label',
     'is_auto_increment_label',
     'column_default',
@@ -107,8 +112,10 @@ const getEditedColumnFields = (column: IPendingColumnChange) => {
   ] as const;
 
   return editableAttributes.reduce<Record<string, any>>((acc, attribute) => {
-    const originalValue = originalColumn[attribute];
-    const changedValue = changedColumn[attribute];
+    const originalValue =
+      attribute === 'data_type' ? getColumnType(originalColumn) : originalColumn[attribute];
+    const changedValue =
+      attribute === 'data_type' ? getColumnType(changedColumn) : changedColumn[attribute];
 
     if (String(originalValue ?? '') !== String(changedValue ?? '')) {
       acc[attribute] = changedValue ?? '';
@@ -118,7 +125,7 @@ const getEditedColumnFields = (column: IPendingColumnChange) => {
   }, {});
 };
 
-const getColumnSearchValues = (column: IColumnInfo) => [column.column_name, column.data_type];
+const getColumnSearchValues = (column: IColumnInfo) => [column.column_name, getColumnType(column)];
 
 const Columns = ({
   id_connection,
@@ -271,8 +278,10 @@ const Columns = ({
         attribute: 'data_type',
         editable: !isReadOnlyObject,
         sortable: true,
-        type: 'autocomplete',
+        type: 'autocomplete-free',
         dataAutocomplete: columnTypes,
+        getEditValue: (column) => getColumnType(column),
+        render: (column) => getColumnType(column),
       },
       {
         label: t('field.nullable'),
@@ -434,12 +443,18 @@ const Columns = ({
           return;
         }
       } else if (attribute === 'data_type') {
-        nextValue = String(value ?? '').trim();
+        const normalizedColumnType = String(value ?? '').trim();
 
-        if (!nextValue) {
+        if (!normalizedColumnType) {
           showToast({ type: 'warn', title: t('toast.columnTypeRequired') });
           return;
         }
+
+        const isRevertedChange = normalizedColumnType === getColumnType(column);
+        const parsedColumnType = isRevertedChange ? column : parseColumnTypeInput(normalizedColumnType);
+
+        nextValue = parsedColumnType.data_type;
+        extraColumnChanges = parsedColumnType;
       } else if (attribute === 'is_nullable_label') {
         const parsedNullableValue = parseNullableValue(value);
 
