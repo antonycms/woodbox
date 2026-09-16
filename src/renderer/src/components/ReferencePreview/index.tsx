@@ -1,13 +1,19 @@
 import React from 'react';
 import { Button } from '@renderer/components/Button';
+import {
+  ContextMenu,
+  type IContextMenuOption,
+  type IContextMenuPosition,
+} from '@renderer/components/ContextMenu';
 import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
-import Table from '@renderer/components/Table';
+import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { useThemeContext } from '@renderer/contexts/Theme';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { copyToClipboard } from '@renderer/utils/methods';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import styles from './styles.module.css';
 
@@ -33,6 +39,11 @@ interface IReferencePreviewProps {
 interface IReferenceHistoryItem {
   reference: IColumnReferenceInfo;
   value: any;
+}
+
+interface IReferenceContextMenu {
+  data: ITableContextMenuData;
+  position: IContextMenuPosition;
 }
 
 const getTableName = (reference?: IColumnReferenceInfo) =>
@@ -82,6 +93,7 @@ const ReferencePreview = ({
   const [referencesCache, setReferencesCache] = React.useState(
     new Map<string, IColumnReferenceInfo[]>(),
   );
+  const [contextMenu, setContextMenu] = React.useState<IReferenceContextMenu>();
 
   const currentItem = history[historyIndex];
   const currentReference = currentItem?.reference;
@@ -210,6 +222,29 @@ const ReferencePreview = ({
     referencesCache,
     rowsCache,
   ]);
+
+  const handleContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>, data: ITableContextMenuData) => {
+      event.preventDefault();
+
+      setContextMenu({ data, position: { x: event.clientX, y: event.clientY } });
+    },
+    [],
+  );
+
+  const closeContextMenu = React.useCallback(() => {
+    setContextMenu(undefined);
+  }, []);
+
+  const contextMenuOptions = React.useMemo<IContextMenuOption[]>(
+    () => [
+      {
+        text: t('common.copy'),
+        onClick: () => copyToClipboard(contextMenu?.data.cellsText || ''),
+      },
+    ],
+    [contextMenu, t],
+  );
 
   const handleOpenNestedReference = React.useCallback(
     (attribute: string, value: any) => {
@@ -343,9 +378,16 @@ const ReferencePreview = ({
             onCellLinkClick={onOpenTable ? handleOpenReferencedTable : handleOpenNestedReference}
             onCellLinkPreviewClick={handleOpenNestedReference}
             cellLinkClickMode={onOpenTable ? 'ctrl' : 'single'}
+            onContextMenu={handleContextMenu}
           />
         )}
       </div>
+
+      <ContextMenu
+        position={contextMenu?.position}
+        onClose={closeContextMenu}
+        options={contextMenuOptions}
+      />
     </div>
   );
 };
