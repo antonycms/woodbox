@@ -328,7 +328,6 @@ const TableColumn = ({
         <Autocomplete
           autoFocus
           backgroundColor={'var(--backgroundColor)'}
-          color={'white'}
           data={dataAutocomplete ?? []}
           value={Array.isArray(value) ? null : value}
           defaultValue={editInitialValue}
@@ -349,7 +348,6 @@ const TableColumn = ({
         <AutocompleteFree
           autoFocus
           backgroundColor={'var(--backgroundColor)'}
-          color={'white'}
           data={dataAutocomplete ?? []}
           value={Array.isArray(value) ? null : value}
           name={name}
@@ -369,7 +367,6 @@ const TableColumn = ({
         <AutocompleteMultiBlank
           autoFocus
           backgroundColor={'var(--backgroundColor)'}
-          color={'white'}
           data={dataAutocomplete ?? []}
           value={Array.isArray(value) ? value : []}
           defaultValue={editInitialValue}
