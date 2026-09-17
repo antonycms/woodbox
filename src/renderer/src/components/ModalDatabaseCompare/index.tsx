@@ -41,7 +41,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
   const { showToast } = useToast();
   const { connections, connectionsInfo, loadConnectionInfo, compareDatabases } = useStoreContext();
   const {
-    activeTheme: { table: tableTheme, mainTab, modal: modalTheme },
+    activeTheme: { table: tableTheme, modal: modalTheme },
   } = useThemeContext();
 
   const [sourceConnectionId, setSourceConnectionId] = React.useState<string>();
