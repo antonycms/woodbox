@@ -42,18 +42,6 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
 
   const isInvalidPosition = typeof positionX !== 'number' || typeof positionY !== 'number';
 
-  React.useEffect(() => {
-    if (isInvalidPosition) return;
-
-    const clickCallback = () => onClose?.();
-
-    window.addEventListener('click', clickCallback);
-
-    return () => {
-      window.removeEventListener('click', clickCallback);
-    };
-  }, [isInvalidPosition, onClose]);
-
   const updateMenuPosition = React.useCallback(() => {
     if (isInvalidPosition) return;
 
@@ -115,6 +103,18 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   React.useLayoutEffect(() => {
     updateMenuPosition();
   }, [updateMenuPosition, options, activeContextInfo]);
+
+  React.useEffect(() => {
+    if (isInvalidPosition) return;
+
+    const clickCallback = () => onClose?.();
+
+    window.addEventListener('click', clickCallback);
+
+    return () => {
+      window.removeEventListener('click', clickCallback);
+    };
+  }, [isInvalidPosition, onClose]);
 
   React.useEffect(() => {
     if (isInvalidPosition) return;
