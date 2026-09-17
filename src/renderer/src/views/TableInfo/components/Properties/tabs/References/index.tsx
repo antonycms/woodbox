@@ -6,7 +6,6 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
 import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
@@ -14,22 +13,12 @@ import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/T
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import FilterBar from '../../components/FilterBar';
+import { getReferenceRowKey, getReferenceSearchValues } from './utils';
+import { IReferenceRow } from './dtos';
 
 interface IReferencesProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
 }
-
-type IReferenceRow = IColumnReferenceInfo & { source_table: string };
-
-const getReferenceRowKey = (item: IReferenceRow) =>
-  `${item.table_schema}-${item.table_name}-${item.constraint_name}-${item.column_name}`;
-
-const getReferenceSearchValues = (row: IReferenceRow) => [
-  row.constraint_name,
-  row.source_table,
-  row.column_name,
-  row.reference_column_name,
-];
 
 const References = ({ id_connection, schema, table, onOpenTable }: IReferencesProps) => {
   const {
@@ -44,11 +33,6 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
   const [sort, setSort] = React.useState<ITableSort[]>([]);
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.usedAsReference);
-
-  React.useEffect(() => {
-    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
-    loadTableUsedAsReference(id_connection, { schema, table });
-  }, []);
 
   const rowsSerialized = React.useMemo(
     () =>
@@ -106,6 +90,10 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
     [t],
   );
 
+  React.useEffect(() => {
+    loadTableUsedAsReference(id_connection, { schema, table });
+  }, [id_connection, loadTableUsedAsReference, schema, table]);
+
   return (
     <>
       <FilterBar
@@ -133,10 +121,13 @@ const References = ({ id_connection, schema, table, onOpenTable }: IReferencesPr
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredAndSortedRows?.length > 1
-            ? `${filteredAndSortedRows?.length} Itens`
-            : `${filteredAndSortedRows?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(
+            filteredAndSortedRows.length === 1
+              ? 'common.itemCountSingular'
+              : 'common.itemCountPlural',
+            { count: filteredAndSortedRows.length },
+          )}
         </Text>
 
         <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>

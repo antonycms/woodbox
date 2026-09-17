@@ -45,21 +45,6 @@ const getGeneratedIndexName = (table: string, columns: string[]) => {
   return `${table}_${columnPart}_idx`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
 };
 
-const mysqlAutoIncrementTypes = new Set([
-  'tinyint',
-  'smallint',
-  'mediumint',
-  'int',
-  'integer',
-  'bigint',
-]);
-
-const isAutoIncrementType = (dataType: string) => {
-  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
-
-  return mysqlAutoIncrementTypes.has(normalizedDataType);
-};
-
 const defaultForm: IFormData = {
   column_name: '',
   data_type: '',
@@ -83,6 +68,7 @@ const ModalNewColumn = ({
   tables,
   hasPrimaryKey,
   supportsAutoIncrement,
+  canUseAutoIncrement,
   indexMethods = [],
   onClose,
   onAdd,
@@ -165,7 +151,7 @@ const ModalNewColumn = ({
         return;
       }
 
-      if (data.is_auto_increment && !isAutoIncrementType(dataType)) {
+      if (data.is_auto_increment && canUseAutoIncrement && !canUseAutoIncrement(dataType)) {
         showToast({
           type: 'warn',
           title: t('toast.invalidAutoIncrementType'),
@@ -199,7 +185,7 @@ const ModalNewColumn = ({
       const reference: IPendingReferenceCreate | undefined = data.is_foreign_key
         ? {
             __pendingId: generateHash(),
-                constraint_name: getGeneratedForeignKeyName(
+            constraint_name: getGeneratedForeignKeyName(
               table,
               columnName,
               selectedReferenceTable!.table_name,
@@ -216,7 +202,7 @@ const ModalNewColumn = ({
       const index: IPendingIndexCreate | undefined = data.is_index
         ? {
             __pendingId: generateHash(),
-                index_name: getGeneratedIndexName(table, [columnName]),
+            index_name: getGeneratedIndexName(table, [columnName]),
             index_method: indexMethods[0] || '',
             is_unique: false,
             is_primary: false,
@@ -237,7 +223,17 @@ const ModalNewColumn = ({
       });
       if (shouldClose !== false) close();
     }),
-    [handleSubmit, onAdd, close, showToast, selectedReferenceTable, table, indexMethods, t],
+    [
+      handleSubmit,
+      onAdd,
+      close,
+      showToast,
+      selectedReferenceTable,
+      table,
+      indexMethods,
+      canUseAutoIncrement,
+      t,
+    ],
   );
 
   React.useEffect(() => {
@@ -416,7 +412,7 @@ const ModalNewColumn = ({
                   }));
                 }}
               />
-              Auto increment
+              {t('column.autoIncrement')}
             </label>
           )}
 
@@ -522,6 +518,7 @@ interface IModalNewColumnProps {
   tables: ITable[];
   hasPrimaryKey?: boolean;
   supportsAutoIncrement?: boolean;
+  canUseAutoIncrement?(dataType: string): boolean;
   indexMethods?: string[];
   onClose?(): void;
   onAdd?(

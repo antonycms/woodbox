@@ -185,6 +185,7 @@ export interface RendererDialect {
   supportsSchemas: boolean;
   supportsFunctions: boolean;
   supportsAutoIncrement: boolean;
+  canUseAutoIncrement?(dataType: string): boolean;
   quoteIdent(value: string): string;
   getQualifiedName(schema: string | undefined, name: string): string;
   commonColumnTypes: string[];

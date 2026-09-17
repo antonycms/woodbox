@@ -6,7 +6,6 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
 import { useStoreContext } from '@renderer/contexts/Store';
 import {
   type IPendingReferenceCreate,
@@ -28,29 +27,12 @@ import FilterBar from '../../components/FilterBar';
 import { generateReferencesDdl } from '../Columns/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
+import { IReferenceSerialized } from './dtos';
+import { getReferenceSearchValues, getReferenceSelectionKey } from './utils';
 
 interface IForeingKeysProps extends ITableInfoProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
 }
-
-interface IReferenceSerialized extends IColumnReferenceInfo {
-  table_reference: string;
-  __pendingId?: string;
-}
-
-const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>
-  (reference as IColumnReferenceInfo & { __pendingId?: string }).__pendingId ||
-  `${reference.constraint_name}-${reference.column_name}`;
-
-const getReferenceSearchValues = (reference: IReferenceSerialized) => [
-  reference.constraint_name,
-  reference.column_name,
-  reference.table_reference,
-  reference.reference_column_name,
-  reference.comment,
-  reference.remove_rule,
-  reference.update_rule,
-];
 
 const ForeingKeys = ({
   id_connection,
@@ -364,11 +346,10 @@ const ForeingKeys = ({
   });
 
   React.useEffect(() => {
-    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableReferences(id_connection, { schema, table });
-  }, []);
+  }, [id_connection, loadTableReferences, mode, schema, table]);
 
   React.useEffect(() => {
     setSelectedReferences([]);
@@ -458,7 +439,7 @@ const ForeingKeys = ({
         </Button>
 
         <Button
-          title="Remover itens selecionados"
+          title={t('common.removeSelectedItems')}
           text
           smallIcon
           color={theme.bar.color}
@@ -477,10 +458,13 @@ const ForeingKeys = ({
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredAndSortedReferences?.length > 1
-            ? `${filteredAndSortedReferences?.length} Itens`
-            : `${filteredAndSortedReferences?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(
+            filteredAndSortedReferences.length === 1
+              ? 'common.itemCountSingular'
+              : 'common.itemCountPlural',
+            { count: filteredAndSortedReferences.length },
+          )}
         </Text>
 
         {mode !== 'create' && (

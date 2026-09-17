@@ -20,6 +20,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { useToast } from '@renderer/contexts/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
+import { getRendererDialect } from '@renderer/database/dialects';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
@@ -27,21 +28,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
 import { generateRestrictionsDdl } from '../Columns/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
-import { getRendererDialect } from '@renderer/database/dialects';
-
-const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
-  (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||
-  restriction.constraint_name;
-
-const getRestrictionSearchValues = (restriction: IColumnRestrictionsInfo) => [
-  restriction.constraint_name,
-  restriction.constraint_type,
-  Array.isArray(restriction.column_names)
-    ? restriction.column_names.join(', ')
-    : restriction.column_names,
-  restriction.expression,
-  restriction.comment,
-];
+import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
 
 const Restrictios = ({
   id_connection,
@@ -312,11 +299,10 @@ const Restrictios = ({
   });
 
   React.useEffect(() => {
-    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableRestrictions(id_connection, { schema, table });
-  }, []);
+  }, [id_connection, loadTableRestrictions, mode, schema, table]);
 
   React.useEffect(() => {
     setSelectedRestrictions([]);
@@ -405,7 +391,7 @@ const Restrictios = ({
         </Button>
 
         <Button
-          title="Remover itens selecionados"
+          title={t('common.removeSelectedItems')}
           text
           smallIcon
           color={theme.bar.color}
@@ -424,10 +410,13 @@ const Restrictios = ({
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredAndSortedRestrictions?.length > 1
-            ? `${filteredAndSortedRestrictions?.length} Itens`
-            : `${filteredAndSortedRestrictions?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(
+            filteredAndSortedRestrictions.length === 1
+              ? 'common.itemCountSingular'
+              : 'common.itemCountPlural',
+            { count: filteredAndSortedRestrictions.length },
+          )}
         </Text>
 
         {mode !== 'create' && (

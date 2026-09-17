@@ -84,6 +84,12 @@ const getAutoIncrementRestriction = (column: DdlColumnInfo, restrictions: DdlRes
   return restrictions.find((restriction) => isAutoIncrementRestriction(column, restriction));
 };
 
+const canUseAutoIncrement = (dataType: string) => {
+  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
+
+  return mysqlIntegerTypes.has(normalizedDataType);
+};
+
 const getMysqlChangeColumnDdl = (
   tableName: string,
   column: Parameters<RendererDialectDdl['getChangeColumnDdl']>[1],
@@ -342,6 +348,7 @@ const mysql: RendererDialect = {
   supportsSchemas: false,
   supportsFunctions: false,
   supportsAutoIncrement: true,
+  canUseAutoIncrement,
   quoteIdent,
   getQualifiedName: (_schema, name) => quoteIdent(name),
   indexMethods: ['BTREE', 'HASH'],

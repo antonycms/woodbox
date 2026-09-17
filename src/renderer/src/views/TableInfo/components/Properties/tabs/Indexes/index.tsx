@@ -25,50 +25,13 @@ import FilterBar from '../../components/FilterBar';
 import { generateIndexesDdl } from '../Columns/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { formatSizeFromBytes } from '@renderer/utils/methods';
-
-const getIndexSelectionKey = (index: IIndexInfo) =>
-  (index as IIndexInfo & { __pendingId?: string }).__pendingId || index.index_name;
-
-const getIndexSizeText = (index: IIndexInfo) => {
-  if (index.index_size_bytes === null || index.index_size_bytes === undefined) return undefined;
-
-  const bytes = Number(index.index_size_bytes);
-
-  if (!Number.isFinite(bytes)) return undefined;
-
-  return formatSizeFromBytes(bytes);
-};
-
-const getIndexColumnsText = (index: IIndexInfo) => {
-  const columnNames = index.column_names || [];
-
-  return columnNames
-    .map((columnName, indexColumn) => {
-      const order = index.column_orders?.[indexColumn];
-
-      return order ? `${columnName} ${order}` : columnName;
-    })
-    .join(', ');
-};
-
-type IIndexInfoSerialized = IIndexInfo & {
-  column_names_display?: string;
-  index_size?: string;
-};
-
-const getIndexSearchValues = (index: IIndexInfoSerialized) => [
-  index.index_name,
-  Array.isArray(index.column_names) ? index.column_names.join(', ') : index.column_names,
-  index.column_names_display,
-  index.is_unique,
-  index.is_primary,
-  index.index_method,
-  index.is_valid,
-  index.expression,
-  index.predicate,
-  index.index_size,
-];
+import { IIndexInfoSerialized } from './dtos';
+import {
+  getIndexColumnsText,
+  getIndexSearchValues,
+  getIndexSelectionKey,
+  getIndexSizeText,
+} from './utils';
 
 const Indexes = ({
   id_connection,
@@ -348,11 +311,10 @@ const Indexes = ({
   });
 
   React.useEffect(() => {
-    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
     if (mode === 'create') return;
 
     loadTableIndexes(id_connection, { schema, table });
-  }, []);
+  }, [id_connection, loadTableIndexes, mode, schema, table]);
 
   React.useEffect(() => {
     setSelectedIndexes([]);
@@ -440,7 +402,7 @@ const Indexes = ({
         </Button>
 
         <Button
-          title="Remover itens selecionados"
+          title={t('common.removeSelectedItems')}
           text
           smallIcon
           color={theme.bar.color}
@@ -459,10 +421,13 @@ const Indexes = ({
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredAndSortedIndexes?.length > 1
-            ? `${filteredAndSortedIndexes?.length} Itens`
-            : `${filteredAndSortedIndexes?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(
+            filteredAndSortedIndexes.length === 1
+              ? 'common.itemCountSingular'
+              : 'common.itemCountPlural',
+            { count: filteredAndSortedIndexes.length },
+          )}
         </Text>
 
         {mode !== 'create' && (

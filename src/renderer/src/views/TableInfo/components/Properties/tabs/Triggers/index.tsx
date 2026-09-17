@@ -21,19 +21,7 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
 import { generateTriggersDdl } from '../Columns/ddl';
 import { getRendererDialect } from '@renderer/database/dialects';
-
-const getTriggerSearchValues = (trigger: ITriggerInfo) => [
-  trigger.trigger_name,
-  trigger.timing,
-  trigger.event,
-  trigger.orientation,
-  trigger.function_name,
-  trigger.status,
-];
-
-const getTriggerSelectionKey = (trigger: ITriggerInfo) => trigger.trigger_name;
-
-const getTriggerRowKey = (item: ITriggerInfo) => item.trigger_name;
+import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
 
 const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
   const {
@@ -80,21 +68,6 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     },
     [],
   );
-
-  React.useEffect(() => {
-    // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
-    loadTableTriggers(id_connection, { schema, table });
-  }, []);
-
-  React.useEffect(() => {
-    setSelectedTriggers([]);
-  }, [triggerFilterText]);
-
-  useSelectionReconciliation({
-    rows: triggers,
-    setSelectedRows: setSelectedTriggers,
-    getSelectionKey: getTriggerSelectionKey,
-  });
 
   const filteredAndSortedTriggers = useFilteredSortedRows({
     rows: triggers,
@@ -159,6 +132,20 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
     [t],
   );
 
+  useSelectionReconciliation({
+    rows: triggers,
+    setSelectedRows: setSelectedTriggers,
+    getSelectionKey: getTriggerSelectionKey,
+  });
+
+  React.useEffect(() => {
+    loadTableTriggers(id_connection, { schema, table });
+  }, [id_connection, loadTableTriggers, schema, table]);
+
+  React.useEffect(() => {
+    setSelectedTriggers([]);
+  }, [triggerFilterText]);
+
   return (
     <>
       <ContextMenu
@@ -201,10 +188,13 @@ const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredAndSortedTriggers?.length > 1
-            ? `${filteredAndSortedTriggers?.length} Itens`
-            : `${filteredAndSortedTriggers?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(
+            filteredAndSortedTriggers.length === 1
+              ? 'common.itemCountSingular'
+              : 'common.itemCountPlural',
+            { count: filteredAndSortedTriggers.length },
+          )}
         </Text>
 
         <Text userSelect={false} title={t('common.lastUpdatedAt')} color={theme.bar.color}>

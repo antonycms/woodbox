@@ -31,101 +31,17 @@ import FilterBar from '../../components/FilterBar';
 import { generateAddColumnsDdl, getColumnType } from './ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { parseColumnTypeInput } from './utils';
-
-const getColumnSelectionKey = (column: IColumnInfo) =>
-  (column as IColumnInfo & { __pendingId?: string }).__pendingId ||
-  (column as IPendingColumnChange).__originalColumn?.column_name ||
-  column.column_name;
-
-const getGeneratedConstraintName = (
-  table: string,
-  type: 'primary_key' | 'unique_key',
-  columns: string[],
-) => {
-  const suffix = type === 'primary_key' ? 'pk' : 'unique';
-
-  return `${table}_${columns.join('_')}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-};
-
-const normalizeOptionalString = (value: unknown) => {
-  const normalizedValue = String(value ?? '').trim();
-
-  return normalizedValue || undefined;
-};
-
-const parseNullableValue = (value: unknown) => {
-  if (typeof value === 'boolean') return value;
-
-  const normalizedValue = String(value ?? '')
-    .trim()
-    .toLowerCase();
-
-  if (['true', 'sim', 'yes', '1'].includes(normalizedValue)) return true;
-  if (['false', 'não', 'nao', 'no', '0'].includes(normalizedValue)) return false;
-
-  return null;
-};
-
-const booleanLabelOptions = ['Sim', 'Não'];
-
-const serializeBooleanLabel = (value: unknown) => (value ? 'Sim' : 'Não');
-
-const mysqlAutoIncrementTypes = new Set([
-  'tinyint',
-  'smallint',
-  'mediumint',
-  'int',
-  'integer',
-  'bigint',
-]);
-
-const isMysqlAutoIncrementType = (dataType: string) => {
-  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
-
-  return mysqlAutoIncrementTypes.has(normalizedDataType);
-};
-
-const serializeColumnBooleanLabels = (column: IColumnInfo): IColumnInfo => ({
-  ...column,
-  is_nullable_label: serializeBooleanLabel(column.is_nullable),
-  is_auto_increment_label: serializeBooleanLabel(column.is_auto_increment),
-});
-
-const getOriginalColumnName = (column: IColumnInfo) =>
-  (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
-
-const getEditedColumnFields = (column: IPendingColumnChange) => {
-  const originalColumn = serializeColumnBooleanLabels(column.__originalColumn);
-  const changedColumn = serializeColumnBooleanLabels(column);
-  const editableAttributes = [
-    'column_name',
-    'data_type',
-    'character_maximum_length',
-    'numeric_precision',
-    'numeric_scale',
-    'datetime_precision',
-    'is_nullable_label',
-    'is_auto_increment_label',
-    'column_default',
-    'description',
-  ] as const;
-
-  return editableAttributes.reduce<Record<string, any>>((acc, attribute) => {
-    const originalValue =
-      attribute === 'data_type' ? getColumnType(originalColumn) : originalColumn[attribute];
-    const changedValue =
-      attribute === 'data_type' ? getColumnType(changedColumn) : changedColumn[attribute];
-
-    if (String(originalValue ?? '') !== String(changedValue ?? '')) {
-      acc[attribute] = changedValue ?? '';
-    }
-
-    return acc;
-  }, {});
-};
-
-const getColumnSearchValues = (column: IColumnInfo) => [column.column_name, getColumnType(column)];
+import {
+  getColumnSearchValues,
+  getColumnSelectionKey,
+  getEditedColumnFields,
+  getGeneratedConstraintName,
+  getOriginalColumnName,
+  normalizeOptionalString,
+  parseBooleanLabelValue,
+  parseColumnTypeInput,
+  serializeColumnBooleanLabels,
+} from './utils';
 
 const Columns = ({
   id_connection,
@@ -193,36 +109,47 @@ const Columns = ({
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
   const connectionInfo = connectionsInfo.get(id_connection);
+  const booleanLabels = React.useMemo(
+    () => ({ yes: t('common.yes'), no: t('common.no') }),
+    [t],
+  );
   const droppedColumnNames = React.useMemo(
     () => new Set(pendingDroppedColumns.map((column) => column.column_name)),
     [pendingDroppedColumns],
   );
   const changedColumnsByOriginalName = React.useMemo(
     () =>
-      new Map(pendingChangedColumns.map((column) => [column.__originalColumn.column_name, column])),
-    [pendingChangedColumns],
+      new Map(
+        pendingChangedColumns.map((column) => [
+          column.__originalColumn.column_name,
+          serializeColumnBooleanLabels(column, booleanLabels),
+        ]),
+      ),
+    [booleanLabels, pendingChangedColumns],
   );
   const existingColumns = React.useMemo(
-    () => columns.map(serializeColumnBooleanLabels),
-    [columns],
+    () => columns.map((column) => serializeColumnBooleanLabels(column, booleanLabels)),
+    [booleanLabels, columns],
   );
   const editedColumnRows = React.useMemo(
     () =>
       new Map(
         pendingChangedColumns.map((column) => [
           column.__originalColumn.column_name,
-          getEditedColumnFields(column),
+          getEditedColumnFields(column, booleanLabels),
         ]),
       ),
-    [pendingChangedColumns],
+    [booleanLabels, pendingChangedColumns],
   );
   const pendingColumnRows = React.useMemo(
-    () => pendingColumns.map(serializeColumnBooleanLabels),
-    [pendingColumns],
+    () => pendingColumns.map((column) => serializeColumnBooleanLabels(column, booleanLabels)),
+    [booleanLabels, pendingColumns],
   );
   const allColumns = React.useMemo(
     () => [
-      ...existingColumns.map((column) => changedColumnsByOriginalName.get(column.column_name) || column),
+      ...existingColumns.map(
+        (column) => changedColumnsByOriginalName.get(column.column_name) || column,
+      ),
       ...pendingColumnRows,
     ],
     [changedColumnsByOriginalName, existingColumns, pendingColumnRows],
@@ -289,7 +216,7 @@ const Columns = ({
         editable: !isReadOnlyObject,
         sortable: true,
         type: 'autocomplete',
-        dataAutocomplete: booleanLabelOptions,
+        dataAutocomplete: [booleanLabels.yes, booleanLabels.no],
       },
       ...(dialect.supportsAutoIncrement
         ? [
@@ -299,7 +226,7 @@ const Columns = ({
               editable: !isReadOnlyObject,
               sortable: true,
               type: 'autocomplete' as const,
-              dataAutocomplete: booleanLabelOptions,
+              dataAutocomplete: [booleanLabels.yes, booleanLabels.no],
             },
           ]
         : []),
@@ -316,7 +243,7 @@ const Columns = ({
         sortable: true,
       },
     ],
-    [columnTypes, dialect.supportsAutoIncrement, isReadOnlyObject, t],
+    [booleanLabels, columnTypes, dialect.supportsAutoIncrement, isReadOnlyObject, t],
   );
 
   const handleOpenNewColumnModal = React.useCallback(() => {
@@ -408,6 +335,7 @@ const Columns = ({
       schema,
       showToast,
       table,
+      t,
     ],
   );
 
@@ -451,12 +379,14 @@ const Columns = ({
         }
 
         const isRevertedChange = normalizedColumnType === getColumnType(column);
-        const parsedColumnType = isRevertedChange ? column : parseColumnTypeInput(normalizedColumnType);
+        const parsedColumnType = isRevertedChange
+          ? column
+          : parseColumnTypeInput(normalizedColumnType);
 
         nextValue = parsedColumnType.data_type;
         extraColumnChanges = parsedColumnType;
       } else if (attribute === 'is_nullable_label') {
-        const parsedNullableValue = parseNullableValue(value);
+        const parsedNullableValue = parseBooleanLabelValue(value, booleanLabels);
 
         if (parsedNullableValue === null) {
           showToast({
@@ -470,7 +400,7 @@ const Columns = ({
         attribute = 'is_nullable';
         nextValue = parsedNullableValue;
       } else if (attribute === 'is_auto_increment_label') {
-        const parsedAutoIncrementValue = parseNullableValue(value);
+        const parsedAutoIncrementValue = parseBooleanLabelValue(value, booleanLabels);
 
         if (parsedAutoIncrementValue === null) {
           showToast({
@@ -481,11 +411,15 @@ const Columns = ({
           return;
         }
 
-        if (parsedAutoIncrementValue && !isMysqlAutoIncrementType(column.data_type)) {
+        if (
+          parsedAutoIncrementValue &&
+          dialect.canUseAutoIncrement &&
+          !dialect.canUseAutoIncrement(column.data_type)
+        ) {
           showToast({
             type: 'warn',
             title: t('toast.invalidAutoIncrementType'),
-            description: t('toast.invalidAutoIncrementMysqlHelp'),
+            description: t('column.autoIncrementTypesHelp'),
           });
           return;
         }
@@ -497,7 +431,7 @@ const Columns = ({
           extraColumnChanges = {
             column_default: undefined,
             is_nullable: false,
-            is_nullable_label: 'Não',
+            is_nullable_label: booleanLabels.no,
           };
         }
       } else if (['column_default', 'description'].includes(attribute)) {
@@ -522,6 +456,8 @@ const Columns = ({
     [
       addPendingChangedColumn,
       allColumns,
+      booleanLabels,
+      dialect,
       showToast,
       updatePendingColumn,
       t,
@@ -695,6 +631,7 @@ const Columns = ({
     onSave: handleSavePendingChanges,
     onUndo: handleUndoSelectedDroppedColumns,
   });
+  const displayedColumnCount = filteredColumnsAndSortedColumns.length;
 
   return (
     <div style={{ display: 'contents' }} onKeyDown={isReadOnlyObject ? undefined : handleKeyDown}>
@@ -719,6 +656,7 @@ const Columns = ({
         tables={connectionInfo?.tables || []}
         hasPrimaryKey={hasPrimaryKey}
         supportsAutoIncrement={dialect.supportsAutoIncrement}
+        canUseAutoIncrement={dialect.canUseAutoIncrement}
         indexMethods={dialect.indexMethods || []}
         onClose={() => setShowNewColumnModal(false)}
         onAdd={handleAddPendingColumn}
@@ -781,7 +719,7 @@ const Columns = ({
             </Button>
 
             <Button
-              title="Remover itens selecionados"
+              title={t('common.removeSelectedItems')}
               text
               smallIcon
               color={theme.bar.color}
@@ -802,10 +740,10 @@ const Columns = ({
 
         <Spacer />
 
-        <Text userSelect={false} title="Total de itens" color={theme.bar.color}>
-          {filteredColumnsAndSortedColumns?.length > 1
-            ? `${filteredColumnsAndSortedColumns?.length} Itens`
-            : `${filteredColumnsAndSortedColumns?.length || 0} Item`}
+        <Text userSelect={false} title={t('common.totalItems')} color={theme.bar.color}>
+          {t(displayedColumnCount === 1 ? 'common.itemCountSingular' : 'common.itemCountPlural', {
+            count: displayedColumnCount,
+          })}
         </Text>
 
         {mode !== 'create' && (
