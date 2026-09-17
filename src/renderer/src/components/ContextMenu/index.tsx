@@ -4,6 +4,7 @@ import { useThemeContext } from '@renderer/contexts/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 import { getBoundaryRect } from '@renderer/utils/DOM';
+import { generateHash } from '@renderer/utils/string';
 
 export interface IContextMenuOption<ActiveContextInfo = any> {
   text: string;
@@ -35,15 +36,19 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
   const { x: positionX, y: positionY } = position || {};
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const [hash] = React.useState(generateHash(10));
   const [menuPosition, setMenuPosition] = React.useState<{
     style: React.CSSProperties;
     openSubmenusToLeft: boolean;
   }>();
 
-  const isInvalidPosition = typeof positionX !== 'number' || typeof positionY !== 'number';
+  const hasPosition = typeof positionX === 'number' && typeof positionY === 'number';
+  const hasOptions = !!options?.length;
+
+  const show = hasPosition && hasOptions;
 
   const updateMenuPosition = React.useCallback(() => {
-    if (isInvalidPosition) return;
+    if (!show) return;
 
     const container = containerRef.current;
     if (!container) return;
@@ -98,35 +103,40 @@ export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<Ac
 
       return { style: { top, left }, openSubmenusToLeft };
     });
-  }, [isInvalidPosition, placement, positionX, positionY]);
+  }, [show, placement, positionX, positionY]);
 
   React.useLayoutEffect(() => {
     updateMenuPosition();
   }, [updateMenuPosition, options, activeContextInfo]);
 
   React.useEffect(() => {
-    if (isInvalidPosition) return;
+    if (!show) return;
+
+    window.dispatchEvent(new CustomEvent('open_context', { detail: hash }));
 
     const clickCallback = () => onClose?.();
+    const clickCloseAfterOpenOtherContext = (e: CustomEvent) => e.detail !== hash && onClose?.();
 
     window.addEventListener('click', clickCallback);
+    window.addEventListener('open_context', clickCloseAfterOpenOtherContext);
 
     return () => {
       window.removeEventListener('click', clickCallback);
+      window.removeEventListener('open_context', clickCloseAfterOpenOtherContext);
     };
-  }, [isInvalidPosition, onClose]);
+  }, [show, onClose, hash]);
 
   React.useEffect(() => {
-    if (isInvalidPosition) return;
+    if (!show) return;
 
     window.addEventListener('resize', updateMenuPosition);
 
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
     };
-  }, [isInvalidPosition, updateMenuPosition]);
+  }, [show, updateMenuPosition]);
 
-  if (isInvalidPosition) return null;
+  if (!show) return null;
 
   const fallbackPositionStyle = { top: positionY, left: positionX };
 
