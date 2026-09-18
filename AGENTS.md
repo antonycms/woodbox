@@ -50,7 +50,7 @@ Atenção: `npm run lint` executa ESLint com `--fix`. Só rode se for pedido ou 
 - Antes de criar a tag, analise os commits desde a última tag de versão (`git describe --tags --abbrev=0` e `git log <tag>..HEAD --oneline`).
 - Gere release notes a partir desses commits, incluindo apenas mudanças perceptíveis ao usuário, como correções, melhorias de uso, desempenho, compatibilidade e recursos novos.
 - Não inclua mudanças internas sem impacto direto no usuário, como documentação do projeto, refactors internos, ajustes de CI/build sem efeito no produto ou tarefas de manutenção.
-- Crie tags de versão como tags anotadas, pois a mensagem da tag é usada como descrição da Release pela GitHub Action: `git tag -a vX.Y.Z -m "..."`.
+- Crie tags de versão como tags anotadas, sempre com mensagem em inglês, pois a mensagem da tag é usada como descrição da Release pela GitHub Action: `git tag -a vX.Y.Z -m "..."`.
 - Depois faça push do commit e da tag.
 
 ## Estrutura do projeto
