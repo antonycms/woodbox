@@ -3,9 +3,7 @@ import Editor, { IEditorRef, type IEditorContextMenu } from '@renderer/component
 import styles from './styles.module.css';
 import {
   TabBar,
-  TabContent,
   TabSplit,
-  TabWindow,
   type IActiveTabContextMenu,
 } from '@renderer/components/Tabs';
 import { useTabContentContext } from '@renderer/components/Tabs/components/TabContentProvider';
@@ -55,15 +53,10 @@ import type {
 } from './dtos';
 
 import { LateralBar } from './components/LateralBar';
-import { TabContentDelete } from './components/TabContentDelete';
-import { TabContentAlter } from './components/TabContentAlter';
-import { TabcontentError } from './components/TabContentError';
-import { TabContentGeneric } from './components/TabContentGeneric';
-import { TabContentSelect } from './components/TabContentSelect';
+import { QueryResultContent } from './components/QueryResultContent';
 import { ModalServerOutput } from './components/ModalServerOutput';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { useQueryCancellation } from './hooks/useQueryCancellation';
-import { TabContentExplain } from './components/TabContentExplain';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import ProcessList from '@renderer/views/ProcessList';
 
@@ -1313,91 +1306,48 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
               onActiveTabIdChange={setActiveTabId}
               borderColor={activeTheme.queryEditor.tab.borderColor}
               backgroundColor={activeTheme.queryEditor.tab.bar.backgroundColor}
-            >
-              {({ paneTabs, activeTabId: paneActiveTabId, tabBarProps }) => (
-                <>
-                  <TabBar
-                    {...tabBarProps}
-                    borderTop
-                    allowClose
-                    draggable
-                    borderBottom
-                    onRemoveTab={handleRemoveResultTab}
-                    contextMenuOptions={makeResultContextMenuOptions(paneTabs)}
-                    ascentColor={activeTheme.queryEditor.tab.ascentColor}
-                    backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-                    backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
-                    color={activeTheme.queryEditor.tab.color}
-                    borderColor={activeTheme.queryEditor.tab.borderColor}
+              contentBackgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+              renderTabContent={(tab) => {
+                const data = querysResultData.get(tab.idTab);
+
+                if (!data) return null;
+
+                return (
+                  <QueryResultContent
+                    data={data}
+                    id_connection={id_connection}
+                    references={tableReferences}
+                    onScrollEnd={() => onScrollEnd(tab.idTab)}
+                    onRefresh={() => refreshResultSqlTab(tab.idTab)}
+                    onCancelQuery={() => cancelResultQuery(tab.idTab)}
+                    onToggleCapture={() => toggleResultCapture(tab.idTab)}
+                    onClearCapture={() => clearResultCapture(tab.idTab)}
+                    onSort={(column, sortType) =>
+                      handleSortQueryResult(tab.idTab, column.attribute, sortType)
+                    }
+                    cancelingQuery={
+                      !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
+                    }
                   />
-
-                  <TabWindow activeTabId={paneActiveTabId}>
-                    {paneTabs.map((tabResult) => {
-                      const data = querysResultData.get(tabResult.idTab);
-
-                      if (!data) return null;
-
-                      const isErrorResult = data.type === 'ERROR';
-                      const isExplainResult = data.type === 'EXPLAIN';
-                      const isSelectResult =
-                        !isErrorResult &&
-                        !isExplainResult &&
-                        (data.type === 'SELECT' || !!data.columns?.length);
-                      const isDeleteResult = !isSelectResult && data.type === 'DELETE';
-                      const isAlterResult = !isSelectResult && data.type === 'ALTER';
-                      const isGenericResult =
-                        !isSelectResult &&
-                        !['SELECT', 'DELETE', 'ALTER', 'ERROR', 'EXPLAIN'].includes(data.type);
-                      const isReadOnlyResult = data.type !== 'SELECT';
-
-                      return (
-                        <TabContent
-                          key={tabResult.idTab}
-                          idTab={tabResult.idTab}
-                          backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-                        >
-                          {isSelectResult && (
-                            <TabContentSelect
-                              data={data}
-                              id_connection={id_connection}
-                              references={tableReferences}
-                              readOnly={isReadOnlyResult}
-                              onSort={(column, sortType) =>
-                                handleSortQueryResult(tabResult.idTab, column.attribute, sortType)
-                              }
-                              onScrollEnd={() => onScrollEnd(tabResult.idTab)}
-                              onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
-                              onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
-                              onToggleCapture={() => toggleResultCapture(tabResult.idTab)}
-                              onClearCapture={() => clearResultCapture(tabResult.idTab)}
-                              cancelingQuery={
-                                !!data.queryExecutionId &&
-                                cancelingQueryIds.has(data.queryExecutionId)
-                              }
-                            />
-                          )}
-
-                          {isDeleteResult && <TabContentDelete data={data} />}
-                          {isAlterResult && <TabContentAlter data={data} />}
-                          {isExplainResult && (
-                            <TabContentExplain
-                              data={data}
-                              onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
-                              cancelingQuery={
-                                !!data.queryExecutionId &&
-                                cancelingQueryIds.has(data.queryExecutionId)
-                              }
-                            />
-                          )}
-                          {isErrorResult && <TabcontentError data={data} />}
-                          {isGenericResult && <TabContentGeneric data={data} />}
-                        </TabContent>
-                      );
-                    })}
-                  </TabWindow>
-                </>
+                );
+              }}
+              renderBar={({ paneTabs, tabBarProps }) => (
+                <TabBar
+                  {...tabBarProps}
+                  borderTop
+                  allowClose
+                  draggable
+                  borderBottom
+                  onRemoveTab={handleRemoveResultTab}
+                  contextMenuOptions={makeResultContextMenuOptions(paneTabs)}
+                  ascentColor={activeTheme.queryEditor.tab.ascentColor}
+                  backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                  backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
+                  color={activeTheme.queryEditor.tab.color}
+                  borderColor={activeTheme.queryEditor.tab.borderColor}
+                />
               )}
-            </TabSplit>
+            />
           </div>
         </ResizableContainer>
       )}

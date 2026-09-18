@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   TabBar,
-  TabWindow,
-  TabContent,
   TabSplit,
   IActiveTabContextMenu,
 } from '@renderer/components/Tabs';
@@ -154,47 +152,33 @@ export const MainContent = () => {
         isTabVisible={(tab) => !tab.groupId || !collapsedGroupIds.has(tab.groupId)}
         borderColor={theme.bar.borderColor}
         backgroundColor={theme.bar.backgroundColor}
-        dropOverlayTop="42px"
-      >
-        {({ paneTabs, activeTabId: paneActiveTabId, isLastPane, tabBarProps }) => (
-          <>
-            <TabBar
-              {...tabBarProps}
-              allowClose
-              draggable
-              borderBottom
-              padding={isLastPane && !aiChatVisible ? '0 34px 0 0' : undefined}
-              color={theme.color}
-              ascentColor={theme.ascentColor}
-              backgroundColor={theme.backgroundColor}
-              backgroundColorBar={theme.bar.backgroundColor}
-              borderColor={theme.bar.borderColor}
-              onRemoveTab={(tab) => removeTab(tab.idTab)}
-              groups={tabGroups}
-              onAddTabToGroup={addTabToGroup}
-              onRemoveTabFromGroup={removeTabFromGroup}
-              onUpdateTabGroup={updateTabGroup}
-              onUngroupTabGroup={ungroupTabGroup}
-              onCloseTabGroup={closeTabGroup}
-              groupEditorRequest={groupEditorRequest}
-              height="42px"
-              contextMenuOptions={contextMenuOptions}
-            />
-
-            {!paneActiveTabId ? (
-              <Welcolme />
-            ) : (
-              <TabWindow activeTabId={paneActiveTabId}>
-                {paneTabs.map(({ id, component: TabComponent }) => (
-                  <TabContent key={id} idTab={id}>
-                    <TabComponent />
-                  </TabContent>
-                ))}
-              </TabWindow>
-            )}
-          </>
+        renderTabContent={({ component: TabComponent }) => <TabComponent />}
+        emptyPane={<Welcolme />}
+        renderBar={({ isLastPane, tabBarProps }) => (
+          <TabBar
+            {...tabBarProps}
+            allowClose
+            draggable
+            borderBottom
+            padding={isLastPane && !aiChatVisible ? '0 34px 0 0' : undefined}
+            color={theme.color}
+            ascentColor={theme.ascentColor}
+            backgroundColor={theme.backgroundColor}
+            backgroundColorBar={theme.bar.backgroundColor}
+            borderColor={theme.bar.borderColor}
+            onRemoveTab={(tab) => removeTab(tab.idTab)}
+            groups={tabGroups}
+            onAddTabToGroup={addTabToGroup}
+            onRemoveTabFromGroup={removeTabFromGroup}
+            onUpdateTabGroup={updateTabGroup}
+            onUngroupTabGroup={ungroupTabGroup}
+            onCloseTabGroup={closeTabGroup}
+            groupEditorRequest={groupEditorRequest}
+            height="42px"
+            contextMenuOptions={contextMenuOptions}
+          />
         )}
-      </TabSplit>
+      />
     </div>
   );
 };

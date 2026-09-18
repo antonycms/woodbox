@@ -10,7 +10,7 @@ export interface ITabSplitPane {
   activeTabId?: string;
 }
 
-export interface ITabSplitChildrenProps<TTab extends ITab = ITab> {
+export interface ITabSplitBarProps<TTab extends ITab = ITab> {
   pane: ITabSplitPane;
   paneTabs: TTab[];
   paneIndex: number;
@@ -32,11 +32,14 @@ export interface ITabSplitProps<TTab extends ITab = ITab> {
   activeTabId?: string | null;
   onActiveTabIdChange(activeTabId?: string): void;
   onMoveTab?(sourceTabId: string, targetTabId: string, placement?: ITabMovePlacement): void;
-  children(props: ITabSplitChildrenProps<TTab>): React.ReactNode;
+  /** Renderiza apenas a barra do pane; os conteúdos têm uma árvore independente. */
+  renderBar(props: ITabSplitBarProps<TTab>): React.ReactNode;
+  renderTabContent(tab: TTab): React.ReactNode;
+  emptyPane?: React.ReactNode;
   isTabVisible?(tab: TTab): boolean;
   borderColor?: string;
   backgroundColor?: string;
-  dropOverlayTop?: number | string;
+  contentBackgroundColor?: string;
   className?: string;
   style?: React.CSSProperties;
   minPanePercent?: number;

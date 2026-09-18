@@ -1,6 +1,8 @@
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import type { ITab } from '../TabBar';
+import TabContent from '../TabContent';
+import TabWindow from '../TabWindow';
 import { TabSplitProvider } from './context';
 import type {
   ITabMovePlacement,
@@ -29,10 +31,12 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
     activeTabId,
     onActiveTabIdChange,
     onMoveTab,
-    children,
+    renderBar,
+    renderTabContent,
+    emptyPane,
     borderColor,
     backgroundColor,
-    dropOverlayTop = '30px',
+    contentBackgroundColor,
     className,
     style,
     minPanePercent = MIN_SPLIT_PANE_PERCENT,
@@ -59,6 +63,29 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
   const tabsById = React.useMemo(() => {
     return new Map(tabs.map((tab) => [tab.idTab, tab]));
   }, [tabs]);
+
+  const paneLayouts = React.useMemo(() => {
+    return panes.map((pane, paneIndex) => {
+      const paneTabs = pane.tabIds.flatMap((id) => {
+        const tab = tabsById.get(id);
+
+        return tab ? [tab] : [];
+      });
+      const visiblePaneTabs = paneTabs.filter(isTabVisible);
+      const paneActiveTabId =
+        pane.activeTabId && visiblePaneTabs.some((tab) => tab.idTab === pane.activeTabId)
+          ? pane.activeTabId
+          : visiblePaneTabs[visiblePaneTabs.length - 1]?.idTab;
+
+      return { pane, paneIndex, paneTabs, activeTabId: paneActiveTabId };
+    });
+  }, [panes, tabsById, isTabVisible]);
+
+  const tabLayouts = React.useMemo(() => {
+    return new Map(
+      paneLayouts.flatMap((layout) => layout.pane.tabIds.map((id) => [id, layout] as const)),
+    );
+  }, [paneLayouts]);
 
   const contextValue = React.useMemo(
     () => ({ dragDataType, draggingTabId, setDraggingTabId }),
@@ -157,6 +184,22 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
     );
   };
 
+  const getPaneEvents = (paneId: string, paneActiveTabId?: string) => ({
+    onDragOver: (event: React.DragEvent<HTMLDivElement>) => handlePaneDragOver(event, paneId),
+    onDragLeave: (event: React.DragEvent<HTMLDivElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+        setDropTarget((prev) => (prev?.paneId === paneId ? undefined : prev));
+      }
+    },
+    onDrop: (event: React.DragEvent<HTMLDivElement>) => handlePaneDrop(event, paneId),
+    onClick: (event: React.MouseEvent<HTMLDivElement>) => {
+      if ((event.target as HTMLElement).closest('[data-tab-bar-id]')) return;
+
+      setActivePaneId(paneId);
+      if (paneActiveTabId) onActiveTabIdChange(paneActiveTabId);
+    },
+  });
+
   const handleResizeStart = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.pointerType === 'mouse' && event.buttons !== 1) return;
@@ -228,100 +271,107 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
         style={
           {
             '--tabSplitBorderColor': borderColor,
-            '--tabSplitDropOverlayTop':
-              typeof dropOverlayTop === 'number' ? `${dropOverlayTop}px` : dropOverlayTop,
+            gridTemplateColumns:
+              panes.length === 2
+                ? `minmax(0, ${firstPanePercent}fr) minmax(0, ${100 - firstPanePercent}fr)`
+                : 'minmax(0, 1fr)',
             backgroundColor,
             ...style,
           } as React.CSSProperties
         }
       >
-        {panes.map((pane, paneIndex) => {
-          const paneTabs = pane.tabIds.flatMap((id) => {
-            const tab = tabsById.get(id);
-
-            return tab ? [tab] : [];
-          });
-          const visiblePaneTabs = paneTabs.filter(isTabVisible);
-          const paneActiveTabId =
-            pane.activeTabId && visiblePaneTabs.some((tab) => tab.idTab === pane.activeTabId)
-              ? pane.activeTabId
-              : visiblePaneTabs[visiblePaneTabs.length - 1]?.idTab;
-
+        {paneLayouts.map(({ pane, paneIndex, paneTabs, activeTabId: paneActiveTabId }) => {
           if (!paneTabs.length) return null;
 
-          const paneStyle =
-            panes.length === 2
-              ? ({
-                  flex: `0 0 ${
-                    paneIndex === 0 ? firstPanePercent : 100 - firstPanePercent
-                  }%`,
-                } as React.CSSProperties)
-              : undefined;
+          const paneStyle = { gridColumn: paneIndex + 1 };
+          const paneBorder = paneIndex > 0 && styles.paneBorder;
+          const paneEvents = getPaneEvents(pane.id, paneActiveTabId);
+
+          return (
+            <React.Fragment key={pane.id}>
+              <div
+                className={classes(styles.paneHeader, paneBorder)}
+                style={paneStyle}
+                {...paneEvents}
+              >
+                {renderBar({
+                  pane,
+                  paneTabs,
+                  paneIndex,
+                  isLastPane: paneIndex === panes.length - 1,
+                  activeTabId: paneActiveTabId,
+                  tabBarProps: {
+                    activeTabId: paneActiveTabId,
+                    tabs: paneTabs,
+                    idTabBar: `tab_split_${pane.id}`,
+                    onMoveTab: (sourceTabId, targetTabId, placement) =>
+                      handleMoveTab(sourceTabId, targetTabId, pane.id, placement),
+                    onActiveTab: (tab) => {
+                      const nextActiveTabId = tab?.idTab;
+
+                      setActivePaneId((prev) => (prev === pane.id ? prev : pane.id));
+                      if (nextActiveTabId) {
+                        setPanes((prev) => setPaneActiveTab(prev, pane.id, nextActiveTabId));
+                      }
+                      onActiveTabIdChange(nextActiveTabId);
+                    },
+                  },
+                })}
+              </div>
+
+              <div
+                className={classes(
+                  styles.paneContent,
+                  paneBorder,
+                  dropTarget?.paneId === pane.id &&
+                    (dropTarget.side === 'full'
+                      ? styles.dropFull
+                      : dropTarget.side === 'left'
+                        ? styles.dropLeft
+                        : styles.dropRight),
+                )}
+                style={paneStyle}
+                {...paneEvents}
+              >
+                {!paneActiveTabId && emptyPane}
+              </div>
+            </React.Fragment>
+          );
+        })}
+
+        {/* A identidade do conteúdo depende só da aba, nunca do pane que a exibe. */}
+        {tabs.map((tab) => {
+          const layout = tabLayouts.get(tab.idTab);
+          const isActive = layout?.activeTabId === tab.idTab;
 
           return (
             <div
-              key={pane.id}
-              className={classes(
-                styles.pane,
-                dropTarget?.paneId === pane.id &&
-                  (dropTarget.side === 'full'
-                    ? styles.dropFull
-                    : dropTarget.side === 'left'
-                      ? styles.dropLeft
-                      : styles.dropRight),
-              )}
-              style={paneStyle}
-              onDragOver={(event) => handlePaneDragOver(event, pane.id)}
-              onDragLeave={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-                  setDropTarget((prev) => (prev?.paneId === pane.id ? undefined : prev));
-                }
-              }}
-              onDrop={(event) => handlePaneDrop(event, pane.id)}
-              onClick={(event) => {
-                if ((event.target as HTMLElement).closest('[data-tab-bar-id]')) return;
-
-                setActivePaneId(pane.id);
-                if (paneActiveTabId) onActiveTabIdChange(paneActiveTabId);
-              }}
+              key={tab.idTab}
+              data-tab-split-content={tab.idTab}
+              className={classes(styles.paneContent, layout?.paneIndex > 0 && styles.paneBorder)}
+              style={{ gridColumn: (layout?.paneIndex ?? 0) + 1 }}
+              hidden={!isActive}
+              {...(layout && getPaneEvents(layout.pane.id, layout.activeTabId))}
             >
-              {children({
-                pane,
-                paneTabs,
-                paneIndex,
-                isLastPane: paneIndex === panes.length - 1,
-                activeTabId: paneActiveTabId,
-                tabBarProps: {
-                  activeTabId: paneActiveTabId,
-                  tabs: paneTabs,
-                  idTabBar: `tab_split_${pane.id}`,
-                  onMoveTab: (sourceTabId, targetTabId, placement) =>
-                    handleMoveTab(sourceTabId, targetTabId, pane.id, placement),
-                  onActiveTab: (tab) => {
-                    const nextActiveTabId = tab?.idTab;
-
-                    setActivePaneId((prev) => (prev === pane.id ? prev : pane.id));
-                    if (nextActiveTabId) {
-                      setPanes((prev) => setPaneActiveTab(prev, pane.id, nextActiveTabId));
-                    }
-                    onActiveTabIdChange(nextActiveTabId);
-                  },
-                },
-              })}
-
-              {paneIndex === 0 && panes.length === 2 && (
-                <div
-                  className={styles.resizeHandle}
-                  role="separator"
-                  aria-orientation="vertical"
-                  onClick={(event) => event.stopPropagation()}
-                  onDoubleClick={() => setFirstPanePercent(50)}
-                  onPointerDown={handleResizeStart}
-                />
-              )}
+              <TabWindow activeTabId={layout?.activeTabId}>
+                <TabContent idTab={tab.idTab} backgroundColor={contentBackgroundColor}>
+                  {renderTabContent(tab)}
+                </TabContent>
+              </TabWindow>
             </div>
           );
         })}
+
+        {panes.length === 2 && (
+          <div
+            className={styles.resizeHandle}
+            role="separator"
+            aria-orientation="vertical"
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={() => setFirstPanePercent(50)}
+            onPointerDown={handleResizeStart}
+          />
+        )}
       </div>
     </TabSplitProvider>
   );
@@ -329,4 +379,4 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
 
 export default TabSplit;
 
-export type { ITabSplitChildrenProps, ITabSplitPane, ITabSplitProps } from './types';
+export type { ITabSplitBarProps, ITabSplitPane, ITabSplitProps } from './types';
