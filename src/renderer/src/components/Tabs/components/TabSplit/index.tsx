@@ -137,8 +137,7 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
       return;
     }
 
-    const tabId =
-      event.dataTransfer.getData(dragDataType) || event.dataTransfer.getData('text/plain');
+    const tabId = event.dataTransfer.getData(dragDataType);
 
     clearDropTarget();
 

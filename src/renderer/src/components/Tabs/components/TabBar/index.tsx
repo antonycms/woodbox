@@ -88,7 +88,6 @@ const TabsBar = (props: ITabsBarProps) => {
   const tabDragStart = (e: React.DragEvent<HTMLDivElement>, idTab: string) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData(dragDataType, idTab);
-    e.dataTransfer.setData('text/plain', idTab);
     setIdTabDraging(idTab);
     tabSplit?.setDraggingTabId(idTab);
   };
