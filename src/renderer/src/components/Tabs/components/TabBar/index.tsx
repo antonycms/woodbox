@@ -8,9 +8,8 @@ import {
 import { useI18n } from '@renderer/contexts/I18n';
 import Tab from '../Tab';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useTabSplitContext } from '../TabSplit/context';
 import styles from '../../styles.module.css';
-
-export const TAB_DRAG_DATA_TYPE = 'application/x-woodbox-tab-id';
 
 const TabsBar = (props: ITabsBarProps) => {
   const {
@@ -48,6 +47,7 @@ const TabsBar = (props: ITabsBarProps) => {
   const {
     activeTheme: { mainTab: theme },
   } = useThemeContext();
+  const tabSplit = useTabSplitContext();
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const handledGroupEditorRequestRef = React.useRef<IGroupEditorRequest>(null);
@@ -57,15 +57,22 @@ const TabsBar = (props: ITabsBarProps) => {
   const [activeTabContextMenu, setActiveTabContextMenu] = React.useState<IActiveTabContextMenu>();
   const [activeGroupContext, setActiveGroupContext] = React.useState<IActiveGroupContextMenu>();
   const noHasContent = !tabs.length;
+  const dragDataType = tabSplit?.dragDataType || idTabBar;
 
   const tabDragEnd = React.useCallback(() => {
     setIdTabDraging(null);
     setIdTabDragTarget(null);
     setIdGroupDragTarget(null);
-  }, []);
+    tabSplit?.setDraggingTabId(undefined);
+  }, [tabSplit]);
 
   const tabDragEnter = (idTab: string) => {
     if (!idTabDraging) return;
+
+    if (idTab === idTabDraging) {
+      setIdTabDragTarget(null);
+      return;
+    }
 
     setIdTabDragTarget(idTab);
     setIdGroupDragTarget(null);
@@ -80,9 +87,10 @@ const TabsBar = (props: ITabsBarProps) => {
 
   const tabDragStart = (e: React.DragEvent<HTMLDivElement>, idTab: string) => {
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData(TAB_DRAG_DATA_TYPE, idTab);
+    e.dataTransfer.setData(dragDataType, idTab);
     e.dataTransfer.setData('text/plain', idTab);
     setIdTabDraging(idTab);
+    tabSplit?.setDraggingTabId(idTab);
   };
 
   React.useEffect(() => {
@@ -104,9 +112,16 @@ const TabsBar = (props: ITabsBarProps) => {
     ) as HTMLElement;
     const targetTabId = target?.dataset.tabId;
     const targetGroupId = targetGroup?.dataset.tabGroupHeaderId;
-    const sourceTabId = idTabDraging || e.dataTransfer.getData(TAB_DRAG_DATA_TYPE);
+    const sourceTabId = idTabDraging || e.dataTransfer.getData(dragDataType);
     const sourceTab = tabs.find((tab) => tab.idTab === sourceTabId);
     const targetTab = tabs.find((tab) => tab.idTab === targetTabId);
+    const targetPlacement =
+      target &&
+      (vertical
+        ? e.clientY > target.getBoundingClientRect().top + target.getBoundingClientRect().height / 2
+        : e.clientX > target.getBoundingClientRect().left + target.getBoundingClientRect().width / 2)
+        ? 'after'
+        : 'before';
 
     setIdTabDraging(null);
     tabDragEnd();
@@ -120,6 +135,13 @@ const TabsBar = (props: ITabsBarProps) => {
 
     if (!targetTabId) {
       if (sourceTab?.groupId) onRemoveTabFromGroup?.(sourceTabId);
+      else {
+        const lastTab = tabs[tabs.length - 1];
+
+        if (lastTab && sourceTabId !== lastTab.idTab) {
+          onMoveTab?.(sourceTabId, lastTab.idTab, 'after');
+        }
+      }
       return;
     }
 
@@ -135,7 +157,7 @@ const TabsBar = (props: ITabsBarProps) => {
       return;
     }
 
-    onMoveTab?.(sourceTabId, targetTabId);
+    onMoveTab?.(sourceTabId, targetTabId, targetPlacement);
   };
 
   const handleClickTab = (tab: ITab) => {
