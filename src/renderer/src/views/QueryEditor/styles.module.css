@@ -34,20 +34,6 @@
   overflow: hidden;
 }
 
-.resultTabsContent > :first-child {
-  flex-shrink: 0;
-}
-
-.resultTabsContent > :last-child {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.resultTabsContent > :last-child > * {
-  min-height: 0;
-  overflow: hidden;
-}
-
 .resultContainer {
   flex: 1;
   min-height: 0;

@@ -4,6 +4,7 @@ import styles from './styles.module.css';
 import {
   TabBar,
   TabContent,
+  TabSplit,
   TabWindow,
   type IActiveTabContextMenu,
 } from '@renderer/components/Tabs';
@@ -31,6 +32,8 @@ import { arrayIsEquals } from '@renderer/utils/array';
 import { executePromisesBatch } from '@renderer/utils/promise';
 import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
+import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import type { ISortDirection } from '@renderer/components/Table/dtos';
 import { ModalQueryVariables } from './components/ModalQueryVariables';
 import { ModalConfirmProductionQuery } from './components/ModalConfirmProductionQuery';
 import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
@@ -42,8 +45,6 @@ import {
   makeQueryErrorMarker,
   makeCanceledQueryResult,
 } from './utils/queryResult';
-import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import type { ISortDirection } from '@renderer/components/Table/dtos';
 import type {
   IDataMakeTabResult,
   IDataUpdateabResult,
@@ -94,7 +95,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     currentConnection?.dialect === 'postgres' || currentConnection?.dialect === 'mysql';
   const isProductionConnection = currentConnection?.environment === 'production';
 
-  const id = React.useMemo(() => generateHash(), []);
   const refEditor = React.useRef<IEditorRef>(null);
   const loadingColumnsKeysRef = React.useRef(new Set<string>());
   const loadingReferencesKeysRef = React.useRef(new Set<string>());
@@ -775,12 +775,12 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     requestQueryExecution({ query, editorOffset: 0, forceNewTab: true, markErrors: true });
   };
 
-  const onScrollEnd = async () => {
-    const lastTabResult = querysResultData.get(activeTabId);
+  const onScrollEnd = async (idTab: string) => {
+    const lastTabResult = querysResultData.get(idTab);
 
     if (!lastTabResult || lastTabResult.loading || !lastTabResult.auto_paginated) return;
 
-    const updateTabResultData = makeUpdateResultTab(activeTabId);
+    const updateTabResultData = makeUpdateResultTab(idTab);
 
     const query = lastTabResult.query;
     const preparedQuery = prepareQueryVariables(query, lastTabResult.variableValues);
@@ -1071,8 +1071,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     tableColumns,
   ]);
 
-  const contextMenuOptions = React.useMemo<IContextMenuOption<IActiveTabContextMenu>[]>(
-    () => [
+  const makeResultContextMenuOptions = React.useCallback(
+    (paneTabs: ITab[]): IContextMenuOption<IActiveTabContextMenu>[] => [
       {
         text: 'Fechar aba',
         onClick: (info) => removeTabResult(info.tab.idTab),
@@ -1086,16 +1086,16 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           );
         },
       },
-      tabsResult.length > 1 && {
+      paneTabs.length > 1 && {
         text: 'Fechar abas à esquerda',
         onClick: (info) => {
-          removeTabResult(tabsResult.slice(0, info.index).map((tab) => tab.idTab));
+          removeTabResult(paneTabs.slice(0, info.index).map((tab) => tab.idTab));
         },
       },
-      tabsResult.length > 1 && {
+      paneTabs.length > 1 && {
         text: 'Fechar abas à direita',
         onClick: (info) => {
-          removeTabResult(tabsResult.slice(info.index + 1).map((tab) => tab.idTab));
+          removeTabResult(paneTabs.slice(info.index + 1).map((tab) => tab.idTab));
         },
       },
       tabsResult.length > 1 && {
@@ -1103,7 +1103,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
         onClick: () => removeTabResult(tabsResult.map((tab) => tab.idTab)),
       },
     ],
-    [removeTabResult, setActiveTabId, tabsResult],
+    [removeTabResult, tabsResult],
   );
 
   const editorContextMenuOptions = React.useMemo<IContextMenuOption<IEditorContextMenu>[]>(
@@ -1130,10 +1130,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     },
     [setSizeTabContent],
   );
-
-  const handleActiveResultTab = React.useCallback((tab: ITab) => {
-    setActiveTabId(tab?.idTab);
-  }, []);
 
   const runAllRef = React.useRef(runAllSQL);
   runAllRef.current = runAllSQL;
@@ -1311,85 +1307,97 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           onResize={handleResizeResultTabs}
         >
           <div className={styles.resultTabsContent}>
-            <TabBar
-              borderTop
-              allowClose
-              borderBottom
-              activeTabId={activeTabId}
+            <TabSplit
               tabs={tabsResult}
-              onActiveTab={handleActiveResultTab}
-              idTabBar={`bottomTabEditor_${id}`}
-              onRemoveTab={handleRemoveResultTab}
-              contextMenuOptions={contextMenuOptions}
-              ascentColor={activeTheme.queryEditor.tab.ascentColor}
-              backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-              backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
-              color={activeTheme.queryEditor.tab.color}
+              activeTabId={activeTabId}
+              onActiveTabIdChange={setActiveTabId}
               borderColor={activeTheme.queryEditor.tab.borderColor}
-            />
-
-            <TabWindow activeTabId={activeTabId}>
-              {tabsResult.map((tabResult) => {
-                const data = querysResultData.get(tabResult.idTab);
-
-                if (!data) return null;
-
-                const isErrorResult = data.type === 'ERROR';
-                const isExplainResult = data.type === 'EXPLAIN';
-                const isSelectResult =
-                  !isErrorResult &&
-                  !isExplainResult &&
-                  (data.type === 'SELECT' || !!data.columns?.length);
-                const isDeleteResult = !isSelectResult && data.type === 'DELETE';
-                const isAlterResult = !isSelectResult && data.type === 'ALTER';
-                const isGenericResult =
-                  !isSelectResult &&
-                  !['SELECT', 'DELETE', 'ALTER', 'ERROR', 'EXPLAIN'].includes(data.type);
-                const isReadOnlyResult = data.type !== 'SELECT';
-
-                return (
-                  <TabContent
-                    key={tabResult.idTab}
-                    idTab={tabResult.idTab}
+              backgroundColor={activeTheme.queryEditor.tab.bar.backgroundColor}
+            >
+              {({ paneTabs, activeTabId: paneActiveTabId, tabBarProps }) => (
+                <>
+                  <TabBar
+                    {...tabBarProps}
+                    borderTop
+                    allowClose
+                    draggable
+                    borderBottom
+                    onRemoveTab={handleRemoveResultTab}
+                    contextMenuOptions={makeResultContextMenuOptions(paneTabs)}
+                    ascentColor={activeTheme.queryEditor.tab.ascentColor}
                     backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
-                  >
-                    {isSelectResult && (
-                      <TabContentSelect
-                        data={data}
-                        id_connection={id_connection}
-                        references={tableReferences}
-                        readOnly={isReadOnlyResult}
-                        onSort={(column, sortType) =>
-                          handleSortQueryResult(tabResult.idTab, column.attribute, sortType)
-                        }
-                        onScrollEnd={onScrollEnd}
-                        onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
-                        onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
-                        onToggleCapture={() => toggleResultCapture(tabResult.idTab)}
-                        onClearCapture={() => clearResultCapture(tabResult.idTab)}
-                        cancelingQuery={
-                          !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
-                        }
-                      />
-                    )}
+                    backgroundColorBar={activeTheme.queryEditor.tab.bar.backgroundColor}
+                    color={activeTheme.queryEditor.tab.color}
+                    borderColor={activeTheme.queryEditor.tab.borderColor}
+                  />
 
-                    {isDeleteResult && <TabContentDelete data={data} />}
-                    {isAlterResult && <TabContentAlter data={data} />}
-                    {isExplainResult && (
-                      <TabContentExplain
-                        data={data}
-                        onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
-                        cancelingQuery={
-                          !!data.queryExecutionId && cancelingQueryIds.has(data.queryExecutionId)
-                        }
-                      />
-                    )}
-                    {isErrorResult && <TabcontentError data={data} />}
-                    {isGenericResult && <TabContentGeneric data={data} />}
-                  </TabContent>
-                );
-              })}
-            </TabWindow>
+                  <TabWindow activeTabId={paneActiveTabId}>
+                    {paneTabs.map((tabResult) => {
+                      const data = querysResultData.get(tabResult.idTab);
+
+                      if (!data) return null;
+
+                      const isErrorResult = data.type === 'ERROR';
+                      const isExplainResult = data.type === 'EXPLAIN';
+                      const isSelectResult =
+                        !isErrorResult &&
+                        !isExplainResult &&
+                        (data.type === 'SELECT' || !!data.columns?.length);
+                      const isDeleteResult = !isSelectResult && data.type === 'DELETE';
+                      const isAlterResult = !isSelectResult && data.type === 'ALTER';
+                      const isGenericResult =
+                        !isSelectResult &&
+                        !['SELECT', 'DELETE', 'ALTER', 'ERROR', 'EXPLAIN'].includes(data.type);
+                      const isReadOnlyResult = data.type !== 'SELECT';
+
+                      return (
+                        <TabContent
+                          key={tabResult.idTab}
+                          idTab={tabResult.idTab}
+                          backgroundColor={activeTheme.queryEditor.tab.backgroundColor}
+                        >
+                          {isSelectResult && (
+                            <TabContentSelect
+                              data={data}
+                              id_connection={id_connection}
+                              references={tableReferences}
+                              readOnly={isReadOnlyResult}
+                              onSort={(column, sortType) =>
+                                handleSortQueryResult(tabResult.idTab, column.attribute, sortType)
+                              }
+                              onScrollEnd={() => onScrollEnd(tabResult.idTab)}
+                              onRefresh={() => refreshResultSqlTab(tabResult.idTab)}
+                              onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
+                              onToggleCapture={() => toggleResultCapture(tabResult.idTab)}
+                              onClearCapture={() => clearResultCapture(tabResult.idTab)}
+                              cancelingQuery={
+                                !!data.queryExecutionId &&
+                                cancelingQueryIds.has(data.queryExecutionId)
+                              }
+                            />
+                          )}
+
+                          {isDeleteResult && <TabContentDelete data={data} />}
+                          {isAlterResult && <TabContentAlter data={data} />}
+                          {isExplainResult && (
+                            <TabContentExplain
+                              data={data}
+                              onCancelQuery={() => cancelResultQuery(tabResult.idTab)}
+                              cancelingQuery={
+                                !!data.queryExecutionId &&
+                                cancelingQueryIds.has(data.queryExecutionId)
+                              }
+                            />
+                          )}
+                          {isErrorResult && <TabcontentError data={data} />}
+                          {isGenericResult && <TabContentGeneric data={data} />}
+                        </TabContent>
+                      );
+                    })}
+                  </TabWindow>
+                </>
+              )}
+            </TabSplit>
           </div>
         </ResizableContainer>
       )}
