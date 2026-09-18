@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build, upload and update
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -37,6 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Setup Node
@@ -54,15 +60,17 @@ jobs:
         run: pnpm run ${{ matrix.platform.script }}
 
       - name: Upload release assets
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           notes_file="$(mktemp)"
-          tag_type="$(git cat-file -t "$TAG_NAME" 2>/dev/null || true)"
+          git fetch --force origin "refs/tags/$TAG_NAME:refs/tags/$TAG_NAME"
+
+          tag_type="$(git cat-file -t "refs/tags/$TAG_NAME" 2>/dev/null || true)"
 
           if [ "$tag_type" = "tag" ]; then
             git for-each-ref "refs/tags/$TAG_NAME" --format='%(contents)' > "$notes_file"
@@ -72,8 +80,12 @@ jobs:
             echo "Release $TAG_NAME" > "$notes_file"
           fi
 
-          gh release view "$TAG_NAME" >/dev/null 2>&1 || \
-            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file "$notes_file"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" --notes-file "$notes_file"
+          else
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file "$notes_file" || \
+              gh release edit "$TAG_NAME" --notes-file "$notes_file"
+          fi
 
           shopt -s nullglob
           assets=(dist/*.AppImage dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/*.yml)
