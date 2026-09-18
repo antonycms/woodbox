@@ -30,11 +30,11 @@ const defaultTheme: ITheme = {
   },
   mainTab: {
     bar: {
-      backgroundColor: '#1c1b22',
+      backgroundColor: '#1f1f26',
       borderColor: '#191622',
     },
     color: '#edecee',
-    backgroundColor: '#1c1b22',
+    backgroundColor: '#1f1f26',
     ascentColor: '#61ffca',
     borderColor: '#191622',
     hoverBackgroundColor: '#242329',
@@ -235,7 +235,7 @@ const defaultTheme: ITheme = {
         fieldLabelColor: '#edecee',
       },
       bar: {
-        backgroundColor: '#1c1b22',
+        backgroundColor: '#1f1f26',
         color: '#edecee',
         borderColor: '#191622',
       },
