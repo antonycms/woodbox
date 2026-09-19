@@ -32,14 +32,74 @@ const githubReleaseUrl = (version: string) => {
   return `https://github.com/antonycms/woodbox/releases/tag/v${version}`;
 };
 
-const normalizeReleaseNotes = (releaseNotes: UpdateInfo['releaseNotes']) => {
-  if (!releaseNotes) return null;
-  if (typeof releaseNotes === 'string') return releaseNotes;
+const htmlEntities: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
 
-  return releaseNotes
-    .map(({ version, note }: ReleaseNoteInfo) => [`v${version}`, note].filter(Boolean).join('\n'))
-    .filter(Boolean)
-    .join('\n\n');
+const decodeHtmlEntities = (text: string) => {
+  return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity: string) => {
+    if (entity[0] === '#') {
+      const isHex = entity[1] === 'x' || entity[1] === 'X';
+      const code = Number.parseInt(entity.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      return Number.isNaN(code) ? match : String.fromCodePoint(code);
+    }
+
+    return htmlEntities[entity.toLowerCase()] ?? match;
+  });
+};
+
+const htmlToPlainText = (html: string) => {
+  const text = html
+    .replace(/\r\n?/g, '\n')
+    .replace(/>\s+</g, '><')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li[^>]*>(<p[^>]*>)?/gi, '- ')
+    .replace(/(<\/p>)?<\/li>/gi, '\n')
+    .replace(/<\/(p|h[1-6]|div)>/gi, '\n\n')
+    .replace(/<\/(ul|ol)>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+
+  return decodeHtmlEntities(text)
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+const normalizeReleaseNote = (version: string, note: string | null) => {
+  if (!note) return null;
+
+  const lines = htmlToPlainText(note).split('\n');
+  const versionHeader = `v${version}`;
+
+  while (lines.length > 0) {
+    const first = lines[0].toLowerCase();
+    const isHeader = first === versionHeader || first === version || first === 'release notes:';
+    if (!isHeader && first !== '') break;
+    lines.shift();
+  }
+
+  return lines.join('\n').trim() || null;
+};
+
+const normalizeReleaseNotes = (version: string, releaseNotes: UpdateInfo['releaseNotes']) => {
+  if (!releaseNotes) return null;
+  if (typeof releaseNotes === 'string') return normalizeReleaseNote(version, releaseNotes);
+
+  const notes = releaseNotes
+    .map(({ version, note }: ReleaseNoteInfo) => ({ version, note: normalizeReleaseNote(version, note) }))
+    .filter((item): item is { version: string; note: string } => !!item.note);
+
+  if (notes.length === 0) return null;
+  if (notes.length === 1) return notes[0].note;
+
+  return notes.map(({ version, note }) => `v${version}\n${note}`).join('\n\n');
 };
 
 const toUpdateAvailablePayload = (info: UpdateInfo): UpdateAvailablePayload => {
@@ -47,7 +107,7 @@ const toUpdateAvailablePayload = (info: UpdateInfo): UpdateAvailablePayload => {
     version: info.version,
     currentVersion: app.getVersion(),
     releaseName: info.releaseName,
-    releaseNotes: normalizeReleaseNotes(info.releaseNotes),
+    releaseNotes: normalizeReleaseNotes(info.version, info.releaseNotes),
     releaseDate: info.releaseDate,
     manualDownloadUrl: process.platform === 'darwin' ? githubReleaseUrl(info.version) : undefined,
   };
