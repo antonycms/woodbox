@@ -5,9 +5,51 @@
   gap: 16px;
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.records {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(48vh, 480px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.record {
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--conflict-border-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--conflict-border-color) 18%, transparent);
+}
+
+.recordSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style-position: inside;
+  user-select: none;
+}
+
+.recordSummary strong {
+  font-size: 12px;
+}
+
+.recordSummary span {
+  color: var(--conflict-muted-color);
+  font-size: 11px;
+  text-align: right;
+}
+
 .tableWrapper {
   overflow: auto;
-  max-height: 320px;
+  max-height: 260px;
 }
 
 .table {

@@ -887,6 +887,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'dataConflict.title': 'Conflitos ao salvar registros',
   'dataConflict.description':
     'Alguns registros mudaram desde o carregamento. Nenhuma alteração deste lote foi salva. Compare os valores abaixo; suas edições foram preservadas.',
+  'dataConflict.conflictCount': '{{count}} registros em conflito precisam de revisão.',
   'dataConflict.record': 'Registro {{number}}',
   'dataConflict.changed': 'Alterado no banco',
   'dataConflict.missing': 'Excluído ou não encontrado com a identificação original',

@@ -884,6 +884,7 @@ export const en = {
   'dataConflict.title': 'Conflicts while saving records',
   'dataConflict.description':
     'Some records have changed since they were loaded. No changes in this batch were saved. Compare the values below; your edits have been preserved.',
+  'dataConflict.conflictCount': '{{count}} conflicting records require review.',
   'dataConflict.record': 'Record {{number}}',
   'dataConflict.changed': 'Changed in database',
   'dataConflict.missing': 'Deleted or not found using the original identity',
