@@ -297,7 +297,17 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         onClose={handleClose}
       >
         <Form id="modal_export_data_form" onSubmit={handleExport}>
-          <div className={styles.container}>
+          <div
+            className={styles.container}
+            style={
+              {
+                '--export-progress-color':
+                  colors.neutralButtonBackgroundColor ||
+                  colors.saveButtonBackgroundColor ||
+                  colors.color,
+              } as React.CSSProperties
+            }
+          >
             <Row>
               <Autocomplete
                 xs={6}
@@ -407,8 +417,10 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
               <Spacer />
 
               <Button
-                color={colors.cancelButtonColor}
-                backgroundColor={colors.cancelButtonBackgroundColor}
+                color={colors.neutralButtonColor || colors.cancelButtonColor}
+                backgroundColor={
+                  colors.neutralButtonBackgroundColor || colors.cancelButtonBackgroundColor
+                }
                 onClick={exporting ? handleCancelExport : handleClose}
                 disabled={canceling}
                 xs={6}
@@ -497,8 +509,10 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
           <Spacer />
 
           <Button
-            color={colors.saveButtonColor}
-            backgroundColor={colors.cancelButtonBackgroundColor}
+            color={colors.neutralButtonColor || colors.saveButtonColor}
+            backgroundColor={
+              colors.neutralButtonBackgroundColor || colors.cancelButtonBackgroundColor
+            }
             onClick={closeColumnsModal}
             xs={6}
             sm={4}
