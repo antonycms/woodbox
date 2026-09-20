@@ -25,6 +25,8 @@ import StoreContext, {
   type IImportConnectionsResult,
   type IImportTableDataParams,
   type IImportTableDataResult,
+  type IApplyTableChangesParams,
+  type IApplyTableChangesResult,
   type IExportDataParams,
   type IExportDataPreview,
   type IExportDataResult,
@@ -515,6 +517,13 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     [],
   );
 
+  const getExportDataCount = React.useCallback(
+    async (idConnection: string, params: Pick<IExportDataParams, 'source'>) => {
+      return await call<number>('@get:export_data_count', idConnection, params);
+    },
+    [],
+  );
+
   const getServerOutput = React.useCallback(async (idConnection: string) => {
     return await call<IServerOutputMessage[]>('@get:server_output', idConnection);
   }, []);
@@ -563,6 +572,14 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
     [],
   );
 
+  const cancelExport = React.useCallback(async (idConnection: string, exportId: string) => {
+    return await call<boolean>('@post:cancel_export', idConnection, exportId);
+  }, []);
+
+  const saveTableChanges = React.useCallback(async (idConnection: string, params: IApplyTableChangesParams) => {
+    return await call<IApplyTableChangesResult>('@post:save_table_changes', idConnection, params);
+  }, []);
+
   const compareDatabases = React.useCallback(async (params: IDatabaseCompareParams) => {
     return await call<IDatabaseCompareResult>('@post:compare_databases', params);
   }, []);
@@ -602,7 +619,10 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getTableRowsCount,
       getQueryRowsCount,
       getExportDataPreview,
+      getExportDataCount,
       exportData,
+      cancelExport,
+      saveTableChanges,
       compareDatabases,
 
       getTableColumns,
@@ -683,6 +703,7 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getColumnTypes,
       getCodexChatGPTAccount,
       getExportDataPreview,
+      getExportDataCount,
       getReactNativeBridgeSessions,
       getReactNativeBridgeStatus,
       getFunctionDefinition,
@@ -700,6 +721,8 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
       getTableUsedAsReference,
       getProcessList,
       exportData,
+      cancelExport,
+      saveTableChanges,
       importConnectionsFromSource,
       importTableData,
       loadConnectionInfo,

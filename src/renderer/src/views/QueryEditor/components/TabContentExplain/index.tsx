@@ -7,11 +7,19 @@ import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { useI18n } from '@renderer/contexts/I18n';
 import { useThemeContext } from '@renderer/contexts/Theme';
+import { useToast } from '@renderer/contexts/Toast';
 import { CancelIcon, ExportIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import type { IQueryResult } from '../../dtos';
 import styles from './styles.module.css';
-import { analyzeExplain, getRawPlanJson, type ExplainRow } from './utils';
+import {
+  analyzeExplain,
+  compareExplain,
+  getRawPlanJson,
+  type ExplainAnalysis,
+  type ExplainMetricComparison,
+  type ExplainRow,
+} from './utils';
 
 import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiTable from '~icons/mdi/table';
@@ -29,10 +37,16 @@ export const TabContentExplain = ({
 }: ITabContentExplainProps) => {
   const { t, language } = useI18n();
   const { activeTheme } = useThemeContext();
-  const [viewMode, setViewMode] = React.useState<'analysis' | 'json'>('analysis');
+  const [viewMode, setViewMode] = React.useState<'analysis' | 'json' | 'comparison'>('analysis');
+  const [baseline, setBaseline] = React.useState<ExplainAnalysis>();
   const [now, setNow] = React.useState(Date.now());
+  const { showToast } = useToast();
 
   const analysis = React.useMemo(() => analyzeExplain(data, t), [data, t]);
+  const comparison = React.useMemo(
+    () => (baseline ? compareExplain(analysis, baseline) : undefined),
+    [analysis, baseline],
+  );
   const rawPlanJson = React.useMemo(
     () => getRawPlanJson((data.rows || []) as ExplainRow[]),
     [data.rows],
@@ -71,6 +85,25 @@ export const TabContentExplain = ({
     medium: styles.riskMedium,
     high: styles.riskHigh,
   };
+
+  const formatDelta = (metric: ExplainMetricComparison) => {
+    if (metric.delta === undefined) return '-';
+
+    const sign = metric.delta > 0 ? '+' : '';
+    const percentage =
+      metric.percentage === undefined ? '' : ` (${sign}${metric.percentage.toFixed(1)}%)`;
+
+    return `${sign}${formatMs(metric.delta)}${percentage}`;
+  };
+
+  const saveBaseline = React.useCallback(() => {
+    setBaseline(analysis);
+    setViewMode('comparison');
+    showToast({
+      type: 'success',
+      title: baseline ? t('query.explainBaselineUpdated') : t('query.explainBaselineSaved'),
+    });
+  }, [analysis, baseline, showToast, t]);
 
   const exportJson = React.useCallback(() => {
     const fileDate = (data.date_run || new Date().toISOString()).replace(/[:.]/g, '-');
@@ -118,6 +151,72 @@ export const TabContentExplain = ({
           <div className={styles.editorWrapper}>
             <Editor language="json" readonly hidePreview value={rawPlanJson} />
           </div>
+        ) : viewMode === 'comparison' && comparison ? (
+          <>
+            <header className={styles.header}>
+              <div>
+                <h3>{t('query.explainComparisonTitle')}</h3>
+                <p>{t('query.explainComparisonDescription')}</p>
+              </div>
+            </header>
+
+            <section className={styles.metrics}>
+              <article>
+                <small>{t('query.explainTotalTime')}</small>
+                <strong>{formatDelta(comparison.totalTime)}</strong>
+                <span className={styles.metricHint}>{t('query.explainComparisonDelta')}</span>
+              </article>
+              <article>
+                <small>{t('query.explainPlanningTime')}</small>
+                <strong>{formatDelta(comparison.planningTime)}</strong>
+                <span className={styles.metricHint}>{t('query.explainComparisonDelta')}</span>
+              </article>
+              <article>
+                <small>{t('query.explainBaselineValue')}</small>
+                <strong>{formatMs(comparison.totalTime.baseline)}</strong>
+                <span className={styles.metricHint}>{t('query.explainComparisonBaseline')}</span>
+              </article>
+              <article>
+                <small>{t('query.explainCurrentValue')}</small>
+                <strong>{formatMs(comparison.totalTime.current)}</strong>
+                <span className={styles.metricHint}>{t('query.explainComparisonCurrent')}</span>
+              </article>
+            </section>
+
+            <section className={styles.section}>
+              <h4>{t('query.explainBottlenecks')}</h4>
+              <div className={styles.comparisonTableWrapper}>
+                <table className={styles.comparisonTable}>
+                  <thead>
+                    <tr>
+                      <th>{t('query.explainOperation')}</th>
+                      <th>{t('query.explainBaselineValue')}</th>
+                      <th>{t('query.explainCurrentValue')}</th>
+                      <th>{t('query.explainComparisonDelta')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparison.bottlenecks.map((item) => (
+                      <tr key={item.label}>
+                        <th>{item.label}</th>
+                        <td>{formatMs(item.time.baseline)}</td>
+                        <td>{formatMs(item.time.current)}</td>
+                        <td
+                          className={
+                            item.time.delta !== undefined && item.time.delta > 0
+                              ? styles.worse
+                              : styles.better
+                          }
+                        >
+                          {formatDelta(item.time)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
         ) : (
           <>
             <header className={styles.header}>
@@ -229,6 +328,26 @@ export const TabContentExplain = ({
               ) : (
                 <IconMdiTable width={16} />
               )}
+            </Button>
+
+            {baseline && (
+              <Button
+                text
+                title={t('query.explainViewComparison')}
+                onClick={() => setViewMode('comparison')}
+                color={activeTheme.queryEditor.bar.color}
+              >
+                {t('query.explainCompare')}
+              </Button>
+            )}
+
+            <Button
+              text
+              title={baseline ? t('query.explainUpdateBaseline') : t('query.explainSaveBaseline')}
+              onClick={saveBaseline}
+              color={activeTheme.queryEditor.bar.color}
+            >
+              {baseline ? t('query.explainUpdateBaseline') : t('query.explainSaveBaseline')}
             </Button>
 
             <Button

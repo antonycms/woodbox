@@ -1,7 +1,5 @@
-import fs from 'fs';
 import path from 'path';
-import { dialog } from 'electron';
-import ExcelJS from 'exceljs';
+import { app, BrowserWindow, dialog } from 'electron';
 import knex, { Knex } from 'knex';
 import { getInternalConnectionSaved } from '@main/storage/store';
 import { emitEvent } from '@main/utils/emitEvent';
@@ -13,6 +11,9 @@ import { getDialectAdapter, getDialectIds } from './dialects';
 import { compareDatabases as compareDatabasesCore, type DatabaseCompareParams } from './compare';
 import { getSslConfig } from './ssl';
 import type { IOrderBy } from './types';
+import { writeExportFile, type ExportFormat } from '@main/files/export';
+import { applyTableChanges } from './tableChanges';
+import type { IApplyTableChangesParams } from '../../preload/database';
 import { serializeOrderBy } from './utils/orderBy';
 import {
   hasSqlStatementSeparator,
@@ -30,13 +31,14 @@ const activeRunSqlQueries = new Map<
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
 
-type ExportFormat = 'csv' | 'json' | 'jsonl' | 'xlsx';
+const activeExports = new Map<string, { connectionId: string; canceled: boolean }>();
 
 type ExportSource =
   | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }
   | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
 
 interface IExportDataParams {
+  exportId: string;
   source: ExportSource;
   columns: string[];
   format: ExportFormat;
@@ -143,51 +145,10 @@ export const cancelProcess = async (connectionId: string, pid: string | number) 
 };
 
 const normalizeExportFileName = (value?: string) => {
-  const name = value?.trim?.() || `woodbox-export-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  const name =
+    value?.trim?.() || `woodbox-export-${new Date().toISOString().replace(/[:.]/g, '-')}`;
 
   return name.replace(/[\\/:*?"<>|]+/g, '-').slice(0, 180);
-};
-
-const writeStream = (stream: fs.WriteStream, content: string) =>
-  new Promise<void>((resolve, reject) => {
-    stream.write(content, (error) => (error ? reject(error) : resolve()));
-  });
-
-const endStream = (stream: fs.WriteStream) =>
-  new Promise<void>((resolve, reject) => {
-    stream.end((error) => (error ? reject(error) : resolve()));
-  });
-
-const jsonStringify = (value: unknown, space?: number) =>
-  JSON.stringify(value, (_, item) => (typeof item === 'bigint' ? String(item) : item), space);
-
-const serializeExportValue = (value: unknown) => {
-  if (value === null || value === undefined) return value;
-  if (typeof value === 'bigint') return String(value);
-  if (value instanceof Date) return value.toISOString();
-  if (Buffer.isBuffer(value)) return value.toString('base64');
-
-  return value;
-};
-
-const serializeExportRow = (row: Record<string, unknown>, columns: string[]) => {
-  return columns.reduce<Record<string, unknown>>((acc, column) => {
-    acc[column] = serializeExportValue(row[column]);
-    return acc;
-  }, {});
-};
-
-const serializeExportRows = (rows: Record<string, unknown>[], columns: string[]) =>
-  rows.map((row) => serializeExportRow(row, columns));
-
-const serializeCsvCell = (value: unknown) => {
-  if (value === null || value === undefined) return '';
-
-  const serializedValue = serializeExportValue(value);
-  const text =
-    typeof serializedValue === 'object' ? jsonStringify(serializedValue) : String(serializedValue);
-
-  return `"${text.replace(/"/g, '""')}"`;
 };
 
 const getExportSourceBaseSql = (
@@ -216,10 +177,8 @@ const getExportSourceBaseSql = (
   return `SELECT * FROM (${sql}) AS __export_query`;
 };
 
-const getExportSourceOrderBy = (
-  source: ExportSource,
-  quoteIdentifier: (value: string) => string,
-) => serializeOrderBy(source.orderBy, quoteIdentifier);
+const getExportSourceOrderBy = (source: ExportSource, quoteIdentifier: (value: string) => string) =>
+  serializeOrderBy(source.orderBy, quoteIdentifier);
 
 const getExportSql = (
   source: ExportSource,
@@ -233,17 +192,6 @@ const getExportSql = (
   const pagination = Number(limit) > 0 ? `LIMIT ${Number(limit)} OFFSET ${offset}` : '';
 
   return [baseSql, orderBy, pagination].filter(Boolean).join('\n');
-};
-
-const readExportRows = async (
-  instance: Knex,
-  source: ExportSource,
-  quoteIdentifier: (value: string) => string,
-  options?: { limit?: number; offset?: number },
-) => {
-  const raw = await instance.raw(getExportSql(source, quoteIdentifier, options));
-
-  return raw;
 };
 
 const getSerializedExportResult = (
@@ -286,7 +234,9 @@ export const closeAllConnections = async () => {
         await connection?.instance?.destroy?.();
       } finally {
         if (isReactNativeBridgeDialect(connection.dialect)) {
-          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+          await releaseReactNativeBridgeGateway(
+            getReactNativeBridgeConnectionSource(connection.id),
+          );
         }
       }
     }),
@@ -321,7 +271,9 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 
   instance = knex({
     pool,
-    debug: process.env.NODE_ENV === 'development',
+    // Knex debug writes every query to stdout, which can throw EPIPE when the
+    // Electron process is detached from its original terminal.
+    debug: false,
     client: adapter.client,
     connection: {
       ...connectionConfig,
@@ -388,7 +340,10 @@ export const testConnection = async (config: IConnectionConfig) => {
     : undefined;
 
   if (bridgeSource) {
-    await retainReactNativeBridgeGateway(bridgeSource, getReactNativeBridgeGatewayOptions(mergedConfig));
+    await retainReactNativeBridgeGateway(
+      bridgeSource,
+      getReactNativeBridgeGatewayOptions(mergedConfig),
+    );
   }
 
   try {
@@ -462,7 +417,9 @@ export const closeConnection = async (connectionId: string) => {
         if (index >= 0) activeConnections.splice(index, 1);
 
         if (isReactNativeBridgeDialect(connection.dialect)) {
-          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+          await releaseReactNativeBridgeGateway(
+            getReactNativeBridgeConnectionSource(connection.id),
+          );
         }
       }
     }),
@@ -632,7 +589,6 @@ export const getFunctionDefinition = async (
   return adapter.getRows(raw);
 };
 
-
 export const compareDatabases = async (params: DatabaseCompareParams) => {
   return compareDatabasesCore(params, getConnection);
 };
@@ -723,117 +679,83 @@ export const getExportDataPreview = async (
   };
 };
 
-export const exportData = async (
+export const getExportDataCount = async (
   connectionId: string,
-  { source, columns, format, batchSize = 1000, fileName }: IExportDataParams,
+  { source }: IExportPreviewParams,
 ) => {
-  if (!columns?.length) throw new Error('Selecione ao menos uma coluna para exportar.');
-
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
   const adapter = getDialectAdapter(dialect);
-  const safeBatchSize = Math.max(1, Math.min(Number(batchSize) || 1000, 100000));
-  const extension = EXPORT_MIME_EXTENSIONS[format];
-  const result = await dialog.showSaveDialog({
-    defaultPath: `${Date.now()}_${normalizeExportFileName(fileName)}.${extension}`,
-    filters: [EXPORT_FORMAT_FILTERS[format]],
-  });
+  const sourceSql = getExportSourceBaseSql(source, adapter.quoteIdentifier);
+  const raw = await instance.raw(
+    `SELECT COUNT(*) AS total_rows FROM (${sourceSql}) AS __export_count`,
+  );
+  const [row] = adapter.getRows(raw);
 
-  if (result.canceled || !result.filePath) return { canceled: true, rows: 0 };
+  return Number(row?.total_rows ?? 0);
+};
 
-  const filePath =
-    path.extname(result.filePath).toLowerCase() === `.${extension}`
-      ? result.filePath
-      : `${result.filePath}.${extension}`;
-  let totalRows = 0;
+export const cancelExport = (connectionId: string, exportId: string) => {
+  const job = activeExports.get(exportId);
+  if (!job || job.connectionId !== connectionId) return false;
+  job.canceled = true;
+  return true;
+};
 
-  const readPage = async (page?: number) => {
-    const limit = safeBatchSize;
-    const offset = page ? (page - 1) * safeBatchSize : 0;
-    const sql = getExportSql(source, adapter.quoteIdentifier, { limit, offset });
-    const raw = await readExportRows(instance, source, adapter.quoteIdentifier, { limit, offset });
-    const { rows } = getSerializedExportResult(adapter, raw, sql);
+export const exportData = async (
+  connectionId: string,
+  { source, columns, format, batchSize = 1000, fileName, exportId }: IExportDataParams,
+) => {
+  if (!columns?.length) throw new Error('Selecione ao menos uma coluna para exportar.');
+  if (!exportId || activeExports.has(exportId))
+    throw new Error('Identificador de exportação inválido.');
+  if (!Object.hasOwn(EXPORT_MIME_EXTENSIONS, format))
+    throw new Error('Formato de exportação inválido.');
 
-    return rows as Record<string, unknown>[];
-  };
-
-  const eachRowsBatch = async (callback: (rows: Record<string, unknown>[]) => Promise<void>) => {
-    let page = 1;
-
-    while (true) {
-      const rows = await readPage(page);
-
-      if (!rows.length) break;
-
-      totalRows += rows.length;
-      await callback(rows);
-
-      if (rows.length < safeBatchSize) break;
-
-      page += 1;
-    }
-  };
-
-  if (format === 'xlsx') {
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ filename: filePath });
-    const worksheet = workbook.addWorksheet('Dados');
-
-    worksheet.columns = columns.map((column) => ({ header: column, key: column }));
-
-    await eachRowsBatch(async (batchRows) => {
-      for (const row of serializeExportRows(batchRows, columns)) {
-        worksheet.addRow(row).commit();
-      }
-    });
-
-    worksheet.commit();
-    await workbook.commit();
-
-    return { canceled: false, filePath, rows: totalRows };
-  }
-
-  const stream = fs.createWriteStream(filePath, { encoding: 'utf8' });
-
+  const job = { connectionId, canceled: false };
+  activeExports.set(exportId, job);
   try {
-    if (format === 'csv') {
-      await writeStream(stream, `\ufeff${columns.map(serializeCsvCell).join(',')}\n`);
+    const { instance, dialect } = await getConnection(connectionId);
+    const adapter = getDialectAdapter(dialect);
+    const safeBatchSize = Math.max(1, Math.min(Math.floor(Number(batchSize)) || 1000, 100000));
+    const extension = EXPORT_MIME_EXTENSIONS[format];
+    if (job.canceled) return { canceled: true, rows: 0 };
+    const saveOptions: Electron.SaveDialogOptions = {
+      defaultPath: path.join(
+        app.getPath('downloads'),
+        `${Date.now()}_${normalizeExportFileName(fileName)}.${extension}`,
+      ),
+      filters: [EXPORT_FORMAT_FILTERS[format]],
+    };
+    const parentWindow = BrowserWindow.getFocusedWindow();
+    const result = parentWindow
+      ? await dialog.showSaveDialog(parentWindow, saveOptions)
+      : await dialog.showSaveDialog(saveOptions);
+    if (job.canceled || result.canceled || !result.filePath) return { canceled: true, rows: 0 };
+    const filePath =
+      path.extname(result.filePath).toLowerCase() === `.${extension}`
+        ? result.filePath
+        : `${result.filePath}.${extension}`;
 
-      await eachRowsBatch(async (batchRows) => {
-        const content = batchRows
-          .map((row) => columns.map((column) => serializeCsvCell(row[column])).join(','))
-          .join('\n');
-
-        if (content) await writeStream(stream, `${content}\n`);
-      });
-    }
-
-    if (format === 'jsonl') {
-      await eachRowsBatch(async (batchRows) => {
-        const content = serializeExportRows(batchRows, columns).map((row) => jsonStringify(row)).join('\n');
-
-        if (content) await writeStream(stream, `${content}\n`);
-      });
-    }
-
-    if (format === 'json') {
-      let isFirstRow = true;
-
-      await writeStream(stream, '[\n');
-
-      await eachRowsBatch(async (batchRows) => {
-        for (const row of serializeExportRows(batchRows, columns)) {
-          await writeStream(stream, `${isFirstRow ? '' : ',\n'}  ${jsonStringify(row)}`);
-          isFirstRow = false;
-        }
-      });
-
-      await writeStream(stream, '\n]\n');
-    }
+    return await writeExportFile({
+      filePath,
+      format,
+      columns,
+      batchSize: safeBatchSize,
+      isCanceled: () => job.canceled,
+      onProgress: (rows) => emitEvent('@event:export_progress', { exportId, connectionId, rows }),
+      readPage: async (page) => {
+        const sql = getExportSql(source, adapter.quoteIdentifier, {
+          limit: safeBatchSize,
+          offset: (page - 1) * safeBatchSize,
+        });
+        const raw = await instance.raw(sql);
+        return getSerializedExportResult(adapter, raw, sql).rows as Record<string, unknown>[];
+      },
+    });
   } finally {
-    await endStream(stream);
+    activeExports.delete(exportId);
   }
-
-  return { canceled: false, filePath, rows: totalRows };
 };
 
 export const runSql = async (
@@ -970,4 +892,9 @@ export const importTableData = async (
   });
 
   return { insertedRows };
+};
+
+export const saveTableChanges = async (connectionId: string, params: IApplyTableChangesParams) => {
+  const { instance, dialect } = await getConnection(connectionId);
+  return applyTableChanges(instance, dialect, params);
 };
