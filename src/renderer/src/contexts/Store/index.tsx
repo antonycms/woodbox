@@ -314,31 +314,30 @@ const StoreContextProvider = ({ children }: React.PropsWithChildren) => {
 
   const addConnection = React.useCallback(async (data: IConnectionCreate) => {
     const connection = { ...data, id: generateHash() };
-    const { password, ...publicConnection } = connection;
 
     await call<void>('@add:config_connections_saved', connection);
+    const publicConnection = await call<IConnection>('@get:config_connections_saved', connection.id);
 
     setConnections((prevState) => [
       ...prevState,
-      { ...publicConnection, hasPassword: !!password },
+      publicConnection,
     ]);
   }, []);
 
   const editConnection = React.useCallback(async (id: string, data: IConnectionCreate) => {
     const connection = { ...data, id };
-    const { password, ...publicConnection } = connection;
 
     await call<void>('@edit:config_connections_saved', id, connection);
+    const publicConnection = await call<IConnection>('@get:config_connections_saved', id);
 
     setConnections((prevState) => {
       const newState = [...prevState];
       const index = newState.findIndex((item) => item.id === id);
 
       const prevIdProject = newState[index]?.id_project;
-      const prevHasPassword = newState[index]?.hasPassword;
 
       publicConnection.id_project = publicConnection.id_project || prevIdProject;
-      newState[index] = { ...publicConnection, hasPassword: !!password || !!prevHasPassword };
+      newState[index] = publicConnection;
 
       return newState;
     });

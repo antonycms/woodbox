@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { ISshConnectionConfig, ISshConnectionPublic } from '../../preload/ssh';
 
 declare global {
   export type Dialect = 'postgres' | 'mysql' | 'sqlite' | 'react-native-sqlite';
@@ -31,11 +32,13 @@ declare global {
     sslCaCert?: string;
     sslCert?: string;
     sslKey?: string;
+    ssh?: ISshConnectionConfig;
     reactNativeBridge?: IReactNativeBridgeConnectionConfig;
   }
 
-  export interface IConnectionPublic extends Omit<IConnectionConfig, 'password'> {
+  export interface IConnectionPublic extends Omit<IConnectionConfig, 'password' | 'ssh'> {
     hasPassword: boolean;
+    ssh?: ISshConnectionPublic;
   }
 
   export interface IConnection {

@@ -1,3 +1,4 @@
+import type { ISshConnectionConfig, ISshConnectionPublic } from '../../../../preload/ssh';
 import { createContext } from 'react';
 import type { Dialect } from '@renderer/database/dialects';
 
@@ -210,6 +211,8 @@ export interface IReactNativeBridgeStatus {
   sessions: IReactNativeBridgeSession[];
 }
 
+export type { ISshConnectionConfig, ISshConnectionPublic } from '../../../../preload/ssh';
+
 export interface IConnectionCreate {
   id_project: string;
   description: string;
@@ -225,12 +228,14 @@ export interface IConnectionCreate {
   sslCaCert?: string;
   sslCert?: string;
   sslKey?: string;
+  ssh?: ISshConnectionConfig;
   reactNativeBridge?: IReactNativeBridgeConnectionConfig;
 }
 
-export interface IConnection extends Omit<IConnectionCreate, 'password'> {
+export interface IConnection extends Omit<IConnectionCreate, 'password' | 'ssh'> {
   id: string;
   hasPassword: boolean;
+  ssh?: ISshConnectionPublic;
 }
 
 export type ImportConnectionsSource = 'dbeaver';

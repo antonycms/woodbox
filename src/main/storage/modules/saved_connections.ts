@@ -1,6 +1,7 @@
 import type Store from 'electron-store';
 import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '@main/storage/secret';
 import { makeFnRemoveStoredItemFromArray } from '@main/storage/utils';
+import { mergeSshCredentials } from './ssh_credentials';
 
 const STORE_KEY = 'saved_connections';
 
@@ -16,14 +17,23 @@ export const encodeConnectionSecrets = (
   store: Store<Record<string, unknown>>,
   connection: IConnectionConfig,
   previous?: IConnectionConfig,
-): IConnectionConfig => ({
-  ...connection,
-  username: encodeSecret(store, connection.username),
-  password:
-    connection.password === undefined || connection.password === ''
-      ? previous?.password
-      : encodeSecret(store, connection.password),
-});
+): IConnectionConfig => {
+  const ssh = mergeSshCredentials(connection.ssh, previous?.ssh);
+
+  return {
+    ...connection,
+    username: encodeSecret(store, connection.username),
+    password:
+      connection.password === undefined || connection.password === ''
+        ? previous?.password
+        : encodeSecret(store, connection.password),
+    ssh: ssh ? {
+      ...ssh,
+      password: encodeSecret(store, ssh.password, { trim: false }),
+      passphrase: encodeSecret(store, ssh.passphrase, { trim: false }),
+    } : undefined,
+  };
+};
 
 export const decodeConnectionSecrets = (
   store: Store<Record<string, unknown>>,
@@ -32,6 +42,11 @@ export const decodeConnectionSecrets = (
   ...connection,
   username: decodeSecret(store, connection.username) || undefined,
   password: decodeSecret(store, connection.password) || undefined,
+  ssh: connection.ssh ? {
+    ...connection.ssh,
+    password: decodeSecret(store, connection.ssh.password) || undefined,
+    passphrase: decodeSecret(store, connection.ssh.passphrase) || undefined,
+  } : undefined,
 });
 
 export const encodeConnectionSecretsForStore = (
@@ -43,11 +58,18 @@ export const toPublicConnection = (
   store: Store<Record<string, unknown>>,
   connection: IConnectionConfig,
 ): IConnectionPublic => {
-  const { password, ...publicConnection } = decodeConnectionSecrets(store, connection);
+  const { password, ssh, ...publicConnection } = decodeConnectionSecrets(store, connection);
+  let publicSsh: IConnectionPublic['ssh'];
+
+  if (ssh) {
+    const { password: sshPassword, passphrase, ...config } = ssh;
+    publicSsh = { ...config, hasPassword: !!sshPassword, hasPassphrase: !!passphrase };
+  }
 
   return {
     ...publicConnection,
     hasPassword: !!connection.password,
+    ssh: publicSsh,
   };
 };
 

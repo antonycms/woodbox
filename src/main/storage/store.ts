@@ -31,12 +31,29 @@ const store = new Store<Record<string, unknown>>({
     snippets,
     ai_providers,
     ai_chats,
+    ssh_hosts: {
+      type: 'array',
+      default: [],
+    },
     window_state: {
       type: ['object', 'null'],
       default: null,
     },
   },
 });
+
+type SshHost = { host: string; port: number; fingerprint: string };
+
+export const getSshHostFingerprint = (host: string, port: number) =>
+  (store.get('ssh_hosts') as SshHost[]).find((item) => item.host === host && item.port === port)?.fingerprint;
+
+export const saveSshHostFingerprint = (host: string, port: number, fingerprint: string) => {
+  const hosts = store.get('ssh_hosts') as SshHost[];
+  store.set('ssh_hosts', [
+    ...hosts.filter((item) => item.host !== host || item.port !== port),
+    { host, port, fingerprint },
+  ]);
+};
 
 export const getWindowState = (): WindowState | null =>
   (store.get('window_state') as WindowState | null) ?? null;
