@@ -1,0 +1,23 @@
+.section {
+  margin-top: 8px;
+}
+
+.sectionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sectionToggle > input {
+  cursor: pointer;
+}
+
+.sectionFields {
+  padding-top: 6px;
+}
