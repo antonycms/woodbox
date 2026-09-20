@@ -1,5 +1,13 @@
+import type { IApplyTableChangesParams, IApplyTableChangesResult } from '../../../../preload/database';
 import { createContext } from 'react';
 import type { Dialect } from '@renderer/database/dialects';
+
+export type {
+  IApplyTableChangesParams,
+  IApplyTableChangesResult,
+  ITableDataConflict,
+  IExportProgress,
+} from '../../../../preload/database';
 
 export interface IScript {
   id: string;
@@ -495,6 +503,7 @@ export type ExportDataSource =
   | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
 
 export interface IExportDataParams {
+  exportId: string;
   source: ExportDataSource;
   columns: string[];
   format: ExportDataFormat;
@@ -615,7 +624,16 @@ export interface IStoreContext {
     idConnection: string,
     params: Pick<IExportDataParams, 'source'>,
   ): Promise<IExportDataPreview>;
+  getExportDataCount(
+    idConnection: string,
+    params: Pick<IExportDataParams, 'source'>,
+  ): Promise<number>;
   exportData(idConnection: string, params: IExportDataParams): Promise<IExportDataResult>;
+  cancelExport(idConnection: string, exportId: string): Promise<boolean>;
+  saveTableChanges(
+    idConnection: string,
+    params: IApplyTableChangesParams,
+  ): Promise<IApplyTableChangesResult>;
   compareDatabases(params: IDatabaseCompareParams): Promise<IDatabaseCompareResult>;
 
   getTableColumns(
