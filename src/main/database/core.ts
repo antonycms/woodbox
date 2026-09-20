@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { connect as connectSocket, isIP } from 'node:net';
+import { checkServerIdentity } from 'node:tls';
 import { dialog } from 'electron';
 import ExcelJS from 'exceljs';
 import knex, { Knex } from 'knex';
@@ -12,6 +14,9 @@ import {
 import { getDialectAdapter, getDialectIds } from './dialects';
 import { compareDatabases as compareDatabasesCore, type DatabaseCompareParams } from './compare';
 import { getSslConfig } from './ssl';
+import { openSshTunnel, type SshTunnel } from './ssh';
+import { verifySshHost } from './sshHostVerification';
+import { mergeSshCredentials } from '../storage/modules/ssh_credentials';
 import type { IOrderBy } from './types';
 import { serializeOrderBy } from './utils/orderBy';
 import {
@@ -22,6 +27,15 @@ import {
 } from './utils/sql';
 
 const activeConnections: IConnection[] = [];
+const connectionTunnels = new WeakMap<Knex, SshTunnel>();
+const destroyConnectionInstance = async (instance: Knex) => {
+  try {
+    await instance.destroy();
+  } finally {
+    await connectionTunnels.get(instance)?.close();
+    connectionTunnels.delete(instance);
+  }
+};
 const pendingConnections = new Map<string, Promise<IConnection>>();
 const activeRunSqlQueries = new Map<
   string,
@@ -283,7 +297,7 @@ export const closeAllConnections = async () => {
   await Promise.all(
     activeConnections.map(async (connection) => {
       try {
-        await connection?.instance?.destroy?.();
+        if (connection?.instance) await destroyConnectionInstance(connection.instance);
       } finally {
         if (isReactNativeBridgeDialect(connection.dialect)) {
           await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
@@ -299,6 +313,11 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   const adapter = getDialectAdapter(dialect);
   const connectionConfig = adapter.getConnectionConfig(config);
   const sslConfig = getSslConfig(config);
+  if (config.ssh?.enabled && dialect !== 'postgres' && dialect !== 'mysql') {
+    throw new Error('Túnel SSH disponível apenas para PostgreSQL e MySQL.');
+  }
+  const tunnel = config.ssh?.enabled
+    ? await openSshTunnel(config.ssh, config, verifySshHost) : undefined;
 
   let instance: null | Knex<any, unknown[]>;
 
@@ -319,16 +338,37 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
         },
       };
 
-  instance = knex({
-    pool,
-    debug: process.env.NODE_ENV === 'development',
-    client: adapter.client,
-    connection: {
-      ...connectionConfig,
-      ...(sslConfig ? { ssl: sslConfig } : {}),
-    },
-    ...adapter.getKnexConfig?.(config),
-  });
+  try {
+    instance = knex({
+      pool,
+      debug: process.env.NODE_ENV === 'development',
+      client: adapter.client,
+      connection: {
+        ...connectionConfig,
+        ...(sslConfig ? { ssl: sslConfig } : {}),
+        ...(tunnel ? dialect === 'mysql' ? {
+          // Preserve the original host for MySQL TLS/SNI, connecting through the local tunnel.
+          stream: () => connectSocket(tunnel.port, tunnel.host),
+        } : {
+          host: tunnel.host,
+          port: tunnel.port,
+          ...(sslConfig ? { ssl: {
+            ...sslConfig,
+            ...(!isIP(config.host) ? { servername: config.host } : {}),
+            checkServerIdentity: (_host, certificate) => checkServerIdentity(config.host, certificate),
+          } } : {}),
+        } : {}),
+      },
+      ...adapter.getKnexConfig?.(config),
+    });
+  } catch (error) {
+    await tunnel?.close();
+    throw error;
+  }
+
+  if (tunnel) {
+    connectionTunnels.set(instance, tunnel);
+  }
 
   const errorsHandled = {
     authentication: {
@@ -363,10 +403,10 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   try {
     await instance.raw('SELECT 1');
   } catch (error: any) {
-    instance.destroy();
+    await destroyConnectionInstance(instance);
     instance = null;
 
-    const serializedError = getError(error);
+    const serializedError = getError(tunnel?.getError() || error);
     throw serializedError;
   }
 
@@ -377,11 +417,12 @@ export const getDialects = () => getDialectIds();
 
 export const testConnection = async (config: IConnectionConfig) => {
   const storedConfig =
-    config.id && !config.password ? getInternalConnectionSaved(config.id) : undefined;
+    config.id ? getInternalConnectionSaved(config.id) : undefined;
   const mergedConfig = {
     ...storedConfig,
     ...config,
     password: config.password || storedConfig?.password,
+    ssh: mergeSshCredentials(config.ssh, storedConfig?.ssh),
   };
   const bridgeSource = isReactNativeBridgeDialect(mergedConfig.dialect)
     ? getReactNativeBridgeTestSource(mergedConfig.id)
@@ -393,7 +434,7 @@ export const testConnection = async (config: IConnectionConfig) => {
 
   try {
     const instance = await makeConnectionInstance(mergedConfig, true);
-    await instance.destroy();
+    await destroyConnectionInstance(instance);
   } finally {
     if (bridgeSource) await releaseReactNativeBridgeGateway(bridgeSource);
   }
@@ -453,7 +494,7 @@ export const closeConnection = async (connectionId: string) => {
   await Promise.all(
     connections.map(async (connection) => {
       try {
-        await connection.instance.destroy();
+        await destroyConnectionInstance(connection.instance);
       } catch (error) {
         console.error(error);
       } finally {
@@ -475,7 +516,9 @@ const getConnection = async (connectionId: string) => {
   );
 
   if (connectionAlreadyStarted) {
-    return connectionAlreadyStarted;
+    const tunnel = connectionTunnels.get(connectionAlreadyStarted.instance);
+    if (!tunnel || tunnel.isOpen()) return connectionAlreadyStarted;
+    await closeConnection(connectionId);
   }
 
   const pendingConnection = pendingConnections.get(connectionId);
