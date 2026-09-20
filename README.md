@@ -17,6 +17,8 @@
 [![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)](https://www.linux.org)
 [![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://www.apple.com/macos)
 
+<a href="https://www.producthunt.com/products/woodbox?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-woodbox" target="_blank" rel="noopener noreferrer"><img alt="Woodbox - Open-source database manager for developers | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1255119&amp;theme=light&amp;t=1789813049534"></a>
+
 [Download](https://github.com/antonycms/woodbox/releases) · [Screenshots](screenshots) · [Report Bug](https://github.com/antonycms/woodbox/issues) · [Request Feature](https://github.com/antonycms/woodbox/issues)
 
 </div>
