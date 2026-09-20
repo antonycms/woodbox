@@ -11,7 +11,8 @@
   flex-direction: column;
 
   background: var(--toast-background);
-  box-shadow: 0 12px 32px var(--toast-shadow-color);
+  border: 1px solid color-mix(in srgb, var(--toast-color) 28%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--toast-shadow-color) 38%, transparent);
   animation: toast-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
