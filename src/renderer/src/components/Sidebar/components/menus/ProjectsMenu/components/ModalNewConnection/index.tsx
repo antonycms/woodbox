@@ -47,6 +47,7 @@ const getConnectionData = (data: IDataNewConnection, idProject?: string): IConne
     sslCaCert: useSsl ? data.sslCaCert : '',
     sslCert: useSsl ? data.sslCert : '',
     sslKey: useSsl ? data.sslKey : '',
+    ssh: isNetworkConnection ? data.ssh : undefined,
     reactNativeBridge: isReactNativeBridge ? data.reactNativeBridge : undefined,
     id_project: idProject || data.id_project,
   };
@@ -117,6 +118,7 @@ export const ModalNewConnection = React.memo(
           sslCaCert: spec.supportsSsl ? prevState.sslCaCert : '',
           sslCert: spec.supportsSsl ? prevState.sslCert : '',
           sslKey: spec.supportsSsl ? prevState.sslKey : '',
+          ssh: spec.connectionMode === 'network' ? prevState.ssh : undefined,
         }));
       },
       [registerDialect],
@@ -192,6 +194,15 @@ export const ModalNewConnection = React.memo(
         sslCaCert: connectionSavedData?.sslCaCert || '',
         sslCert: connectionSavedData?.sslCert || '',
         sslKey: connectionSavedData?.sslKey || '',
+        ssh: connectionSavedData?.ssh ? {
+          enabled: connectionSavedData.ssh.enabled,
+          host: connectionSavedData.ssh.host,
+          port: connectionSavedData.ssh.port,
+          username: connectionSavedData.ssh.username,
+          authMethod: connectionSavedData.ssh.authMethod,
+          privateKeyPath: connectionSavedData.ssh.privateKeyPath,
+          agentPath: connectionSavedData.ssh.agentPath,
+        } : undefined,
       }));
     };
 
@@ -203,6 +214,7 @@ export const ModalNewConnection = React.memo(
       <Modal
         title={idConnection ? t('modal.editConnection') : t('modal.newConnection')}
         width="500px"
+        maxHeight="90vh"
         show={show}
       >
         <form id="formNewConnection" onSubmit={onSubmit} ref={formRef}>
@@ -278,6 +290,7 @@ export const ModalNewConnection = React.memo(
                 textColor={colors.color}
                 hasSavedPassword={!!(idConnection && connectionSavedData?.hasPassword)}
                 supportsSsl={!!selectedDialect.supportsSsl}
+                savedSsh={connectionSavedData?.ssh}
               />
             )}
           </Row>

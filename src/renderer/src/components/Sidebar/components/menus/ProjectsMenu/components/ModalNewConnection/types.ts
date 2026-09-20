@@ -2,11 +2,10 @@ import type { IInputProps } from '@renderer/components/Input';
 import type {
   ConnectionEnvironment,
   IReactNativeBridgeConnectionConfig,
+  ISshConnectionConfig,
 } from '@renderer/contexts/Store';
 import type { Dialect } from '@renderer/database/dialects';
 import type React from 'react';
-
-export type SslFileField = 'sslCaCert' | 'sslCert' | 'sslKey';
 
 export interface IDataNewConnection {
   id?: string;
@@ -25,6 +24,7 @@ export interface IDataNewConnection {
   sslCaCert?: string;
   sslCert?: string;
   sslKey?: string;
+  ssh?: ISshConnectionConfig;
   reactNativeBridge?: IReactNativeBridgeConnectionConfig;
 }
 

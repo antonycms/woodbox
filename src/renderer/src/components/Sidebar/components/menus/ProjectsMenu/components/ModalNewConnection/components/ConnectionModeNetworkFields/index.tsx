@@ -1,14 +1,13 @@
 import React from 'react';
 import { Input } from '@renderer/components/Input';
 import { useI18n } from '@renderer/contexts/I18n';
-import call from '@renderer/utils/call';
+import { SshTunnelFields } from './components/SshTunnelFields';
+import { SslFields } from './components/SslFields';
 import type {
   IDataNewConnection,
   RegisterField,
   SetConnectionFormState,
-  SslFileField,
 } from '../../types';
-import styles from '../../styles.module.css';
 
 interface IConnectionModeNetworkFieldsProps {
   register: RegisterField;
@@ -19,6 +18,7 @@ interface IConnectionModeNetworkFieldsProps {
   textColor: string;
   hasSavedPassword: boolean;
   supportsSsl: boolean;
+  savedSsh: React.ComponentProps<typeof SshTunnelFields>['savedSsh'];
 }
 
 export const ConnectionModeNetworkFields = React.memo(
@@ -31,40 +31,9 @@ export const ConnectionModeNetworkFields = React.memo(
     textColor,
     hasSavedPassword,
     supportsSsl,
+    savedSsh,
   }: IConnectionModeNetworkFieldsProps) => {
     const { t } = useI18n();
-
-    const handleSslChange = React.useCallback(
-      (ssl: boolean) => {
-        setState((prevState) => ({
-          ...prevState,
-          ssl,
-          sslRejectUnauthorized: ssl ? prevState.sslRejectUnauthorized : false,
-          sslCaCert: ssl ? prevState.sslCaCert : '',
-          sslCert: ssl ? prevState.sslCert : '',
-          sslKey: ssl ? prevState.sslKey : '',
-        }));
-      },
-      [setState],
-    );
-
-    const handleSslRejectUnauthorizedChange = React.useCallback(
-      (sslRejectUnauthorized: boolean) => {
-        setState((prevState) => ({ ...prevState, sslRejectUnauthorized }));
-      },
-      [setState],
-    );
-
-    const selectSslFile = React.useCallback(
-      async (field: SslFileField) => {
-        const filePath = await call<string | null>('@dialog:select_ssl_file');
-
-        if (!filePath) return;
-
-        setState((prevState) => ({ ...prevState, [field]: filePath }));
-      },
-      [setState],
-    );
 
     return (
       <>
@@ -115,66 +84,24 @@ export const ConnectionModeNetworkFields = React.memo(
         />
 
         {!!supportsSsl && (
-          <>
-            <div className={styles.checkboxes}>
-              <label className={styles.checkbox} style={{ color: textColor }}>
-                <input
-                  type="checkbox"
-                  name="ssl"
-                  checked={!!state.ssl}
-                  onChange={(event) => handleSslChange(event.target.checked)}
-                />
-                {t('field.ssl')}
-              </label>
-
-              <label className={styles.checkbox} style={{ color: textColor }}>
-                <input
-                  type="checkbox"
-                  name="sslRejectUnauthorized"
-                  checked={!!state.sslRejectUnauthorized}
-                  disabled={!state.ssl}
-                  onChange={(event) => handleSslRejectUnauthorizedChange(event.target.checked)}
-                />
-                {t('field.sslRejectUnauthorized')}
-              </label>
-            </div>
-
-            {!!state.ssl && (
-              <>
-                <Input
-                  label={t('field.sslCaCert')}
-                  xs={12}
-                  md={4}
-                  backgroundColor={backgroundColor}
-                  color={color}
-                  {...register('sslCaCert')}
-                  readOnly
-                  onClick={() => selectSslFile('sslCaCert')}
-                />
-                <Input
-                  label={t('field.sslCert')}
-                  xs={12}
-                  md={4}
-                  backgroundColor={backgroundColor}
-                  color={color}
-                  {...register('sslCert')}
-                  readOnly
-                  onClick={() => selectSslFile('sslCert')}
-                />
-                <Input
-                  label={t('field.sslKey')}
-                  xs={12}
-                  md={4}
-                  backgroundColor={backgroundColor}
-                  color={color}
-                  {...register('sslKey')}
-                  readOnly
-                  onClick={() => selectSslFile('sslKey')}
-                />
-              </>
-            )}
-          </>
+          <SslFields
+            register={register}
+            state={state}
+            setState={setState}
+            color={color}
+            backgroundColor={backgroundColor}
+            textColor={textColor}
+          />
         )}
+
+        <SshTunnelFields
+          state={state}
+          setState={setState}
+          savedSsh={savedSsh}
+          color={color}
+          backgroundColor={backgroundColor}
+          textColor={color}
+        />
       </>
     );
   },
