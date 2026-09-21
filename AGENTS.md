@@ -20,7 +20,8 @@
 - Evite `any` quando houver tipo viável, mesmo com `strict: false` no projeto.
 - Use aliases existentes:
   - `@renderer/*` dentro do renderer.
-  - imports relativos no `src/main` e `src/preload`, seguindo o padrão atual.
+  - `@shared/*` para tipos e utilitários compartilhados no main, preload e renderer.
+  - imports relativos no `src/main` e `src/preload` para os demais módulos, seguindo o padrão atual.
 - Em comandos shell, siga o RTK: prefixe com `rtk`.
 - Não introduza Tailwind, styled-components ou nova lib visual sem pedido explícito.
 
@@ -66,7 +67,7 @@ src/
 └── renderer/           # React frontend
     └── src/
         ├── components/ # Componentes reutilizáveis
-        ├── contexts/   # Estado global
+        ├── stores/     # Estado e ações com Zustand
         ├── database/   # Tipos/helpers de banco usados no renderer
         ├── hooks/      # Hooks reutilizáveis
         ├── styles/     # Reset, tema e ícones
@@ -80,8 +81,8 @@ src/
 
 - Use React com componentes funcionais.
 - Use `@renderer/...` para imports do renderer.
-- Prefira reutilizar componentes, hooks, contexts e utils existentes antes de criar novos.
-- Não crie estado manual extenso quando já houver hook ou context no projeto que resolva o caso.
+- Prefira reutilizar componentes, hooks, stores e utils existentes antes de criar novos.
+- Não crie estado manual extenso quando já houver hook ou store no projeto que resolva o caso.
 - Ícones devem seguir `unplugin-icons` com imports `~icons/{collection}/{name}`; quando fizer sentido, centralize em `src/renderer/src/styles/icons.tsx`.
 
 ### Estrutura e componentes
@@ -98,7 +99,7 @@ src/
 - Mantenha no `index.tsx` da view apenas a orquestração principal: carregamento essencial, estados de abertura e composição da tela.
 - Evite acumular componentes grandes, cards, modais, menus e helpers específicos no `index.tsx`.
 - Lógicas exclusivas de modal/dropdown/painel devem ficar dentro do próprio componente.
-- Chamadas de storage/IPC/API usadas só por um modal/dropdown/painel devem ficar nesse componente, não na view pai.
+- Operações usadas só por um modal/dropdown/painel devem ser disparadas nele pelos hooks de domínio, não na view pai.
 - A view pai deve passar apenas dados mínimos de contexto para filhos, como `active`, `onClose`, ids e registro selecionado.
 - Evite duplicar tipos, constantes, mapeamentos e formatadores; extraia para arquivo local quando for específico da view ou para `utils`/`hooks` quando for reutilizável.
 
@@ -107,15 +108,22 @@ src/
 - Preserve a identidade atual: interface escura, focada, técnica, com destaque neon/suave para ações e estados.
 - Textos não interativos devem desabilitar seleção: use `userSelect={false}` no componente `Text`; se não usar `Text`, aplique via CSS.
 - Antes de criar novas cores, consulte `src/renderer/src/styles/theme/default.ts`.
-- Prefira tokens do tema atual (`__colors`) e variáveis CSS geradas pelo `ThemeProvider`.
+- Prefira tokens do tema atual (`__colors`) e variáveis CSS derivadas de `useThemeStore`.
 - Não hardcode cores repetidas quando já houver valor equivalente no tema.
 - Mantenha CSS Modules local ao componente.
 - Evite mudanças visuais amplas em componentes compartilhados sem necessidade.
 
 ### Estado, eventos e feedback
 
-- Reutilize contexts existentes: `Store`, `Theme`, `Toast`, `AppTab` e outros antes de criar estado global novo.
-- Todo texto visível ao usuário no renderer deve usar `useI18n` com chaves em `src/renderer/src/contexts/I18n`; não deixe labels, placeholders, tooltips, títulos de modal ou toasts hardcoded.
+- Acesse dados e operações pelas stores Zustand em `@renderer/stores/...`: `useWorkspaceStore`, `useSnippetsStore`, `useAIStore`, `useDatabaseStore`, `useDialogsStore`, `useUpdatesStore` e `useReactNativeBridgeStore`.
+- Use seletores por propriedade ou `useShallow` para selecionar várias propriedades. Não assine a store inteira. Agrupamentos de projetos/conexões usam o seletor memoizado de `stores/Workspace/selectors.ts`.
+- Workspace reúne projetos, conexões e scripts; IA reúne provedores e conversas. Preserve as ações coordenadas e atualizações imutáveis de listas/Maps. Não recrie um Store geral.
+- Inicialize as stores explicitamente na raiz com `initializeStores`; cada domínio compartilha seu carregamento inicial e permite nova tentativa após falha. Persistência e credenciais continuam no main, sem middleware `persist` no renderer.
+- Não use React Context para estado da aplicação. Interface usa `Theme`, `I18n`, `Toast`, `AppTab` e `AIChatPanel` em `stores`. Tabelas criam stores independentes (`createTableInfoStore`) por instância, passadas explicitamente por props; nunca transforme esse estado em singleton global. `TabSplit` mantém seu estado local e se comunica com as barras por props/callbacks.
+- `AppTab.restoreSession` restaura abas, grupos e seleção conjuntamente; grupos vazios são removidos pelas próprias ações, sem efeitos de limpeza nos componentes.
+- Helpers de persistência JSON ficam em `utils/storage.ts` e são reutilizados por `useStorage`, com suporte a localStorage/sessionStorage.
+- `ToastHost`, `AppTabLifecycle` e `StoreInitialization` cuidam da renderização e dos efeitos de interface, sem Providers. Dados locais derivados podem continuar em props/useState.
+- Todo texto visível ao usuário no renderer deve usar `useI18nStore` com chaves em `src/renderer/src/stores/I18n`; não deixe labels, placeholders, tooltips, títulos de modal ou toasts hardcoded.
 - Use hooks existentes como `useForm`, `useStorage`, `useDebounce`, `useResize` e `useLatestFunc` quando aplicável.
 - Para mensagens ao usuário, use o padrão de Toast existente.
 - Mensagens de erro e confirmação devem ser claras e em português brasileiro.
@@ -124,7 +132,7 @@ src/
 
 Sempre que possível, organize hooks dentro do componente nesta ordem:
 
-1. Contextos e estado global.
+1. Estado global.
 2. Estado local.
 3. Referências.
 4. Hooks personalizados.
@@ -146,6 +154,8 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 
 ## Banco de dados
 
+- No renderer, geração de DDL e seus tipos ficam em `database/ddl`; essa camada não deve importar stores ou views.
+
 - Use Knex e os adaptadores existentes em `src/main/database/dialects`.
 - Ao adicionar suporte a dialeto ou query de metadados, atualize o adapter e os arquivos de `querys` correspondentes.
 - Não monte SQL com concatenação quando houver entrada do usuário; use mecanismos seguros do Knex/driver.
@@ -154,6 +164,9 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 
 ## Preload e IPC
 
+- No renderer, centralize `window.api` nas ações das stores de domínio; componentes e views consomem essas stores, sem acessar a ponte diretamente. Não use canais IPC ou APIs genéricas de Electron.
+- Contratos da API ficam em `src/shared/types/api.ts` e os canais em `src/shared/types/ipc.ts`; sincronize método, schema de entrada no main, handler e preload.
+- Eventos expostos devem entregar apenas o payload e retornar uma função de cancelamento. Para erros de IPC, use `getErrorMessage`, pois a rejeição pode ser um objeto serializado com posição SQL.
 - Mantenha `contextIsolation` compatível com o padrão atual.
 - Se expuser nova API no preload, atualize também `src/preload/index.d.ts`.
 - Prefira canais IPC nomeados no padrão atual, por exemplo:
@@ -165,6 +178,7 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 
 ## TypeScript e tipos globais
 
+- Tipos compartilhados ficam em `src/shared/types` e devem ser importados diretamente por quem os usa, sem aliases globais ou reexports nas outras camadas.
 - Tipos globais do main ficam em `src/main/@types`.
 - Tipos globais do renderer ficam em `src/renderer/src/@types`.
 - Tipos da ponte preload ficam em `src/preload/index.d.ts`.
