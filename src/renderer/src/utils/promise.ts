@@ -19,3 +19,16 @@ export const executePromisesBatch = async <Item, ItemReturn>(
 
   return results;
 };
+
+export const runPromiseOnce = (load: () => Promise<void>) => {
+  let promise: Promise<void> | undefined;
+
+  return () => {
+    promise ??= Promise.resolve().then(load).catch((error) => {
+      promise = undefined;
+      throw error;
+    });
+
+    return promise;
+  };
+};
