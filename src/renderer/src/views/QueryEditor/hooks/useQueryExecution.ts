@@ -110,7 +110,7 @@ export const useQueryExecution = ({
         return;
       }
 
-      const message = formatQueryExecutionErrorMessage(error, markErrors);
+      const message = formatQueryExecutionErrorMessage(error, t('common.unknownErrorNoDot'), markErrors);
 
       updateTabResultData({
         type: 'ERROR',
@@ -197,7 +197,7 @@ export const useQueryExecution = ({
         type: 'ERROR',
         query,
         variableValues,
-        message: formatQueryExecutionErrorMessage(error),
+        message: formatQueryExecutionErrorMessage(error, t('common.unknownErrorNoDot')),
         loading: false,
         queryExecutionId: undefined,
       });
@@ -272,7 +272,7 @@ export const useQueryExecution = ({
         return;
       }
 
-      const message = formatQueryErrorMessage(error);
+      const message = formatQueryErrorMessage(error, t('common.unknownErrorNoDot'));
       updateTabResultData({
         type: 'ERROR',
         message,
@@ -346,7 +346,7 @@ export const useQueryExecution = ({
         return;
       }
 
-      const message = formatQueryErrorMessage(error);
+      const message = formatQueryErrorMessage(error, t('common.unknownErrorNoDot'));
       updateTabResultData({
         type: 'ERROR',
         query,
@@ -413,7 +413,7 @@ export const useQueryExecution = ({
         return;
       }
 
-      const message = formatQueryErrorMessage(error);
+      const message = formatQueryErrorMessage(error, t('common.unknownErrorNoDot'));
       updateTabResultData({ type: 'ERROR', message, loading: false, queryExecutionId: undefined });
     }
   };

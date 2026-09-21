@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { generateHash } from '@shared/utils/string';
 import { Column, IGridSystem } from '@renderer/components/Grid';
@@ -7,12 +8,13 @@ import { classes } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
 export const FilePicker = (props: IFilePickerProps) => {
+  const t = useI18nStore((state) => state.t);
   const {
     ref,
     accept,
     autoFocus,
     backgroundColor,
-    buttonText = 'Escolher arquivo',
+    buttonText = t('file.choose'),
     className,
     color,
     disabled,
@@ -27,7 +29,7 @@ export const FilePicker = (props: IFilePickerProps) => {
     onChange,
     onClick,
     onFocus,
-    placeholder = 'Nenhum arquivo selecionado',
+    placeholder = t('file.noneSelected'),
     placeholderColor,
     required,
     style,

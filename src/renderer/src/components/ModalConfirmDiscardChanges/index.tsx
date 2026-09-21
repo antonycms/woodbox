@@ -24,11 +24,11 @@ const ModalConfirmDiscardChanges = ({
       closeOutside
       onClose={onCancel}
     >
-      <Text color={colors.color}>{message || t('message.discardPendingChanges')}</Text>
+      <Text userSelect={false} color={colors.color}>{message || t('message.discardPendingChanges')}</Text>
 
       <div style={{ height: 16 }} />
 
-      <Text color={colors.color}>{t('modal.confirmProceed')}</Text>
+      <Text userSelect={false} color={colors.color}>{t('modal.confirmProceed')}</Text>
 
       <div style={{ height: 16 }} />
 

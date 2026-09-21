@@ -488,11 +488,11 @@ const Data = ({
         setShowNoPkModal(false);
         showToast({ type: 'success', title: t('toast.dataSaved') });
         await handleRefresh();
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.dataSaveError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {

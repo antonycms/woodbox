@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { useForm } from '@renderer/hooks/useForm';
@@ -10,6 +11,7 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useThemeStore } from '@renderer/stores/Theme';
 
 export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectProps) => {
+  const t = useI18nStore((state) => state.t);
   const { projects, addProject, editProject } = useWorkspaceStore(
     useShallow((state) => ({
       projects: state.projects,
@@ -50,14 +52,14 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
   }, [idProject]);
 
   return (
-    <Modal title={idProject ? 'Editar Projeto' : 'Novo Projeto'} width="500px" show={show}>
+    <Modal title={idProject ? t('context.editProject') : t('project.new')} width="500px" show={show}>
       <form onSubmit={onSubmit}>
         <Input
           autoFocus
           required
           backgroundColor={colors.fieldBackgroundColor}
           color={colors.fieldColor}
-          label="Descrição"
+          label={t('field.description')}
           labelColor={colors.fieldLabelColor}
           md={12}
           {...register('description')}
@@ -74,7 +76,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
 
           <Button
@@ -85,7 +87,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
             sm={4}
             md={3}
           >
-            Salvar
+            {t('common.save')}
           </Button>
         </Row>
       </form>

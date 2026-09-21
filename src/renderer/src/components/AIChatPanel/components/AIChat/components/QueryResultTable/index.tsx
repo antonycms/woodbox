@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import type { IColumn } from '@renderer/components/Table/dtos';
@@ -21,6 +22,7 @@ const getColumns = (result: IAIQueryResult): IColumn<Record<string, unknown>>[] 
 };
 
 export const QueryResultTable = React.memo(({ result }: IQueryResultTableProps) => {
+  const t = useI18nStore((state) => state.t);
   const rows = result?.rows || [];
   const columns = React.useMemo(() => (result ? getColumns(result) : []), [result]);
 
@@ -28,7 +30,7 @@ export const QueryResultTable = React.memo(({ result }: IQueryResultTableProps) 
 
   return (
     <>
-      <p style={{ margin: '4px 0 14px 0' }}>Resultado da query:</p>
+      <p style={{ margin: '4px 0 14px 0', userSelect: 'none' }}>{t('query.resultTitle')}</p>
 
       <div className={styles.queryResultTable}>
         <Table initialAnalysisMode={rows.length === 1} rows={rows} columns={columns} rowKeyExtractor={(_, index) => index} />

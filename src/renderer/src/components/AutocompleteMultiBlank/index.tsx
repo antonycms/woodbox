@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { useDropdownPlacement } from '@renderer/components/Autocomplete/hooks/useDropdownPlacement';
 import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks/useDropdownOutsideClick';
@@ -22,6 +23,7 @@ export interface IAutoCompleteMultiBlankRef {
 }
 
 export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankProps<T>) {
+  const t = useI18nStore((state) => state.t);
   const {
     ref,
     data,
@@ -43,7 +45,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
     clearable = true,
     extractLabel = defaultExtractLabel,
     extractValue = defaultExtractValue,
-    emptyMessage = 'Não há opções disponíveis',
+    emptyMessage = t('common.noOptions'),
   } = props;
   const { autocomplete: theme } = useThemeStore((state) => state.activeTheme);
 
@@ -358,7 +360,7 @@ export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankPr
           )}
 
           {!!(selected.length && clearable) && (
-            <IconMdiClose title="Desmarcar" color={color} cursor="pointer" onClick={onClear} />
+            <IconMdiClose title={t('common.unselect')} color={color} cursor="pointer" onClick={onClear} />
           )}
         </div>
       )}

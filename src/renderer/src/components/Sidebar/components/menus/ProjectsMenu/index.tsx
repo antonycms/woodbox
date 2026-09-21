@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useProjectTree } from './hooks/useProjectTree';
 import { useSidebarReveal } from './hooks/useSidebarReveal';
 import { useShallow } from 'zustand/react/shallow';
@@ -151,11 +152,11 @@ const ProjectsMenu = () => {
 
     try {
       await loadConnectionInfo(id);
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('toast.connectionError'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
 
       return false;
@@ -765,7 +766,7 @@ const ProjectsMenu = () => {
           <Button
             smallIcon
             text
-            title="Abrir editor SQL"
+            title={t('tooltip.openSqlEditor')}
             color={colors.color}
             icon={() => <FileSqlIcon size={14} />}
             onClick={openSelectedConnectionScript}
@@ -801,7 +802,7 @@ const ProjectsMenu = () => {
           <Button
             smallIcon
             text
-            title="Palavra exata"
+            title={t('common.exactWord')}
             icon={() => <WholeWordIcon />}
             color={isWholeWordFilter ? 'white' : 'gray'}
             onClick={toggleWholeWordFilter}

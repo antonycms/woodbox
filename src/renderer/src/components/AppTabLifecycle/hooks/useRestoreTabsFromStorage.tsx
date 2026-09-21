@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { IAppTab } from '@renderer/stores/AppTab/types';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
@@ -111,7 +112,7 @@ export const useRestoreTabsFromStorage = () => {
             showToast({
               type: 'error',
               title: t('toast.restoreConnectionError'),
-              description: result.reason?.message,
+              description: getErrorMessage(result.reason, t('common.unknownError')),
             });
           }
         });

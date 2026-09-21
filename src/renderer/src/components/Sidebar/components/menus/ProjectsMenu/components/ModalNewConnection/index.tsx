@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React, { useCallback } from 'react';
 import { Button } from '@renderer/components/Button';
@@ -172,11 +173,11 @@ export const ModalNewConnection = React.memo(
         await testConnection(connection);
 
         showToast({ type: 'success', title: t('toast.connectionSuccess') });
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.connectionFailed'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
         setLoadingTestConnection(false);

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
@@ -145,11 +146,11 @@ export const ModalRenameSchema = React.memo(
         });
 
         close();
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.schemaRenameError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {

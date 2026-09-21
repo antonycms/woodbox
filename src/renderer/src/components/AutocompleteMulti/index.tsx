@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { useDropdownFixedPosition } from '@renderer/components/Autocomplete/hooks/useDropdownFixedPosition';
@@ -25,6 +26,7 @@ export interface IAutoCompleteMultiRef {
 }
 
 export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
+  const t = useI18nStore((state) => state.t);
   const {
     ref,
     data,
@@ -45,7 +47,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
     clearable = true,
     extractLabel = defaultExtractLabel,
     extractValue = defaultExtractValue,
-    emptyMessage = 'Não há opções disponíveis',
+    emptyMessage = t('common.noOptions'),
     ...gridSystem
   } = props;
   const { autocomplete: theme } = useThemeStore((state) => state.activeTheme);
@@ -309,7 +311,7 @@ export function AutocompleteMulti<T = any>(props: IAutocompleteMultiProps<T>) {
 
         if (selected.length && clearable) {
           return (
-            <IconMdiClose title="Desmarcar" color={color} cursor="pointer" onClick={onClear} />
+            <IconMdiClose title={t('common.unselect')} color={color} cursor="pointer" onClick={onClear} />
           );
         }
 

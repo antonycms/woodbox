@@ -284,19 +284,19 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     () =>
       [
         {
-          text: data.capture?.active ? 'Parar captura' : 'Iniciar captura',
+          text: data.capture?.active ? t('capture.stop') : t('capture.start'),
           onClick: onToggleCapture,
         },
         hasCapturedRows && {
-          text: 'Exportar captura como JSONL',
+          text: t('capture.exportJsonl'),
           onClick: handleExportCaptureJsonl,
         },
         hasCapturedRows && {
-          text: 'Exportar captura como CSV',
+          text: t('capture.exportCsv'),
           onClick: handleExportCaptureCsv,
         },
         hasCapturedRows && {
-          text: 'Descartar captura',
+          text: t('capture.discard'),
           onClick: onClearCapture,
         },
       ].filter(Boolean) as IContextMenuOption[],
@@ -307,6 +307,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       hasCapturedRows,
       onClearCapture,
       onToggleCapture,
+      t,
     ],
   );
 
@@ -320,7 +321,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       const total = await getQueryRowsCount(id_connection, preparedQuery);
 
       setRowsCount(total);
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('toast.countRowsError'),
@@ -636,11 +637,11 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       setDroppedRows(new Map());
       showToast({ type: 'success', title: t('toast.dataSaved') });
       onRefresh();
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('toast.dataSaveError'),
-        description: error?.message,
+        description: getErrorMessage(error, t('common.unknownError')),
         delay: 8000,
       });
     } finally {

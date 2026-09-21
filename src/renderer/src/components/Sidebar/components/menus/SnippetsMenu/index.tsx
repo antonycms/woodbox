@@ -189,7 +189,7 @@ const SnippetsMenu = () => {
         closeOutside
         onClose={() => setSnippetToRemove(undefined)}
       >
-        <Text small color={colors.color}>
+        <Text userSelect={false} small color={colors.color}>
           {t('snippet.deleteQuestion', { name: snippetToRemove?.name || '' })}
         </Text>
 

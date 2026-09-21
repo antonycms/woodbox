@@ -1,6 +1,11 @@
 import type { TranslationKey } from './en';
 
 export const ptBR: Record<TranslationKey, string> = {
+  'project.new': 'Novo Projeto',
+  'query.resultTitle': 'Resultado da query:',
+  'refresh.cancelAuto': 'Cancelar auto-refresh ({{interval}})',
+  'refresh.none': 'Nenhum',
+  'aiProvider.baseUrlPlaceholder': 'http://localhost:11434/v1',
   'settings.title': 'Configurações',
   'settings.menu.general.label': 'Geral',
   'settings.menu.general.description': 'Preferências do app',

@@ -25,7 +25,7 @@ export const ModalConfirmProductionQuery = React.memo(
         onClose={onCancel}
       >
         <div className={styles.message}>
-          <Text color={colors.color}>{t('message.confirmProductionQuery')}</Text>
+          <Text userSelect={false} color={colors.color}>{t('message.confirmProductionQuery')}</Text>
         </div>
 
         <div className={styles.editorContainer}>

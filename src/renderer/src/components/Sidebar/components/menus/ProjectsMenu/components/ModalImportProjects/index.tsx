@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
@@ -89,11 +90,11 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
 
         setPreview(importPreview);
         selectPreviewItems(importPreview);
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('settings.import.readFileFailedTitle'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
         setLoadingPreview(false);
@@ -170,11 +171,11 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           count: importResult.connectionsImported,
         }),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('settings.import.importFailedTitle'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingImport(false);
@@ -319,27 +320,27 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           <Divider size={12} />
 
           <div className={styles.resultBox} style={themedPanelStyle}>
-            <Text small color={colors.color}>
+            <Text userSelect={false} small color={colors.color}>
               {t('settings.import.projectsSummary', {
                 created: result.projectsCreated,
                 reused: result.projectsReused,
               })}
             </Text>
-            <Text small color={colors.color}>
+            <Text userSelect={false} small color={colors.color}>
               {t('settings.import.connectionsSummary', {
                 imported: result.connectionsImported,
                 skipped: result.connectionsSkipped,
               })}
             </Text>
             {!!result.unsupportedConnections.length && (
-              <Text small color={settings.importWarningColor}>
+              <Text userSelect={false} small color={settings.importWarningColor}>
                 {t('settings.import.unsupportedConnections', {
                   count: result.unsupportedConnections.length,
                 })}
               </Text>
             )}
             {result.warnings.slice(0, 2).map((warning) => (
-              <Text key={warning} small color={settings.importWarningColor}>
+              <Text userSelect={false} key={warning} small color={settings.importWarningColor}>
                 {warning}
               </Text>
             ))}

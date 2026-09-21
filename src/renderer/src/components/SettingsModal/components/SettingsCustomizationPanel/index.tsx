@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
@@ -504,11 +505,11 @@ export const SettingsCustomizationPanel = React.memo(() => {
             themeName: importedTheme.name,
           }),
         });
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('settings.customization.themeImportFailedTitle'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       }
     },
@@ -721,7 +722,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
         closeOutside
         onClose={() => setThemeToRemove(undefined)}
       >
-        <Text small color={colors.color}>
+        <Text userSelect={false} small color={colors.color}>
           {t('settings.customization.removeThemeQuestion', { themeName: themeToRemove || '' })}
         </Text>
 

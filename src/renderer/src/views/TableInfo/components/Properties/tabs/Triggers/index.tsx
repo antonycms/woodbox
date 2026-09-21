@@ -57,14 +57,14 @@ const Triggers = ({ tableStore, id_connection, schema, table }: ITableInfoViewPr
   const contextMenuOptions = React.useMemo(() => {
     return [
       {
-        text: 'Gerar DDL',
+        text: t('modal.generateDdl'),
         onClick: () => {
           setDdlSql(generateTriggersDdl(selectedTriggers));
           setShowDdlModal(true);
         },
       },
     ];
-  }, [selectedTriggers]);
+  }, [selectedTriggers, t]);
 
   const onContextMenuTable = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {

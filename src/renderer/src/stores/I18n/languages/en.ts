@@ -1,4 +1,9 @@
 export const en = {
+  'project.new': 'New Project',
+  'query.resultTitle': 'Query result:',
+  'refresh.cancelAuto': 'Cancel auto-refresh ({{interval}})',
+  'refresh.none': 'None',
+  'aiProvider.baseUrlPlaceholder': 'http://localhost:11434/v1',
   'settings.title': 'Settings',
   'settings.menu.general.label': 'General',
   'settings.menu.general.description': 'App preferences',

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
@@ -201,11 +202,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
         showToast({ type: 'success', title: t('aiProvider.saved') });
         setEditingProvider(undefined);
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('aiProvider.saveFailed'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
         setLoadingSave(false);
@@ -221,11 +222,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       setLoadingTest(true);
       await testAIProvider(editingProvider);
       showToast({ type: 'success', title: t('aiProvider.testSuccess') });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.testFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingTest(false);
@@ -240,12 +241,12 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
       setCodexAccount(account);
       if (account.authenticated) setCodexLogin(undefined);
-    } catch (error) {
+    } catch (error: unknown) {
       if (!silent) {
         showToast({
           type: 'error',
           title: t('aiProvider.codexStatusFailed'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       }
     } finally {
@@ -260,11 +261,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
       setCodexLogin(login);
       window.open(login.verificationUrl, '_blank');
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.codexLoginFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingCodexLogin(false);
@@ -277,11 +278,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       await logoutCodexChatGPT();
       setCodexLogin(undefined);
       await loadCodexAccount();
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.codexLogoutFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingCodexAccount(false);
@@ -294,11 +295,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     try {
       await removeAIProvider(providerToRemove.id);
       showToast({ type: 'success', title: t('aiProvider.removed') });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.removeFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setProviderToRemove(undefined);
@@ -530,7 +531,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   required
                   label={t('aiProvider.field.baseURL')}
                   value={editingProvider.baseURL}
-                  placeholder="http://localhost:11434/v1"
+                  placeholder={t('aiProvider.baseUrlPlaceholder')}
                   md={12}
                   color={colors.fieldColor}
                   backgroundColor={colors.fieldBackgroundColor}

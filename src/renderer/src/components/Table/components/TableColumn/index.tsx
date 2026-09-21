@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
@@ -18,9 +19,6 @@ const linkStyle: React.CSSProperties = {
 
 const emptyStyle: React.CSSProperties = {};
 const primaryShortcutKeyLabel = getPrimaryShortcutKeyLabel();
-const singleLinkTitle = 'Clique para abrir linha referenciada';
-const previewLinkTitle = `Clique para visualizar referência; ${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
-const openLinkTitle = `${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
 
 interface ITableColumnProps {
   indexRow?: number;
@@ -110,15 +108,16 @@ const TableColumn = ({
   row,
   column,
 }: ITableColumnProps) => {
+  const t = useI18nStore((state) => state.t);
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
   const linkTitle = !isLinkClickable
     ? undefined
     : linkClickMode === 'single'
-      ? singleLinkTitle
+      ? t('tooltip.clickOpenReferencedRow')
       : onFkCellPreviewClick
-        ? previewLinkTitle
-        : openLinkTitle;
+        ? t('tooltip.previewOrOpenReferencedRow', { shortcut: primaryShortcutKeyLabel })
+        : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: primaryShortcutKeyLabel });
 
   const className = React.useMemo(() => {
     return classes(

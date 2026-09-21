@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -45,11 +46,11 @@ export const ModalNewSchema = React.memo(
         });
 
         close();
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.schemaCreateError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {

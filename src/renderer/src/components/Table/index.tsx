@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
 import useDebounce from '@renderer/hooks/useDebounce';
@@ -116,6 +117,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     initialAnalysisMode,
   } = props;
 
+  const t = useI18nStore((state) => state.t);
   const { table: theme } = useThemeStore((state) => state.activeTheme);
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
@@ -1168,7 +1170,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           40,
       );
       const rowColumnsMinSize = rowsToAnalyze.map((row) =>
-        Math.ceil(calculateTextHtmlWidth(`Linha #${Number(row.__index_row) + 1}`) + 40),
+        Math.ceil(calculateTextHtmlWidth(t('table.rowNumber', { number: Number(row.__index_row) + 1 })) + 40),
       );
       const minSizes = [firstColumnMinSize, ...rowColumnsMinSize];
       const sizes = minSizes.map((size) => {
@@ -1195,7 +1197,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       captureDefaultScroll();
       setAnalysisMode(true);
     },
-    [captureDefaultScroll, defaultColumnSize, maxColumnSize],
+    [captureDefaultScroll, defaultColumnSize, maxColumnSize, t],
   );
 
   const resetAnalysisMode = React.useCallback(() => {

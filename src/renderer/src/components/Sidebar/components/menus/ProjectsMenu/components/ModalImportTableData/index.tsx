@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import ExcelJS from 'exceljs';
@@ -289,11 +290,11 @@ export const ModalImportTableData = React.memo(
         setLoadingColumns(true);
         const columns = await getTableColumns(idConnection, { schema, table });
         setTableColumns(columns);
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.loadTableColumnsError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {
@@ -321,14 +322,14 @@ export const ModalImportTableData = React.memo(
             ),
           );
           return parsed;
-        } catch (error: any) {
+        } catch (error: unknown) {
           setParsedFile(undefined);
           setMapping({});
           setCsvParsedSeparator('');
           showToast({
             type: 'error',
             title: t('toast.readFileError'),
-            description: error?.message,
+            description: getErrorMessage(error, t('common.unknownError')),
             delay: 8000,
           });
         } finally {
@@ -423,11 +424,11 @@ export const ModalImportTableData = React.memo(
           });
 
           close();
-        } catch (error: any) {
+        } catch (error: unknown) {
           showToast({
             type: 'error',
             title: t('toast.dataImportError'),
-            description: error?.message,
+            description: getErrorMessage(error, t('common.unknownError')),
             delay: 8000,
           });
         } finally {
@@ -507,14 +508,14 @@ export const ModalImportTableData = React.memo(
             )}
           </Row>
 
-          {!!loadingColumns && <Text color={colors.color}>{t('import.loadingColumns')}</Text>}
-          {!!loadingFile && <Text color={colors.color}>{t('import.readingFile')}</Text>}
+          {!!loadingColumns && <Text userSelect={false} color={colors.color}>{t('import.loadingColumns')}</Text>}
+          {!!loadingFile && <Text userSelect={false} color={colors.color}>{t('import.readingFile')}</Text>}
 
           {!!parsedFile && (
             <>
               <Divider />
 
-              <Text color={colors.color} small>
+              <Text userSelect={false} color={colors.color} small>
                 {t('import.fileSummary', {
                   fileName: parsedFile.fileName,
                   rows: parsedFile.rows.length.toLocaleString(language),

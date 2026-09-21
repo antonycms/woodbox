@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
@@ -66,7 +67,7 @@ export const SshTunnelFields = React.memo((props: Props) => {
       const path = await dialogs.selectSshKey();
       if (path) update({ privateKeyPath: path, passphrase: undefined });
     } catch (error) {
-      showToast({ type: 'error', title: t('ssh.keySelectionError'), description: (error as Error).message });
+      showToast({ type: 'error', title: t('ssh.keySelectionError'), description: getErrorMessage(error, t('common.unknownError')) });
     }
   };
 

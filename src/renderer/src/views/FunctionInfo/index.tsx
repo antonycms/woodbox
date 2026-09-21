@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Spacer } from '@renderer/components/Spacer';
@@ -110,11 +111,11 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         showToast({ type: 'success', title: t('toast.functionSaved') });
 
         await Promise.all([load()]);
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.functionSaveError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {
@@ -234,7 +235,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                     </Button>
 
                     <Button
-                      title="Atualizar dados"
+                      title={t('common.refreshData')}
                       text
                       smallIcon
                       color={propertiesTheme.bar.color}
