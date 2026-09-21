@@ -1,3 +1,4 @@
+import { quoteMysqlIdentifier as quoteIdent } from '@shared/utils/sql';
 import type {
   DdlColumnInfo,
   DdlReferenceInfo,
@@ -6,8 +7,6 @@ import type {
   RendererDialectDdl,
 } from './types';
 import { getIndexColumnsDdl } from './utils';
-
-const quoteIdent = (value: string) => `\`${String(value).replace(/`/g, '``')}\``;
 
 const mysqlIntegerTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
 const mysqlPrefixIndexTypes = new Set([
