@@ -11,7 +11,7 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { TranslationKey } from '@renderer/stores/I18n/translations';
 import { useThemeStore } from '@renderer/stores/Theme';
 import type { DatabaseCompareSelectableObject, IObjectsModalProps } from '../../types';
-import { getGroupKey, getObjectDisplayName, getObjectKey, getObjectTypeLabel } from '../../utils';
+import { filterObject, groupObjects, getGroupKey, getObjectDisplayName, getObjectKey, getObjectTypeLabel } from '../../utils';
 import styles from './styles.module.css';
 
 type ObjectListItem =
@@ -32,19 +32,31 @@ type ObjectListItem =
 export const ObjectsModal = React.memo((props: IObjectsModalProps) => {
   const {
     show,
-    filterText,
-    groups,
+    objects,
+    supportsSchemas,
     selectedObjectSet,
-    collapsedSchemaSet,
     loading,
     onClose,
-    onFilterTextChange,
     onToggleGroup,
     onToggleObject,
-    onToggleSchemaVisibility,
   } = props;
   const t = useI18nStore((state) => state.t);
   const { modal: modalTheme } = useThemeStore((state) => state.activeTheme);
+
+  const [filterText, setFilterText] = React.useState('');
+  const [collapsedSchemas, setCollapsedSchemas] = React.useState<string[]>([]);
+  const wasOpen = React.useRef(false);
+
+  const groups = React.useMemo(
+    () => groupObjects(objects.filter((object) => filterObject(object, filterText)), supportsSchemas),
+    [objects, filterText, supportsSchemas],
+  );
+  const collapsedSchemaSet = React.useMemo(() => new Set(collapsedSchemas), [collapsedSchemas]);
+  const toggleSchemaVisibility = React.useCallback((groupKey: string) => {
+    setCollapsedSchemas((prev) =>
+      prev.includes(groupKey) ? prev.filter((item) => item !== groupKey) : [...prev, groupKey],
+    );
+  }, []);
 
   const listItems = React.useMemo<ObjectListItem[]>(() => {
     return groups.flatMap((group) => {
@@ -78,6 +90,11 @@ export const ObjectsModal = React.memo((props: IObjectsModalProps) => {
     [t],
   );
 
+  React.useEffect(() => {
+    if (show && !wasOpen.current) setCollapsedSchemas(groups.map(getGroupKey));
+    wasOpen.current = !!show;
+  }, [show, groups]);
+
   return (
     <Modal
       show={show}
@@ -95,7 +112,7 @@ export const ObjectsModal = React.memo((props: IObjectsModalProps) => {
         placeholderColor={modalTheme.color}
         disabled={loading}
         style={{ margin: '2px' }}
-        onChange={(event) => onFilterTextChange(event.target.value)}
+        onChange={(event) => setFilterText(event.target.value)}
       />
 
       <div
@@ -134,7 +151,7 @@ export const ObjectsModal = React.memo((props: IObjectsModalProps) => {
                       className={styles.schemaButton}
                       type="button"
                       disabled={loading}
-                      onClick={() => onToggleSchemaVisibility(item.groupKey)}
+                      onClick={() => toggleSchemaVisibility(item.groupKey)}
                     >
                       <span className={styles.schemaLabel}>{getSchemaLabel(item.label)}</span>
                       <span className={styles.schemaDivider} />

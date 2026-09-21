@@ -35,14 +35,11 @@ export interface IDdlModalProps {
 
 export interface IObjectsModalProps {
   show?: boolean;
-  filterText: string;
-  groups: ObjectGroup[];
+  objects: DatabaseCompareSelectableObject[];
+  supportsSchemas: boolean;
   selectedObjectSet: Set<string>;
-  collapsedSchemaSet: Set<string>;
   loading?: boolean;
   onClose(): void;
-  onFilterTextChange(value: string): void;
   onToggleGroup(objects: DatabaseCompareSelectableObject[]): void;
   onToggleObject(object: DatabaseCompareSelectableObject): void;
-  onToggleSchemaVisibility(groupKey: string): void;
 }

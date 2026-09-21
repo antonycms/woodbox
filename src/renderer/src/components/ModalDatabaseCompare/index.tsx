@@ -26,7 +26,7 @@ import { DEFAULT_OPTIONS, KIND_LABEL_KEY, MESSAGE_LABEL_KEY, OPERATION_LABEL_KEY
 import { DdlModal } from './components/DdlModal';
 import { ObjectsModal } from './components/ObjectsModal';
 import type { DatabaseCompareSelectableObject, IModalDatabaseCompareProps } from './types';
-import { filterObject, getGroupKey, getObjectKey, groupObjects, mergeFunctions, mergeTables } from './utils';
+import { getObjectKey, mergeFunctions, mergeTables } from './utils';
 import styles from './styles.module.css';
 
 const RESULT_OPERATIONS = ['modify', 'create', 'delete'] as const;
@@ -50,14 +50,12 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
     })),
   );
   const compareDatabases = useDatabaseStore((state) => state.compare);
-  const { table: tableTheme, modal: modalTheme } = useThemeStore((state) => state.activeTheme);
+  const { table: tableTheme, modal: modalTheme, feedback } = useThemeStore((state) => state.activeTheme);
 
   const [sourceConnectionId, setSourceConnectionId] = React.useState<string>();
   const [targetConnectionId, setTargetConnectionId] = React.useState<string>();
   const [selectedObjectsKeys, setSelectedObjectsKeys] = React.useState<string[]>([]);
-  const [collapsedSchemas, setCollapsedSchemas] = React.useState<string[]>([]);
   const [showObjectsModal, setShowObjectsModal] = React.useState(false);
-  const [filterText, setFilterText] = React.useState('');
   const [loadingConnectionIds, setLoadingConnectionIds] = React.useState<string[]>([]);
   const [loadingCompare, setLoadingCompare] = React.useState(false);
   const [result, setResult] = React.useState<IDatabaseCompareResult>();
@@ -106,15 +104,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
     ];
   }, [allFunctions, allTables]);
 
-  const filteredGroups = React.useMemo(() => {
-    return groupObjects(
-      selectableObjects.filter((object) => filterObject(object, filterText)),
-      supportsSchemas,
-    );
-  }, [filterText, selectableObjects, supportsSchemas]);
-
   const selectedObjectSet = React.useMemo(() => new Set(selectedObjectsKeys), [selectedObjectsKeys]);
-  const collapsedSchemaSet = React.useMemo(() => new Set(collapsedSchemas), [collapsedSchemas]);
 
   const selectedObjects = React.useMemo<IDatabaseCompareObjectSelection[]>(() => {
     return selectableObjects
@@ -162,9 +152,8 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
   }, [loadingCompare, onClose]);
 
   const openObjectsModal = React.useCallback(() => {
-    setCollapsedSchemas(filteredGroups.map(getGroupKey));
     setShowObjectsModal(true);
-  }, [filteredGroups]);
+  }, []);
 
   const closeObjectsModal = React.useCallback(() => {
     setShowObjectsModal(false);
@@ -185,12 +174,6 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
       keys.forEach((key) => (allSelected ? current.delete(key) : current.add(key)));
       return [...current];
     });
-  }, []);
-
-  const toggleSchemaVisibility = React.useCallback((groupKey: string) => {
-    setCollapsedSchemas((prev) =>
-      prev.includes(groupKey) ? prev.filter((item) => item !== groupKey) : [...prev, groupKey],
-    );
   }, []);
 
   const toggleResultOperation = React.useCallback((operation: string) => {
@@ -284,8 +267,6 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
 
   React.useEffect(() => {
     setSelectedObjectsKeys([]);
-    setCollapsedSchemas([]);
-    setFilterText('');
     setResult(undefined);
     setSelectedResultItem(undefined);
   }, [sourceConnectionId, targetConnectionId]);
@@ -307,6 +288,12 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
               {
                 color: modalTheme.color,
                 '--database-compare-row-background-color': modalTheme.fieldBackgroundColor,
+                '--database-compare-border-color': modalTheme.borderColor,
+                '--database-compare-warning-border-color': feedback.warningBorderColor,
+                '--database-compare-warning-background-color': feedback.warningBackgroundColor,
+                '--database-compare-modify-color': tableTheme.backgroundColorColumnEdited,
+                '--database-compare-create-background-color': tableTheme.backgroundColorRowNew,
+                '--database-compare-delete-background-color': tableTheme.backgroundColorRowRemoved,
               } as React.CSSProperties
             }
           >
@@ -488,17 +475,15 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
       </Modal>
 
       <ObjectsModal
+        key={`${sourceConnectionId}:${targetConnectionId}`}
         show={!!show && showObjectsModal}
-        filterText={filterText}
-        groups={filteredGroups}
+        objects={selectableObjects}
+        supportsSchemas={supportsSchemas}
         selectedObjectSet={selectedObjectSet}
-        collapsedSchemaSet={collapsedSchemaSet}
         loading={loadingCompare}
         onClose={closeObjectsModal}
-        onFilterTextChange={setFilterText}
         onToggleGroup={toggleGroup}
         onToggleObject={toggleObject}
-        onToggleSchemaVisibility={toggleSchemaVisibility}
       />
 
 

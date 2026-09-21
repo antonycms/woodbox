@@ -51,7 +51,7 @@ export const DdlModal = React.memo(({ item, title, onClose }: IDdlModalProps) =>
             <Text small color={colors.color} userSelect={false}>
               {t('databaseCompare.rollbackDdl')}
             </Text>
-            <pre className={styles.rollback} style={{ color: colors.color }}>
+            <pre className={styles.rollback} style={{ color: colors.color, backgroundColor: colors.fieldBackgroundColor }}>
               {item.rollbackDdl}
             </pre>
           </>
