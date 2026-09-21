@@ -40,11 +40,15 @@ const Editor = ({
   }>();
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const outsideContainerRef = React.useRef<HTMLDivElement>(null);
   const editorInstanceRef = React.useRef<monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
   const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
 
-  const { width, height } = useResize({ HTMLElement: containerRef.current });
+  const { width, height } = useResize({
+    HTMLElement: outsideContainerRef.current,
+    ignoreZeroValue: true,
+  });
 
   const stopCtrlClickPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!props.onCtrlClick || !isPrimaryShortcutPressed(event)) return;
@@ -52,7 +56,16 @@ const Editor = ({
     event.stopPropagation();
   };
 
-  const resize = useDebounce(() => editor?.layout?.(), 10);
+  const resize = useDebounce(() => {
+    const element = outsideContainerRef.current;
+
+    if (element?.clientWidth && element?.clientHeight) {
+      editor?.layout?.({ width: element.clientWidth, height: element.clientHeight });
+      return;
+    }
+
+    editor?.layout?.();
+  }, 10);
 
   const emitCurrentValueChange = useDebounce(() => {
     props.onChangeCurrentValue?.(getCurrentValue());
@@ -88,6 +101,13 @@ const Editor = ({
   };
 
   const layout = () => {
+    const element = outsideContainerRef.current;
+
+    if (element?.clientWidth && element?.clientHeight) {
+      editor?.layout?.({ width: element.clientWidth, height: element.clientHeight });
+      return;
+    }
+
     editor?.layout?.();
   };
 
@@ -686,6 +706,7 @@ const Editor = ({
     <>
       <div
         className={styles.outsideContainer}
+        ref={outsideContainerRef}
         onClickCapture={stopCtrlClickPropagation}
         onContextMenu={openEditorContextMenu}
       >
