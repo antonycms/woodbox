@@ -5,7 +5,7 @@
 ## Escopo
 
 - Aplicação desktop Electron + React para gerenciamento de bancos de dados.
-- Stack principal: Electron 35, electron-vite, React 19, TypeScript, CSS Modules, Monaco Editor, Knex, PostgreSQL, MySQL e SQLite.
+- Stack principal: Electron 43, electron-vite, React 19, TypeScript, CSS Modules, Monaco Editor, Knex, PostgreSQL, MySQL e SQLite.
 - `src/main`: processo principal do Electron, IPC, conexões, queries e storage local.
 - `src/preload`: ponte segura entre Electron e renderer.
 - `src/renderer`: interface React.
@@ -42,7 +42,7 @@ rtk npm run typecheck:node
 rtk npm run typecheck:web
 ```
 
-Atenção: `npm run lint` executa ESLint com `--fix`. Só rode se for pedido ou combinado.
+Atenção: `npm run lint` executa Biome com `check --write`. Só rode se for pedido ou combinado.
 
 ## Versões e tags
 
@@ -64,6 +64,7 @@ src/
 │   ├── storage/        # Persistência local via electron-store
 │   └── utils/          # Helpers de IPC/eventos
 ├── preload/            # API exposta ao renderer
+├── shared/             # Contratos e utilitários compartilhados entre camadas
 └── renderer/           # React frontend
     └── src/
         ├── components/ # Componentes reutilizáveis
@@ -102,11 +103,12 @@ src/
 - Operações usadas só por um modal/dropdown/painel devem ser disparadas nele pelos hooks de domínio, não na view pai.
 - A view pai deve passar apenas dados mínimos de contexto para filhos, como `active`, `onClose`, ids e registro selecionado.
 - Evite duplicar tipos, constantes, mapeamentos e formatadores; extraia para arquivo local quando for específico da view ou para `utils`/`hooks` quando for reutilizável.
+- Ao extrair componentes ou hooks, preserve quando o estado é mantido ou reiniciado, inclusive ao abrir/fechar painéis e trocar de conexão. Revise dependências dos hooks e a limpeza de timers, eventos e subscriptions.
 
 ### UI e estilo
 
 - Preserve a identidade atual: interface escura, focada, técnica, com destaque neon/suave para ações e estados.
-- Textos não interativos devem desabilitar seleção: use `userSelect={false}` no componente `Text`; se não usar `Text`, aplique via CSS.
+- Labels e textos decorativos devem desabilitar seleção: use `userSelect={false}` no componente `Text`; se não usar `Text`, aplique via CSS. SQL, dados, logs e detalhes de erros devem continuar copiáveis.
 - Antes de criar novas cores, consulte `src/renderer/src/styles/theme/default.ts`.
 - Prefira tokens do tema atual (`__colors`) e variáveis CSS derivadas de `useThemeStore`.
 - Não hardcode cores repetidas quando já houver valor equivalente no tema.
@@ -121,12 +123,19 @@ src/
 - Inicialize as stores explicitamente na raiz com `initializeStores`; cada domínio compartilha seu carregamento inicial e permite nova tentativa após falha. Persistência e credenciais continuam no main, sem middleware `persist` no renderer.
 - Não use React Context para estado da aplicação. Interface usa `Theme`, `I18n`, `Toast`, `AppTab` e `AIChatPanel` em `stores`. Tabelas criam stores independentes (`createTableInfoStore`) por instância, passadas explicitamente por props; nunca transforme esse estado em singleton global. `TabSplit` mantém seu estado local e se comunica com as barras por props/callbacks.
 - `AppTab.restoreSession` restaura abas, grupos e seleção conjuntamente; grupos vazios são removidos pelas próprias ações, sem efeitos de limpeza nos componentes.
-- Helpers de persistência JSON ficam em `utils/storage.ts` e são reutilizados por `useStorage`, com suporte a localStorage/sessionStorage.
+- Para persistência JSON no renderer, use os helpers de `utils/storage.ts`, reutilizados por `useStorage`, com suporte a localStorage/sessionStorage. Valide o formato dos dados recuperados antes de usá-los.
 - `ToastHost`, `AppTabLifecycle` e `StoreInitialization` cuidam da renderização e dos efeitos de interface, sem Providers. Dados locais derivados podem continuar em props/useState.
 - Todo texto visível ao usuário no renderer deve usar `useI18nStore` com chaves em `src/renderer/src/stores/I18n`; não deixe labels, placeholders, tooltips, títulos de modal ou toasts hardcoded.
+- Ao criar ou alterar chaves de tradução, atualize `languages/ptBR.ts` e `languages/en.ts` em conjunto.
 - Use hooks existentes como `useForm`, `useStorage`, `useDebounce`, `useResize` e `useLatestFunc` quando aplicável.
 - Para mensagens ao usuário, use o padrão de Toast existente.
 - Mensagens de erro e confirmação devem ser claras e em português brasileiro.
+- Normalize erros exibidos ao usuário com `getErrorMessage`; no renderer, use fallback traduzido.
+
+### Edição de linhas
+
+- Reutilize `hooks/useRowChanges.ts` e `utils/tableRows.ts` nos fluxos de edição de dados, sem duplicar o gerenciamento de alterações.
+- Preserve as diferenças entre `NULL`, valor padrão e campo não informado, além dos comportamentos de cancelamento, exclusão e modo somente leitura.
 
 ### Ordem dos Hooks
 
@@ -157,7 +166,7 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 - No renderer, geração de DDL e seus tipos ficam em `database/ddl`; essa camada não deve importar stores ou views.
 
 - Use Knex e os adaptadores existentes em `src/main/database/dialects`.
-- Ao adicionar suporte a dialeto ou query de metadados, atualize o adapter e os arquivos de `querys` correspondentes.
+- Ao adicionar suporte a dialeto ou query de metadados, atualize o adapter e os arquivos de `queries` correspondentes.
 - Não monte SQL com concatenação quando houver entrada do usuário; use mecanismos seguros do Knex/driver.
 - Tenha cuidado com SQL executado livremente pelo usuário: não reescreva a query sem motivo.
 - Em resultados tabulares, preserve paginação, metadados e compatibilidade entre PostgreSQL, MySQL e SQLite.
@@ -183,6 +192,8 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 - Tipos globais do renderer ficam em `src/renderer/src/@types`.
 - Tipos da ponte preload ficam em `src/preload/index.d.ts`.
 - Prefira tipos explícitos em contratos entre main, preload e renderer.
+- Use `unknown` para valores dinâmicos e erros; faça narrowing antes de acessar suas propriedades. Não substitua `any` por casts amplos apenas para passar no typecheck.
+- Reutilize `DatabaseRow`, de `src/shared/types/database.ts`, para resultados de banco sem estrutura conhecida; use tipos específicos quando a estrutura for conhecida.
 - Ao mudar payload de IPC, sincronize chamada, handler e tipo relacionado.
 
 ## Validação antes de finalizar
@@ -205,4 +216,5 @@ rtk npm run typecheck:node
 rtk npm run typecheck
 ```
 
-- Se não rodar validação, informe o motivo.
+- Typecheck não substitui teste de comportamento. Em alterações de edição, captura e exportação, verifique os fluxos afetados, incluindo cancelamento e falhas.
+- Informe quais verificações foram executadas e o que não foi testado. Se não rodar validação, informe o motivo.
