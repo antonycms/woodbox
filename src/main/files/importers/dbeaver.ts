@@ -2,7 +2,9 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { generateHash } from '@main/utils/methods';
+import { generateHash } from '@shared/utils/string';
+import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+import type { IProject } from '@shared/types/workspace';
 
 const inflateRaw = promisify(zlib.inflateRaw);
 

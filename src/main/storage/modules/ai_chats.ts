@@ -1,5 +1,12 @@
 import type Store from 'electron-store';
-import { generateHash } from '@main/utils/methods';
+import { generateHash } from '@shared/utils/string';
+import type {
+  IAIChatMessage,
+  IAIChat,
+  IAIChatInput,
+  IAIChatPatch,
+  IAIChatAppendMessagesInput,
+} from '@shared/types/ai';
 
 const STORE_KEY = 'ai_chats';
 

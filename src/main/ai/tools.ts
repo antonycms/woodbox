@@ -1,3 +1,5 @@
+import type { Dialect, ConnectionEnvironment } from '@shared/types/connections';
+import type { IAIQueryApproval } from '@shared/types/ai';
 import { isStepCount, jsonSchema, type Schema, type ToolSet, tool } from 'ai';
 import {
   getConnectionInfo,

@@ -3,7 +3,7 @@ import { createServer, type Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import ssh2, { type ClientChannel, type ConnectConfig } from 'ssh2';
-import type { ISshConnectionConfig } from '../../preload/ssh';
+import type { ISshConnectionConfig } from '@shared/types/ssh';
 
 export interface SshTunnel {
   host: string;

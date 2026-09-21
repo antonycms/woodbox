@@ -1,4 +1,12 @@
 import type { Knex } from 'knex';
+import type { IOrderBy, SerializedRunSqlResult } from '@shared/types/database';
+import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+
+export interface IConnection {
+  id: string;
+  instance: Knex<any, unknown[]>;
+  dialect: Dialect;
+}
 
 export interface DatabaseDialectQueries {
   getTables(): string;
@@ -25,21 +33,6 @@ export interface DatabaseDialectQueries {
   getFunctionOwner?(params: { schema: string; functionName: string; functionIdentityArguments?: string }): string;
   getProcessList?(): string;
   cancelProcess?(pid: number): string;
-}
-
-export interface SerializedRunSqlColumn {
-  name: string;
-  type?: string;
-}
-
-export interface SerializedRunSqlResult {
-  type: string;
-  affected_rows?: number;
-  auto_paginated?: boolean;
-  execution_time_ms?: number;
-  rows: any[];
-  columns: string[];
-  columns_info?: SerializedRunSqlColumn[];
 }
 
 export interface SerializeRunSqlContext {
@@ -84,9 +77,4 @@ export interface IGetTableDataParams {
   actualPage?: number;
   where?: string;
   orderBy?: IOrderBy[];
-}
-
-export interface IOrderBy {
-  columnName: string;
-  sortType: 'DESC' | 'ASC';
 }

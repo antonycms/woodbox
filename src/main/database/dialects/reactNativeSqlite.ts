@@ -1,3 +1,4 @@
+import type { IReactNativeBridgeConnectionConfig } from '@shared/types/reactNativeBridge';
 import sqlite from './sqlite';
 import type { DatabaseDialectAdapter } from '../types';
 

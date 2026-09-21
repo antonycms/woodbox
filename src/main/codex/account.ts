@@ -1,3 +1,4 @@
+import type { ICodexChatGPTAccount, ICodexChatGPTLoginStart } from '@shared/types/ai';
 import {
   clearStoredCodexCredential,
   getEnvCodexCredential,

@@ -1,11 +1,12 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["electron.vite.config.*", "./src/main/**/*", "./src/preload/**/*"],
+  "include": ["electron.vite.config.*", "./src/main/**/*", "./src/preload/**/*", "./src/shared/**/*"],
   "compilerOptions": {
     "esModuleInterop": true,
     "composite": true,
     "paths": {
-      "@main/*": ["./src/main/*"]
+      "@main/*": ["./src/main/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   }
 }

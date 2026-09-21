@@ -1,3 +1,12 @@
+import type { IConnectionConfig } from '@shared/types/connections';
+import type { IProject } from '@shared/types/workspace';
+import type {
+  ImportConnectionsSource,
+  IImportConnectionsSelection,
+  IImportConnectionsParams,
+  IImportConnectionsPreview,
+  IImportConnectionsResult,
+} from '@shared/types/imports';
 import Store from 'electron-store';
 import { initialValue as projects, getModule as getModuleProjects } from './modules/projects';
 import {

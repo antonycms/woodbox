@@ -1,3 +1,4 @@
+import type { IConnectionConfig } from '@shared/types/connections';
 import fs from 'fs';
 
 export const getSslConfig = ({

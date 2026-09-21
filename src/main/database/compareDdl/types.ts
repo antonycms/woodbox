@@ -1,5 +1,7 @@
-export type CompareDbObjectType = 'table' | 'view' | 'materialized_view';
-export type CompareConstraintType = 'primary_key' | 'unique_key' | 'check' | 'exclusion';
+import type {
+  DatabaseObjectType as CompareDbObjectType,
+  ConstraintType as CompareConstraintType,
+} from '@shared/types/database';
 
 export type CompareColumnInfo = Record<string, unknown> & {
   column_name: string;

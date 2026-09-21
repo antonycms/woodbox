@@ -1,3 +1,4 @@
+import type { IProject } from '@shared/types/workspace';
 import type Store from 'electron-store';
 import {
   makeFnAddItemInStoredArray,

@@ -12,12 +12,24 @@ import {
   retainReactNativeBridgeGateway,
 } from '@main/reactNativeBridge/gateway';
 import { getDialectAdapter, getDialectIds } from './dialects';
-import { compareDatabases as compareDatabasesCore, type DatabaseCompareParams } from './compare';
+import type { DatabaseCompareParams } from '@shared/types/databaseCompare';
+import type {
+  IParamsGetTableData,
+  IOptionsRunSql,
+  IExportDataParams,
+  ExportDataFormat as ExportFormat,
+  ExportDataSource as ExportSource,
+  IServerOutputMessage,
+  IImportTableDataParams,
+  IImportTableDataResult,
+} from '@shared/types/database';
+import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+import type { IConnection, ITableWithSchema } from './types';
+import { compareDatabases as compareDatabasesCore } from './compare';
 import { getSslConfig } from './ssl';
 import { openSshTunnel, type SshTunnel } from './ssh';
 import { verifySshHost } from './sshHostVerification';
 import { mergeSshCredentials } from '../storage/modules/ssh_credentials';
-import type { IOrderBy } from './types';
 import { serializeOrderBy } from './utils/orderBy';
 import {
   hasSqlStatementSeparator,
@@ -44,23 +56,7 @@ const activeRunSqlQueries = new Map<
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
 
-type ExportFormat = 'csv' | 'json' | 'jsonl' | 'xlsx';
-
-type ExportSource =
-  | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }
-  | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
-
-interface IExportDataParams {
-  source: ExportSource;
-  columns: string[];
-  format: ExportFormat;
-  batchSize?: number;
-  fileName?: string;
-}
-
-interface IExportPreviewParams {
-  source: ExportSource;
-}
+type IExportPreviewParams = Pick<IExportDataParams, 'source'>;
 
 const EXPORT_FORMAT_FILTERS: Record<ExportFormat, Electron.FileFilter> = {
   csv: { name: 'CSV', extensions: ['csv'] },
@@ -83,17 +79,6 @@ const getReactNativeBridgeTestSource = (connectionId?: string) =>
 const getReactNativeBridgeGatewayOptions = (config: IConnectionConfig) => ({
   port: config.reactNativeBridge?.port,
 });
-
-interface IServerOutputMessage {
-  id: string;
-  connectionId: string;
-  date: string;
-  severity?: string;
-  message: string;
-  detail?: string;
-  hint?: string;
-  where?: string;
-}
 
 const addServerOutput = (connectionId: string, notice: any) => {
   if (!connectionId) return;
@@ -562,7 +547,7 @@ export const getConnectionInfo = async (connectionId: string) => {
   return { tables, schemas, functions };
 };
 
-export const getTableColumns = async (connectionId: string, { table, schema }) => {
+export const getTableColumns = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -586,7 +571,7 @@ export const getColumnTypes = async (connectionId: string) => {
   return adapter.getRows(raw);
 };
 
-export const getTableReferences = async (connectionId: string, { table, schema }) => {
+export const getTableReferences = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -598,7 +583,7 @@ export const getTableReferences = async (connectionId: string, { table, schema }
   return adapter.getRows(raw);
 };
 
-export const getTableUsedAsReference = async (connectionId: string, { table, schema }) => {
+export const getTableUsedAsReference = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -610,7 +595,7 @@ export const getTableUsedAsReference = async (connectionId: string, { table, sch
   return adapter.getRows(raw);
 };
 
-export const getTableRestrictions = async (connectionId: string, { table, schema }) => {
+export const getTableRestrictions = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -622,7 +607,7 @@ export const getTableRestrictions = async (connectionId: string, { table, schema
   return adapter.getRows(raw);
 };
 
-export const getTableDefinition = async (connectionId: string, { table, schema }) => {
+export const getTableDefinition = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -634,7 +619,7 @@ export const getTableDefinition = async (connectionId: string, { table, schema }
   return adapter.getRows(raw);
 };
 
-export const getTableIndexes = async (connectionId: string, { table, schema }) => {
+export const getTableIndexes = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -646,7 +631,7 @@ export const getTableIndexes = async (connectionId: string, { table, schema }) =
   return adapter.getRows(raw);
 };
 
-export const getTableTriggers = async (connectionId: string, { table, schema }) => {
+export const getTableTriggers = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -692,14 +677,7 @@ export const getTableData = async (
     limit = 200,
     where,
     orderBy,
-  }: {
-    table: string;
-    schema: string;
-    page?: number;
-    limit?: number;
-    where?: string;
-    orderBy?: IOrderBy[];
-  },
+  }: IParamsGetTableData,
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -882,7 +860,7 @@ export const exportData = async (
 export const runSql = async (
   connectionId: string,
   sql: string,
-  options?: { page?: number; limit?: number; orderBy?: IOrderBy[]; queryExecutionId?: string },
+  options?: IOptionsRunSql,
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -971,7 +949,7 @@ export const runSql = async (
 export const runExplainSql = async (
   connectionId: string,
   sql: string,
-  options?: { queryExecutionId?: string },
+  options?: Pick<IOptionsRunSql, 'queryExecutionId'>,
 ) => {
   const connection = await getConnection(connectionId);
   const adapter = getDialectAdapter(connection.dialect);

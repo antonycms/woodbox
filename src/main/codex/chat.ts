@@ -1,3 +1,10 @@
+import type {
+  IAIProviderConfig,
+  IAIChatMessageInput,
+  IAIQueryApproval,
+  IAIChatRequest,
+  IAIChatResponse,
+} from '@shared/types/ai';
 import { asSchema, type Tool, type ToolSet } from 'ai';
 import {
   AI_QUERY_EXECUTION_TOOL_NAME,

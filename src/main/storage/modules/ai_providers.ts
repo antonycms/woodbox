@@ -5,7 +5,8 @@ import {
   isLegacySafeSecret,
   isLocalEncryptedSecret,
 } from '@main/storage/secret';
-import { generateHash } from '@main/utils/methods';
+import { generateHash } from '@shared/utils/string';
+import type { IAIProviderConfig, IAIProviderPublic, IAIProviderInput } from '@shared/types/ai';
 
 const STORE_KEY = 'ai_providers';
 

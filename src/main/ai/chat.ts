@@ -1,3 +1,10 @@
+import type {
+  IAIProviderInput,
+  IAIChatMessageInput,
+  IAIQueryApproval,
+  IAIChatRequest,
+  IAIChatResponse,
+} from '@shared/types/ai';
 import { generateText } from 'ai';
 import { getCodexChatGPTAccount } from '@main/codex/account';
 import { getInternalAIProvider } from '@main/storage/store';

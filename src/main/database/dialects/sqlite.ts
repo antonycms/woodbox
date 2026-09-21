@@ -1,7 +1,7 @@
+import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
+import type { SerializedRunSqlResult } from '@shared/types/database';
 import queries from '@main/database/queries/sqlite';
-import type { DatabaseDialectAdapter, SerializedRunSqlResult } from '../types';
-
-const quoteIdentifier = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
+import type { DatabaseDialectAdapter } from '../types';
 
 const splitStatements = (sql: string) => {
   const statements: string[] = [];

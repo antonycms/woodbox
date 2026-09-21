@@ -1,9 +1,7 @@
 import { randomUUID } from 'crypto';
 import { emitEvent } from '@main/utils/emitEvent';
-import type {
-  BridgeHelloMessage,
-  ReactNativeBridgeSessionInfo,
-} from './protocol';
+import type { ReactNativeBridgeSessionInfo } from '@shared/types/reactNativeBridge';
+import type { BridgeHelloMessage } from './protocol';
 
 export interface ReactNativeBridgeSession extends ReactNativeBridgeSessionInfo {
   send(data: unknown): boolean;

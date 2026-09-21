@@ -1,3 +1,4 @@
+import type { UpdateAvailablePayload, UpdateProgressPayload } from '@shared/types/updates';
 import { BrowserWindow, app } from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater';
 import addListener from './utils/addListener';
@@ -6,22 +7,6 @@ import { emitEvent } from './utils/emitEvent';
 type ReleaseNoteInfo = {
   readonly version: string;
   readonly note: string | null;
-};
-
-type UpdateAvailablePayload = {
-  version: string;
-  currentVersion: string;
-  releaseName?: string | null;
-  releaseNotes?: string | null;
-  releaseDate?: string;
-  manualDownloadUrl?: string;
-};
-
-type UpdateProgressPayload = {
-  version?: string;
-  percent: number;
-  transferred: number;
-  total: number;
 };
 
 let initialized = false;

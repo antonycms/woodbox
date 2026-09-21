@@ -1,4 +1,4 @@
-import type { ISshConnectionConfig } from '../../../preload/ssh';
+import type { ISshConnectionConfig } from '@shared/types/ssh';
 
 export const mergeSshCredentials = (
   ssh?: ISshConnectionConfig,

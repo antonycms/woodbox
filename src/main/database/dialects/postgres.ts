@@ -1,11 +1,12 @@
+import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
+import type { SerializedRunSqlResult } from '@shared/types/database';
 import pg from 'pg';
 import queries from '@main/database/queries/postgres';
-import type { DatabaseDialectAdapter, SerializedRunSqlResult } from '../types';
+import type { DatabaseDialectAdapter } from '../types';
 
 pg.types.setTypeParser(1114, (val) => val);
 pg.types.setTypeParser(1184, (val) => val);
 
-const quoteIdentifier = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 const postgresTypesByOid = new Map<number, string>(
   Object.entries(pg.types.builtins).map(([name, oid]) => [Number(oid), name.toLowerCase()]),
 );

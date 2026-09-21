@@ -1,3 +1,4 @@
+import type { IConnectionConfig, IConnectionPublic } from '@shared/types/connections';
 import type Store from 'electron-store';
 import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '@main/storage/secret';
 import { makeFnRemoveStoredItemFromArray } from '@main/storage/utils';

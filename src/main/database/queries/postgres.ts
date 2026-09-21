@@ -3,7 +3,8 @@
   https://marketplace.visualstudio.com/items?itemName=jtladeiras.vscode-inline-sql
 */
 
-import type { IGetTableDataParams, IOrderBy, ITableWithSchema } from '@main/database/types';
+import type { IOrderBy } from '@shared/types/database';
+import type { IGetTableDataParams, ITableWithSchema } from '@main/database/types';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 const quoteLiteral = (value?: string) => `'${String(value ?? '').replace(/'/g, "''")}'`;
