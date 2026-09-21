@@ -1,6 +1,6 @@
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import type { Dialect } from '@shared/types/connections';
-import type { IRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, IRunSqlResult } from '@shared/types/database';
 import type { ITableQuery } from '@renderer/utils/sql';
 
 export interface IQueryResult extends IRunSqlResult {
@@ -34,7 +34,7 @@ export type IDataMakeTabResult = IQueryResult & { title?: string };
 
 export interface IQueryCapturedRow {
   captured_at: string;
-  row: any;
+  row: DatabaseRow;
 }
 
 export interface IQueryCaptureState {

@@ -3,7 +3,7 @@ import { calculateTextHtmlWidth } from '@renderer/utils/methods';
 import type { IColumn } from '../dtos';
 import { DEFAULT_COLUMN_SIZE } from '../constants';
 
-interface UseTableColumnSizingParams<Row = any> {
+interface UseTableColumnSizingParams<Row = Record<string, unknown>> {
   columns: IColumn<Row>[];
 }
 

@@ -18,10 +18,10 @@ interface IReferenceSelectionProps {
   idConnection: string;
   reference?: IColumnReferenceInfo;
   onDataError(error: unknown): void;
-  onSelectValue(value: any): void;
+  onSelectValue(value: unknown): void;
 }
 
-const serializeRows = (rows: any[]) =>
+const serializeRows = (rows: Record<string, unknown>[]) =>
   rows.map((row) => ({
     ...row,
     __table_hash_item: `reference_${generateHash()}`,
@@ -45,7 +45,7 @@ const ReferenceSelection = ({
   );
   const t = useI18nStore((state) => state.t);
   const [columns, setColumns] = React.useState<IColumn[]>([]);
-  const [items, setItems] = React.useState<any[]>([]);
+  const [items, setItems] = React.useState<ReturnType<typeof serializeRows>>([]);
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
@@ -244,7 +244,7 @@ const ReferenceSelection = ({
           rows={items}
           sort={sort}
           loading={loading}
-          rowKeyExtractor={(row, index) => row.__table_hash_item ?? index}
+          rowKeyExtractor={(row, index) => typeof row.__table_hash_item === 'string' ? row.__table_hash_item : index}
           onSort={handleSort}
           onScrollEnd={loadNextPage}
           onSelectCellData={handleSelectCell}

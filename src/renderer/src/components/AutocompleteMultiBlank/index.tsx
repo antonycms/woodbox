@@ -1,3 +1,4 @@
+import { defaultExtractLabel, defaultExtractValue } from '@renderer/components/Autocomplete/utils';
 import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { useDropdownPlacement } from '@renderer/components/Autocomplete/hooks/useDropdownPlacement';
@@ -14,15 +15,14 @@ import IconMdiClose from '~icons/mdi/close';
 
 import styles from './styles.module.css';
 
-const defaultExtractLabel = (item: any) => (typeof item === 'string' ? item : item?.label);
-const defaultExtractValue = (item: any) => (typeof item === 'string' ? item : item?.value);
+
 
 export interface IAutoCompleteMultiBlankRef {
   clear: () => void;
   open: () => void;
 }
 
-export function AutocompleteMultiBlank<T = any>(props: IAutocompleteMultiBlankProps<T>) {
+export function AutocompleteMultiBlank<T = unknown>(props: IAutocompleteMultiBlankProps<T>) {
   const t = useI18nStore((state) => state.t);
   const {
     ref,

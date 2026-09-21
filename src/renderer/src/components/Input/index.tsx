@@ -91,7 +91,7 @@ export const Input = (props: IInputProps) => {
               minLength={minLength}
               min={min}
               max={max}
-              value={value || dataValue || ''}
+              value={value || (dataValue ? String(dataValue) : '')}
               type={type}
               onChange={fakeHandle}
             disabled={disabled}
@@ -171,7 +171,7 @@ export type IInputProps = IGridSystem & {
   disabled?: boolean;
   readOnly?: boolean;
   value?: string | number;
-  'data-value'?: any;
+  'data-value'?: unknown;
   useFakeInputToValidate?: boolean;
   placeholder?: string;
   onChange?(event: React.ChangeEvent<HTMLInputElement>): void;

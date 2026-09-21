@@ -1,3 +1,4 @@
+import type { ProjectTreeItemData } from './types';
 import { getErrorMessage } from '@shared/utils/error';
 import { useProjectTree } from './hooks/useProjectTree';
 import { useSidebarReveal } from './hooks/useSidebarReveal';
@@ -17,7 +18,6 @@ import {
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
 import TreeView, {
-  IItemTreeViewData,
   ITreeViewRef,
 } from '@renderer/components/TreeView';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
@@ -81,29 +81,29 @@ const ProjectsMenu = () => {
   const [isWholeWordFilter, setIsWholeWordFilter] = React.useState(false);
 
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
-  const [contextMenuItemSelected, setContextMenuItemSelected] = React.useState<IItemTreeViewData>();
+  const [contextMenuItemSelected, setContextMenuItemSelected] = React.useState<ProjectTreeItemData>();
 
   const [idProjectSelected, setIdProjectSelected] = React.useState<string>();
   const [idConnectionSelected, setIdConnectionSelected] = React.useState<string>();
 
   const [isNewProject, setIsNewProject] = React.useState(false);
-  const [projectEditing, setProjectEditing] = React.useState<IItemTreeViewData>();
-  const [projectToDelete, setProjectToDelete] = React.useState<IItemTreeViewData>();
+  const [projectEditing, setProjectEditing] = React.useState<ProjectTreeItemData>();
+  const [projectToDelete, setProjectToDelete] = React.useState<ProjectTreeItemData>();
   const [showImportProjects, setShowImportProjects] = React.useState(false);
 
   const [isNewConnection, setIsNewConnection] = React.useState(false);
-  const [connectionEditing, setConnectionEditing] = React.useState<IItemTreeViewData>();
+  const [connectionEditing, setConnectionEditing] = React.useState<ProjectTreeItemData>();
 
   const [isNewScript, setIsNewScript] = React.useState(false);
   const [scriptEditing, setScriptEditing] = React.useState<IScript>();
 
-  const [schemaToCreate, setSchemaToCreate] = React.useState<IItemTreeViewData>();
-  const [schemaToDelete, setSchemaToDelete] = React.useState<IItemTreeViewData>();
-  const [schemaToRename, setSchemaToRename] = React.useState<IItemTreeViewData>();
-  const [tableToDelete, setTableToDelete] = React.useState<IItemTreeViewData>();
-  const [tableToRename, setTableToRename] = React.useState<IItemTreeViewData>();
-  const [tableToImport, setTableToImport] = React.useState<IItemTreeViewData>();
-  const [tableToExport, setTableToExport] = React.useState<IItemTreeViewData>();
+  const [schemaToCreate, setSchemaToCreate] = React.useState<ProjectTreeItemData>();
+  const [schemaToDelete, setSchemaToDelete] = React.useState<ProjectTreeItemData>();
+  const [schemaToRename, setSchemaToRename] = React.useState<ProjectTreeItemData>();
+  const [tableToDelete, setTableToDelete] = React.useState<ProjectTreeItemData>();
+  const [tableToRename, setTableToRename] = React.useState<ProjectTreeItemData>();
+  const [tableToImport, setTableToImport] = React.useState<ProjectTreeItemData>();
+  const [tableToExport, setTableToExport] = React.useState<ProjectTreeItemData>();
   const [showDatabaseCompare, setShowDatabaseCompare] = React.useState(false);
 
   const showModalNewProject = !!(isNewProject || projectEditing);
@@ -168,7 +168,7 @@ const ProjectsMenu = () => {
   }, [connectionsInfo, loadConnectionInfo, showToast, t]);
 
   const onContextMenuTreeView = React.useCallback(
-    (item: IItemTreeViewData, event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    (item: ProjectTreeItemData, event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       const position = { x: event.clientX, y: event.clientY };
 
       setContextMenuPosition(position);
@@ -289,7 +289,7 @@ const ProjectsMenu = () => {
   );
 
   const handleOpemItemTreeView = React.useCallback(
-    async (item: IItemTreeViewData, itemIsOpen: boolean) => {
+    async (item: ProjectTreeItemData, itemIsOpen: boolean) => {
       if (itemIsOpen) return;
 
       if (item.type === 'connection') {
@@ -300,7 +300,7 @@ const ProjectsMenu = () => {
     [refreshConnectionInfo],
   );
 
-  const handleClickItemThreeView = React.useCallback((item: IItemTreeViewData) => {
+  const handleClickItemThreeView = React.useCallback((item: ProjectTreeItemData) => {
     setIdConnectionSelected(item?.data?.id_connection);
     setIdProjectSelected(item?.data?.id_project);
   }, []);
@@ -369,7 +369,7 @@ const ProjectsMenu = () => {
     [addTab, getTab, refreshConnectionInfo, setActiveTabId, t],
   );
 
-  const handleDoubleClickItemThreeView = React.useCallback((item: IItemTreeViewData) => {
+  const handleDoubleClickItemThreeView = React.useCallback((item: ProjectTreeItemData) => {
     if (item.type === 'table') {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;

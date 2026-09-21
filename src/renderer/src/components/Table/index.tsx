@@ -15,6 +15,7 @@ import type {
   ISortDirection,
   ITableSort,
   TableCellEditValue,
+  TableSerializedRow,
   TableCellPosition,
   TableDragSelectionState,
   TableScrollState,
@@ -41,41 +42,41 @@ import {
 
 const TABLE_SEARCH_CLOSE_ANIMATION_MS = 120;
 
-export interface ITableContextMenuCellData<Row = any> {
-  row: Row;
+export interface ITableContextMenuCellData<Row = Record<string, unknown>> {
+  row: TableSerializedRow<Row>;
   column: IColumn<Row>;
   rowIndex: number;
   colIndex: number;
 }
 
-export interface ITableContextMenuData<Row = any> {
+export interface ITableContextMenuData<Row = Record<string, unknown>> {
   cellsText: string;
   rowsText: string;
   rowsJson: string;
-  rows: Record<string, any>[];
-  selectedCellRows: Record<string, any>[];
+  rows: Record<string, unknown>[];
+  selectedCellRows: Record<string, unknown>[];
   selectedCells: ITableContextMenuCellData<Row>[];
 }
 
-export interface ITableSelectedCellData<Row = any> {
-  row: Row;
+export interface ITableSelectedCellData<Row = Record<string, unknown>> {
+  row: TableSerializedRow<Row>;
   column: IColumn<Row>;
-  value: any;
+  value: unknown;
   rowIndex: number;
   colIndex: number;
 }
 
-interface ITableProps<Row = any> {
+interface ITableProps<Row = Record<string, unknown>> {
   rowKeyExtractor?(rowData: Row, index: number): React.Key;
   onContextMenu?(
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData<Row>,
   ): void;
   onScrollEnd?(): void;
-  onEditRow?(indexRow: number, attribute: string, value: any, rowKey?: React.Key): void;
-  onEditNewRow?(rowKey: React.Key, attribute: string, value: any): void;
-  editedRows?: Map<React.Key, any>;
-  newRows?: Map<React.Key, any>;
+  onEditRow?(indexRow: number, attribute: string, value: unknown, rowKey?: React.Key): void;
+  onEditNewRow?(rowKey: React.Key, attribute: string, value: unknown): void;
+  editedRows?: Map<React.Key, Partial<Row>>;
+  newRows?: Map<React.Key, Partial<Row>>;
   newRowsPosition?: 'start' | 'end';
   removedRows?: Set<React.Key>;
   rows: Row[];
@@ -85,15 +86,15 @@ interface ITableProps<Row = any> {
   loading?: boolean;
   onSelectRow?(selectedRows: Row[]): void;
   onSelectCellData?(data: ITableSelectedCellData<Row>): void;
-  onCellLinkClick?(attribute: string, value: any): void;
-  onCellLinkPreviewClick?(attribute: string, value: any): void;
+  onCellLinkClick?(attribute: string, value: unknown): void;
+  onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
   initialAnalysisMode?: boolean;
 }
 
-const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
+const rowKeyExtractorDefault = (_: unknown, index: number): React.Key => index;
 
-function Table<Row = any>(props: ITableProps<Row>) {
+function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
   const {
     columns = [],
     rows = [],
@@ -124,7 +125,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [cellEditInitialValue, setCellEditInitialValue] = React.useState<string | number>();
   const [analysisMode, setAnalysisMode] = React.useState(false);
-  const [analysisRows, setAnalysisRows] = React.useState<any[]>([]);
+  const [analysisRows, setAnalysisRows] = React.useState<TableSerializedRow<Row>[]>([]);
   const [analysisColumnsSize, setAnalysisColumnsSize] = React.useState<number[]>([]);
   const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
   const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
@@ -174,13 +175,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const columnsSizeRef = React.useRef(columnsSize);
   columnsSizeRef.current = columnsSize;
 
-  const serializedRows = React.useMemo(() => {
+  const serializedRows = React.useMemo<TableSerializedRow<Row>[]>(() => {
     const newRowsLength = newRows?.size ?? 0;
     const newRowsStartIndex = newRowsPosition === 'end' ? rows.length : 0;
     const rowsStartIndex = newRowsPosition === 'end' ? 0 : newRowsLength;
 
     const serializedNewRows = [...(newRows?.entries() ?? [])].map(([keyRow, row], index) => ({
-      ...row,
+      ...(row as Row),
       __index_row: newRowsStartIndex + index,
       __row_index: index,
       __key_row: keyRow,
@@ -275,7 +276,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   });
 
   const selectedRows = React.useMemo(() => {
-    const map = new Map<React.Key, any>();
+    const map = new Map<React.Key, TableSerializedRow<Row>>();
     selectedCells.forEach((key) => {
       const rowIndex = parseInt(key.split(':')[0], 10);
       const row = serializedRows[rowIndex];
@@ -293,7 +294,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const getResolvedCellValue = React.useCallback(
-    (row: any, column?: IColumn<Row>) => {
+    (row: TableSerializedRow<Row>, column?: IColumn<Row>) => {
       if (!row || !column) return undefined;
 
       const editedRow = editedRows?.get(row.__key_row);
@@ -319,7 +320,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     };
     const occurrences: TableSearchOccurrence[] = [];
 
-    searchableRows.forEach((row: any) => {
+    searchableRows.forEach((row) => {
       columns.forEach((column, colIndex) => {
         const value = getResolvedCellValue(row, column);
         const serializedValue = serializeTableValue(value, column.type, { nullAsEmpty: true });
@@ -1115,13 +1116,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
         return Object.fromEntries(
           sortedColIndices
-            .map((colIndex) => {
+            .map((colIndex): [string, unknown] | null => {
               const col = columnsRef.current[colIndex];
               if (!col) return null;
 
               return [col.attribute, getResolvedCellValue(row, col) ?? null];
             })
-            .filter((entry): entry is [string, any] => !!entry),
+            .filter((entry): entry is [string, unknown] => !!entry),
         );
       });
 
@@ -1154,7 +1155,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
 
   const enterAnalysisMode = React.useCallback(
     (
-      rowsToAnalyze: Array<{ __index_row: number }>,
+      rowsToAnalyze: TableSerializedRow<Row>[],
       selectedCells: Set<string>,
       anchor?: TableCellPosition | null,
     ) => {

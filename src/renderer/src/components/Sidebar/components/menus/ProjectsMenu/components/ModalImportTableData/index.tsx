@@ -106,19 +106,17 @@ const parseMatrix = (
 const isCsvFile = (file: File) => file.name.toLowerCase().endsWith('.csv');
 
 const getExcelCellValue = (value: ExcelJS.CellValue): unknown => {
-  const valueType = typeof value;
-
   if (
     !value ||
     value instanceof Date ||
-    valueType === 'string' ||
-    valueType === 'number' ||
-    valueType === 'boolean'
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
   ) {
     return value;
   }
 
-  const cellValue = value as Record<string, any>;
+  const cellValue = value;
 
   if ('result' in cellValue) return cellValue.result;
   if ('text' in cellValue) return cellValue.text;

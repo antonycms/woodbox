@@ -56,7 +56,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
 
   const [availableColumns, setAvailableColumns] = React.useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = React.useState<string[]>([]);
-  const [rowsPreview, setRowsPreview] = React.useState<Record<string, any>[]>([]);
+  const [rowsPreview, setRowsPreview] = React.useState<Record<string, unknown>[]>([]);
   const [format, setFormat] = React.useState<ExportDataFormat>('csv');
   const [batchSize, setBatchSize] = React.useState<string | number>(1000);
   const [showColumnsModal, setShowColumnsModal] = React.useState(false);
@@ -75,7 +75,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const previewRowsSerialized = React.useMemo(
     () =>
       rowsPreview.map((row) =>
-        selectedColumns.reduce<Record<string, any>>((acc, column) => {
+        selectedColumns.reduce<Record<string, unknown>>((acc, column) => {
           acc[column] = row?.[column];
           return acc;
         }, {}),

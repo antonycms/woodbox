@@ -6,7 +6,7 @@ import styles from './styles.module.css';
 import { getBoundaryRect } from '@renderer/utils/DOM';
 import { generateHash } from '@shared/utils/string';
 
-export interface IContextMenuOption<ActiveContextInfo = any> {
+export interface IContextMenuOption<ActiveContextInfo = unknown> {
   text: string;
   onClick?(activeContextInfo?: ActiveContextInfo): void;
   children?: IContextMenuOption<ActiveContextInfo>[];
@@ -20,7 +20,7 @@ export interface IContextMenuPosition {
 
 export type ContextMenuPlacement = 'bottom' | 'top';
 
-export interface IContextMenuProps<ActiveContextInfo = any> {
+export interface IContextMenuProps<ActiveContextInfo = unknown> {
   activeContextInfo?: ActiveContextInfo;
   options: IContextMenuOption<ActiveContextInfo>[];
   position?: IContextMenuPosition;
@@ -28,7 +28,7 @@ export interface IContextMenuProps<ActiveContextInfo = any> {
   onClose?(): void;
 }
 
-export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<ActiveContextInfo>) {
+export function ContextMenu<ActiveContextInfo = unknown>(props: IContextMenuProps<ActiveContextInfo>) {
   const { contextMenu: theme } = useThemeStore((state) => state.activeTheme);
   const { position, placement = 'bottom', onClose, options, activeContextInfo } = props;
   const { x: positionX, y: positionY } = position || {};

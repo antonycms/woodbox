@@ -30,7 +30,7 @@ interface IReferencePreviewProps {
   active: boolean;
   idConnection: string;
   initialReference?: IColumnReferenceInfo;
-  initialValue: any;
+  initialValue: unknown;
   onOpenTable?: (
     idConnection: string,
     schema: string,
@@ -42,7 +42,7 @@ interface IReferencePreviewProps {
 
 interface IReferenceHistoryItem {
   reference: IColumnReferenceInfo;
-  value: any;
+  value: unknown;
 }
 
 interface IReferenceContextMenu {
@@ -57,7 +57,7 @@ const getTableName = (reference?: IColumnReferenceInfo) =>
       }`
     : '';
 
-const getReferenceKey = (reference: IColumnReferenceInfo, value: any) =>
+const getReferenceKey = (reference: IColumnReferenceInfo, value: unknown) =>
   [
     reference.reference_table_schema,
     reference.reference_table_name,
@@ -97,7 +97,7 @@ const ReferencePreview = ({
   const [viewMode, setViewMode] = React.useState<'table' | 'json'>('table');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string>();
-  const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, any>>());
+  const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, unknown>>());
   const [columnsCache, setColumnsCache] = React.useState(new Map<string, IColumn[]>());
   const [referencesCache, setReferencesCache] = React.useState(
     new Map<string, IColumnReferenceInfo[]>(),
@@ -256,7 +256,7 @@ const ReferencePreview = ({
   );
 
   const handleOpenNestedReference = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const reference = currentFkMap.get(attribute);
 
       if (!reference || value === null || value === undefined) return;
@@ -269,7 +269,7 @@ const ReferencePreview = ({
   );
 
   const handleOpenReferencedTable = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const reference = currentFkMap.get(attribute);
 
       if (!reference || value === null || value === undefined) return;

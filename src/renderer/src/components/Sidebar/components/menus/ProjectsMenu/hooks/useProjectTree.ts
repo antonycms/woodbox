@@ -1,6 +1,6 @@
 import React from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { IItemTreeView } from '@renderer/components/TreeView';
+import type { ProjectTreeItem } from '../types';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
@@ -61,7 +61,7 @@ export const useProjectTree = (
     return connectionsGroupPerProject.map((project) => {
       let hasContentWithFilterText = false;
 
-      const projects: IItemTreeView = {
+      const projects: ProjectTreeItem = {
         id: project.id,
         label: project.description,
         type: 'project' as const,
@@ -77,7 +77,7 @@ export const useProjectTree = (
             description_connection: connection.description,
           };
 
-          let databaseObjectsThreeView: IItemTreeView[] =
+          let databaseObjectsThreeView: ProjectTreeItem[] =
             connectionInfo?.tables?.map((table) => {
               const { table_name, table_schema, total_size, object_type = 'table' } = table;
 
@@ -93,7 +93,7 @@ export const useProjectTree = (
               };
             }) || [];
 
-          let functionsThreeView: IItemTreeView[] = dialect.supportsFunctions
+          let functionsThreeView: ProjectTreeItem[] = dialect.supportsFunctions
             ? connectionInfo?.functions?.map((fn, index) => {
                 const { function_name, function_schema } = fn;
 
@@ -111,7 +111,7 @@ export const useProjectTree = (
 
           const connectionScripts = scriptsByConnectionId.get(connection.id) || [];
 
-          const scriptsThreeView: IItemTreeView[] = connectionScripts.map((script) => ({
+          const scriptsThreeView: ProjectTreeItem[] = connectionScripts.map((script) => ({
             id: `script_${script.id}`,
             label: script.name,
             icon: 'file' as const,
@@ -138,7 +138,7 @@ export const useProjectTree = (
             ({ data }) => data.object_type === 'materialized_view',
           );
 
-          let schemasThreeView: IItemTreeView[] = dialect.supportsSchemas
+          let schemasThreeView: ProjectTreeItem[] = dialect.supportsSchemas
             ? connectionInfo?.schemas?.map?.((schema) => {
                 const tablesSchema = tablesThreeView.filter(
                   ({ data }) => data.table_schema === schema,
@@ -190,7 +190,7 @@ export const useProjectTree = (
                       childs: functionsSchema,
                       icon: 'functions',
                     },
-                  ].filter(Boolean) as IItemTreeView[],
+                  ].filter(Boolean) as ProjectTreeItem[],
                 };
               }) || []
             : [];
@@ -260,7 +260,7 @@ export const useProjectTree = (
                 data: dataConnection,
               },
             ].filter(Boolean),
-          } as IItemTreeView;
+          } as ProjectTreeItem;
         }),
       };
 

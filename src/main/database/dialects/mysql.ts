@@ -1,5 +1,6 @@
+import type { FieldPacket, ResultSetHeader } from 'mysql2';
 import { quoteMysqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
-import type { SerializedRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, SerializedRunSqlResult } from '@shared/types/database';
 import queries from '../queries/mysql';
 import type { DatabaseDialectAdapter } from '../types';
 
@@ -85,17 +86,18 @@ const splitStatements = (sql: string) => {
   return statements;
 };
 
-const normalizeRows = (rows: any[]) => {
+const normalizeRows = (rows: DatabaseRow[]) => {
   return rows.map((row) => {
     const normalized = { ...row };
 
     for (const field of ['column_names', 'column_orders']) {
-      if (typeof normalized[field] !== 'string') continue;
+      const value = normalized[field];
+      if (typeof value !== 'string') continue;
 
       try {
-        normalized[field] = JSON.parse(normalized[field]);
+        normalized[field] = JSON.parse(value);
       } catch {
-        normalized[field] = normalized[field].split(',').filter(Boolean);
+        normalized[field] = value.split(',').filter(Boolean);
       }
     }
 
@@ -111,15 +113,15 @@ const normalizeRows = (rows: any[]) => {
   });
 };
 
-const getRows = (raw: any) => {
-  const rows = Array.isArray(raw) ? raw[0] : raw?.rows || [];
+const getRows = <Row = DatabaseRow>(raw: unknown): Row[] => {
+  const rows = Array.isArray(raw) ? raw[0] : (raw as { rows?: DatabaseRow[] })?.rows || [];
 
   if (!Array.isArray(rows)) return [];
 
-  return normalizeRows(rows);
+  return normalizeRows(rows) as Row[];
 };
 
-const getMysqlTypeName = (field: any) => {
+const getMysqlTypeName = (field: FieldPacket & { extendedTypeName?: string; typeName?: string }) => {
   if (field.extendedTypeName) return String(field.extendedTypeName).toLowerCase();
   if (field.typeName) return String(field.typeName).toLowerCase();
 
@@ -144,8 +146,8 @@ const mysql: DatabaseDialectAdapter = {
   getExplainSql: (sql) => `EXPLAIN ANALYZE ${sql};`,
   serializeRunSqlResult: (raw, context) => {
     const rows = getRows(raw);
-    const fields = Array.isArray(raw) ? raw[1] : undefined;
-    const okPacket = Array.isArray(raw) && !Array.isArray(raw[0]) ? raw[0] : undefined;
+    const fields: FieldPacket[] | undefined = Array.isArray(raw) ? raw[1] : undefined;
+    const okPacket: ResultSetHeader | undefined = Array.isArray(raw) && !Array.isArray(raw[0]) ? raw[0] : undefined;
     const columns = fields?.map?.((field) => field.name) || Object.keys(rows[0] || {});
     const type = rows.length || Array.isArray(raw?.[0]) ? 'SELECT' : 'OK';
 

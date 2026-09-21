@@ -1,5 +1,5 @@
 import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
-import type { SerializedRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, IColumnInfo, SerializedRunSqlResult } from '@shared/types/database';
 import queries from '../queries/sqlite';
 import type { DatabaseDialectAdapter } from '../types';
 
@@ -102,7 +102,7 @@ const splitStatements = (sql: string) => {
   return statements;
 };
 
-const normalizeRows = (rows: any[]) => {
+const normalizeRows = (rows: DatabaseRow[]) => {
   return rows.map((row) => {
     const normalized = { ...row };
 
@@ -116,12 +116,12 @@ const normalizeRows = (rows: any[]) => {
   });
 };
 
-const getRows = (raw: any) => {
-  const rows = Array.isArray(raw) ? raw : raw?.rows || [];
+const getRows = <Row = DatabaseRow>(raw: unknown): Row[] => {
+  const rows = Array.isArray(raw) ? raw : (raw as { rows?: DatabaseRow[] })?.rows || [];
 
   if (!Array.isArray(rows)) return [];
 
-  return normalizeRows(rows);
+  return normalizeRows(rows) as Row[];
 };
 
 const isSelectStatement = (statement?: string) => {
@@ -229,7 +229,7 @@ const sqlite: DatabaseDialectAdapter = {
             dbConnection,
           );
 
-          return getRows(raw);
+          return getRows<IColumnInfo>(raw);
         }),
       );
       const typesByColumn = new Map<string, Set<string>>();

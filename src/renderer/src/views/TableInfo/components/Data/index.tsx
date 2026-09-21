@@ -1,5 +1,5 @@
-import { useRowChanges } from './hooks/useRowChanges';
-import { normalizeCellValue } from './utils';
+import { useRowChanges } from '@renderer/hooks/useRowChanges';
+import { normalizeCellValue } from '@renderer/utils/tableRows';
 import { ValuePreview, type ValuePreviewRequest } from './components/ValuePreview';
 import { useShallow } from 'zustand/react/shallow';
 import { getErrorMessage } from '@shared/utils/error';
@@ -114,22 +114,14 @@ const Data = ({
     useShallow((state) => ({ t: state.t, language: state.language })),
   );
   const showToast = useToastStore((state) => state.showToast);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
-  const [items, setItems] = React.useState<any[]>([]);
+  const [items, setItems] = React.useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
   const [rowsCount, setRowsCount] = React.useState<number>();
   const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
-  const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
@@ -141,8 +133,17 @@ const Data = ({
   const [valuePreview, setValuePreview] = React.useState<ValuePreviewRequest>();
   const showValuePreview = !!valuePreview;
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
+  const lastPageSearch = React.useRef(page);
   const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
+
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
@@ -204,7 +205,7 @@ const Data = ({
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
 
-    const row = selectedCell.row as any;
+    const row = selectedCell.row;
     const attribute = String(selectedCell.column.attribute);
     const editedRow = editedFieldsRows.get(row.__key_row);
     const newRow = newRows.get(row.__key_row);
@@ -216,7 +217,7 @@ const Data = ({
   }, [editedFieldsRows, newRows, selectedCell]);
 
   const serializeRows = React.useCallback(
-    (rows: any[]) =>
+    (rows: Record<string, unknown>[]) =>
       rows.map((row) => ({
         ...row,
         __table_hash_item: `row_${generateHash()}`,
@@ -275,7 +276,7 @@ const Data = ({
   }, []);
 
   const handleFkCellClick = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const ref = fkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
       onOpenTable?.(
@@ -290,7 +291,7 @@ const Data = ({
   );
 
   const handleFkPreviewClick = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const ref = fkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
 
@@ -331,10 +332,10 @@ const Data = ({
   );
 
   const handleApplySelectedCellValue = React.useCallback(
-    (value: any) => {
+    (value: unknown) => {
       if (!selectedCell) return;
 
-      const row = selectedCell.row as any;
+      const row = selectedCell.row;
       const attribute = String(selectedCell.column.attribute);
       const normalizedValue = normalizeCellValue(value);
 
@@ -369,8 +370,8 @@ const Data = ({
     });
   }, []);
 
-  const rowKeyExtractor = React.useCallback((row: any, index: number) => {
-    return row.__table_hash_item ?? index;
+  const rowKeyExtractor = React.useCallback((row: Record<string, unknown>, index: number) => {
+    return typeof row.__table_hash_item === 'string' ? row.__table_hash_item : index;
   }, []);
 
   const loadData = React.useCallback(async () => {
@@ -541,7 +542,7 @@ const Data = ({
     cells.forEach(({ row, column, rowIndex }) => {
       if (!column.editable) return;
 
-      const rowData = row as any;
+      const rowData = row;
       const attribute = String(column.attribute);
 
       if (rowData.__is_new_row) {
@@ -674,45 +675,6 @@ const Data = ({
     ],
   );
 
-  React.useEffect(() => {
-    // Monta uma vez: a aba de dados é recriada quando a tabela/conexão muda.
-    loadData();
-  }, []);
-
-  React.useEffect(() => {
-    onRegisterRefresh?.(handleRefresh);
-  }, [onRegisterRefresh, handleRefresh]);
-
-  React.useEffect(() => {
-    if (!appTabId) return;
-
-    onPendingRowsChangesChange?.(hasPendingRowsChanges);
-  }, [appTabId, hasPendingRowsChanges, onPendingRowsChangesChange]);
-
-  React.useEffect(() => {
-    if (columns.length === 0) {
-      loadTableColumns(id_connection, { table, schema });
-    }
-
-    if (references.length === 0) {
-      loadTableReferences(id_connection, { table, schema });
-    }
-
-    if (restrictions.length === 0) {
-      loadTableRestrictions(id_connection, { table, schema });
-    }
-  }, [
-    id_connection,
-    table,
-    schema,
-    columns.length,
-    references.length,
-    restrictions.length,
-    loadTableColumns,
-    loadTableReferences,
-    loadTableRestrictions,
-  ]);
-
   const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
     return [
       {
@@ -782,6 +744,45 @@ const Data = ({
     schema,
     table,
     t,
+  ]);
+
+  React.useEffect(() => {
+    // Monta uma vez: a aba de dados é recriada quando a tabela/conexão muda.
+    loadData();
+  }, []);
+
+  React.useEffect(() => {
+    onRegisterRefresh?.(handleRefresh);
+  }, [onRegisterRefresh, handleRefresh]);
+
+  React.useEffect(() => {
+    if (!appTabId) return;
+
+    onPendingRowsChangesChange?.(hasPendingRowsChanges);
+  }, [appTabId, hasPendingRowsChanges, onPendingRowsChangesChange]);
+
+  React.useEffect(() => {
+    if (columns.length === 0) {
+      loadTableColumns(id_connection, { table, schema });
+    }
+
+    if (references.length === 0) {
+      loadTableReferences(id_connection, { table, schema });
+    }
+
+    if (restrictions.length === 0) {
+      loadTableRestrictions(id_connection, { table, schema });
+    }
+  }, [
+    id_connection,
+    table,
+    schema,
+    columns.length,
+    references.length,
+    restrictions.length,
+    loadTableColumns,
+    loadTableReferences,
+    loadTableRestrictions,
   ]);
 
   return (

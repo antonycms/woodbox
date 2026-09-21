@@ -13,7 +13,7 @@ import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiMap from '~icons/mdi/map';
 
 interface IReferenceValuePreviewProps {
-  column?: IColumn;
+  column?: Pick<IColumn, 'label' | 'attribute' | 'info'>;
   dialect: Dialect;
   readonly?: boolean;
   value: unknown;

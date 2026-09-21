@@ -5,7 +5,7 @@ import { classes } from '@renderer/styles/theme';
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import IconItemTreeView from '../IconItemTreeView';
 
-const ItemTreeView = (props: IItemTreeViewProps) => {
+const ItemTreeView = <Data,>(props: IItemTreeViewProps<Data>) => {
   const { icon, loading, childs, openedItemsIdSet } = props;
   const color = props.color;
   const iconColor = props.iconColor || color;
@@ -88,15 +88,15 @@ const ItemTreeView = (props: IItemTreeViewProps) => {
   );
 };
 
-const ItemTreeViewMemo = React.memo(ItemTreeView);
+const ItemTreeViewMemo = React.memo(ItemTreeView) as typeof ItemTreeView;
 
 export default ItemTreeViewMemo;
 
-export interface IItemTreeViewProps extends IItemTreeView {
+export interface IItemTreeViewProps<Data = unknown> extends IItemTreeView<Data> {
   isFirst?: boolean;
   color?: string;
   focusBackgroundColor?: string;
   openedItemsIdSet?: Set<string>;
   revealedItemId?: string;
-  onSwitch?(item: IItemTreeView): void;
+  onSwitch?(item: IItemTreeView<Data>): void;
 }

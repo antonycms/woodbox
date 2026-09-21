@@ -37,7 +37,7 @@ export const getNextSort = (
   return nextSort;
 };
 
-const compareValues = (a: any, b: any): number => {
+const compareValues = (a: unknown, b: unknown): number => {
   if (typeof a === 'number' && typeof b === 'number') {
     return a - b;
   }
@@ -52,7 +52,7 @@ const compareValues = (a: any, b: any): number => {
   });
 };
 
-export const sortRows = <Row extends Record<string, any>>(
+export const sortRows = <Row>(
   rows: Row[],
   sort: ITableSort[] = [],
 ): Row[] => {
@@ -62,8 +62,8 @@ export const sortRows = <Row extends Record<string, any>>(
     .map((row, index) => ({ row, index }))
     .sort((a, b) => {
       for (const sortItem of sort) {
-        const aValue = a.row[sortItem.columnName];
-        const bValue = b.row[sortItem.columnName];
+        const aValue = a.row[sortItem.columnName as keyof Row];
+        const bValue = b.row[sortItem.columnName as keyof Row];
         const aIsEmpty = aValue === null || aValue === undefined;
         const bIsEmpty = bValue === null || bValue === undefined;
 

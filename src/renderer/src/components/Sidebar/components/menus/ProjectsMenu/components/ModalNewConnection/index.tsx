@@ -7,7 +7,7 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import { useForm } from '@renderer/hooks/useForm';
+import { useForm, type FormChangeValue } from '@renderer/hooks/useForm';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useToastStore } from '@renderer/stores/Toast';
@@ -105,7 +105,7 @@ export const ModalNewConnection = React.memo(
     const registerDialect = register('dialect');
 
     const handleDialectChange = React.useCallback(
-      (event: any) => {
+      (event: FormChangeValue) => {
         const dialect = event.value as Dialect;
         const spec = getRendererDialect(dialect);
 

@@ -26,7 +26,7 @@ const getVisibleItemIds = (items: IItemTreeView[] = [], openedItemsIdSet: Set<st
   return ids;
 };
 
-const TreeView = (props: ITreeViewProps) => {
+const TreeView = <Data,>(props: ITreeViewProps<Data>) => {
   const activeTheme = useThemeStore((state) => state.activeTheme);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
@@ -37,9 +37,9 @@ const TreeView = (props: ITreeViewProps) => {
     activeTheme.sideBar.selectedBackgroundColor;
 
   const itemsById = React.useMemo(() => {
-    const map = new Map<string, IItemTreeView>();
+    const map = new Map<string, IItemTreeView<Data>>();
 
-    const addItems = (items: IItemTreeView[] = []) => {
+    const addItems = (items: IItemTreeView<Data>[] = []) => {
       for (const item of items) {
         if (!item) continue;
 
@@ -62,7 +62,7 @@ const TreeView = (props: ITreeViewProps) => {
     return id ? itemsById.get(id) : undefined;
   }, [itemsById]);
 
-  const getItemFromElement = React.useCallback((target: HTMLDivElement): IItemTreeView => {
+  const getItemFromElement = React.useCallback((target: HTMLDivElement): IItemTreeView<Data> => {
     const idItem = target?.id?.replace?.('item_treeview_id_', '');
     const item = getItem(idItem);
 
@@ -148,7 +148,7 @@ const TreeView = (props: ITreeViewProps) => {
     props.onContextMenu?.({ id: item.id, label: item.label, data: item.data, type: item.type }, e);
   };
 
-  const handleSwitchItem = async (item: IItemTreeView, open?: boolean) => {
+  const handleSwitchItem = async (item: IItemTreeView<Data>, open?: boolean) => {
     const itemIsOpen = openedItemsId.some((id) => id === item.id);
 
     if (typeof open === 'boolean' && itemIsOpen === open) return;
@@ -224,16 +224,16 @@ const TreeView = (props: ITreeViewProps) => {
 
 export default TreeView;
 
-export interface IItemTreeViewData {
+export interface IItemTreeViewData<Data = unknown> {
   id: string;
   label: string;
-  data?: any;
+  data?: Data;
   type?: string;
 }
 
-export interface IItemTreeView extends IItemTreeViewData {
+export interface IItemTreeView<Data = unknown> extends IItemTreeViewData<Data> {
   labelInfo?: string;
-  childs?: IItemTreeViewProps[];
+  childs?: IItemTreeViewProps<Data>[];
   icon?: AvalailableTreeViewIcon;
   color?: string;
   iconColor?: string;
@@ -250,17 +250,17 @@ interface ITreeViewRevealOptions {
   focus?: boolean;
 }
 
-interface ITreeViewProps {
+interface ITreeViewProps<Data> {
   ref?: React.Ref<ITreeViewRef>;
-  items: IItemTreeView[];
-  onClick?(itemData: IItemTreeViewData): void;
-  onDoubleClick?(itemData: IItemTreeViewData): void;
+  items: IItemTreeView<Data>[];
+  onClick?(itemData: IItemTreeViewData<Data>): void;
+  onDoubleClick?(itemData: IItemTreeViewData<Data>): void;
   onSwitchItem?(
-    item: IItemTreeViewData,
+    item: IItemTreeViewData<Data>,
     isOpen: boolean,
   ): boolean | void | Promise<boolean> | Promise<void>;
   onContextMenu?(
-    item: IItemTreeViewData,
+    item: IItemTreeViewData<Data>,
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
   ): void;
 }

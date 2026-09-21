@@ -9,7 +9,7 @@ export function setObjectProperty<Obj extends object, Key extends string, Value 
   const keys = key.split('.');
   const lastIndex = keys.length - 1;
 
-  let current: any = objResult;
+  let current = objResult as Record<string, unknown>;
 
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index];
@@ -18,19 +18,20 @@ export function setObjectProperty<Obj extends object, Key extends string, Value 
       current[key] = value;
     } else {
       current[key] = current[key] || {};
-      current = current[key];
+      current = current[key] as Record<string, unknown>;
     }
   }
 
   return objResult as Obj & NestedPath<Key, Value>;
 }
 
-export const getValueFromObjectByNestedAttribute = (obj: object, nestedAttribute: string): any => {
-  const attributes = nestedAttribute.split('.') as (keyof object)[];
-  return attributes.reduce((acc, attribute) => acc?.[attribute], obj);
+export const getValueFromObjectByNestedAttribute = (obj: object, nestedAttribute: string): unknown => {
+  const attributes = nestedAttribute.split('.');
+  return attributes.reduce<unknown>((acc, attribute) =>
+    (acc as Record<string, unknown>)?.[attribute], obj);
 };
 
-export const checkIsEquals = (item1: any, item2: any): boolean => {
+export const checkIsEquals = (item1: unknown, item2: unknown): boolean => {
   if (!item1 && !item2) return true;
   if (!item1 || !item2) return false;
 
@@ -47,8 +48,8 @@ export const checkIsEquals = (item1: any, item2: any): boolean => {
   for (const attribute of attributesObj1) {
     if (!match) break;
 
-    const value1 = item1[attribute];
-    const value2 = item2[attribute];
+    const value1 = (item1 as Record<string, unknown>)[attribute];
+    const value2 = (item2 as Record<string, unknown>)[attribute];
 
     if (typeof value1 !== typeof value2) match = false;
     else if (Array.isArray(value1) !== Array.isArray(value2)) match = false;
@@ -75,10 +76,10 @@ export const getUniqueValueFromObjectKeys = <Obj extends object>(
 export const createFormDataFromObject = <Obj extends object>(obj: Obj) => {
   const formData = new FormData();
 
-  const applyValue = (key: string, value: any) => {
+  const applyValue = (key: string, value: unknown) => {
     if (value === undefined || value === null) return;
 
-    formData.append(key, value as any);
+    formData.append(key, value instanceof Blob ? value : String(value));
 
     if (value instanceof File) {
       formData.set(key, value);

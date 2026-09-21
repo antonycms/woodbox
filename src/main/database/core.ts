@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import { exportRowsToFile } from '../files/exportData';
 import { connect as connectSocket, isIP } from 'node:net';
 import { checkServerIdentity } from 'node:tls';
@@ -11,6 +12,15 @@ import {
 import { getDialectAdapter, getDialectIds } from './dialects';
 import type { DatabaseCompareParams } from '@shared/types/databaseCompare';
 import type {
+  DatabaseRow,
+  IDatabaseProcess,
+  ITable,
+  IFunctionDb,
+  IColumnInfo,
+  IColumnReferenceInfo,
+  IColumnRestrictionsInfo,
+  IIndexInfo,
+  ITriggerInfo,
   IParamsGetTableData,
   IOptionsRunSql,
   IExportDataParams,
@@ -47,7 +57,7 @@ const destroyConnectionInstance = async (instance: Knex) => {
 const pendingConnections = new Map<string, Promise<IConnection>>();
 const activeRunSqlQueries = new Map<
   string,
-  { connectionId: string; instance: Knex; dbConnection: any; dialect: Dialect }
+  { connectionId: string; instance: Knex; dbConnection: object; dialect: Dialect }
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
@@ -62,7 +72,7 @@ const getReactNativeBridgeGatewayOptions = (config: IConnectionConfig) => ({
   port: config.reactNativeBridge?.port,
 });
 
-const addServerOutput = (connectionId: string, notice: any) => {
+const addServerOutput = (connectionId: string, notice: Pick<IServerOutputMessage, 'severity' | 'message' | 'detail' | 'hint' | 'where'>) => {
   if (!connectionId) return;
 
   const message: IServerOutputMessage = {
@@ -102,7 +112,7 @@ export const getProcessList = async (connectionId: string) => {
 
   const raw = await instance.raw(query.getProcessList());
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IDatabaseProcess>(raw);
 };
 
 export const cancelProcess = async (connectionId: string, pid: string | number) => {
@@ -238,7 +248,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   const tunnel = config.ssh?.enabled
     ? await openSshTunnel(config.ssh, config, verifySshHost) : undefined;
 
-  let instance: null | Knex<any, unknown[]>;
+  let instance: null | Knex<DatabaseRow, unknown[]>;
 
   const pool = noPool
     ? undefined
@@ -258,7 +268,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
       };
 
   try {
-    instance = knex({
+    instance = knex<DatabaseRow, unknown[]>({
       pool,
       debug: process.env.NODE_ENV === 'development',
       client: adapter.client,
@@ -296,17 +306,17 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
     },
   };
 
-  const getError = (error: Error) => {
+  const getError = (error: unknown) => {
     let serializedError = error;
 
-    if (!serializedError?.message) {
+    if (!getErrorMessage(serializedError)) {
       return new Error('Ocorreu um erro desconhecido.');
     }
 
     Object.keys(errorsHandled).some((key) => {
       const { message, errors = [] } = errorsHandled[key];
 
-      const checkErrorMessage = errors.some((textError) => error.message.includes(textError));
+      const checkErrorMessage = errors.some((textError) => getErrorMessage(error).includes(textError));
 
       if (checkErrorMessage) {
         serializedError = new Error(message);
@@ -321,7 +331,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 
   try {
     await instance.raw('SELECT 1');
-  } catch (error: any) {
+  } catch (error: unknown) {
     await destroyConnectionInstance(instance);
     instance = null;
 
@@ -472,11 +482,11 @@ export const getConnectionInfo = async (connectionId: string) => {
     query.getFunctions ? instance.raw(query.getFunctions()) : undefined,
   ]);
 
-  const tables = adapter.getRows(tablesRaw);
+  const tables = adapter.getRows<ITable>(tablesRaw);
   const schemas = schemasRaw
-    ? adapter.getRows(schemasRaw).map((row) => row?.schema_name)
+    ? adapter.getRows<{ schema_name: string }>(schemasRaw).map((row) => row?.schema_name)
     : undefined;
-  const functions = functionsRaw ? adapter.getRows(functionsRaw) : [];
+  const functions = functionsRaw ? adapter.getRows<IFunctionDb>(functionsRaw) : [];
 
   return { tables, schemas, functions };
 };
@@ -490,7 +500,7 @@ export const getTableColumns = async (connectionId: string, { table, schema }: I
 
   const raw = await instance.raw(query.getTableColumns({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnInfo>(raw);
 };
 
 export const getColumnTypes = async (connectionId: string) => {
@@ -502,7 +512,7 @@ export const getColumnTypes = async (connectionId: string) => {
 
   const raw = await instance.raw(query.getColumnTypes());
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ name: string }>(raw);
 };
 
 export const getTableReferences = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -514,7 +524,7 @@ export const getTableReferences = async (connectionId: string, { table, schema }
 
   const raw = await instance.raw(query.getTableReferences({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnReferenceInfo>(raw);
 };
 
 export const getTableUsedAsReference = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -526,7 +536,7 @@ export const getTableUsedAsReference = async (connectionId: string, { table, sch
 
   const raw = await instance.raw(query.getTableUsedAsReference({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnReferenceInfo>(raw);
 };
 
 export const getTableRestrictions = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -538,7 +548,7 @@ export const getTableRestrictions = async (connectionId: string, { table, schema
 
   const raw = await instance.raw(query.getTableRestrictions({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnRestrictionsInfo>(raw);
 };
 
 export const getTableDefinition = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -550,7 +560,7 @@ export const getTableDefinition = async (connectionId: string, { table, schema }
 
   const raw = await instance.raw(query.getTableDefinition({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ definition: string }>(raw);
 };
 
 export const getTableIndexes = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -562,7 +572,7 @@ export const getTableIndexes = async (connectionId: string, { table, schema }: I
 
   const raw = await instance.raw(query.getTableIndexes({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IIndexInfo>(raw);
 };
 
 export const getTableTriggers = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -574,7 +584,7 @@ export const getTableTriggers = async (connectionId: string, { table, schema }: 
 
   const raw = await instance.raw(query.getTableTriggers({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<ITriggerInfo>(raw);
 };
 
 export const getFunctionDefinition = async (
@@ -591,7 +601,7 @@ export const getFunctionDefinition = async (
 
   const raw = await instance.raw(query.getFunctionDefinition({ schema, functionName }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ definition: string }>(raw);
 };
 
 
@@ -760,7 +770,7 @@ export const runSql = async (
     }
   }
 
-  const dbConnection = await (instance.client as any).acquireConnection();
+  const dbConnection = await instance.client.acquireConnection();
 
   try {
     if (options?.queryExecutionId) {
@@ -775,7 +785,7 @@ export const runSql = async (
     const t0 = Date.now();
     const statements =
       !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
-    const results: { raw: any; statement: string }[] = [];
+    const results: { raw: unknown; statement: string }[] = [];
 
     try {
       for (const statement of statements) {
@@ -806,7 +816,7 @@ export const runSql = async (
     }
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
-    await (instance.client as any).releaseConnection(dbConnection);
+    await instance.client.releaseConnection(dbConnection);
   }
 };
 

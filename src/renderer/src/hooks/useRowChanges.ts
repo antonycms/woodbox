@@ -3,7 +3,7 @@ import { useToastStore } from '@renderer/stores/Toast';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { generateHash } from '@shared/utils/string';
 import type { IColumnInfo, IColumnRestrictionsInfo } from '@shared/types/database';
-import { normalizeCellValue } from '../utils';
+import { normalizeCellValue } from '@renderer/utils/tableRows';
 
 type DraftRow = Record<string, unknown> & {
   __key_row?: React.Key;
@@ -12,12 +12,24 @@ type DraftRow = Record<string, unknown> & {
 
 interface RowChangesOptions {
   items: Record<string, unknown>[];
-  columns: IColumnInfo[];
-  restrictions: IColumnRestrictionsInfo[];
+  columns?: IColumnInfo[];
+  restrictions?: IColumnRestrictionsInfo[];
   onCloseMenu: () => void;
+  readOnly?: boolean;
+  discardNewRowsOnCancel?: boolean;
 }
 
-export const useRowChanges = ({ items, columns, restrictions, onCloseMenu }: RowChangesOptions) => {
+const EMPTY_COLUMNS: IColumnInfo[] = [];
+const EMPTY_RESTRICTIONS: IColumnRestrictionsInfo[] = [];
+
+export const useRowChanges = ({
+  items,
+  columns = EMPTY_COLUMNS,
+  restrictions = EMPTY_RESTRICTIONS,
+  onCloseMenu,
+  readOnly = false,
+  discardNewRowsOnCancel = false,
+}: RowChangesOptions) => {
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
   const [selectedRows, setSelectedRows] = React.useState<DraftRow[]>([]);
@@ -157,6 +169,16 @@ export const useRowChanges = ({ items, columns, restrictions, onCloseMenu }: Row
   const handleCancelSelectedRowsEditions = React.useCallback(() => {
     if (!selectedRows.length) return;
 
+    if (discardNewRowsOnCancel) {
+      setNewRows((prevState) => {
+        const nextState = new Map(prevState);
+        selectedRows.forEach((row) => {
+          if (row.__is_new_row) nextState.delete(row.__key_row);
+        });
+        return nextState;
+      });
+    }
+
     setEditedFieldsRows((prevState) => {
       const newState = new Map(prevState);
 
@@ -166,7 +188,7 @@ export const useRowChanges = ({ items, columns, restrictions, onCloseMenu }: Row
 
       return newState;
     });
-  }, [selectedRows]);
+  }, [discardNewRowsOnCancel, selectedRows]);
 
   const handleUndoSelectedDroppedRows = React.useCallback(() => {
     if (!selectedRows.length) return;
@@ -183,6 +205,8 @@ export const useRowChanges = ({ items, columns, restrictions, onCloseMenu }: Row
   }, [selectedRows]);
 
   const handleRemoveSelectedRows = React.useCallback(() => {
+    if (readOnly) return;
+
     if (!selectedRows.length) {
       showToast({ type: 'warn', title: t('toast.selectRowsRemove') });
       return;
@@ -219,7 +243,7 @@ export const useRowChanges = ({ items, columns, restrictions, onCloseMenu }: Row
     });
 
     onCloseMenu();
-  }, [selectedRows, showToast, t, onCloseMenu]);
+  }, [readOnly, selectedRows, showToast, t, onCloseMenu]);
 
   const resetRows = React.useCallback(() => {
     setNewRows(new Map());

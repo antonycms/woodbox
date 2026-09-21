@@ -1,6 +1,7 @@
+import type { ProjectTreeItem } from '../types';
 import React from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { IItemTreeView, ITreeViewRef } from '@renderer/components/TreeView';
+import type { ITreeViewRef } from '@renderer/components/TreeView';
 import { useAppTabStore } from '@renderer/stores/AppTab';
 
 type SidebarRevealTarget = {
@@ -20,7 +21,7 @@ const getSidebarRevealKey = (target: SidebarRevealTarget) => {
   );
 };
 
-const getSidebarRevealItemKey = (item: IItemTreeView) => {
+const getSidebarRevealItemKey = (item: ProjectTreeItem) => {
   if (item.type !== 'table' && item.type !== 'function') return;
 
   if (item.type === 'table') {
@@ -46,10 +47,10 @@ const getSidebarRevealItemKey = (item: IItemTreeView) => {
   }
 };
 
-const buildSidebarRevealIndex = (items: IItemTreeView[]) => {
+const buildSidebarRevealIndex = (items: ProjectTreeItem[]) => {
   const index = new Map<string, SidebarRevealPath>();
 
-  const addItems = (itemsToAdd: IItemTreeView[] = [], parentIds: string[] = []) => {
+  const addItems = (itemsToAdd: ProjectTreeItem[] = [], parentIds: string[] = []) => {
     for (const item of itemsToAdd) {
       if (!item) continue;
 
@@ -92,7 +93,7 @@ const scheduleSidebarReveal = (callback: () => void) => {
 
 export const useSidebarReveal = (
   treeViewRef: React.RefObject<ITreeViewRef>,
-  projectsSerialized: IItemTreeView[],
+  projectsSerialized: ProjectTreeItem[],
 ) => {
   const { tabs, activeTabId } = useAppTabStore(
     useShallow((state) => ({

@@ -21,7 +21,7 @@ import type {
 
 export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
-const serializeInsertValue = (value: any) => {
+const serializeInsertValue = (value: unknown) => {
   if (value === null || value === undefined) return 'NULL';
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
@@ -31,7 +31,7 @@ const serializeInsertValue = (value: any) => {
   return quoteLiteral(String(value));
 };
 
-const getInsertColumns = (row: Record<string, any>, columnOrder?: string[]) => {
+const getInsertColumns = (row: Record<string, unknown>, columnOrder?: string[]) => {
   const rowColumns = Object.keys(row);
 
   if (!columnOrder?.length) return rowColumns;
@@ -88,14 +88,14 @@ export const generateInsertDdl = (
   dialect: RendererDialect,
   schema: string | undefined,
   table: string,
-  rows: Record<string, any>[],
+  rows: Record<string, unknown>[],
   columnOrder?: string[],
 ) => {
   if (!rows.length) return '';
 
   const quoteIdent = dialect.quoteIdent;
   const tableName = getTableName(dialect, schema, table);
-  const groups = new Map<string, { columns: string[]; rows: Record<string, any>[] }>();
+  const groups = new Map<string, { columns: string[]; rows: Record<string, unknown>[] }>();
 
   rows.forEach((row) => {
     const columns = getInsertColumns(row, columnOrder);
@@ -128,7 +128,7 @@ export const generateInsertDdl = (
 
 const serializeUpdateValue = serializeInsertValue;
 
-const serializeWhereValue = (dialect: RendererDialect, column: string, value: any) => {
+const serializeWhereValue = (dialect: RendererDialect, column: string, value: unknown) => {
   const quoteIdent = dialect.quoteIdent;
 
   if (value === null || value === undefined) return `${quoteIdent(column)} IS NULL`;
@@ -141,8 +141,8 @@ export const generateUpdateDdl = (
   schema: string | undefined,
   table: string,
   rows: Array<{
-    originalRow: Record<string, any>;
-    changes: Record<string, any>;
+    originalRow: Record<string, unknown>;
+    changes: Record<string, unknown>;
   }>,
   whereColumns: string[],
 ) => {
@@ -172,7 +172,7 @@ export const generateDeleteDdl = (
   dialect: RendererDialect,
   schema: string | undefined,
   table: string,
-  rows: Record<string, any>[],
+  rows: Record<string, unknown>[],
   whereColumns: string[],
 ) => {
   const tableName = getTableName(dialect, schema, table);

@@ -10,7 +10,7 @@ import { Spacer } from '../Spacer';
 import { AutocompleteMulti } from '../AutocompleteMulti';
 
 interface IModalCopyProps extends Omit<IModalProps, 'children'> {
-  content: any[];
+  content: Record<string, unknown>[];
 }
 
 export const ModalCopy = (props: IModalCopyProps) => {

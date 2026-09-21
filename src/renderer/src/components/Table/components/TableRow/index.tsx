@@ -7,7 +7,7 @@ interface ITableRowProps {
   isHeader?: boolean;
   onClick?(row, isSelected: boolean): void;
   children: React.ReactNode;
-  row?: any;
+  row?: Record<string, unknown>;
 }
 
 const TableRow = ({ children, isSelected, isHeader, onClick, row }: ITableRowProps) => {

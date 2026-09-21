@@ -1,10 +1,10 @@
 import type { Knex } from 'knex';
-import type { IOrderBy, SerializedRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, IOrderBy, SerializedRunSqlResult } from '@shared/types/database';
 import type { Dialect, IConnectionConfig } from '@shared/types/connections';
 
 export interface IConnection {
   id: string;
-  instance: Knex<any, unknown[]>;
+  instance: Knex<DatabaseRow, unknown[]>;
   dialect: Dialect;
 }
 
@@ -43,7 +43,7 @@ export interface SerializeRunSqlContext {
 
 export interface ResolveRunSqlColumnsInfoContext {
   instance: Knex;
-  dbConnection: any;
+  dbConnection: object;
   sql: string;
   results: SerializedRunSqlResult[];
 }
@@ -54,15 +54,15 @@ export interface DatabaseDialectAdapter {
   queries: DatabaseDialectQueries;
   getConnectionConfig(config: IConnectionConfig): object;
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
-  getRows(raw: any): any[];
-  serializeRunSqlResult(raw: any, context: SerializeRunSqlContext): SerializedRunSqlResult[];
+  getRows<Row = DatabaseRow>(raw: unknown): Row[];
+  serializeRunSqlResult(raw: unknown, context: SerializeRunSqlContext): SerializedRunSqlResult[];
   getExplainSql(sql: string): string;
   resolveRunSqlColumnsInfo?(
     context: ResolveRunSqlColumnsInfoContext,
   ): Promise<SerializedRunSqlResult[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
-  cancelQuery?(params: { instance: Knex; dbConnection: any }): Promise<boolean>;
+  cancelQuery?(params: { instance: Knex; dbConnection: object }): Promise<boolean>;
 }
 
 export interface ITableWithSchema {

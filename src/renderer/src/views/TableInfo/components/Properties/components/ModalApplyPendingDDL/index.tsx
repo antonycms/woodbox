@@ -24,14 +24,14 @@ const ModalApplyPendingDDL = ({
   const showToast = useToastStore((state) => state.showToast);
   const [editableSql, setEditableSql] = React.useState(sql);
 
-  React.useEffect(() => {
-    setEditableSql(sql);
-  }, [sql]);
-
   const handleCopy = React.useCallback(() => {
     copyToClipboard(editableSql);
     showToast({ type: 'success', title: t('common.contentCopied') });
   }, [editableSql, showToast, t]);
+
+  React.useEffect(() => {
+    setEditableSql(sql);
+  }, [sql]);
 
   return (
     <Modal

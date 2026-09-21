@@ -1,5 +1,5 @@
 import React from 'react';
-import type { IColumn } from '../../dtos';
+import type { IColumn, TableSerializedRow } from '../../dtos';
 import styles from '../../styles.module.css';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
@@ -12,14 +12,14 @@ import { serializeTableValue } from '../../utils';
 
 type TableCellEditValue = string | number | (string | number)[];
 
-interface ITableAnalysisViewProps<Row = any> {
+interface ITableAnalysisViewProps<Row = Record<string, unknown>> {
   columns: IColumn<Row>[];
-  rows: Row[];
+  rows: TableSerializedRow<Row>[];
   rowHeight: number;
   columnsSize: number[];
   minColumnsSize: number[];
-  editedRows?: Map<React.Key, any>;
-  newRows?: Map<React.Key, any>;
+  editedRows?: Map<React.Key, Partial<Row>>;
+  newRows?: Map<React.Key, Partial<Row>>;
   cellEditingKey?: string;
   cellEditInitialValue?: string | number;
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
@@ -42,8 +42,8 @@ interface ITableAnalysisViewProps<Row = any> {
     event: React.MouseEvent<HTMLElement, MouseEvent>,
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
-  onCellLinkClick?(attribute: string, value: any): void;
-  onCellLinkPreviewClick?(attribute: string, value: any): void;
+  onCellLinkClick?(attribute: string, value: unknown): void;
+  onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
 
@@ -96,7 +96,7 @@ interface ITableAnalysisValueProps {
   columnIndex: number;
   rowColumnKey: string;
   attribute: string;
-  value: any;
+  value: unknown;
   serializedValue: string;
   isEdited?: boolean;
   isRemoved?: boolean;
@@ -115,8 +115,8 @@ interface ITableAnalysisValueProps {
     event: React.MouseEvent<HTMLElement, MouseEvent>,
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
-  onCellLinkClick?(attribute: string, value: any): void;
-  onCellLinkPreviewClick?(attribute: string, value: any): void;
+  onCellLinkClick?(attribute: string, value: unknown): void;
+  onCellLinkPreviewClick?(attribute: string, value: unknown): void;
 }
 
 const TableAnalysisValue = React.memo(
@@ -218,8 +218,8 @@ const TableAnalysisInput = ({
   onBlurCell,
   onEditCell,
 }: {
-  column: IColumn;
-  value: any;
+  column: Pick<IColumn, 'type' | 'dataAutocomplete'>;
+  value: unknown;
   rowIndex: number;
   attribute: string;
   editInitialValue?: string | number;
@@ -291,7 +291,7 @@ const TableAnalysisInput = ({
         backgroundColor={'var(--backgroundColor)'}
         color={'white'}
         data={column.dataAutocomplete ?? []}
-        value={value}
+        value={value as string | number | boolean | null}
         defaultValue={editInitialValue}
         name={attribute}
         containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
@@ -310,7 +310,7 @@ const TableAnalysisInput = ({
         backgroundColor={'var(--backgroundColor)'}
         color={'white'}
         data={column.dataAutocomplete ?? []}
-        value={value}
+        value={value as string | number | boolean | null}
         name={attribute}
         containerClassName={classes(styles.analysis_value, styles.autocomplete_cell)}
         className={styles.table_autocomplete_input}
@@ -354,7 +354,7 @@ const TableAnalysisInput = ({
   );
 };
 
-const TableAnalysisView = ({
+const TableAnalysisView = <Row,>({
   columns,
   rows,
   rowHeight,
@@ -378,7 +378,7 @@ const TableAnalysisView = ({
   onCellLinkClick,
   onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
-}: ITableAnalysisViewProps) => {
+}: ITableAnalysisViewProps<Row>) => {
   const t = useI18nStore((state) => state.t);
   const columnsSizeStyle = React.useMemo(() => {
     return columnsSize.map((size) => `${size}px`).join(' ');
@@ -417,7 +417,7 @@ const TableAnalysisView = ({
           {t('table.column')}
         </TableAnalysisHeader>
 
-        {rows.map((row: any, rowIndex) => (
+        {rows.map((row, rowIndex) => (
           <TableAnalysisHeader
             key={row.__key_row}
             columnIndex={rowIndex + 1}
@@ -446,7 +446,7 @@ const TableAnalysisView = ({
               )}
             </div>
 
-            {rows.map((row: any) => {
+            {rows.map((row) => {
               const keyRow = row.__key_row;
               const attribute = String(column.attribute);
               const rowColumnKey = `${keyRow}:${attribute}`;
@@ -519,4 +519,4 @@ const TableAnalysisView = ({
   );
 };
 
-export default React.memo(TableAnalysisView);
+export default React.memo(TableAnalysisView) as typeof TableAnalysisView;

@@ -1,3 +1,4 @@
+import type { ITable, IFunctionDb } from '@shared/types/database';
 import type { Dialect, ConnectionEnvironment } from '@shared/types/connections';
 import type { IAIQueryApproval } from '@shared/types/ai';
 import { isStepCount, jsonSchema, type Schema, type ToolSet, tool } from 'ai';
@@ -129,8 +130,8 @@ const getTableObjectGroup = (objectType: unknown) => {
 };
 
 const groupConnectionObjects = (
-  tables: Record<string, unknown>[],
-  functions: Record<string, unknown>[],
+  tables: ITable[],
+  functions: IFunctionDb[],
 ) => {
   const groups: Record<string, string[]> = {};
 

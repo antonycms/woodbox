@@ -1,3 +1,5 @@
+export type DatabaseRow = Record<string, unknown>;
+
 export type DatabaseObjectType = 'table' | 'view' | 'materialized_view';
 
 export interface ITable {
@@ -93,7 +95,7 @@ export interface ITriggerInfo {
 }
 
 export interface IDataTable {
-  data: any[];
+  data: DatabaseRow[];
 }
 
 export interface IOrderBy {
@@ -124,16 +126,16 @@ export interface SerializedRunSqlColumn {
 
 export interface IRunSqlResult {
   type: string;
-  affected_rows?: number;
+  affected_rows?: number | null;
   auto_paginated?: boolean;
   execution_time_ms?: number;
-  rows?: any[];
+  rows?: DatabaseRow[];
   columns?: string[];
   columns_info?: SerializedRunSqlColumn[];
 }
 
 export interface SerializedRunSqlResult extends IRunSqlResult {
-  rows: any[];
+  rows: DatabaseRow[];
   columns: string[];
 }
 
@@ -153,7 +155,7 @@ export interface IExportDataParams {
 
 export interface IExportDataPreview {
   columns: string[];
-  rows: any[];
+  rows: DatabaseRow[];
 }
 
 export interface IExportDataResult {

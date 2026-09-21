@@ -11,7 +11,7 @@ import { cellKey, serializeTableCopyValue } from '../utils';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
-interface UseTableKeyboardEventsParams<Row = any> {
+interface UseTableKeyboardEventsParams<Row = Record<string, unknown>> {
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   searchOpen: boolean;
   analysisMode: boolean;
