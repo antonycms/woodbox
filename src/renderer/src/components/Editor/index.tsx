@@ -605,6 +605,7 @@ const Editor = ({
       const currentEditor = initEditor();
       editorInstanceRef.current = currentEditor;
       setEditor(currentEditor);
+      props.onReady?.();
       if (props.autoFocus) currentEditor.focus();
       frameId = window.requestAnimationFrame(resize);
     });
@@ -737,6 +738,7 @@ export interface IEditorProps {
   onChange?: (value: string) => void;
   onChangeCurrentValue?: (value: string) => void;
   onDidChangeContent?: () => void;
+  onReady?: () => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
   onCtrlClick?: IEditorCtrlClickHandler;

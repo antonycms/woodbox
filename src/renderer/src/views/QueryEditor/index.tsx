@@ -67,11 +67,13 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
   const isProductionConnection = currentConnection?.environment === 'production';
 
   const refEditor = React.useRef<IEditorRef>(null);
+  const hasLoadedScriptContentRef = React.useRef(false);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
   const [hasUnreadServerOutput, setHasUnreadServerOutput] = React.useState(false);
+  const [isEditorReady, setIsEditorReady] = React.useState(false);
 
   const { autocomplete, tableReferences, handleUpdateCurrentQueryInfo } = useQueryAutocomplete(
     id_connection, currentConnection?.dialect,
@@ -261,15 +263,16 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
   };
 
   const loadScriptContent = async () => {
-    if (!id_script) return;
+    if (!id_script || !isEditorReady) return;
 
     const content = await getScriptContent(id_script);
 
-    if (content) refEditor.current?.setValue?.(content);
+    refEditor.current?.setValue?.(content);
+    hasLoadedScriptContentRef.current = true;
   };
 
   const saveScript = useDebounce(() => {
-    if (!id_script) return;
+    if (!id_script || !hasLoadedScriptContentRef.current) return;
 
     const content = refEditor.current?.getValue();
 
@@ -352,10 +355,11 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
   }, [refEditor.current?.element]);
 
   React.useEffect(() => {
+    hasLoadedScriptContentRef.current = false;
     const timeout = setTimeout(loadScriptContent);
 
     return () => clearTimeout(timeout);
-  }, [id_script]);
+  }, [id_script, isEditorReady]);
 
   React.useEffect(() => {
     const removeListener = onServerOutput((message: IServerOutputMessage) => {
@@ -410,6 +414,7 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
           onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
           onDidChangeContent={clearEditorErrorMarkers}
+          onReady={() => setIsEditorReady(true)}
           autocomplete={autocomplete}
           onCtrlClick={handleEditorCtrlClick}
           contextMenuOptions={editorContextMenuOptions}
