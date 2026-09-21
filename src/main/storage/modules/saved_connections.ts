@@ -1,7 +1,7 @@
 import type { IConnectionConfig, IConnectionPublic } from '@shared/types/connections';
 import type Store from 'electron-store';
-import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '@main/storage/secret';
-import { makeFnRemoveStoredItemFromArray } from '@main/storage/utils';
+import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '../secret';
+import { makeFnRemoveStoredItemFromArray } from '../utils';
 import { mergeSshCredentials } from './ssh_credentials';
 
 const STORE_KEY = 'saved_connections';

@@ -4,7 +4,7 @@ import {
   encodeSecret,
   isLegacySafeSecret,
   isLocalEncryptedSecret,
-} from '@main/storage/secret';
+} from '../secret';
 import { generateHash } from '@shared/utils/string';
 import type { IAIProviderConfig, IAIProviderPublic, IAIProviderInput } from '@shared/types/ai';
 

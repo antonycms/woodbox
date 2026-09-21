@@ -9,7 +9,7 @@ import { asSchema, type Tool, type ToolSet } from 'ai';
 import {
   AI_QUERY_EXECUTION_TOOL_NAME,
   type AIQueryExecutionToolOutput,
-} from '@main/ai/tools';
+} from '../ai/tools';
 import { getValidCodexCredential } from './account';
 
 type CodexTextContent = { type?: string; text?: string };

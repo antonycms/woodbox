@@ -1,6 +1,6 @@
 import { quoteMysqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
 import type { SerializedRunSqlResult } from '@shared/types/database';
-import queries from '@main/database/queries/mysql';
+import queries from '../queries/mysql';
 import type { DatabaseDialectAdapter } from '../types';
 
 const splitStatements = (sql: string) => {

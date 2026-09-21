@@ -1,7 +1,7 @@
 import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
 import type { SerializedRunSqlResult } from '@shared/types/database';
 import pg from 'pg';
-import queries from '@main/database/queries/postgres';
+import queries from '../queries/postgres';
 import type { DatabaseDialectAdapter } from '../types';
 
 pg.types.setTypeParser(1114, (val) => val);

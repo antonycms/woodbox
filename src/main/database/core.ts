@@ -5,12 +5,12 @@ import { checkServerIdentity } from 'node:tls';
 import { dialog } from 'electron';
 import ExcelJS from 'exceljs';
 import knex, { Knex } from 'knex';
-import { getInternalConnectionSaved } from '@main/storage/store';
-import { emitEvent } from '@main/utils/emitEvent';
+import { getInternalConnectionSaved } from '../storage/store';
+import { emitEvent } from '../utils/emitEvent';
 import {
   releaseReactNativeBridgeGateway,
   retainReactNativeBridgeGateway,
-} from '@main/reactNativeBridge/gateway';
+} from '../reactNativeBridge/gateway';
 import { getDialectAdapter, getDialectIds } from './dialects';
 import type { DatabaseCompareParams } from '@shared/types/databaseCompare';
 import type {

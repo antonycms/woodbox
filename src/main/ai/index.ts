@@ -1,4 +1,4 @@
-import addListener from '@main/utils/addListener';
+import addListener from '../utils/addListener';
 import { cancelAIChatMessage, sendAIChatMessage, testAIProvider } from './chat';
 
 addListener('@post:ai_chat_message', sendAIChatMessage);

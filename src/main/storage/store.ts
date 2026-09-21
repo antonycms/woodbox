@@ -28,7 +28,7 @@ import {
   parseDbeaverExport,
   toStoredDbeaverConnection,
   toStoredDbeaverProject,
-} from '@main/files/importers/dbeaver';
+} from '../files/importers/dbeaver';
 
 type WindowState = { width: number; height: number; x: number; y: number; isMaximized: boolean };
 

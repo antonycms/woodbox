@@ -10,8 +10,8 @@ import {
   getTableRestrictions,
   getTableRowsCount,
   runExplainSql,
-} from '@main/database/core';
-import { getConnectionsSaved } from '@main/storage/store';
+} from '../database/core';
+import { getConnectionsSaved } from '../storage/store';
 
 const aiToolSchema = <T extends object>(schema: Parameters<typeof jsonSchema>[0]): Schema<T> =>
   jsonSchema<T>(schema);

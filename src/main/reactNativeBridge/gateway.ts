@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { createServer, type Server } from 'http';
 import type { Socket } from 'net';
-import { emitEvent } from '@main/utils/emitEvent';
+import { emitEvent } from '../utils/emitEvent';
 import {
   createSessionId,
   getReactNativeBridgeSessions,

@@ -6,9 +6,9 @@ import type {
   IAIChatResponse,
 } from '@shared/types/ai';
 import { generateText } from 'ai';
-import { getCodexChatGPTAccount } from '@main/codex/account';
-import { getInternalAIProvider } from '@main/storage/store';
-import { sendCodexChatGPTMessage } from '@main/codex/chat';
+import { getCodexChatGPTAccount } from '../codex/account';
+import { getInternalAIProvider } from '../storage/store';
+import { sendCodexChatGPTMessage } from '../codex/chat';
 import { resolveAIModel } from './providers';
 import {
   AI_TOOL_STOP_CONDITION,
