@@ -1,7 +1,8 @@
+import { useShallow } from 'zustand/react/shallow';
+import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
 import { Input } from '@renderer/components/Input';
-import { useI18n } from '@renderer/contexts/I18n';
-import call from '@renderer/utils/call';
+import { useI18nStore } from '@renderer/stores/I18n';
 import type { RegisterField, SetConnectionFormState } from '../../types';
 
 interface IConnectionModeFileFieldsProps {
@@ -13,15 +14,20 @@ interface IConnectionModeFileFieldsProps {
 
 export const ConnectionModeFileFields = React.memo(
   ({ register, setState, color, backgroundColor }: IConnectionModeFileFieldsProps) => {
-    const { t } = useI18n();
+    const dialogs = useDialogsStore(
+      useShallow((state) => ({
+        selectSqliteFile: state.selectSqliteFile,
+      })),
+    );
+    const t = useI18nStore((state) => state.t);
 
     const selectSqliteFile = React.useCallback(async () => {
-      const filePath = await call<string | null>('@dialog:select_sqlite_file');
+      const filePath = await dialogs.selectSqliteFile();
 
       if (!filePath) return;
 
       setState((prevState) => ({ ...prevState, database: filePath }));
-    }, [setState]);
+    }, [dialogs, setState]);
 
     return (
       <Input

@@ -1,6 +1,6 @@
 import React from "react";
 import { Column, IGridSystem } from "../Grid";
-import { generateHash } from "@renderer/utils/string";
+import { generateHash } from '@shared/utils/string';
 import styles from './styles.module.css';
 
 interface ActivatableSection extends IGridSystem {

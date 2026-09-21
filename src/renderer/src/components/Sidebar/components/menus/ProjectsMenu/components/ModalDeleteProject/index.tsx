@@ -1,3 +1,6 @@
+import { useShallow } from 'zustand/react/shallow';
+import { selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -5,21 +8,22 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 
 export const ModalDeleteProject = React.memo(
   ({ show, idProject, project, onClose }: IModalDeleteProjectProps) => {
-    const { t } = useI18n();
-    const { connectionsGroupPerProject, removeProject } = useStoreContext();
-    const { tabs, removeTab } = useAppTabContext();
-    const { showToast } = useToast();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const connectionsGroupPerProject = useWorkspaceStore(selectConnectionsGroupPerProject);
+    const removeProject = useWorkspaceStore((state) => state.removeProject);
+    const { tabs, removeTab } = useAppTabStore(
+      useShallow((state) => ({ tabs: state.tabs, removeTab: state.removeTab })),
+    );
+    const showToast = useToastStore((state) => state.showToast);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
 
@@ -67,7 +71,7 @@ export const ModalDeleteProject = React.memo(
         showToast({
           type: 'error',
           title: t('toast.projectDeleteError'),
-          description: error instanceof Error ? error.message : undefined,
+          description: getErrorMessage(error) || undefined,
           delay: 8000,
         });
       } finally {

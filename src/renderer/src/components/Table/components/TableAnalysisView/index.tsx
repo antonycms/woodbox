@@ -6,7 +6,7 @@ import ResizableContainer, { type OnResizeCallback } from '@renderer/components/
 import { Autocomplete } from '@renderer/components/AutocompleteBlank';
 import { Autocomplete as AutocompleteFree } from '@renderer/components/AutocompleteFreeBlank';
 import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBlank';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { serializeTableValue } from '../../utils';
 
@@ -379,7 +379,7 @@ const TableAnalysisView = ({
   onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
 }: ITableAnalysisViewProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const columnsSizeStyle = React.useMemo(() => {
     return columnsSize.map((size) => `${size}px`).join(' ');
   }, [columnsSize]);

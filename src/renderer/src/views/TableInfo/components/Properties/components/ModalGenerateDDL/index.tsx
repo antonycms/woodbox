@@ -4,10 +4,10 @@ import Editor from '@renderer/components/Editor';
 import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { copyToClipboard } from '@renderer/utils/methods';
-import { useToast } from '@renderer/contexts/Toast';
+import { useToastStore } from '@renderer/stores/Toast';
 import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
@@ -17,11 +17,9 @@ const ModalGenerateDDL = ({
   dialect = getRendererDialect(),
   onClose,
 }: IModalGenerateDDLProps) => {
-  const { t } = useI18n();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
-  const { showToast } = useToast();
+  const t = useI18nStore((state) => state.t);
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
+  const showToast = useToastStore((state) => state.showToast);
 
   const handleCopy = React.useCallback(() => {
     copyToClipboard(sql);

@@ -1,4 +1,4 @@
-import type { DatabaseObjectType, IFunctionDb, ITable } from '@renderer/contexts/Store';
+import type { DatabaseObjectType, IFunctionDb, ITable } from '@shared/types/database';
 import type { DatabaseCompareSelectableObject, ObjectGroup } from './types';
 
 const getQualifiedLabel = (schema: string | undefined, name: string) =>

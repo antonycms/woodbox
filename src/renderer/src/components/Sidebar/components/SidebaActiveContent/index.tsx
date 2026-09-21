@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
 
@@ -10,9 +10,7 @@ interface ISidebarActiveContentProps {
 
 export const SidebarActiveContent = React.memo((props: ISidebarActiveContentProps) => {
   const { children, active } = props;
-  const {
-    activeTheme: { sideBar: colors },
-  } = useThemeContext();
+  const { sideBar: colors } = useThemeStore((state) => state.activeTheme);
 
   const stylesVar = toCssProperties({ backgroundColorSidebar: colors.backgroundColor });
 

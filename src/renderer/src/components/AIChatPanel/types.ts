@@ -1,4 +1,4 @@
-import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
+import type { DatabaseObjectType } from '@shared/types/database';
 
 export interface IAIChatModelGroup {
   providerId: string;

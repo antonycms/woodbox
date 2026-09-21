@@ -1,8 +1,5 @@
-import type {
-  IDatabaseCompareItem,
-  IFunctionDb,
-  ITable,
-} from '@renderer/contexts/Store';
+import type { DatabaseCompareItem as IDatabaseCompareItem } from '@shared/types/databaseCompare';
+import type { IFunctionDb, ITable } from '@shared/types/database';
 
 export interface IModalDatabaseCompareProps {
   show?: boolean;

@@ -7,9 +7,9 @@ import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
-import { useI18n } from '@renderer/contexts/I18n';
-import type { TranslationKey } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { TranslationKey } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
 import type { DatabaseCompareSelectableObject, IObjectsModalProps } from '../../types';
 import { getGroupKey, getObjectDisplayName, getObjectKey, getObjectTypeLabel } from '../../utils';
 import styles from './styles.module.css';
@@ -43,10 +43,8 @@ export const ObjectsModal = React.memo((props: IObjectsModalProps) => {
     onToggleObject,
     onToggleSchemaVisibility,
   } = props;
-  const { t } = useI18n();
-  const {
-    activeTheme: { modal: modalTheme },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { modal: modalTheme } = useThemeStore((state) => state.activeTheme);
 
   const listItems = React.useMemo<ObjectListItem[]>(() => {
     return groups.flatMap((group) => {

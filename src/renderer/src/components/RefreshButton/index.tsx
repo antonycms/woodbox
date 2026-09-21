@@ -5,7 +5,7 @@ import {
   type ContextMenuPlacement,
   type IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { IconRefresh } from '@renderer/styles/icons';
 
@@ -34,7 +34,7 @@ export const RefreshButton = ({
   menuPlacement,
   onRefresh,
 }: IRefreshButtonProps) => {
-  const { activeTheme } = useThemeContext();
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const [menuPosition, setMenuPosition] = React.useState<IContextMenuPosition>();
   const [autoRefreshMs, setAutoRefreshMs] = React.useState<number | null>(null);
   const refreshingRef = React.useRef(false);

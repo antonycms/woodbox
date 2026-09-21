@@ -31,7 +31,7 @@ import {
 
 // dialect
 addListener('@get:dialects', getDialects);
-addListener('@get:test_connection', testConnection);
+addListener('@get:test_connection', (data) => testConnection({ ...data, id: data.id ?? '' }));
 addListener('@get:close_connection', closeConnection);
 addListener('@get:connection_info', getConnectionInfo);
 addListener('@get:table_data', getTableData);

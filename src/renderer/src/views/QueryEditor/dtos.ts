@@ -1,31 +1,20 @@
 import type { ITableSort } from '@renderer/components/Table/dtos';
-import type { Dialect } from '@renderer/database/dialects';
+import type { Dialect } from '@shared/types/connections';
+import type { IRunSqlResult } from '@shared/types/database';
 import type { ITableQuery } from '@renderer/utils/sql';
 
-export interface IQueryResult {
-  type: string;
-  rows?: any[];
-  columns?: string[];
-  columns_info?: IQueryResultColumn[];
+export interface IQueryResult extends IRunSqlResult {
   loading?: boolean;
   queryExecutionId?: string;
   message?: string;
   query: string;
-  affected_rows?: number;
   date_run?: string;
-  execution_time_ms?: number;
   page?: number;
   orderBy?: ITableSort[];
-  auto_paginated?: boolean;
   tables_info?: ITableQuery[];
   variableValues?: Record<string, string>;
   capture?: IQueryCaptureState;
   explain?: IQueryExplainResult;
-}
-
-export interface IQueryResultColumn {
-  name: string;
-  type?: string;
 }
 
 export interface IPendingQueryExecution {
@@ -64,6 +53,7 @@ export interface IQueryExplainResult {
 export type IDataUpdateabResult = Partial<IDataMakeTabResult> & { captureRows?: boolean };
 
 export interface IQueryEditorProps {
+  isActiveTab?: boolean;
   id_connection: string;
   id_script?: string;
 }

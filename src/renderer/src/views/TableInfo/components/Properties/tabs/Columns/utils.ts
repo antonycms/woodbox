@@ -1,6 +1,8 @@
-import type { IColumnInfo } from '@renderer/contexts/Store';
-import type { IPendingColumnChange } from '@renderer/contexts/TableInfoContext';
-import { getColumnType } from './ddl';
+import type { IColumnInfo } from '@shared/types/database';
+import type {
+  IPendingColumnChange,
+} from '@renderer/database/ddl/types';
+import { getColumnType } from '@renderer/database/ddl';
 
 export interface IColumnBooleanLabels {
   yes: string;

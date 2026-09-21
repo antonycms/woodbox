@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { useForm } from '@renderer/hooks/useForm';
 import { Button } from '@renderer/components/Button';
@@ -5,14 +6,18 @@ import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectProps) => {
-  const { projects, addProject, editProject } = useStoreContext();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const { projects, addProject, editProject } = useWorkspaceStore(
+    useShallow((state) => ({
+      projects: state.projects,
+      addProject: state.addProject,
+      editProject: state.editProject,
+    })),
+  );
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const { register, handleSubmit, reset, setState } = useForm({ description: '' });
 

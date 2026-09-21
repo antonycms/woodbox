@@ -1,5 +1,5 @@
 import React from 'react';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { classes } from '@renderer/styles/theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { HistoryIcon } from '@renderer/styles/icons';
@@ -72,7 +72,7 @@ export default function ColumnFilterInput({
   onHistorySelect,
   onKeyDown,
 }: IColumnFilterInputProps) {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const optionRefs = React.useRef<Array<HTMLButtonElement | null>>([]);

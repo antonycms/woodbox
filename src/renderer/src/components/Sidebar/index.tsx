@@ -3,8 +3,8 @@ import ResizableContainer from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase, IconSettings, IconSnippet } from '@renderer/styles/icons';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useCssPropertiesWithActiveTheme } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useCssPropertiesWithActiveTheme } from '@renderer/hooks/useCssPropertiesWithActiveTheme';
 import { SettingsModal } from '@renderer/components/SettingsModal';
 import ProjectsMenu from './components/menus/ProjectsMenu';
 import { MenuBar } from './components/MenuBar';
@@ -16,7 +16,7 @@ import SnippetsMenu from './components/menus/SnippetsMenu';
 type Menu = 'projects' | 'snippets';
 
 export const Sidebar = React.memo(() => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const [selectedMenu, setSelectedMenu] = React.useState<Menu | null>('projects');
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [width, _setWidth] = useStorage('sidebar_width', 300);

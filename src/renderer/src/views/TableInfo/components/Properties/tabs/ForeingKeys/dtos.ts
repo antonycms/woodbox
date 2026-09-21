@@ -1,4 +1,4 @@
-import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
+import type { IColumnReferenceInfo } from '@shared/types/database';
 
 export interface IReferenceSerialized extends IColumnReferenceInfo {
   table_reference: string;

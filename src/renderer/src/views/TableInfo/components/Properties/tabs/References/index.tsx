@@ -1,14 +1,15 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
@@ -16,19 +17,24 @@ import FilterBar from '../../components/FilterBar';
 import { getReferenceRowKey, getReferenceSearchValues } from './utils';
 import { IReferenceRow } from './dtos';
 
-interface IReferencesProps extends ITableInfoProps {
+interface IReferencesProps extends ITableInfoViewProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
 }
 
-const References = ({ id_connection, schema, table, onOpenTable }: IReferencesProps) => {
+const References = ({ tableStore, id_connection, schema, table, onOpenTable }: IReferencesProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } =
-    useTableInfoContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      usedAsReference: state.usedAsReference,
+      loadTableUsedAsReference: state.loadTableUsedAsReference,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
   const [referenceFilterText, setReferenceFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
 

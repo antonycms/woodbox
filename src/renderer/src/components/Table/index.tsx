@@ -7,7 +7,7 @@ import styles from './styles.module.css';
 import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
 import TableSearchBar from './components/TableSearchBar';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type {
   IColumn,
@@ -116,9 +116,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     initialAnalysisMode,
   } = props;
 
-  const {
-    activeTheme: { table: theme },
-  } = useThemeContext();
+  const { table: theme } = useThemeStore((state) => state.activeTheme);
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();

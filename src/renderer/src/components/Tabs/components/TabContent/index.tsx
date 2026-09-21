@@ -2,12 +2,9 @@ import React from 'react';
 import { Freeze } from 'react-freeze';
 import { classes } from '@renderer/styles/theme';
 import styles from '../../styles.module.css';
-import { useTabContext } from '../TabProvider';
-import TabContentProvider from '../TabContentProvider';
 
 const TabContent = (props: ITabWindowProps) => {
-  const { children, idTab, backgroundColor, hasPadding } = props;
-  const { activeTabId } = useTabContext();
+  const { children, activeTabId, idTab, backgroundColor, hasPadding } = props;
   const isActiveTab = activeTabId === idTab;
 
   return (
@@ -15,9 +12,7 @@ const TabContent = (props: ITabWindowProps) => {
       className={classes(styles.tabContent, isActiveTab && styles.active)}
       style={{ backgroundColor, padding: hasPadding ? '10px' : null }}
     >
-      <TabContentProvider activeTabId={activeTabId} tabId={idTab}>
-        <Freeze freeze={!isActiveTab}>{children}</Freeze>
-      </TabContentProvider>
+      <Freeze freeze={!isActiveTab}>{children}</Freeze>
     </div>
   );
 };
@@ -26,6 +21,7 @@ export default TabContent;
 
 export interface ITabWindowProps {
   idTab: string;
+  activeTabId?: string | null;
   children?: React.ReactNode;
   backgroundColor?: string;
   hasPadding?: boolean;

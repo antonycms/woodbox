@@ -5,10 +5,9 @@ import {
   IContextMenuOption,
   IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import Tab from '../Tab';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useTabSplitContext } from '../TabSplit/context';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from '../../styles.module.css';
 
 const TabsBar = (props: ITabsBarProps) => {
@@ -43,11 +42,10 @@ const TabsBar = (props: ITabsBarProps) => {
     height = '30px',
     width = '100%',
     padding,
+    dragDataType = idTabBar,
+    onDraggingTabId,
   } = props;
-  const {
-    activeTheme: { mainTab: theme },
-  } = useThemeContext();
-  const tabSplit = useTabSplitContext();
+  const { mainTab: theme } = useThemeStore((state) => state.activeTheme);
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const handledGroupEditorRequestRef = React.useRef<IGroupEditorRequest>(null);
@@ -57,14 +55,13 @@ const TabsBar = (props: ITabsBarProps) => {
   const [activeTabContextMenu, setActiveTabContextMenu] = React.useState<IActiveTabContextMenu>();
   const [activeGroupContext, setActiveGroupContext] = React.useState<IActiveGroupContextMenu>();
   const noHasContent = !tabs.length;
-  const dragDataType = tabSplit?.dragDataType || idTabBar;
 
   const tabDragEnd = React.useCallback(() => {
     setIdTabDraging(null);
     setIdTabDragTarget(null);
     setIdGroupDragTarget(null);
-    tabSplit?.setDraggingTabId(undefined);
-  }, [tabSplit]);
+    onDraggingTabId?.(undefined);
+  }, [onDraggingTabId]);
 
   const tabDragEnter = (idTab: string) => {
     if (!idTabDraging) return;
@@ -89,7 +86,7 @@ const TabsBar = (props: ITabsBarProps) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData(dragDataType, idTab);
     setIdTabDraging(idTab);
-    tabSplit?.setDraggingTabId(idTab);
+    onDraggingTabId?.(idTab);
   };
 
   React.useEffect(() => {
@@ -496,11 +493,9 @@ const TabGroupHeader = (props: ITabGroupHeaderProps) => {
 };
 
 const TabGroupEditor = (props: ITabGroupEditorProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const { context, onUpdateGroup, onUngroup, onCloseGroup } = props;
-  const {
-    activeTheme: { mainTab: theme },
-  } = useThemeContext();
+  const { mainTab: theme } = useThemeStore((state) => state.activeTheme);
   const { group, position } = context;
   const [title, setTitle] = React.useState(group.title);
   const tabGroupColors = theme.groupColors;
@@ -595,6 +590,8 @@ type IGroupedTabItem =
   | { type: 'tab'; tab: ITab; group?: ITabGroup };
 
 export interface ITabsBarProps {
+  onDraggingTabId?(tabId: string): void;
+  dragDataType?: string;
   idTabBar: string;
   tabs: ITab[];
   groups?: ITabGroup[];

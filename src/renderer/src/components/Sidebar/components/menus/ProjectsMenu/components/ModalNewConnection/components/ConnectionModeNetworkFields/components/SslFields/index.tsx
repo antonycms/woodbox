@@ -1,9 +1,10 @@
+import { useShallow } from 'zustand/react/shallow';
+import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
 import { ActivatableSection } from '@renderer/components/ActivatableSection';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
-import { useI18n } from '@renderer/contexts/I18n';
-import call from '@renderer/utils/call';
+import { useI18nStore } from '@renderer/stores/I18n';
 import type { IDataNewConnection, RegisterField, SetConnectionFormState } from '../../../../types';
 import styles from './styles.module.css';
 
@@ -21,7 +22,12 @@ interface ISslFieldsProps {
 
 export const SslFields = React.memo(
   ({ register, state, setState, color, backgroundColor, textColor }: ISslFieldsProps) => {
-    const { t } = useI18n();
+    const dialogs = useDialogsStore(
+      useShallow((state) => ({
+        selectSslFile: state.selectSslFile,
+      })),
+    );
+    const t = useI18nStore((state) => state.t);
 
     const handleSslChange = React.useCallback(
       (ssl: boolean) => {
@@ -46,13 +52,13 @@ export const SslFields = React.memo(
 
     const selectSslFile = React.useCallback(
       async (field: SslFileField) => {
-        const filePath = await call<string | null>('@dialog:select_ssl_file');
+        const filePath = await dialogs.selectSslFile();
 
         if (!filePath) return;
 
         setState((prevState) => ({ ...prevState, [field]: filePath }));
       },
-      [setState],
+      [dialogs, setState],
     );
 
     return (

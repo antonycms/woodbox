@@ -1,4 +1,4 @@
-import type { II18nContext } from '@renderer/contexts/I18n';
+import { TranslateFn } from '@renderer/stores/I18n/types';
 import type { IQueryResult } from '../../dtos';
 
 export type ExplainRow = Record<string, unknown>;
@@ -184,7 +184,7 @@ const getTextBottlenecks = (planText: string): Bottleneck[] => {
 
 export const analyzeExplain = (
   data: IQueryResult,
-  t: II18nContext['t'],
+  t: TranslateFn,
 ): ExplainAnalysis => {
   const rows = (data.rows || []) as ExplainRow[];
   const planText = getPlanText(rows);

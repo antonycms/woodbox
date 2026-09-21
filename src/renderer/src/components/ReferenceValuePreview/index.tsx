@@ -2,9 +2,9 @@ import React from 'react';
 import { Button } from '@renderer/components/Button';
 import Editor, { type IEditorProps } from '@renderer/components/Editor';
 import type { IColumn } from '@renderer/components/Table/dtos';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import type { Dialect } from '@renderer/database/dialects';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import type { Dialect } from '@shared/types/connections';
 import SpatialMap from './components/SpatialMap';
 import { getSpatialPreviewData, serializePreviewValue } from './spatial';
 import styles from './styles.module.css';
@@ -30,11 +30,9 @@ const ReferenceValuePreview = ({
   language = 'json',
 }: IReferenceValuePreviewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
+    tableInfo: { data: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
   const initializedViewMode = React.useRef(false);
   const [viewMode, setViewMode] = React.useState<'editor' | 'map'>('editor');
 

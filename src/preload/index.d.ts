@@ -1,10 +1,9 @@
-import type { ElectronAPI } from '@electron-toolkit/preload';
+import type { WoodboxApi } from '@shared/types/api';
 import type { Environment } from 'monaco-editor';
 
 declare global {
   interface Window {
-    electron: ElectronAPI;
-    api: unknown;
+    api: WoodboxApi;
     shiftPressed?: boolean;
     ctrlPressed?: boolean;
     metaPressed?: boolean;

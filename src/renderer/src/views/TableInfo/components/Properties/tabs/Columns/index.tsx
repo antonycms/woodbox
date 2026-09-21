@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
@@ -6,29 +7,30 @@ import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
-import { type IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import {
-  type IPendingColumnChange,
-  type IPendingColumnCreate,
-  type IPendingIndexCreate,
-  type IPendingReferenceCreate,
-  useTableInfoContext,
-} from '@renderer/contexts/TableInfoContext';
+import type { IColumnInfo } from '@shared/types/database';
+import { generateHash } from '@shared/utils/string';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import type {
+  IPendingColumnChange,
+  IPendingColumnCreate,
+  IPendingIndexCreate,
+  IPendingReferenceCreate,
+} from '@renderer/database/ddl/types';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
-import { generateHash } from '@renderer/utils/string';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateAddColumnsDdl, getColumnType } from './ddl';
+import { generateAddColumnsDdl, getColumnType } from '@renderer/database/ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
 import {
@@ -43,7 +45,7 @@ import {
   serializeColumnBooleanLabels,
 } from './utils';
 
-const Columns = ({
+const Columns = ({ tableStore,
   id_connection,
   schema,
   table,
@@ -51,13 +53,16 @@ const Columns = ({
   tableComment,
   onCreateApplied,
   objectType = 'table',
-}: ITableInfoProps) => {
+}: ITableInfoViewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { connections, connectionsInfo } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const { connections, connectionsInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+    })),
+  );
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -65,8 +70,8 @@ const Columns = ({
       ),
     [connections, id_connection],
   );
-  const { showToast } = useToast();
-  const { t } = useI18n();
+  const showToast = useToastStore((state) => state.showToast);
+  const t = useI18nStore((state) => state.t);
   const {
     columns,
     pendingColumns,
@@ -97,7 +102,40 @@ const Columns = ({
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      columns: state.columns,
+      pendingColumns: state.pendingColumns,
+      pendingDroppedColumns: state.pendingDroppedColumns,
+      pendingChangedColumns: state.pendingChangedColumns,
+      pendingRestrictions: state.pendingRestrictions,
+      pendingReferences: state.pendingReferences,
+      indexes: state.indexes,
+      pendingIndexes: state.pendingIndexes,
+      columnTypes: state.columnTypes,
+      references: state.references,
+      restrictions: state.restrictions,
+      addPendingColumn: state.addPendingColumn,
+      addPendingIndex: state.addPendingIndex,
+      updatePendingColumn: state.updatePendingColumn,
+      addPendingRestriction: state.addPendingRestriction,
+      addPendingReference: state.addPendingReference,
+      removePendingColumn: state.removePendingColumn,
+      addPendingDroppedColumns: state.addPendingDroppedColumns,
+      removePendingDroppedColumns: state.removePendingDroppedColumns,
+      addPendingChangedColumn: state.addPendingChangedColumn,
+      removePendingChangedColumns: state.removePendingChangedColumns,
+      clearPendingChanges: state.clearPendingChanges,
+      loadColumnTypes: state.loadColumnTypes,
+      loadTableColumns: state.loadTableColumns,
+      loadTableReferences: state.loadTableReferences,
+      loadTableRestrictions: state.loadTableRestrictions,
+      openPendingChangesSqlModal: state.openPendingChangesSqlModal,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedColumns, setSelectedColumns] = React.useState<IColumnInfo[]>([]);
   const [columnFilterText, setColumnFilterText] = React.useState('');

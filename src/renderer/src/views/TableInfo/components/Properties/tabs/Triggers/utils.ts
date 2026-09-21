@@ -1,4 +1,4 @@
-import type { ITriggerInfo } from '@renderer/contexts/Store';
+import type { ITriggerInfo } from '@shared/types/database';
 
 export const getTriggerSearchValues = (trigger: ITriggerInfo) => [
   trigger.trigger_name,

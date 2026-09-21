@@ -1,14 +1,14 @@
+import { useRowChanges } from './hooks/useRowChanges';
+import { normalizeCellValue } from './utils';
+import { ValuePreview, type ValuePreviewRequest } from './components/ValuePreview';
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import Table, {
   type ITableContextMenuData,
   type ITableSelectedCellData,
 } from '@renderer/components/Table';
-import ReferencePreview from '@renderer/components/ReferencePreview';
-import ReferenceValuePreview from '@renderer/components/ReferenceValuePreview';
-import ResizableContainer from '@renderer/components/ResizableContainer';
 import { Spacer } from '@renderer/components/Spacer';
-import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import type { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { ContextMenu, type IContextMenuOption } from '@renderer/components/ContextMenu';
 import {
@@ -22,38 +22,36 @@ import {
 } from '@renderer/styles/icons';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import styles from './styles.module.css';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
-import { ITableInfoProps } from '../../dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { ITableInfoViewProps } from '../../dtos';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
 import {
   generateDeleteDdl,
   generateInsertDdl,
   generateUpdateDdl,
-} from '../Properties/tabs/Columns/ddl';
+} from '@renderer/database/ddl';
 import ModalDataError from './components/ModalDataError';
-import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 
-import IconMdiClose from '~icons/mdi/close';
-
-interface IDataProps extends ITableInfoProps {
+interface IDataProps extends ITableInfoViewProps {
   onOpenTable?: (
     idConnection: string,
     schema: string,
@@ -65,11 +63,9 @@ interface IDataProps extends ITableInfoProps {
   onPendingRowsChangesChange?: (hasPendingChanges: boolean) => void;
 }
 
-type PreviewTab = 'value' | 'reference' | 'selection';
-
-const normalizeCellValue = (value: any) => (value === '' ? null : value);
 
 const Data = ({
+  tableStore,
   id_connection,
   schema,
   table,
@@ -82,11 +78,9 @@ const Data = ({
   objectType = 'table',
 }: IDataProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme, tab: tabTheme },
-      modal: colors,
-    },
-  } = useThemeContext();
+    tableInfo: { data: theme },
+    modal: colors,
+  } = useThemeStore((state) => state.activeTheme);
   const {
     columns,
     references,
@@ -95,11 +89,31 @@ const Data = ({
     loadTableReferences,
     loadTableRestrictions,
     loading: loadingTableInfo,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      columns: state.columns,
+      references: state.references,
+      restrictions: state.restrictions,
+      loadTableColumns: state.loadTableColumns,
+      loadTableReferences: state.loadTableReferences,
+      loadTableRestrictions: state.loadTableRestrictions,
+      loading: state.loading,
+    })),
+  );
 
-  const { getTableData, getTableRowsCount, runSql, connections } = useStoreContext();
-  const { t, language } = useI18n();
-  const { showToast } = useToast();
+  const { getTableData, getTableRowsCount, runSql } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableData: state.getTableData,
+      getTableRowsCount: state.getTableRowsCount,
+      runSql: state.runSql,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -115,16 +129,8 @@ const Data = ({
   const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
   const [page, setPage] = React.useState(0);
   const [sort, setSort] = React.useState<ITableSort[]>([]);
-  const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const lastPageSearch = React.useRef(page);
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
-  const [editedFieldsRows, setEditedFieldsRows] = React.useState<
-    Map<React.Key, Record<string, any>>
-  >(new Map());
-  const [droppedRows, setDroppedRows] = React.useState<Map<React.Key, Record<string, any>>>(
-    new Map(),
-  );
-  const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
   const [whereInput, setWhereInput] = React.useState(initialWhere || '');
@@ -132,17 +138,15 @@ const Data = ({
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
-  const [showValuePreview, setShowValuePreview] = React.useState(false);
-  const [previewWidth, setPreviewWidth] = React.useState(420);
+  const [valuePreview, setValuePreview] = React.useState<ValuePreviewRequest>();
+  const showValuePreview = !!valuePreview;
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
-  const [previewTabBarId] = React.useState(`table_data_preview_${generateHash()}`);
-  const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
   const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
-      setDataErrorMessage(error instanceof Error ? error.message : t('common.unknownError'));
+      setDataErrorMessage(getErrorMessage(error) || t('common.unknownError'));
     },
     [t],
   );
@@ -174,6 +178,28 @@ const Data = ({
     getTableRowsCount,
     handleDataError,
   ]);
+
+  const closeContextMenuTable = React.useCallback(() => {
+    setContextMenuTable(undefined);
+  }, []);
+
+  const {
+    editedFieldsRows,
+    droppedRows,
+    newRows,
+    primaryKeyColumns,
+    hasPendingRowsChanges,
+    handleEditNewRow,
+    handleEditRow,
+    removedRowKeys,
+    handleAddItem,
+    handleDuplicateSelectedRows,
+    handleCancelSelectedRowsEditions,
+    handleUndoSelectedDroppedRows,
+    handleRemoveSelectedRows,
+    setSelectedRows,
+    resetRows,
+  } = useRowChanges({ items, columns, restrictions, onCloseMenu: closeContextMenuTable });
 
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
@@ -207,19 +233,8 @@ const Data = ({
     ? fkMap.get(String(selectedCell.column.attribute))
     : undefined;
 
-  const previewTabs = React.useMemo(
-    () =>
-      [
-        { idTab: 'value', title: t('tabs.value') },
-        !!selectedReference && { idTab: 'reference', title: t('reference.singular') },
-        !!selectedReference && { idTab: 'selection', title: t('tabs.selection') },
-      ].filter(Boolean) as ITab[],
-    [!!selectedReference, t],
-  );
-
   const closeValuePreview = React.useCallback(() => {
-    setShowValuePreview(false);
-    setActivePreviewTab('value');
+    setValuePreview(undefined);
   }, []);
 
   const toggleValuePreview = React.useCallback(() => {
@@ -228,16 +243,8 @@ const Data = ({
       return;
     }
 
-    setShowValuePreview(true);
+    setValuePreview({ tab: 'value' });
   }, [closeValuePreview, showValuePreview]);
-
-  const handlePreviewResize = React.useCallback((size: { width?: number }) => {
-    if (size.width) setPreviewWidth(size.width);
-  }, []);
-
-  const handleActivePreviewTab = React.useCallback((tab?: ITab) => {
-    setActivePreviewTab(tab?.idTab as PreviewTab);
-  }, []);
 
   const handleWhereInputChange = React.useCallback(
     (value: string) => {
@@ -267,10 +274,6 @@ const Data = ({
     setShowNoPkModal(false);
   }, []);
 
-  const closeContextMenuTable = React.useCallback(() => {
-    setContextMenuTable(undefined);
-  }, []);
-
   const handleFkCellClick = React.useCallback(
     (attribute: string, value: any) => {
       const ref = fkMap.get(attribute);
@@ -291,8 +294,7 @@ const Data = ({
       const ref = fkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
 
-      setShowValuePreview(true);
-      setActivePreviewTab('reference');
+      setValuePreview({ tab: 'reference' });
     },
     [fkMap],
   );
@@ -328,79 +330,6 @@ const Data = ({
     [appliedWhere, schema, sort, table],
   );
 
-  const primaryKeyColumns = React.useMemo(
-    () =>
-      restrictions.find((restriction) => restriction.constraint_type === 'primary_key')
-        ?.column_names || [],
-    [restrictions],
-  );
-
-  const defaultColumnNames = React.useMemo(
-    () =>
-      new Set(
-        columns.filter((column) => column.column_default).map((column) => column.column_name),
-      ),
-    [columns],
-  );
-
-  const hasPendingRowsChanges = React.useMemo(
-    () =>
-      [...newRows.values()].some((row) => Object.keys(row).length) ||
-      !!editedFieldsRows.size ||
-      !!droppedRows.size,
-    [newRows, editedFieldsRows, droppedRows],
-  );
-
-  const handleEditNewRow = React.useCallback(
-    (rowKey: React.Key, attribute: string, value: any, useDefaultOnNull = true) => {
-      const normalizedValue = normalizeCellValue(value);
-
-      setNewRows((prevState) => {
-        const newState = new Map(prevState);
-        const prevRowEdited = { ...(newState.get(rowKey) || {}) };
-
-        if (useDefaultOnNull && normalizedValue === null && defaultColumnNames.has(attribute)) {
-          delete prevRowEdited[attribute];
-          newState.set(rowKey, prevRowEdited);
-          return newState;
-        }
-
-        newState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
-
-        return newState;
-      });
-    },
-    [defaultColumnNames],
-  );
-
-  const handleEditRow = React.useCallback(
-    (index: number, attribute: string, value: any, rowKey?: React.Key) => {
-      const normalizedValue = normalizeCellValue(value);
-      const key = rowKey ?? index;
-      const row = items[index];
-
-      setEditedFieldsRows((prevState) => {
-        const newState = new Map(prevState);
-        const prevRowEdited = { ...(newState.get(key) || {}) };
-        const originalValue = row?.[attribute];
-
-        if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
-          delete prevRowEdited[attribute];
-
-          if (Object.keys(prevRowEdited).length) newState.set(key, prevRowEdited);
-          else newState.delete(key);
-
-          return newState;
-        }
-
-        newState.set(key, { ...prevRowEdited, [attribute]: normalizedValue });
-
-        return newState;
-      });
-    },
-    [items],
-  );
-
   const handleApplySelectedCellValue = React.useCallback(
     (value: any) => {
       if (!selectedCell) return;
@@ -427,20 +356,6 @@ const Data = ({
     [handleEditNewRow, handleEditRow, selectedCell],
   );
 
-  const handleApplySelectedPreviewValue = React.useCallback(
-    (value: string) => {
-      if (!selectedCell?.column.editable) return;
-
-      handleApplySelectedCellValue(value);
-    },
-    [handleApplySelectedCellValue, selectedCell],
-  );
-
-  const removedRowKeys = React.useMemo(
-    () => new Set(droppedRows.keys()),
-    [droppedRows],
-  );
-
   const onContextMenuTable = React.useCallback((
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData,
@@ -457,44 +372,6 @@ const Data = ({
   const rowKeyExtractor = React.useCallback((row: any, index: number) => {
     return row.__table_hash_item ?? index;
   }, []);
-
-  const handleAddItem = React.useCallback(() => {
-    const key = `new_${generateHash()}`;
-
-    setNewRows((prevState) => new Map(prevState).set(key, {}));
-  }, []);
-
-  const handleDuplicateSelectedRows = React.useCallback(() => {
-    if (!selectedRows.length) {
-      showToast({ type: 'warn', title: t('toast.selectRowsDuplicate') });
-      return;
-    }
-
-    setNewRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        const sourceRow = {
-          ...row,
-          ...(newRows.get(row.__key_row) || {}),
-          ...(editedFieldsRows.get(row.__key_row) || {}),
-        };
-
-        const duplicatedRow = columns.reduce<Record<string, any>>((acc, column) => {
-          if (primaryKeyColumns.includes(column.column_name)) return acc;
-
-          acc[column.column_name] = sourceRow[column.column_name];
-          return acc;
-        }, {});
-
-        nextState.set(`new_${generateHash()}`, duplicatedRow);
-      });
-
-      return nextState;
-    });
-
-    setContextMenuTable(undefined);
-  }, [columns, editedFieldsRows, newRows, primaryKeyColumns, selectedRows, showToast]);
 
   const loadData = React.useCallback(async () => {
     const newPage = page + 1;
@@ -555,16 +432,14 @@ const Data = ({
       lastPageSearch.current = 1;
       setPage(1);
       setLastFetchDate(new Date());
-      setNewRows(new Map());
-      setEditedFieldsRows(new Map());
-      setDroppedRows(new Map());
+      resetRows();
       setItems(serializeRows(data));
     } catch (error: unknown) {
       handleDataError(error);
     } finally {
       setLoading(false);
     }
-  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows, handleDataError]);
+  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows, handleDataError, resetRows]);
 
   const applyPendingRows = React.useCallback(
     async (whereColumns: string[]) => {
@@ -609,9 +484,7 @@ const Data = ({
 
       try {
         await runSql(id_connection, sql);
-        setNewRows(new Map());
-        setEditedFieldsRows(new Map());
-        setDroppedRows(new Map());
+        resetRows();
         setShowNoPkModal(false);
         showToast({ type: 'success', title: t('toast.dataSaved') });
         await handleRefresh();
@@ -640,6 +513,7 @@ const Data = ({
       id_connection,
       showToast,
       handleRefresh,
+      resetRows,
       t,
     ],
   );
@@ -661,20 +535,6 @@ const Data = ({
     applyPendingRows(columns.map((column) => column.column_name));
   }, [applyPendingRows, columns]);
 
-  const handleCancelSelectedRowsEditions = React.useCallback(() => {
-    if (!selectedRows.length) return;
-
-    setEditedFieldsRows((prevState) => {
-      const newState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        newState.delete(row.__key_row);
-      });
-
-      return newState;
-    });
-  }, [selectedRows]);
-
   const handleSetSelectedCellsNull = React.useCallback(() => {
     const cells = contextMenuTable?.data?.selectedCells || [];
 
@@ -695,59 +555,6 @@ const Data = ({
     setContextMenuTable(undefined);
   }, [contextMenuTable, handleEditNewRow, handleEditRow]);
 
-  const handleUndoSelectedDroppedRows = React.useCallback(() => {
-    if (!selectedRows.length) return;
-
-    setDroppedRows((prevState) => {
-      const newState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        newState.delete(row.__key_row);
-      });
-
-      return newState;
-    });
-  }, [selectedRows]);
-
-  const handleRemoveSelectedRows = React.useCallback(() => {
-    if (!selectedRows.length) {
-      showToast({ type: 'warn', title: t('toast.selectRowsRemove') });
-      return;
-    }
-
-    setNewRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        if (row.__is_new_row) nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-
-    setDroppedRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        if (!row.__is_new_row) nextState.set(row.__key_row, row);
-      });
-
-      return nextState;
-    });
-
-    setEditedFieldsRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-
-    setContextMenuTable(undefined);
-  }, [selectedRows, showToast, t]);
-
   const handleSort = React.useCallback(
     async (column: IColumn, sortType?: ISortDirection | null) => {
       if (loading || !column.sortable) return;
@@ -765,9 +572,7 @@ const Data = ({
         });
 
         setSort(nextSort);
-        setNewRows(new Map());
-        setEditedFieldsRows(new Map());
-        setDroppedRows(new Map());
+        resetRows();
         setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
@@ -778,7 +583,7 @@ const Data = ({
         setLoading(false);
       }
     },
-    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows, handleDataError],
+    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows, handleDataError, resetRows],
   );
 
   const applyFilter = React.useCallback(
@@ -801,9 +606,7 @@ const Data = ({
         setAppliedWhere(nextWhereInput);
         addFilterHistory(nextWhereInput);
         setRowsCount(undefined);
-        setNewRows(new Map());
-        setEditedFieldsRows(new Map());
-        setDroppedRows(new Map());
+        resetRows();
         setItems(serializeRows(data));
         setPage(1);
         lastPageSearch.current = 1;
@@ -816,6 +619,7 @@ const Data = ({
     },
     [
       addFilterHistory,
+      resetRows,
       getTableData,
       handleDataError,
       id_connection,
@@ -874,12 +678,6 @@ const Data = ({
     // Monta uma vez: a aba de dados é recriada quando a tabela/conexão muda.
     loadData();
   }, []);
-
-  React.useEffect(() => {
-    if (!selectedReference && activePreviewTab !== 'value') {
-      setActivePreviewTab('value');
-    }
-  }, [activePreviewTab, selectedReference]);
 
   React.useEffect(() => {
     onRegisterRefresh?.(handleRefresh);
@@ -1037,80 +835,18 @@ const Data = ({
           />
         </div>
 
-        {showValuePreview && (
-          <ResizableContainer
-            width={previewWidth}
-            minWidth={356}
-            maxWidth={900}
-            direction="horizontal"
-            horizontalResizeSide="left"
-            className={styles.previewResizable}
-            onResize={handlePreviewResize}
-          >
-            <div className={styles.preview} style={{ backgroundColor: colors.backgroundColor }}>
-              <div className={styles.previewHeader}>
-                <TabBar
-                  borderBottom
-                  idTabBar={previewTabBarId}
-                  activeTabId={activePreviewTab}
-                  onActiveTab={handleActivePreviewTab}
-                  ascentColor={tabTheme.ascentColor}
-                  backgroundColor={tabTheme.backgroundColor}
-                  backgroundColorBar={tabTheme.bar.backgroundColor}
-                  borderColor={tabTheme.borderColor}
-                  color={tabTheme.color}
-                  tabs={previewTabs}
-                />
-
-                <Button
-                  title={t('tooltip.closeValuePreview')}
-                  backgroundColor={tabTheme.backgroundColor}
-                  color={tabTheme.color}
-                  onClick={closeValuePreview}
-                  width="auto"
-                  icon={() => <IconMdiClose width={16} />}
-                />
-              </div>
-
-              <TabWindow activeTabId={activePreviewTab}>
-                <TabContent idTab="value">
-                  <ReferenceValuePreview
-                    key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
-                    column={selectedCell?.column}
-                    dialect={dialect.editorDialect}
-                    readonly={!selectedCell?.column.editable}
-                    value={selectedCellValue}
-                    onChange={handleApplySelectedPreviewValue}
-                  />
-                </TabContent>
-
-                {!!selectedReference && (
-                  <TabContent idTab="reference">
-                    <ReferencePreview
-                      active={activePreviewTab === 'reference'}
-                      idConnection={id_connection}
-                      initialReference={selectedReference}
-                      initialValue={selectedCellValue}
-                      onOpenTable={onOpenTable}
-                    />
-                  </TabContent>
-                )}
-
-                {!!selectedReference && (
-                  <TabContent idTab="selection">
-                    <ReferenceSelection
-                      active={activePreviewTab === 'selection'}
-                      idConnection={id_connection}
-                      reference={selectedReference}
-                      onDataError={handleDataError}
-                      onSelectValue={handleApplySelectedCellValue}
-                    />
-                  </TabContent>
-                )}
-              </TabWindow>
-            </div>
-          </ResizableContainer>
-        )}
+        <ValuePreview
+          preview={valuePreview}
+          id_connection={id_connection}
+          dialect={dialect.editorDialect}
+          selectedCell={selectedCell}
+          selectedCellValue={selectedCellValue}
+          selectedReference={selectedReference}
+          onClose={closeValuePreview}
+          onOpenTable={onOpenTable}
+          onDataError={handleDataError}
+          onApplyValue={handleApplySelectedCellValue}
+        />
       </div>
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

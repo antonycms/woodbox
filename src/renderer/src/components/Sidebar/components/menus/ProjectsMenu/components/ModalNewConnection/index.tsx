@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React, { useCallback } from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -6,17 +7,13 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useToast } from '@renderer/contexts/Toast';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useToastStore } from '@renderer/stores/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
-import type { ConnectionEnvironment, IConnectionCreate } from '@renderer/contexts/Store';
-import {
-  getRendererDialect,
-  getRendererDialectOptions,
-  type Dialect,
-} from '@renderer/database/dialects';
+import type { ConnectionEnvironment, IConnectionCreate, Dialect } from '@shared/types/connections';
+import { getRendererDialect, getRendererDialectOptions } from '@renderer/database/dialects';
 import { ConnectionModeFileFields } from './components/ConnectionModeFileFields';
 import { ConnectionModeNetworkFields } from './components/ConnectionModeNetworkFields';
 import { ReactNativeBridgeFields } from './components/ReactNativeBridgeFields';
@@ -55,15 +52,20 @@ const getConnectionData = (data: IDataNewConnection, idProject?: string): IConne
 
 export const ModalNewConnection = React.memo(
   ({ idProject, idConnection, show, onClose }: IModalNewConnectionProps) => {
-    const { showToast } = useToast();
-    const { t } = useI18n();
+    const showToast = useToastStore((state) => state.showToast);
+    const t = useI18nStore((state) => state.t);
 
-    const { connections, addConnection, editConnection, connectionTypes, testConnection } =
-      useStoreContext();
+    const { connections, addConnection, editConnection, connectionTypes, testConnection } = useWorkspaceStore(
+      useShallow((state) => ({
+        connections: state.connections,
+        addConnection: state.addConnection,
+        editConnection: state.editConnection,
+        connectionTypes: state.connectionTypes,
+        testConnection: state.testConnection,
+      })),
+    );
 
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const formRef = React.useRef<HTMLFormElement>(null);
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);

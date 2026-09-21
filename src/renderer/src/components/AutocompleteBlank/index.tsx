@@ -4,10 +4,10 @@ import { useDropdownOutsideClick } from '@renderer/components/Autocomplete/hooks
 import { SpinnerLoading } from '@renderer/components/Loaders';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { IGridSystem } from '@renderer/components/Grid';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { classes, toCssProperties } from '@renderer/styles/theme';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 
 import styles from './styles.module.css';
 
@@ -42,9 +42,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     extractValue = defaultExtractValue,
     emptyMessage = 'Não há opções disponíveis',
   } = props;
-  const {
-    activeTheme: { autocomplete: theme },
-  } = useThemeContext();
+  const { autocomplete: theme } = useThemeStore((state) => state.activeTheme);
 
   const itemSize = 41;
 

@@ -1,14 +1,15 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { IServerOutputMessage } from '@renderer/contexts/Store/context';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import type { IServerOutputMessage } from '@shared/types/database';
 import { toDateTime } from '@renderer/utils/date';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { useDatabaseStore } from '@renderer/stores/Database';
 import styles from './styles.module.css';
 
 interface IModalServerOutputProps {
@@ -19,12 +20,16 @@ interface IModalServerOutputProps {
 
 export const ModalServerOutput = React.memo(
   ({ show, id_connection, onClose }: IModalServerOutputProps) => {
-    const { t } = useI18n();
-    const {
-      activeTheme: { queryEditor, modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const { queryEditor, modal: colors } = useThemeStore((state) => state.activeTheme);
 
-    const { getServerOutput, clearServerOutput } = useStoreContext();
+    const { onServerOutput, getServerOutput, clearServerOutput } = useDatabaseStore(
+      useShallow((state) => ({
+        onServerOutput: state.onServerOutput,
+        getServerOutput: state.getServerOutput,
+        clearServerOutput: state.clearServerOutput,
+      })),
+    );
 
     const [messages, setMessages] = React.useState<IServerOutputMessage[]>([]);
     const listRef = React.useRef<HTMLDivElement>(null);
@@ -51,20 +56,17 @@ export const ModalServerOutput = React.memo(
     React.useEffect(() => {
       loadServerOutput();
 
-      const removeListener = window.electron.ipcRenderer.on(
-        '@event:server_output',
-        (_event, message: IServerOutputMessage) => {
-          if (message.connectionId !== id_connection) return;
+      const removeListener = onServerOutput((message: IServerOutputMessage) => {
+        if (message.connectionId !== id_connection) return;
 
-          setMessages((prevState) => {
-            if (prevState.some(({ id }) => id === message.id)) return prevState;
-            return [...prevState, message].slice(-1000);
-          });
-        },
-      );
+        setMessages((prevState) => {
+          if (prevState.some(({ id }) => id === message.id)) return prevState;
+          return [...prevState, message].slice(-1000);
+        });
+      });
 
       return removeListener;
-    }, [id_connection]);
+    }, [id_connection, onServerOutput]);
 
     return (
       <Modal

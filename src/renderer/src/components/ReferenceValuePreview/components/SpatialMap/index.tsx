@@ -1,7 +1,7 @@
 import React from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
 
 interface ISpatialMapProps {
@@ -10,10 +10,8 @@ interface ISpatialMapProps {
 
 const SpatialMap = ({ geoJson }: ISpatialMapProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme },
-    },
-  } = useThemeContext();
+    tableInfo: { data: theme },
+  } = useThemeStore((state) => state.activeTheme);
   const mapElementRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {

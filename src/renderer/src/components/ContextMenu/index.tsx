@@ -1,10 +1,10 @@
 import React from 'react';
 import { Button } from '@renderer/components/Button';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 import { getBoundaryRect } from '@renderer/utils/DOM';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 
 export interface IContextMenuOption<ActiveContextInfo = any> {
   text: string;
@@ -29,9 +29,7 @@ export interface IContextMenuProps<ActiveContextInfo = any> {
 }
 
 export function ContextMenu<ActiveContextInfo = any>(props: IContextMenuProps<ActiveContextInfo>) {
-  const {
-    activeTheme: { contextMenu: theme },
-  } = useThemeContext();
+  const { contextMenu: theme } = useThemeStore((state) => state.activeTheme);
   const { position, placement = 'bottom', onClose, options, activeContextInfo } = props;
   const { x: positionX, y: positionY } = position || {};
 

@@ -6,19 +6,17 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IDdlModalProps } from '../../types';
 import styles from './styles.module.css';
 
 export const DdlModal = React.memo(({ item, title, onClose }: IDdlModalProps) => {
-  const { t } = useI18n();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const ddl = item?.ddl || '';
 

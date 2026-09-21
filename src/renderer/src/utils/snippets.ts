@@ -1,5 +1,5 @@
-import type { ISnippet } from '@renderer/contexts/Store';
-import type { Dialect } from '@renderer/database/dialects';
+import type { ISnippet } from '@shared/types/workspace';
+import type { Dialect } from '@shared/types/connections';
 
 export type SnippetInput = Omit<ISnippet, 'id' | 'created_at' | 'updated_at'>;
 

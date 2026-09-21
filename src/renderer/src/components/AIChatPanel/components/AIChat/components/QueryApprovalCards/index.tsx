@@ -1,6 +1,6 @@
 import React from 'react';
-import { useI18n } from '@renderer/contexts/I18n';
-import type { IAIQueryApproval } from '@renderer/contexts/Store';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIQueryApproval } from '@shared/types/ai';
 import { CopyIcon } from '@renderer/styles/icons';
 import { isReadOnlySelectQuery } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
@@ -26,7 +26,7 @@ interface IQueryApprovalCardProps {
 
 export const QueryApprovalCard = React.memo(
   ({ approval, onApprove, onCopy, onReject }: IQueryApprovalCardProps) => {
-    const { t } = useI18n();
+    const t = useI18nStore((state) => state.t);
     const [editing, setEditing] = React.useState(false);
     const [editedSql, setEditedSql] = React.useState(approval.sql);
     const [unsafeConfirming, setUnsafeConfirming] = React.useState(false);

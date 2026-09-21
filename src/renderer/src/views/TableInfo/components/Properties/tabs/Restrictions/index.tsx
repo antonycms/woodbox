@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
@@ -7,17 +8,17 @@ import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
-import type { IColumnRestrictionsInfo } from '@renderer/contexts/Store';
-import { useStoreContext } from '@renderer/contexts/Store';
-import {
-  type IPendingRestrictionCreate,
-  useTableInfoContext,
-} from '@renderer/contexts/TableInfoContext';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
+import type { IColumnRestrictionsInfo } from '@shared/types/database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import type {
+  IPendingRestrictionCreate,
+} from '@renderer/database/ddl/types';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { getRendererDialect } from '@renderer/database/dialects';
@@ -26,26 +27,24 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateRestrictionsDdl } from '../Columns/ddl';
+import { generateRestrictionsDdl } from '@renderer/database/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
 
-const Restrictios = ({
+const Restrictios = ({ tableStore,
   id_connection,
   schema,
   table,
   mode,
   tableComment,
   onCreateApplied,
-}: ITableInfoProps) => {
+}: ITableInfoViewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { showToast } = useToast();
-  const { connections } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
+  const connections = useWorkspaceStore((state) => state.connections);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -69,7 +68,26 @@ const Restrictios = ({
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      columns: state.columns,
+      pendingColumns: state.pendingColumns,
+      pendingDroppedColumns: state.pendingDroppedColumns,
+      restrictions: state.restrictions,
+      pendingRestrictions: state.pendingRestrictions,
+      pendingDroppedRestrictions: state.pendingDroppedRestrictions,
+      addPendingRestriction: state.addPendingRestriction,
+      removePendingRestriction: state.removePendingRestriction,
+      addPendingDroppedRestrictions: state.addPendingDroppedRestrictions,
+      removePendingDroppedRestrictions: state.removePendingDroppedRestrictions,
+      clearPendingChanges: state.clearPendingChanges,
+      loadTableRestrictions: state.loadTableRestrictions,
+      openPendingChangesSqlModal: state.openPendingChangesSqlModal,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
     [],

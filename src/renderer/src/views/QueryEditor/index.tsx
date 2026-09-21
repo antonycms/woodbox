@@ -1,83 +1,61 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import Editor, { IEditorRef, type IEditorContextMenu } from '@renderer/components/Editor';
-import styles from './styles.module.css';
-import {
-  TabBar,
-  TabSplit,
-  type IActiveTabContextMenu,
-} from '@renderer/components/Tabs';
-import { useTabContentContext } from '@renderer/components/Tabs/components/TabContentProvider';
+import { TabBar, TabSplit } from '@renderer/components/Tabs';
 import type { IContextMenuOption } from '@renderer/components/ContextMenu';
-import { generateHash } from '@renderer/utils/string';
+import type { IServerOutputMessage } from '@shared/types/database';
 import ResizableContainer, { type OnResizeCallback } from '@renderer/components/ResizableContainer';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { ITab } from '@renderer/components/Tabs/components/TabBar';
-import {
-  IColumnInfo,
-  IColumnReferenceInfo,
-  IServerOutputMessage,
-  type ExportDataSource,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { getTablesFromQuerySql, hasUnsafeSqlMutation, ITableQuery } from '@renderer/utils/sql';
-import { isSnippetAvailableForDialect } from '@renderer/utils/snippets';
-import { getNextSort } from '@renderer/utils/tableSort';
-import { arrayIsEquals } from '@renderer/utils/array';
-import { executePromisesBatch } from '@renderer/utils/promise';
-import { IDefineSQlAutocompleteParams } from '@renderer/components/Editor/autocompleteDefault';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import type { ISortDirection } from '@renderer/components/Table/dtos';
+import { getRendererDialect } from '@renderer/database/dialects';
+import { ModalExportData } from '@renderer/components/ModalExportData';
+import ProcessList from '@renderer/views/ProcessList';
+import { useQueryAutocomplete } from './hooks/useQueryAutocomplete';
+import { useQueryResults } from './hooks/useQueryResults';
+import { useQueryExecution } from './hooks/useQueryExecution';
+import { useQueryRequests } from './hooks/useQueryRequests';
 import { ModalQueryVariables } from './components/ModalQueryVariables';
 import { ModalConfirmProductionQuery } from './components/ModalConfirmProductionQuery';
-import { getQueryVariables, prepareQueryVariables } from './utils/queryVariables';
-import {
-  formatQueryErrorMessage,
-  formatQueryExecutionErrorMessage,
-  getCaptureRowHash,
-  getQueryErrorOffset,
-  makeQueryErrorMarker,
-  makeCanceledQueryResult,
-} from './utils/queryResult';
-import type {
-  IDataMakeTabResult,
-  IDataUpdateabResult,
-  IExecuteQueryParams,
-  IPendingQueryExecution,
-  IQueryEditorProps,
-  IQueryResult,
-} from './dtos';
-
 import { LateralBar } from './components/LateralBar';
 import { QueryResultContent } from './components/QueryResultContent';
 import { ModalServerOutput } from './components/ModalServerOutput';
-import { getRendererDialect } from '@renderer/database/dialects';
-import { useQueryCancellation } from './hooks/useQueryCancellation';
-import { ModalExportData } from '@renderer/components/ModalExportData';
-import ProcessList from '@renderer/views/ProcessList';
+import type { IQueryEditorProps } from './dtos';
+import styles from './styles.module.css';
 
-export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => {
-  const { t } = useI18n();
+export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQueryEditorProps) => {
+  const t = useI18nStore((state) => state.t);
+
+  const onServerOutput = useDatabaseStore((state) => state.onServerOutput);
+  
+  const { editScript, getScriptContent, connections } = useWorkspaceStore(
+    useShallow((state) => ({
+      editScript: state.editScript,
+      getScriptContent: state.getScriptContent,
+      connections: state.connections,
+    })),
+  );
+
+  const activeTheme = useThemeStore((state) => state.activeTheme);
+
   const {
-    runSql,
-    cancelRunSql,
-    connections,
-    connectionsInfo,
-    getTableColumns,
-    getTableReferences,
-    editScript,
-    getScriptContent,
-    runExplainSql,
-    snippets,
-  } = useStoreContext();
+    addTab,
+    getTab,
+    setActiveTabId,
+  } = useAppTabStore(
+    useShallow((state) => ({
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+    })),
+  );
 
-  const { activeTheme } = useThemeContext();
-  const { isActiveTab } = useTabContentContext();
-  const { addTab, getTab, setActiveTabId: setActiveAppTabId } = useAppTabContext();
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const currentConnection = React.useMemo(
     () => connections.find((connection) => connection.id === id_connection),
@@ -89,163 +67,67 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const isProductionConnection = currentConnection?.environment === 'production';
 
   const refEditor = React.useRef<IEditorRef>(null);
-  const loadingColumnsKeysRef = React.useRef(new Set<string>());
-  const loadingReferencesKeysRef = React.useRef(new Set<string>());
-  const [activeTabId, setActiveTabId] = React.useState<string>(null);
   const [sizeTabContent, _setSizeTabContent] = useStorage('editor_tab_result_height', 240);
-  const [queryVariableValuesByConnection, setQueryVariableValuesByConnection] = useStorage<
-    Record<string, Record<string, string>>
-  >('query_editor_variable_values', {});
   const setSizeTabContent = useDebounce(_setSizeTabContent);
 
-  const [currentQueryTablesInfo, setCurrentQueryTablesInfo] = React.useState<ITableQuery[]>([]);
-  const [tableColumns, setTableColumns] = React.useState<Map<string, IColumnInfo[]>>(new Map());
-  const [tableReferences, setTableReferences] = React.useState<Map<string, IColumnReferenceInfo[]>>(
-    new Map(),
-  );
-  const [tabsResult, setTabsResult] = React.useState<ITab[]>([]);
-  const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
-    new Map(),
-  );
-  const [pendingQueryExecution, setPendingQueryExecution] =
-    React.useState<IPendingQueryExecution>();
-  const [pendingExportQuery, setPendingExportQuery] = React.useState<string>();
-  const [exportQuerySource, setExportQuerySource] = React.useState<ExportDataSource>();
-  const [pendingProductionQueryExecution, setPendingProductionQueryExecution] =
-    React.useState<IExecuteQueryParams>();
   const [showServerOutputModal, setShowServerOutputModal] = React.useState(false);
   const [hasUnreadServerOutput, setHasUnreadServerOutput] = React.useState(false);
+
+  const { autocomplete, tableReferences, handleUpdateCurrentQueryInfo } = useQueryAutocomplete(
+    id_connection, currentConnection?.dialect,
+  );
+
+  const results = useQueryResults();
+  
+  const queryExecution = useQueryExecution({
+    id_connection, refEditor, results, dialect: currentConnection?.dialect || 'postgres'
+  });
+
+  const queryRequests = useQueryRequests({
+    id_connection, 
+    isProductionConnection,
+    executeQuery: queryExecution.executeQuery,
+    executeExplainQuery: queryExecution.executeExplainQuery,
+  });
+
+  const {
+    resultActiveTabId,
+    setResultActiveTabId,
+    tabsResult,
+    querysResultData,
+    toggleResultCapture,
+    clearResultCapture,
+    makeResultContextMenuOptions,
+    handleRemoveResultTab,
+  } = results;
+
   const {
     cancelingQueryIds,
-    forgetCanceledQuery,
-    markQueryCanceling,
-    removeCancelingQueryId,
-    wasQueryCanceled,
-  } = useQueryCancellation();
-  const tableColumnsRef = React.useRef(tableColumns);
-  tableColumnsRef.current = tableColumns;
-  const tableReferencesRef = React.useRef(tableReferences);
-  tableReferencesRef.current = tableReferences;
-
-  const makeUpdateResultTab = React.useCallback((idTab: string) => {
-    const updateTabResultData = (params: IDataUpdateabResult) => {
-      setQuerysResultData((prevState) => {
-        const newMap = new Map(prevState);
-
-        const prevTabResultData = prevState.get(idTab) || ({} as IQueryResult);
-        const { captureRows, ...dataParams } = params;
-        const queryChanged =
-          typeof dataParams.query === 'string' &&
-          !!prevTabResultData.query &&
-          dataParams.query !== prevTabResultData.query;
-        const baseTabResultData = queryChanged
-          ? { ...prevTabResultData, capture: undefined }
-          : prevTabResultData;
-        const newTabResultData = { ...baseTabResultData, ...dataParams };
-
-        if (captureRows && newTabResultData.capture?.active && Array.isArray(dataParams.rows)) {
-          const rowHashes = new Set(newTabResultData.capture.rowHashes);
-          const capturedRows = dataParams.rows.flatMap((row) => {
-            const rowHash = getCaptureRowHash(row);
-
-            if (rowHashes.has(rowHash)) return [];
-
-            rowHashes.add(rowHash);
-
-            return [{ captured_at: new Date().toISOString(), row }];
-          });
-
-          newTabResultData.capture = {
-            ...newTabResultData.capture,
-            rows: [...newTabResultData.capture.rows, ...capturedRows],
-            rowHashes: [...rowHashes],
-          };
-        }
-
-        newTabResultData.tables_info = getTablesFromQuerySql(newTabResultData.query);
-
-        newMap.set(idTab, newTabResultData);
-
-        return newMap;
-      });
-    };
-
-    return updateTabResultData;
-  }, []);
-
-  const makeNewTabResult = React.useCallback((data: IDataMakeTabResult) => {
-    const {
-      loading,
-      type,
-      columns = [],
-      rows = [],
-      columns_info,
-      query,
-      affected_rows,
-      page,
-      title = `Result ${tabsResult.length + 1}`,
-      variableValues,
-      queryExecutionId,
-    } = data;
-
-    const idTab = generateHash();
-
-    const tab: ITab = {
-      idTab,
-      title,
-    };
-
-    const queryResultData: IQueryResult = {
-      type,
-      columns,
-      rows,
-      loading,
-      query,
-      page,
-      affected_rows,
-      columns_info,
-      tables_info: getTablesFromQuerySql(query),
-      variableValues,
-      queryExecutionId,
-    };
-
-    setTabsResult((prevState) => [...prevState, tab]);
-    setActiveTabId(idTab);
-
-    const updateTabResultData = makeUpdateResultTab(idTab);
-
-    updateTabResultData(queryResultData);
-
-    return updateTabResultData;
-  }, [makeUpdateResultTab, tabsResult.length]);
-
-  const removeTabResult = React.useCallback((idTab: string | string[]) => {
-    const tabsIdToRemove = new Set(Array.isArray(idTab) ? idTab : [idTab]);
-
-    setTabsResult((prevState) => {
-      if (activeTabId && tabsIdToRemove.has(activeTabId)) {
-        const activeTabIndex = prevState.findIndex((tab) => tab.idTab === activeTabId);
-        const nextTab =
-          prevState.slice(activeTabIndex + 1).find((tab) => !tabsIdToRemove.has(tab.idTab)) ||
-          prevState
-            .slice(0, activeTabIndex)
-            .reverse()
-            .find((tab) => !tabsIdToRemove.has(tab.idTab));
-
-        setActiveTabId(nextTab?.idTab || null);
-      }
-
-      return prevState.filter((tab) => !tabsIdToRemove.has(tab.idTab));
-    });
-
-    setQuerysResultData((prevState) => {
-      const newMap = new Map(prevState);
-
-      tabsIdToRemove.forEach((id) => newMap.delete(id));
-
-      return newMap;
-    });
-  }, [activeTabId]);
+    cancelResultQuery,
+    refreshResultSqlTab,
+    onScrollEnd,
+    handleSortQueryResult,
+  } = queryExecution
+    
+  const {
+    pendingQueryExecution,
+    pendingExportQuery,
+    exportQuerySource,
+    pendingProductionQueryExecution,
+    requestQueryExecution,
+    closeVariablesModal,
+    closeExportVariablesModal,
+    closeExportModal,
+    closeProductionConfirmModal,
+    queryVariableInitialValues,
+    pendingQueryVariables,
+    pendingExportQueryVariables,
+    pendingProductionSql,
+    executePendingQuery,
+    openExportModalFromQuery,
+    exportPendingQuery,
+    executePendingProductionQuery,
+  } = queryRequests;
 
   const getSelectionsValues = () => {
     const selections = refEditor.current?.getSelections?.();
@@ -259,223 +141,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     return selectionsValue;
   };
 
-  const executeQuery = async (params: IExecuteQueryParams) => {
-    const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
-    const preparedQuery = prepareQueryVariables(query, variableValues);
-    const queryExecutionId = generateHash();
-
-    const updateTabResultData =
-      !forceNewTab && !openNewTab && activeTabId
-        ? makeUpdateResultTab(activeTabId)
-        : makeNewTabResult({
-            query,
-            variableValues,
-            type: 'SELECT',
-            date_run: new Date().toISOString(),
-          });
-
-    updateTabResultData({
-      type: 'SELECT',
-      loading: true,
-      queryExecutionId,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      refEditor.current.setMarkers([]);
-
-      const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, { queryExecutionId });
-
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
-        );
-        return;
-      }
-
-      updateTabResultData({
-        page: 1,
-        query,
-        variableValues,
-        columns,
-        columns_info,
-        rows,
-        type,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-        queryExecutionId: undefined,
-      });
-    } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
-        );
-        return;
-      }
-
-      const message = formatQueryExecutionErrorMessage(error, markErrors);
-
-      updateTabResultData({
-        type: 'ERROR',
-        query,
-        variableValues,
-        message,
-        loading: false,
-        queryExecutionId: undefined,
-      });
-
-      const errorOffset = getQueryErrorOffset(error);
-
-      if (errorOffset === undefined) return;
-
-      const editorQueryStartOffset = params.editorOffset || 0;
-      const errorPosition = refEditor.current.getPositionAt(editorQueryStartOffset + errorOffset);
-      const endPosition = refEditor.current.getPositionAt(editorQueryStartOffset + query.length);
-
-      if (!errorPosition || !endPosition) return;
-
-      refEditor.current.setMarkers([makeQueryErrorMarker(message, errorPosition, endPosition)]);
-      refEditor.current.setPosition(errorPosition);
-    }
-  };
-
-  const executeExplainQuery = async (params: IExecuteQueryParams) => {
-    const { query, variableValues } = params;
-    const preparedQuery = prepareQueryVariables(query, variableValues);
-    const dialectId = currentConnection?.dialect || 'postgres';
-    const queryExecutionId = generateHash();
-
-    const updateTabResultData = makeNewTabResult({
-      query,
-      variableValues,
-      type: 'EXPLAIN',
-      title: t('query.explainTabTitle'),
-      date_run: new Date().toISOString(),
-      explain: {
-        dialect: dialectId,
-        originalQuery: query,
-      },
-    });
-
-    updateTabResultData({
-      type: 'EXPLAIN',
-      loading: true,
-      queryExecutionId,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      const [result] = await runExplainSql(id_connection, preparedQuery, {
-        queryExecutionId,
-      });
-
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
-        );
-        return;
-      }
-
-      updateTabResultData({
-        ...result,
-        type: 'EXPLAIN',
-        query,
-        variableValues,
-        loading: false,
-        queryExecutionId: undefined,
-        explain: {
-          dialect: dialectId,
-          originalQuery: query,
-        },
-      });
-    } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
-        );
-        return;
-      }
-
-      updateTabResultData({
-        type: 'ERROR',
-        query,
-        variableValues,
-        message: formatQueryExecutionErrorMessage(error),
-        loading: false,
-        queryExecutionId: undefined,
-      });
-    }
-  };
-
-  const confirmOrExecuteQuery = (params: IExecuteQueryParams) => {
-    if (params.mode === 'explain') {
-      executeExplainQuery(params);
-      return;
-    }
-
-    const preparedQuery = prepareQueryVariables(params.query, params.variableValues);
-
-    if (isProductionConnection && hasUnsafeSqlMutation(preparedQuery)) {
-      setPendingProductionQueryExecution(params);
-      return;
-    }
-
-    executeQuery(params);
-  };
-
-  const requestQueryExecution = (params: IPendingQueryExecution) => {
-    const variables = getQueryVariables(params.query);
-
-    if (variables.length) {
-      setPendingQueryExecution(params);
-      return;
-    }
-
-    confirmOrExecuteQuery(params);
-  };
-
-  const closeVariablesModal = React.useCallback(() => {
-    setPendingQueryExecution(undefined);
-  }, []);
-
-  const closeExportVariablesModal = React.useCallback(() => {
-    setPendingExportQuery(undefined);
-  }, []);
-
-  const closeExportModal = React.useCallback(() => {
-    setExportQuerySource(undefined);
-  }, []);
-
-  const closeProductionConfirmModal = React.useCallback(() => {
-    setPendingProductionQueryExecution(undefined);
-  }, []);
-
-  const queryVariableInitialValues = React.useMemo(
-    () => queryVariableValuesByConnection[id_connection] || {},
-    [id_connection, queryVariableValuesByConnection],
-  );
-
-  const pendingQueryVariables = React.useMemo(() => {
-    return getQueryVariables(pendingQueryExecution?.query || '');
-  }, [pendingQueryExecution?.query]);
-
-  const pendingExportQueryVariables = React.useMemo(() => {
-    return getQueryVariables(pendingExportQuery || '');
-  }, [pendingExportQuery]);
-
-  const pendingProductionSql = React.useMemo(() => {
-    return pendingProductionQueryExecution
-      ? prepareQueryVariables(
-          pendingProductionQueryExecution.query,
-          pendingProductionQueryExecution.variableValues,
-        )
-      : '';
-  }, [pendingProductionQueryExecution]);
-
   const showServerOutput = React.useCallback(() => {
     setHasUnreadServerOutput(false);
     setShowServerOutputModal(true);
@@ -488,7 +153,7 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const tab = getTab(tabId);
 
     if (tab) {
-      setActiveAppTabId(tabId);
+      setActiveTabId(tabId);
       return;
     }
 
@@ -501,197 +166,20 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       },
       component: () => <ProcessList id_connection={id_connection} />,
     });
-  }, [addTab, getTab, id_connection, setActiveAppTabId, supportsProcessList, t]);
+  }, [addTab, getTab, id_connection, setActiveTabId, supportsProcessList, t]);
 
   const closeServerOutput = React.useCallback(() => {
     setShowServerOutputModal(false);
   }, []);
 
-  const executePendingQuery = (variableValues: Record<string, string>) => {
-    if (!pendingQueryExecution) return;
-
-    setQueryVariableValuesByConnection((prevState) => ({
-      ...prevState,
-      [id_connection]: {
-        ...(prevState[id_connection] || {}),
-        ...variableValues,
-      },
-    }));
-
-    const params = { ...pendingQueryExecution, variableValues };
-    setPendingQueryExecution(undefined);
-    confirmOrExecuteQuery(params);
-  };
-
-  const openExportModalFromQuery = React.useCallback((query: string) => {
-    if (!query?.trim?.()) return;
-
-    const variables = getQueryVariables(query);
-
-    if (variables.length) {
-      setPendingExportQuery(query);
-      return;
-    }
-
-    setExportQuerySource({ type: 'query', sql: query });
-  }, []);
-
-  const exportPendingQuery = (variableValues: Record<string, string>) => {
-    if (!pendingExportQuery) return;
-
-    setQueryVariableValuesByConnection((prevState) => ({
-      ...prevState,
-      [id_connection]: {
-        ...(prevState[id_connection] || {}),
-        ...variableValues,
-      },
-    }));
-
-    setExportQuerySource({ type: 'query', sql: prepareQueryVariables(pendingExportQuery, variableValues) });
-    setPendingExportQuery(undefined);
-  };
-
-  const executePendingProductionQuery = () => {
-    if (!pendingProductionQueryExecution) return;
-
-    const params = pendingProductionQueryExecution;
-    setPendingProductionQueryExecution(undefined);
-    executeQuery(params);
-  };
-
-  const cancelResultQuery = async (idTab: string) => {
-    const tab = querysResultData.get(idTab);
-
-    if (!tab?.loading || !tab.queryExecutionId) return;
-
-    markQueryCanceling(tab.queryExecutionId);
-
-    let canceled = false;
-
-    try {
-      canceled = await cancelRunSql(id_connection, tab.queryExecutionId);
-
-      if (canceled) {
-        makeUpdateResultTab(idTab)(makeCanceledQueryResult(t('toast.queryCanceled')));
-      }
-    } finally {
-      if (!canceled) forgetCanceledQuery(tab.queryExecutionId);
-      removeCancelingQueryId(tab.queryExecutionId);
-    }
-  };
-
-  const toggleResultCapture = (idTab: string) => {
-    const tab = querysResultData.get(idTab);
-
-    if (!tab) return;
-
-    const date = new Date().toISOString();
-    const updateTabResultData = makeUpdateResultTab(idTab);
-
-    if (tab.capture?.active) {
-      updateTabResultData({
-        capture: {
-          ...tab.capture,
-          active: false,
-          stopped_at: date,
-        },
-      });
-      return;
-    }
-
-    if (tab.capture) {
-      updateTabResultData({
-        capture: {
-          ...tab.capture,
-          active: true,
-          stopped_at: undefined,
-          rowHashes: [
-            ...new Set([...tab.capture.rowHashes, ...(tab.rows || []).map(getCaptureRowHash)]),
-          ],
-        },
-      });
-      return;
-    }
-
-    updateTabResultData({
-      capture: {
-        active: true,
-        started_at: date,
-        rows: [],
-        rowHashes: (tab.rows || []).map(getCaptureRowHash),
-      },
-    });
-  };
-
-  const clearResultCapture = (idTab: string) => {
-    makeUpdateResultTab(idTab)({ capture: undefined });
-  };
-
-  const refreshResultSqlTab = async (idTab: string) => {
-    const tab = querysResultData.get(idTab);
-    const updateTabResultData = makeUpdateResultTab(idTab);
-    const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
-    const queryExecutionId = generateHash();
-
-    updateTabResultData({
-      loading: true,
-      queryExecutionId,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, {
-          orderBy: tab.orderBy,
-          queryExecutionId,
-        });
-
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
-        return;
-      }
-
-      updateTabResultData({
-        page: 1,
-        columns,
-        columns_info,
-        rows,
-        type,
-        query: tab.query,
-        variableValues: tab.variableValues,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-        orderBy: tab.orderBy,
-        queryExecutionId: undefined,
-        captureRows: true,
-      });
-    } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
-        return;
-      }
-
-      const message = formatQueryErrorMessage(error);
-      updateTabResultData({
-        type: 'ERROR',
-        message,
-        query: tab.query,
-        variableValues: tab.variableValues,
-        loading: false,
-        queryExecutionId: undefined,
-      });
-    }
-  };
-
   const runCurrentSQL = async (openNewTab?: boolean) => {
     const selections = refEditor.current?.getSelections?.() || [];
     const selectionsValue = getSelectionsValues();
+    
     const firstSelectionPosition = selections
       .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
       ?.getStartPosition?.();
+    
     const selectionOffset = firstSelectionPosition
       ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
       : undefined;
@@ -713,9 +201,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   const explainCurrentSQL = async () => {
     const selections = refEditor.current?.getSelections?.() || [];
     const selectionsValue = getSelectionsValues();
+
     const firstSelectionPosition = selections
       .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
       ?.getStartPosition?.();
+    
     const selectionOffset = firstSelectionPosition
       ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
       : undefined;
@@ -748,9 +238,11 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     const selections = refEditor.current?.getSelections?.() || [];
     const selectionsValue = getSelectionsValues();
     const query = selectionsValue.join('\n');
+
     const firstSelectionPosition = selections
       .find((selection) => refEditor.current?.getSelectionValue?.(selection)?.trim?.())
       ?.getStartPosition?.();
+    
     const selectionOffset = firstSelectionPosition
       ? refEditor.current?.getOffsetAt?.(firstSelectionPosition)
       : undefined;
@@ -767,221 +259,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
 
     requestQueryExecution({ query, editorOffset: 0, forceNewTab: true, markErrors: true });
   };
-
-  const onScrollEnd = async (idTab: string) => {
-    const lastTabResult = querysResultData.get(idTab);
-
-    if (!lastTabResult || lastTabResult.loading || !lastTabResult.auto_paginated) return;
-
-    const updateTabResultData = makeUpdateResultTab(idTab);
-
-    const query = lastTabResult.query;
-    const preparedQuery = prepareQueryVariables(query, lastTabResult.variableValues);
-    const newPage = (lastTabResult.page || 1) + 1;
-    const queryExecutionId = generateHash();
-
-    updateTabResultData({
-      loading: true,
-      queryExecutionId,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, {
-          page: newPage,
-          orderBy: lastTabResult.orderBy,
-          queryExecutionId,
-        });
-
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), {
-            query,
-            variableValues: lastTabResult.variableValues,
-          }),
-        );
-        return;
-      }
-
-      updateTabResultData({
-        page: newPage,
-        columns,
-        columns_info,
-        rows: [...lastTabResult.rows, ...rows],
-        type,
-        query,
-        variableValues: lastTabResult.variableValues,
-        affected_rows,
-        auto_paginated,
-        loading: false,
-        execution_time_ms,
-        queryExecutionId: undefined,
-      });
-    } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(
-          makeCanceledQueryResult(t('toast.queryCanceled'), {
-            query,
-            variableValues: lastTabResult.variableValues,
-          }),
-        );
-        return;
-      }
-
-      const message = formatQueryErrorMessage(error);
-      updateTabResultData({
-        type: 'ERROR',
-        query,
-        variableValues: lastTabResult.variableValues,
-        message,
-        loading: false,
-        queryExecutionId: undefined,
-      });
-    }
-  };
-
-  const handleSortQueryResult = async (
-    idTab: string,
-    columnName: string,
-    sortType?: ISortDirection | null,
-  ) => {
-    const tab = querysResultData.get(idTab);
-    if (!tab || tab.loading) return;
-
-    const orderBy = getNextSort(tab.orderBy, columnName, sortType);
-    const updateTabResultData = makeUpdateResultTab(idTab);
-    const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
-    const queryExecutionId = generateHash();
-
-    updateTabResultData({
-      loading: true,
-      orderBy,
-      queryExecutionId,
-      date_run: new Date().toISOString(),
-    });
-
-    try {
-      const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, {
-          page: 1,
-          orderBy,
-          queryExecutionId,
-        });
-
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
-        return;
-      }
-
-      updateTabResultData({
-        page: 1,
-        columns,
-        columns_info,
-        rows,
-        type,
-        query: tab.query,
-        variableValues: tab.variableValues,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-        orderBy,
-        queryExecutionId: undefined,
-      });
-    } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
-        updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
-        return;
-      }
-
-      const message = formatQueryErrorMessage(error);
-      updateTabResultData({ type: 'ERROR', message, loading: false, queryExecutionId: undefined });
-    }
-  };
-
-  const getTableInfoKey = ({ name, schema }: ITableQuery) => `${schema ? schema + '.' : ''}${name}`;
-
-  const loadTableColumns = React.useCallback(async () => {
-    const pendingTables = new Map<string, ITableQuery>();
-
-    for (const tableInfo of currentQueryTablesInfo) {
-      const key = getTableInfoKey(tableInfo);
-
-      const isPending = !tableColumnsRef.current.has(key) && !loadingColumnsKeysRef.current.has(key);
-
-      if (isPending) {
-        loadingColumnsKeysRef.current.add(key);
-        pendingTables.set(key, tableInfo);
-      }
-    }
-
-    if (!pendingTables.size) return;
-
-    try {
-      const results = await executePromisesBatch(
-        [...pendingTables.entries()],
-        async ([key, tableInfo]) => {
-          const columns = await getTableColumns(id_connection, {
-            schema: tableInfo.schema,
-            table: tableInfo.name,
-          });
-
-          return { key, columns };
-        },
-      );
-
-      setTableColumns((prevState) => {
-        const newState = new Map(prevState);
-        results.forEach(({ key, columns }) => newState.set(key, columns));
-        return newState;
-      });
-    } finally {
-      pendingTables.forEach((_, key) => loadingColumnsKeysRef.current.delete(key));
-    }
-  }, [currentQueryTablesInfo, getTableColumns, id_connection]);
-
-  const loadTableReferences = React.useCallback(async () => {
-    const pendingTables = new Map<string, ITableQuery>();
-
-    for (const tableInfo of currentQueryTablesInfo) {
-      const key = getTableInfoKey(tableInfo);
-
-      const isPending =
-        !tableReferencesRef.current.has(key) && !loadingReferencesKeysRef.current.has(key);
-
-      if (isPending) {
-        loadingReferencesKeysRef.current.add(key);
-        pendingTables.set(key, tableInfo);
-      }
-    }
-
-    if (!pendingTables.size) return;
-
-    try {
-      const results = await executePromisesBatch(
-        [...pendingTables.entries()],
-        async ([key, tableInfo]) => {
-          const references = await getTableReferences(id_connection, {
-            schema: tableInfo.schema,
-            table: tableInfo.name,
-          });
-
-          return { key, references };
-        },
-      );
-
-      setTableReferences((prevState) => {
-        const newState = new Map(prevState);
-        results.forEach(({ key, references }) => newState.set(key, references));
-        return newState;
-      });
-    } finally {
-      pendingTables.forEach((_, key) => loadingReferencesKeysRef.current.delete(key));
-    }
-  }, [currentQueryTablesInfo, getTableReferences, id_connection]);
 
   const loadScriptContent = async () => {
     if (!id_script) return;
@@ -1003,102 +280,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
     refEditor.current?.setMarkers?.([]);
   }, []);
 
-  const handleUpdateCurrentQueryInfo = React.useCallback((query: string) => {
-    const tablesQueryInfo = getTablesFromQuerySql(query);
-
-    setCurrentQueryTablesInfo((prevState) => {
-      // avoid changing the state memory address if there are no changes (prevent rerendering)
-      const checkIsEquals = arrayIsEquals(prevState, tablesQueryInfo);
-      return checkIsEquals ? prevState : tablesQueryInfo;
-    });
-  }, []);
-
-  const autocomplete = React.useMemo<IDefineSQlAutocompleteParams>(() => {
-    const snippetsAvailable = snippets.filter((snippet) =>
-      isSnippetAvailableForDialect(snippet, currentConnection?.dialect),
-    );
-    const connectionInfo = connectionsInfo.get(id_connection);
-
-    if (!connectionInfo) return { snippets: snippetsAvailable };
-
-    const schemas = connectionInfo.schemas || [];
-    const tables = connectionInfo.tables || [];
-    const functions = connectionInfo.functions || [];
-
-    const schemasSerialized = schemas.map((schema) => ({ name: schema }));
-    const tablesAvailable = tables.map((table) => ({
-      name: table.table_name,
-      schema: table.table_schema,
-    }));
-    const functionsAvailable = functions.map((fn) => ({
-      name: fn.function_name,
-      schema: fn.function_schema,
-    }));
-    const tablesUsed = currentQueryTablesInfo;
-
-    const columns = [];
-
-    tablesUsed.forEach((tableInfo) => {
-      const { name: table, schema } = tableInfo;
-      const key = `${schema ? schema + '.' : ''}${table}`;
-
-      tableColumns
-        .get(key)
-        ?.forEach?.((column) => columns.push({ name: column.column_name, table, schema }));
-    });
-
-    return {
-      schemas: schemasSerialized,
-      tablesAvailable,
-      tablesUsed,
-      columns,
-      functions: functionsAvailable,
-      snippets: snippetsAvailable,
-    };
-  }, [
-    connectionsInfo,
-    currentConnection?.dialect,
-    currentQueryTablesInfo,
-    id_connection,
-    snippets,
-    tableColumns,
-  ]);
-
-  const makeResultContextMenuOptions = React.useCallback(
-    (paneTabs: ITab[]): IContextMenuOption<IActiveTabContextMenu>[] => [
-      {
-        text: 'Fechar aba',
-        onClick: (info) => removeTabResult(info.tab.idTab),
-      },
-      tabsResult.length > 1 && {
-        text: 'Fechar outras abas',
-        onClick: (info) => {
-          setActiveTabId(info.tab.idTab);
-          removeTabResult(
-            tabsResult.filter((tab) => tab.idTab !== info.tab.idTab).map((tab) => tab.idTab),
-          );
-        },
-      },
-      paneTabs.length > 1 && {
-        text: 'Fechar abas à esquerda',
-        onClick: (info) => {
-          removeTabResult(paneTabs.slice(0, info.index).map((tab) => tab.idTab));
-        },
-      },
-      paneTabs.length > 1 && {
-        text: 'Fechar abas à direita',
-        onClick: (info) => {
-          removeTabResult(paneTabs.slice(info.index + 1).map((tab) => tab.idTab));
-        },
-      },
-      tabsResult.length > 1 && {
-        text: 'Fechar todas as abas',
-        onClick: () => removeTabResult(tabsResult.map((tab) => tab.idTab)),
-      },
-    ],
-    [removeTabResult, tabsResult],
-  );
-
   const editorContextMenuOptions = React.useMemo<IContextMenuOption<IEditorContextMenu>[]>(
     () => [
       {
@@ -1108,13 +289,6 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
       },
     ],
     [openExportModalFromQuery, t],
-  );
-
-  const handleRemoveResultTab = React.useCallback(
-    (tab: ITab) => {
-      removeTabResult(tab.idTab);
-    },
-    [removeTabResult],
   );
 
   const handleResizeResultTabs = React.useCallback<OnResizeCallback>(
@@ -1178,31 +352,20 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
   }, [refEditor.current?.element]);
 
   React.useEffect(() => {
-    loadTableColumns();
-  }, [loadTableColumns]);
-
-  React.useEffect(() => {
     const timeout = setTimeout(loadScriptContent);
 
     return () => clearTimeout(timeout);
   }, [id_script]);
 
   React.useEffect(() => {
-    loadTableReferences();
-  }, [loadTableReferences]);
+    const removeListener = onServerOutput((message: IServerOutputMessage) => {
+      if (message.connectionId !== id_connection || showServerOutputModal) return;
 
-  React.useEffect(() => {
-    const removeListener = window.electron.ipcRenderer.on(
-      '@event:server_output',
-      (_event, message: IServerOutputMessage) => {
-        if (message.connectionId !== id_connection || showServerOutputModal) return;
-
-        setHasUnreadServerOutput(true);
-      },
-    );
+      setHasUnreadServerOutput(true);
+    });
 
     return removeListener;
-  }, [id_connection, showServerOutputModal]);
+  }, [id_connection, onServerOutput, showServerOutputModal]);
 
   React.useEffect(() => {
     if (!isActiveTab) return;
@@ -1302,8 +465,8 @@ export const QueryEditor = ({ id_connection, id_script }: IQueryEditorProps) => 
           <div className={styles.resultTabsContent}>
             <TabSplit
               tabs={tabsResult}
-              activeTabId={activeTabId}
-              onActiveTabIdChange={setActiveTabId}
+              activeTabId={resultActiveTabId}
+              onActiveTabIdChange={setResultActiveTabId}
               borderColor={activeTheme.queryEditor.tab.borderColor}
               backgroundColor={activeTheme.queryEditor.tab.bar.backgroundColor}
               contentBackgroundColor={activeTheme.queryEditor.tab.backgroundColor}

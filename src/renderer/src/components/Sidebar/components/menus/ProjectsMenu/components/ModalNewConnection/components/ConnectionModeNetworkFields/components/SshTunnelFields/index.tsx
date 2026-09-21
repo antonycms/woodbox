@@ -1,12 +1,13 @@
+import { useShallow } from 'zustand/react/shallow';
+import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
-import { useI18n } from '@renderer/contexts/I18n';
-import type { ISshConnectionConfig, ISshConnectionPublic } from '@renderer/contexts/Store';
-import { useToast } from '@renderer/contexts/Toast';
-import call from '@renderer/utils/call';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { ISshConnectionConfig, ISshConnectionPublic } from '@shared/types/ssh';
+import { useToastStore } from '@renderer/stores/Toast';
 import type { IDataNewConnection, SetConnectionFormState } from '../../../../types';
 import { ActivatableSection } from '@renderer/components/ActivatableSection';
 import styles from './styles.module.css';
@@ -29,8 +30,13 @@ interface Props {
 }
 
 export const SshTunnelFields = React.memo((props: Props) => {
-  const { t } = useI18n();
-  const { showToast } = useToast();
+  const dialogs = useDialogsStore(
+    useShallow((state) => ({
+      selectSshKey: state.selectSshKey,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
 
   const { state, setState, savedSsh, color, backgroundColor, textColor } = props;
 
@@ -57,7 +63,7 @@ export const SshTunnelFields = React.memo((props: Props) => {
 
   const selectKey = async () => {
     try {
-      const path = await call<string | null>('@dialog:select_ssh_key');
+      const path = await dialogs.selectSshKey();
       if (path) update({ privateKeyPath: path, passphrase: undefined });
     } catch (error) {
       showToast({ type: 'error', title: t('ssh.keySelectionError'), description: (error as Error).message });

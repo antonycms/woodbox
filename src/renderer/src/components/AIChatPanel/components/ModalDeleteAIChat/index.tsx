@@ -4,9 +4,9 @@ import { Divider } from '@renderer/components/Divider';
 import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import type { IAIChat } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIChat } from '@shared/types/ai';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 interface IModalDeleteAIChatProps {
   chat?: IAIChat;
@@ -16,10 +16,8 @@ interface IModalDeleteAIChatProps {
 
 export const ModalDeleteAIChat = React.memo(
   ({ chat, onClose, onConfirm }: IModalDeleteAIChatProps) => {
-    const { t } = useI18n();
-    const {
-      activeTheme: { aiChat: aiChatTheme, mainTab: theme },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
 
     return (
       <Modal title={t('aiChat.delete')} width="420px" show={!!chat} closeOutside onClose={onClose}>

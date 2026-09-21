@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Bar } from '@renderer/components/Bar';
@@ -11,10 +12,11 @@ import { Text } from '@renderer/components/Text';
 import { ContextMenu, type IContextMenuOption, type IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { type IColumn, type ISortDirection, type ITableSort } from '@renderer/components/Table/dtos';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { CancelIcon, PanelFile, RecordIcon, RunIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
@@ -46,14 +48,18 @@ interface IProcessListCaptureState {
 }
 
 const ProcessList = ({ id_connection }: IProcessListProps) => {
-  const {
-    activeTheme: {
-      processList: theme,
-    },
-  } = useThemeContext();
-  const { t, language } = useI18n();
-  const { connections, getProcessList, cancelProcess } = useStoreContext();
-  const { showToast } = useToast();
+  const { processList: theme } = useThemeStore((state) => state.activeTheme);
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const { getProcessList, cancelProcess } = useDatabaseStore(
+    useShallow((state) => ({
+      getProcessList: state.getProcessList,
+      cancelProcess: state.cancelProcess,
+    })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
   const loadingRef = React.useRef(false);
   const [rows, setRows] = React.useState<ProcessListRow[]>([]);
   const [filter, setFilter] = React.useState('');
@@ -458,8 +464,8 @@ const ProcessList = ({ id_connection }: IProcessListProps) => {
                 />
               </div>
 
-              <TabWindow activeTabId={activePreviewTab}>
-                <TabContent idTab="value">
+              <TabWindow>
+                <TabContent activeTabId={activePreviewTab} idTab="value">
                   <ReferenceValuePreview
                     readonly
                     language={selectedCell?.column?.attribute == 'query' ? 'sql' : 'json'}

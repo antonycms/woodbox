@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
@@ -5,13 +6,13 @@ import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextM
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import type { ITriggerInfo } from '@renderer/contexts/Store';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import type { ITriggerInfo } from '@shared/types/database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
@@ -19,19 +20,25 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateTriggersDdl } from '../Columns/ddl';
+import { generateTriggersDdl } from '@renderer/database/ddl';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
 
-const Triggers = ({ id_connection, schema, table }: ITableInfoProps) => {
+const Triggers = ({ tableStore, id_connection, schema, table }: ITableInfoViewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { triggers, loadTableTriggers, lastFetchDate, loading } = useTableInfoContext();
-  const { connections } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const { triggers, loadTableTriggers, lastFetchDate, loading } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      triggers: state.triggers,
+      loadTableTriggers: state.loadTableTriggers,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(

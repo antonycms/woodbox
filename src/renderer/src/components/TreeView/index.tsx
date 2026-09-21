@@ -4,7 +4,7 @@ import styles from './styles.module.css';
 
 import { AvalailableTreeViewIcon } from './IconItemTreeView';
 import ItemTreeView, { IItemTreeViewProps } from './ItemTreeView';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 const getVisibleItemIds = (items: IItemTreeView[] = [], openedItemsIdSet: Set<string>) => {
   const ids: string[] = [];
@@ -27,7 +27,7 @@ const getVisibleItemIds = (items: IItemTreeView[] = [], openedItemsIdSet: Set<st
 };
 
 const TreeView = (props: ITreeViewProps) => {
-  const { activeTheme } = useThemeContext();
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [openedItemsId, setOpenedItemsId] = React.useState<string[]>([]);
   const [revealedItemId, setRevealedItemId] = React.useState<string>();

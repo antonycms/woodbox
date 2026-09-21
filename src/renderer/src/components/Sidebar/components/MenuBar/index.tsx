@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -10,7 +10,7 @@ export const MenuBar = ({
   footerItems,
   onFooterItemClick,
 }: IMenuBarProps) => {
-  const { activeTheme } = useThemeContext();
+  const activeTheme = useThemeStore((state) => state.activeTheme);
 
   const {
     ascentColor: ascentColorMenuBar,

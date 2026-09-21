@@ -5,17 +5,15 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import type { Dialect } from '@renderer/database/dialects';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import type { Dialect } from '@shared/types/connections';
 import styles from './styles.module.css';
 
 export const ModalConfirmProductionQuery = React.memo(
   ({ show, sql, dialect, onCancel, onConfirm }: IModalConfirmProductionQueryProps) => {
-    const { t } = useI18n();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     return (
       <Modal

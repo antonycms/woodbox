@@ -1,7 +1,7 @@
 import React from 'react';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { SpinnerLoading } from '@renderer/components/Loaders';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -26,9 +26,7 @@ export const Button = React.memo((props: IButtonProps) => {
     type = 'button',
     ...gridProps
   } = props;
-  const {
-    activeTheme: { button: theme },
-  } = useThemeContext();
+  const { button: theme } = useThemeStore((state) => state.activeTheme);
 
   const classesButton = classes(
     styles.button,

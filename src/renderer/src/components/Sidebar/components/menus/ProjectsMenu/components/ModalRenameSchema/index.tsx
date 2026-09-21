@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -5,24 +6,31 @@ import { Input } from '@renderer/components/Input';
 import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { useForm } from '@renderer/hooks/useForm';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import TableInfo from '@renderer/views/TableInfo';
 
 export const ModalRenameSchema = React.memo(
   ({ show, idConnection, schema, onClose }: IModalRenameSchemaProps) => {
-    const { t } = useI18n();
-    const { runSql, loadConnectionInfo } = useStoreContext();
-    const { tabs, addTab, activeTabId, setActiveTabId } = useAppTabContext();
-    const { showToast } = useToast();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const runSql = useDatabaseStore((state) => state.runSql);
+    const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
+    const { tabs, addTab, activeTabId, setActiveTabId } = useAppTabStore(
+      useShallow((state) => ({
+        tabs: state.tabs,
+        addTab: state.addTab,
+        activeTabId: state.activeTabId,
+        setActiveTabId: state.setActiveTabId,
+      })),
+    );
+    const showToast = useToastStore((state) => state.showToast);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
     const { register, handleSubmit, setState, reset } = useForm<IDataRenameSchema>({ name: '' });

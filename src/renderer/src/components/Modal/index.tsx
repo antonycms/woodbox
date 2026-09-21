@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { Divider } from '@renderer/components/Divider';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
@@ -23,10 +23,8 @@ export const Modal = React.memo((props: IModalProps) => {
   } = props;
 
   const {
-    activeTheme: {
-      modal: { backgroundColor, color, overlayColor },
-    },
-  } = useThemeContext();
+    modal: { backgroundColor, color, overlayColor },
+  } = useThemeStore((state) => state.activeTheme);
 
   const overlayRef = React.useRef<HTMLDivElement>(null);
 

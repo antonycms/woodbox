@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import {
@@ -9,9 +11,11 @@ import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IColumnReferenceInfo } from '@shared/types/database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IColumn } from '@renderer/components/Table/dtos';
@@ -71,12 +75,17 @@ const ReferencePreview = ({
   onOpenTable,
 }: IReferencePreviewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { connections, getTableColumns, getTableData, getTableReferences } = useStoreContext();
+    tableInfo: { data: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const connections = useWorkspaceStore((state) => state.connections);
+  const { getTableColumns, getTableData, getTableReferences } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableColumns: state.getTableColumns,
+      getTableData: state.getTableData,
+      getTableReferences: state.getTableReferences,
+    })),
+  );
   const dialect = React.useMemo(
     () =>
       getRendererDialect(connections.find((connection) => connection.id === idConnection)?.dialect),
@@ -200,7 +209,7 @@ const ReferencePreview = ({
         });
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('reference.loadError'));
+      setError(getErrorMessage(error) || t('reference.loadError'));
     } finally {
       setLoading(false);
     }

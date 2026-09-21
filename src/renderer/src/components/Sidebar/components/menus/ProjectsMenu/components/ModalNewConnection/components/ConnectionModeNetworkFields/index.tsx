@@ -1,6 +1,6 @@
 import React from 'react';
 import { Input } from '@renderer/components/Input';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { SshTunnelFields } from './components/SshTunnelFields';
 import { SslFields } from './components/SslFields';
 import type {
@@ -33,7 +33,7 @@ export const ConnectionModeNetworkFields = React.memo(
     supportsSsl,
     savedSsh,
   }: IConnectionModeNetworkFieldsProps) => {
-    const { t } = useI18n();
+    const t = useI18nStore((state) => state.t);
 
     return (
       <>

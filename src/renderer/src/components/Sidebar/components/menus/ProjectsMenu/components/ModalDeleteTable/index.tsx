@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -5,22 +6,29 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalDeleteTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalDeleteTableProps) => {
-    const { t } = useI18n();
-    const { runSql, loadConnectionInfo, connections } = useStoreContext();
-    const { tabs, removeTab } = useAppTabContext();
-    const { showToast } = useToast();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const runSql = useDatabaseStore((state) => state.runSql);
+    const { loadConnectionInfo, connections } = useWorkspaceStore(
+      useShallow((state) => ({
+        loadConnectionInfo: state.loadConnectionInfo,
+        connections: state.connections,
+      })),
+    );
+    const { tabs, removeTab } = useAppTabStore(
+      useShallow((state) => ({ tabs: state.tabs, removeTab: state.removeTab })),
+    );
+    const showToast = useToastStore((state) => state.showToast);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
     const dialect = React.useMemo(

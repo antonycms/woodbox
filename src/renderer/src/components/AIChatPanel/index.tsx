@@ -1,13 +1,18 @@
+import { selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import * as centralSearchConstants from '@renderer/components/CentralSearchModal/constants';
-import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useAIChatPanelStore } from '@renderer/stores/AIChatPanel';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIChat } from '@shared/types/ai';
+import { useAIStore } from '@renderer/stores/AI';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconAI } from '@renderer/styles/icons';
@@ -27,7 +32,8 @@ import { buildAIChatMessageContent } from './utils/draftContexts';
 import styles from './styles.module.css';
 
 export const AIChatPanel = React.memo(() => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
+  
   const {
     activeChatId,
     clearEditorContextRequest,
@@ -36,23 +42,50 @@ export const AIChatPanel = React.memo(() => {
     openChatPanel,
     toggleChatPanel,
     visible,
-  } = useAIChatPanelContext();
-  const { activeTabId, addTab, getTab, setActiveTabId, tabs } = useAppTabContext();
-  const {
-    aiChats,
-    aiProviders,
-    addAIChat,
-    connections,
-    connectionsGroupPerProject,
-    connectionsInfo,
-    editAIChat,
-    loadConnectionInfo,
-    removeAIChat,
-  } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { aiChat: aiChatTheme, mainTab: theme },
-  } = useThemeContext();
+  } = useAIChatPanelStore(
+    useShallow((state) => ({
+      activeChatId: state.activeChatId,
+      clearEditorContextRequest: state.clearEditorContextRequest,
+      closeChatPanel: state.closeChatPanel,
+      editorContextRequest: state.editorContextRequest,
+      openChatPanel: state.openChatPanel,
+      toggleChatPanel: state.toggleChatPanel,
+      visible: state.visible,
+    })),
+  );
+
+  const { activeTabId, addTab, getTab, setActiveTabId, tabs } = useAppTabStore(
+    useShallow((state) => ({
+      activeTabId: state.activeTabId,
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+      tabs: state.tabs,
+    })),
+  );
+
+  const { aiChats, aiProviders, addAIChat, editAIChat, removeAIChat } = useAIStore(
+    useShallow((state) => ({
+      aiChats: state.aiChats,
+      aiProviders: state.aiProviders,
+      addAIChat: state.addAIChat,
+      editAIChat: state.editAIChat,
+      removeAIChat: state.removeAIChat,
+    })),
+  );
+
+  const connectionsGroupPerProject = useWorkspaceStore(selectConnectionsGroupPerProject);
+
+  const { connections, connectionsInfo, loadConnectionInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+      loadConnectionInfo: state.loadConnectionInfo,
+    })),
+  );
+  
+  const showToast = useToastStore((state) => state.showToast);
+  const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
   const [width, _setWidth] = useStorage('ai_chat_panel_width', 430);
   const [emptyDraft, setEmptyDraft] = React.useState('');
   const [initialMessage, setInitialMessage] = React.useState('');
@@ -241,7 +274,7 @@ export const AIChatPanel = React.memo(() => {
         showToast({
           type: 'error',
           title: t('aiProvider.selectModelFailed'),
-          description: error instanceof Error ? error.message : String(error),
+          description: getErrorMessage(error) || String(error),
         });
       }
     },
@@ -265,7 +298,7 @@ export const AIChatPanel = React.memo(() => {
         showToast({
           type: 'error',
           title: t('aiChat.saveConnectionFailed'),
-          description: error instanceof Error ? error.message : String(error),
+          description: getErrorMessage(error) || String(error),
         });
       }
     },
@@ -317,7 +350,7 @@ export const AIChatPanel = React.memo(() => {
       showToast({
         type: 'error',
         title: t('aiChat.createFailed'),
-        description: error instanceof Error ? error.message : String(error),
+        description: getErrorMessage(error) || String(error),
       });
     }
   }, [
@@ -444,7 +477,7 @@ export const AIChatPanel = React.memo(() => {
         showToast({
           type: 'error',
           title: t('toast.connectionError'),
-          description: error instanceof Error ? error.message : String(error),
+          description: getErrorMessage(error) || String(error),
         });
       })
       .finally(() => {

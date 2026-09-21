@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
@@ -9,10 +10,11 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext, type ISnippet } from '@renderer/contexts/Store';
-import { useToast } from '@renderer/contexts/Toast';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { ISnippet } from '@shared/types/workspace';
+import { useSnippetsStore } from '@renderer/stores/Snippets';
+import { useToastStore } from '@renderer/stores/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import {
   downloadSnippetsFile,
@@ -35,12 +37,16 @@ const readFileText = (file: File) => {
 };
 
 const SnippetsMenu = () => {
-  const { t } = useI18n();
-  const { snippets, addSnippet, removeSnippet } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { sideBar: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { snippets, addSnippet, removeSnippet } = useSnippetsStore(
+    useShallow((state) => ({
+      snippets: state.snippets,
+      addSnippet: state.addSnippet,
+      removeSnippet: state.removeSnippet,
+    })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
+  const { sideBar: colors } = useThemeStore((state) => state.activeTheme);
 
   const inputFileRef = React.useRef<HTMLInputElement>(null);
   const [filterText, setFilterText] = React.useState('');

@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
@@ -16,9 +18,9 @@ import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import type { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Text } from '@renderer/components/Text';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import {
   AddIcon,
   CancelIcon,
@@ -30,22 +32,20 @@ import {
 } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
+import type { IColumnReferenceInfo, IColumnRestrictionsInfo } from '@shared/types/database';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
-import {
-  IColumnReferenceInfo,
-  IColumnRestrictionsInfo,
-  useStoreContext,
-} from '@renderer/contexts/Store';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
-import { useToast } from '@renderer/contexts/Toast';
+import { useToastStore } from '@renderer/stores/Toast';
 import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
 import {
   generateDeleteDdl,
   generateInsertDdl,
   generateUpdateDdl,
-} from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
+} from '@renderer/database/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
@@ -94,11 +94,26 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     readOnly,
   } = props;
 
-  const { activeTheme } = useThemeContext();
-  const { t, language } = useI18n();
-  const { addTab, getTab, setActiveTabId } = useAppTabContext();
-  const { getTableRestrictions, getQueryRowsCount, runSql, connections } = useStoreContext();
-  const { showToast } = useToast();
+  const activeTheme = useThemeStore((state) => state.activeTheme);
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const { addTab, getTab, setActiveTabId } = useAppTabStore(
+    useShallow((state) => ({
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+    })),
+  );
+  const { getTableRestrictions, getQueryRowsCount, runSql } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableRestrictions: state.getTableRestrictions,
+      getQueryRowsCount: state.getQueryRowsCount,
+      runSql: state.runSql,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const showToast = useToastStore((state) => state.showToast);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -309,7 +324,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       showToast({
         type: 'error',
         title: t('toast.countRowsError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     } finally {
@@ -416,7 +431,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       showToast({
         type: 'error',
         title: t('toast.selectionLoadError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     },
@@ -1083,8 +1098,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 />
               </div>
 
-              <TabWindow activeTabId={activePreviewTab}>
-                <TabContent idTab="value">
+              <TabWindow>
+                <TabContent activeTabId={activePreviewTab} idTab="value">
                   <ReferenceValuePreview
                     key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
                     column={selectedCell?.column}
@@ -1096,7 +1111,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 </TabContent>
 
                 {!!selectedReference && (
-                  <TabContent idTab="reference">
+                  <TabContent activeTabId={activePreviewTab} idTab="reference">
                     <ReferencePreview
                       active={activePreviewTab === 'reference'}
                       idConnection={id_connection}
@@ -1108,7 +1123,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 )}
 
                 {canSelectReferenceValue && (
-                  <TabContent idTab="selection">
+                  <TabContent activeTabId={activePreviewTab} idTab="selection">
                     <ReferenceSelection
                       active={activePreviewTab === 'selection'}
                       idConnection={id_connection}

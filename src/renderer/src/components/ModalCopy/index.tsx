@@ -1,10 +1,10 @@
 import React from 'react';
 import { IModalProps, Modal } from '@renderer/components/Modal';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { useForm } from '@renderer/hooks/useForm';
 import { Row } from '../Grid';
 import { Input } from '../Input';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { Button } from '../Button';
 import { Spacer } from '../Spacer';
 import { AutocompleteMulti } from '../AutocompleteMulti';
@@ -14,12 +14,10 @@ interface IModalCopyProps extends Omit<IModalProps, 'children'> {
 }
 
 export const ModalCopy = (props: IModalCopyProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const { content, onClose, ...modalProps } = props;
 
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const attributes = React.useMemo(() => {
     if (!Array.isArray(content) || !content.length) return [];

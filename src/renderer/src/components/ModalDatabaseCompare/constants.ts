@@ -2,9 +2,9 @@ import type {
   DatabaseCompareKind,
   DatabaseCompareMessageCode,
   DatabaseCompareOperation,
-  IDatabaseCompareOptions,
-} from '@renderer/contexts/Store';
-import type { TranslationKey } from '@renderer/contexts/I18n';
+  DatabaseCompareOptions as IDatabaseCompareOptions,
+} from '@shared/types/databaseCompare';
+import { TranslationKey } from '@renderer/stores/I18n/translations';
 
 export const DEFAULT_OPTIONS: IDatabaseCompareOptions = {
   compareTables: true,

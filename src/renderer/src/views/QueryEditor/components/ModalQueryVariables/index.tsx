@@ -6,8 +6,8 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 const EMPTY_INITIAL_VALUES: Record<string, string> = {};
 
@@ -27,10 +27,8 @@ export const ModalQueryVariables = React.memo(
     onCancel,
     onExecute,
   }: IModalQueryVariablesProps) => {
-    const { t } = useI18n();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const { register, handleSubmit, setState, reset } = useForm<Record<string, string>>({});
 

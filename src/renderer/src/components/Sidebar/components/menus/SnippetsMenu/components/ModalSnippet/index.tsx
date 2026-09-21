@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { AutocompleteMulti } from '@renderer/components/AutocompleteMulti';
 import { Button } from '@renderer/components/Button';
@@ -8,9 +9,11 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext, type ISnippet } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { ISnippet } from '@shared/types/workspace';
+import { useSnippetsStore } from '@renderer/stores/Snippets';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { ExportIcon } from '@renderer/styles/icons';
 import { downloadSnippetFile, getSnippetBodyText, getSnippetScopes } from '@renderer/utils/snippets';
 import styles from './styles.module.css';
@@ -25,11 +28,15 @@ const emptyForm = {
 
 export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
   const { show, snippet, onClose } = props;
-  const { t } = useI18n();
-  const { addSnippet, editSnippet, connectionTypes } = useStoreContext();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { addSnippet, editSnippet } = useSnippetsStore(
+    useShallow((state) => ({
+      addSnippet: state.addSnippet,
+      editSnippet: state.editSnippet,
+    })),
+  );
+  const connectionTypes = useWorkspaceStore((state) => state.connectionTypes);
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const editorRef = React.useRef<IEditorRef>(null);
   const [form, setForm] = React.useState(emptyForm);

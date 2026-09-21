@@ -1,5 +1,5 @@
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import WoodboxLogo from '@renderer/assets/icons/woodbox.svg?react';
 import { getPrimaryShortcutKeyLabel } from '@renderer/utils/keyboard';
@@ -16,10 +16,8 @@ const shortcuts = [
 ] as const;
 
 export const Welcolme = () => {
-  const { t } = useI18n();
-  const {
-    activeTheme: { welcome: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { welcome: colors } = useThemeStore((state) => state.activeTheme);
 
   return (
     <div className={styles.container} style={colors}>

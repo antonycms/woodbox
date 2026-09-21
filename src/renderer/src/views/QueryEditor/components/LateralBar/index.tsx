@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import {
   ExplainIcon,
   IconFileWrited,
@@ -10,7 +10,7 @@ import {
   RunIcon,
   RunSelectionIcon,
 } from '@renderer/styles/icons';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { getPrimaryShortcutKeyLabel } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
@@ -25,8 +25,8 @@ interface ILateralBarProps {
 }
 
 export const LateralBar = (props: ILateralBarProps) => {
-  const { t } = useI18n();
-  const { activeTheme } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const shortcutKey = getPrimaryShortcutKeyLabel();
 
   const {

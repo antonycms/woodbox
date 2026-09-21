@@ -6,7 +6,7 @@ import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
 import TableHeaderColumn from '../TableHeaderColumn';
 import TableRowNumber from '../TableRowNumber';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -84,7 +84,7 @@ const TableDefaultView = <Row,>({
   onCellLinkPreviewClick,
   cellLinkClickMode,
 }: ITableDefaultViewProps<Row>) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
 
   const [sortContextMenu, setSortContextMenu] = React.useState<{
     column: IColumn<Row>;

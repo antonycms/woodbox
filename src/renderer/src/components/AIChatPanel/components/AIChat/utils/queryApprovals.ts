@@ -1,4 +1,5 @@
-import type { IAIChatResponse, IConnection } from '@renderer/contexts/Store';
+import type { IAIChatResponse } from '@shared/types/ai';
+import type { IConnectionPublic as IConnection } from '@shared/types/connections';
 
 export const normalizeSqlForComparison = (sql: string) =>
   sql.trim().replace(/;+\s*$/, '').replace(/\s+/g, ' ').toLowerCase();

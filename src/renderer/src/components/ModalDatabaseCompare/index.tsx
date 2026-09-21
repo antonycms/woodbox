@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -7,17 +9,18 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import {
-  type IConnection,
-  type IDatabaseCompareItem,
-  type IDatabaseCompareMessage,
-  type IDatabaseCompareObjectSelection,
-  type IDatabaseCompareResult,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IConnectionPublic as IConnection } from '@shared/types/connections';
+import type {
+  DatabaseCompareItem as IDatabaseCompareItem,
+  DatabaseCompareMessage as IDatabaseCompareMessage,
+  DatabaseCompareObjectSelection as IDatabaseCompareObjectSelection,
+  DatabaseCompareResult as IDatabaseCompareResult,
+} from '@shared/types/databaseCompare';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { DEFAULT_OPTIONS, KIND_LABEL_KEY, MESSAGE_LABEL_KEY, OPERATION_LABEL_KEY } from './constants';
 import { DdlModal } from './components/DdlModal';
@@ -37,12 +40,17 @@ const OPERATION_CLASS = {
 
 export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProps) => {
   const { show, onClose } = props;
-  const { t } = useI18n();
-  const { showToast } = useToast();
-  const { connections, connectionsInfo, loadConnectionInfo, compareDatabases } = useStoreContext();
-  const {
-    activeTheme: { table: tableTheme, modal: modalTheme },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
+  const { connections, connectionsInfo, loadConnectionInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+      loadConnectionInfo: state.loadConnectionInfo,
+    })),
+  );
+  const compareDatabases = useDatabaseStore((state) => state.compare);
+  const { table: tableTheme, modal: modalTheme } = useThemeStore((state) => state.activeTheme);
 
   const [sourceConnectionId, setSourceConnectionId] = React.useState<string>();
   const [targetConnectionId, setTargetConnectionId] = React.useState<string>();
@@ -139,7 +147,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
         showToast({
           type: 'error',
           title: t('toast.connectionError'),
-          description: error instanceof Error ? error.message : String(error),
+          description: getErrorMessage(error) || String(error),
         });
       } finally {
         setLoadingConnectionIds((prev) => prev.filter((id) => id !== connectionId));
@@ -252,7 +260,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
       showToast({
         type: 'error',
         title: t('databaseCompare.compareFailed'),
-        description: error instanceof Error ? error.message : String(error),
+        description: getErrorMessage(error) || String(error),
       });
     } finally {
       setLoadingCompare(false);

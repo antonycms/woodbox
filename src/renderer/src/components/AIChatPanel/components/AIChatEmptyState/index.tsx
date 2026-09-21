@@ -1,9 +1,10 @@
 import React from 'react';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
-import { useI18n } from '@renderer/contexts/I18n';
-import { type IAIChat, useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIChat } from '@shared/types/ai';
+import { useAIStore } from '@renderer/stores/AI';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import { AIChatComposer } from '../AIChatComposer';
 import type {
@@ -54,11 +55,9 @@ export const AIChatEmptyState = React.memo(
     onSelectMenuOption,
     onSubmit,
   }: IAIChatEmptyStateProps) => {
-    const { t } = useI18n();
-    const { aiChats } = useStoreContext();
-    const {
-      activeTheme: { aiChat: aiChatTheme, mainTab: theme },
-    } = useThemeContext();
+    const t = useI18nStore((state) => state.t);
+    const aiChats = useAIStore((state) => state.aiChats);
+    const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
 
     const recentChats = React.useMemo(() => aiChats.slice(0, 4), [aiChats]);
 

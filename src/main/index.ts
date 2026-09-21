@@ -4,6 +4,8 @@ import './ai';
 import './codex';
 import './reactNativeBridge';
 import * as path from 'path';
+import { pathToFileURL } from 'node:url';
+import { trustRenderer } from './ipc/security';
 import { app, shell, BrowserWindow, globalShortcut, Menu } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
@@ -29,7 +31,9 @@ function createWindow() {
     icon: path.join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -59,10 +63,13 @@ function createWindow() {
   });
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    trustRenderer(mainWindow.webContents, process.env['ELECTRON_RENDERER_URL']);
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    const rendererFile = path.join(__dirname, '../renderer/index.html');
+    trustRenderer(mainWindow.webContents, pathToFileURL(rendererFile).href);
+    mainWindow.loadFile(rendererFile);
   }
 
   return mainWindow;

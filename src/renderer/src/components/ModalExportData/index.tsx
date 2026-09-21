@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -11,14 +13,12 @@ import { Spacer } from '@renderer/components/Spacer';
 import Table from '@renderer/components/Table';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { Text } from '@renderer/components/Text';
-import {
-  type ExportDataFormat,
-  type ExportDataSource,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import type { ExportDataFormat, ExportDataSource } from '@shared/types/database';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import styles from './styles.module.css';
 
 interface IModalExportDataProps {
@@ -42,12 +42,17 @@ const uniqueColumns = (columns: string[] = []) => [...new Set(columns.filter(Boo
 
 export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const { show, idConnection, source, fileName, onClose } = props;
-  const { t, language } = useI18n();
-  const { getExportDataPreview, exportData } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const { getExportPreview: getExportDataPreview, exportData } = useDatabaseStore(
+    useShallow((state) => ({
+      getExportPreview: state.getExportPreview,
+      exportData: state.exportData,
+    })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const [availableColumns, setAvailableColumns] = React.useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = React.useState<string[]>([]);
@@ -152,7 +157,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
       showToast({
         type: 'error',
         title: t('toast.dataExportError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     } finally {
@@ -206,7 +211,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         showToast({
           type: 'error',
           title: t('toast.previewLoadError'),
-          description: error instanceof Error ? error.message : t('common.unknownError'),
+          description: getErrorMessage(error) || t('common.unknownError'),
           delay: 8000,
         });
       } finally {

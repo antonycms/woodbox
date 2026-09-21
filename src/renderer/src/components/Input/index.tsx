@@ -1,8 +1,8 @@
 import React from 'react';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
@@ -49,9 +49,7 @@ export const Input = (props: IInputProps) => {
     id: externalId,
     ...gridSystem
   } = props;
-  const {
-    activeTheme: { field: theme },
-  } = useThemeContext();
+  const { field: theme } = useThemeStore((state) => state.activeTheme);
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
   const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;

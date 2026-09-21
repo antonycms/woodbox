@@ -1,25 +1,22 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import {
-  type IColumnInfo,
-  type IColumnRestrictionsInfo,
-  type ITable,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import type { IColumnInfo, IColumnRestrictionsInfo, ITable } from '@shared/types/database';
+import { generateHash } from '@shared/utils/string';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import type {
   IPendingColumnCreate,
   IPendingIndexCreate,
   IPendingReferenceCreate,
-} from '@renderer/contexts/TableInfoContext';
+} from '@renderer/database/ddl/types';
 import { useForm } from '@renderer/hooks/useForm';
-import { generateHash } from '@renderer/utils/string';
 import { Autocomplete } from '@renderer/components/AutocompleteFree';
 import { parseColumnTypeInput } from '../../utils';
 import styles from './styles.module.css';
@@ -73,12 +70,15 @@ const ModalNewColumn = ({
   onClose,
   onAdd,
 }: IModalNewColumnProps) => {
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
-  const { getTableColumns, getTableRestrictions } = useStoreContext();
-  const { t } = useI18n();
-  const { showToast } = useToast();
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
+  const { getTableColumns, getTableRestrictions } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableColumns: state.getTableColumns,
+      getTableRestrictions: state.getTableRestrictions,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
   const [referenceRestrictions, setReferenceRestrictions] = React.useState<
     IColumnRestrictionsInfo[]

@@ -4,5 +4,3 @@ export { default as TabWindow } from './components/TabWindow';
 export { default as TabContent } from './components/TabContent';
 export { default as TabSplit } from './components/TabSplit';
 export type { ITabSplitBarProps, ITabSplitPane, ITabSplitProps } from './components/TabSplit';
-export { TabSplitProvider, useTabSplitContext } from './components/TabSplit/context';
-export type { ITabSplitContextValue } from './components/TabSplit/context';

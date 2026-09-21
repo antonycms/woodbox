@@ -1,7 +1,7 @@
 import React from 'react';
 import Table from '@renderer/components/Table';
 import type { IColumn } from '@renderer/components/Table/dtos';
-import type { IAIQueryResult } from '@renderer/contexts/Store';
+import type { IAIQueryResult } from '@shared/types/ai';
 import styles from '../../styles.module.css';
 
 interface IQueryResultTableProps {

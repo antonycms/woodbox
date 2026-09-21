@@ -18,7 +18,7 @@ export interface ITabSplitBarProps<TTab extends ITab = ITab> {
   activeTabId?: string;
   tabBarProps: Pick<
     ITabsBarProps,
-    'activeTabId' | 'tabs' | 'idTabBar' | 'onActiveTab' | 'onMoveTab'
+    'dragDataType' | 'onDraggingTabId' | 'activeTabId' | 'tabs' | 'idTabBar' | 'onActiveTab' | 'onMoveTab'
   >;
 }
 
@@ -34,7 +34,7 @@ export interface ITabSplitProps<TTab extends ITab = ITab> {
   onMoveTab?(sourceTabId: string, targetTabId: string, placement?: ITabMovePlacement): void;
   /** Renderiza apenas a barra do pane; os conteúdos têm uma árvore independente. */
   renderBar(props: ITabSplitBarProps<TTab>): React.ReactNode;
-  renderTabContent(tab: TTab): React.ReactNode;
+  renderTabContent(tab: TTab, isActiveTab: boolean): React.ReactNode;
   emptyPane?: React.ReactNode;
   isTabVisible?(tab: TTab): boolean;
   borderColor?: string;

@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Spacer } from '@renderer/components/Spacer';
 import { Button } from '@renderer/components/Button';
@@ -7,14 +8,15 @@ import Editor, { IEditorRef } from '@renderer/components/Editor';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/string';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { generateHash } from '@shared/utils/string';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { IconRefresh, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
@@ -30,13 +32,17 @@ interface IFunctionInfoProps {
 
 const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: propertiesTheme, tab: tabTheme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { getFunctionDefinition, runSql, connections } = useStoreContext();
-  const { showToast } = useToast();
+    tableInfo: { properties: propertiesTheme, tab: tabTheme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const { getFunctionDefinition, runSql } = useDatabaseStore(
+    useShallow((state) => ({
+      getFunctionDefinition: state.getFunctionDefinition,
+      runSql: state.runSql,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const showToast = useToastStore((state) => state.showToast);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -153,8 +159,8 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         ]}
       />
 
-      <TabWindow activeTabId="tabProperties">
-        <TabContent idTab="tabProperties">
+      <TabWindow>
+        <TabContent activeTabId="tabProperties" idTab="tabProperties">
           <div className={styles.propertiesContainer}>
             <div
               className={styles.propertiesHeader}
@@ -201,8 +207,8 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                 tabs={[{ idTab: 'tabDefinition', title: t('tabs.definition') }]}
               />
 
-              <TabWindow activeTabId="tabDefinition">
-                <TabContent idTab="tabDefinition">
+              <TabWindow>
+                <TabContent activeTabId="tabDefinition" idTab="tabDefinition">
                   <div className={styles.editorContainer} onKeyDownCapture={handleKeyDown}>
                     <Editor
                       ref={refEditor}

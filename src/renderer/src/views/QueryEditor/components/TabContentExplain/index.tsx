@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
@@ -5,8 +6,8 @@ import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { CancelIcon, ExportIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import type { IQueryResult } from '../../dtos';
@@ -27,8 +28,10 @@ export const TabContentExplain = ({
   onCancelQuery,
   cancelingQuery,
 }: ITabContentExplainProps) => {
-  const { t, language } = useI18n();
-  const { activeTheme } = useThemeContext();
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const [viewMode, setViewMode] = React.useState<'analysis' | 'json'>('analysis');
   const [now, setNow] = React.useState(Date.now());
 

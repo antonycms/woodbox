@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -15,9 +15,7 @@ export interface IPropsSpinner {
 
 const SpinnerLoading = (props: IPropsSpinner) => {
   const { absolute, color, size = 60, thickness = 3, center, padding = '3px', background } = props;
-  const {
-    activeTheme: { loaders: theme },
-  } = useThemeContext();
+  const { loaders: theme } = useThemeStore((state) => state.activeTheme);
   const backgroundColor = background || theme.spinnerBackgroundColor;
 
   return (

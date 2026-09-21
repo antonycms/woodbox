@@ -1,10 +1,7 @@
 import type { IInputProps } from '@renderer/components/Input';
-import type {
-  ConnectionEnvironment,
-  IReactNativeBridgeConnectionConfig,
-  ISshConnectionConfig,
-} from '@renderer/contexts/Store';
-import type { Dialect } from '@renderer/database/dialects';
+import type { ConnectionEnvironment, Dialect } from '@shared/types/connections';
+import type { IReactNativeBridgeConnectionConfig } from '@shared/types/reactNativeBridge';
+import type { ISshConnectionConfig } from '@shared/types/ssh';
 import type React from 'react';
 
 export interface IDataNewConnection {

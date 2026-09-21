@@ -5,12 +5,14 @@ import { Button } from '@renderer/components/Button';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import type { IndexColumnOrder } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import type { IPendingIndexCreate } from '@renderer/contexts/TableInfoContext';
+import type { IndexColumnOrder } from '@shared/types/database';
+import { generateHash } from '@shared/utils/string';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import type {
+  IPendingIndexCreate,
+} from '@renderer/database/ddl/types';
 import { useForm } from '@renderer/hooks/useForm';
-import { generateHash } from '@renderer/utils/string';
 import styles from './styles.module.css';
 
 const getGeneratedIndexName = (
@@ -46,10 +48,8 @@ const ModalNewIndex = ({
   onClose,
   onAdd,
 }: IModalNewIndexProps) => {
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
-  const { t } = useI18n();
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
 
   const selectedColumns = React.useMemo(

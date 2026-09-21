@@ -1,12 +1,14 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
-import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import type { IColumnReferenceInfo } from '@shared/types/database';
+import { generateHash } from '@shared/utils/string';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
-import { generateHash } from '@renderer/utils/string';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import styles from './styles.module.css';
@@ -33,12 +35,15 @@ const ReferenceSelection = ({
   onSelectValue,
 }: IReferenceSelectionProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme },
-    },
-  } = useThemeContext();
-  const { getTableColumns, getTableData } = useStoreContext();
-  const { t } = useI18n();
+    tableInfo: { data: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const { getTableColumns, getTableData } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableColumns: state.getTableColumns,
+      getTableData: state.getTableData,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
   const [columns, setColumns] = React.useState<IColumn[]>([]);
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);

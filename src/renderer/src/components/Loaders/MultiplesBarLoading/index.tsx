@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { toCssProperties } from '@renderer/styles/theme';
 import styles from './styles.module.css';
 
@@ -8,9 +8,7 @@ interface IMultiplesBarLoadingProps {
   zIndex?: number;
 }
 const MultiplesBarLoading = (props: IMultiplesBarLoadingProps) => {
-  const {
-    activeTheme: { loaders: theme },
-  } = useThemeContext();
+  const { loaders: theme } = useThemeStore((state) => state.activeTheme);
   const { background = theme.overlayBackgroundColor, zIndex } = props;
 
   return (

@@ -1,22 +1,22 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { AIChatComposer } from '../AIChatComposer';
 import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
-import { useI18n } from '@renderer/contexts/I18n';
-import {
-  type IAIChatMessage,
-  type IAIChatMessageInput,
-  type IAIQueryApproval,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
+import { generateHash } from '@shared/utils/string';
+import { useAIStore } from '@renderer/stores/AI';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { BackIcon, OptionsIcon } from '@renderer/styles/icons';
-import { generateHash } from '@renderer/utils/string';
 import { MessageContent } from './components/MessageContent';
 import type { IQueryApprovalApproveOptions } from './components/QueryApprovalCards';
 import { QueryResultTable } from './components/QueryResultTable';
 import type { IAIChatProps } from './dtos';
+import { getErrorMessage } from '@shared/utils/error';
 import styles from './styles.module.css';
 import {
   getResponseQueryApprovals,
@@ -25,7 +25,6 @@ import {
 } from './utils/queryApprovals';
 import {
   getAssistantContent,
-  getErrorMessage,
   getExcerpt,
   getQueryResultForTable,
   serializeQueryResultForAI,
@@ -52,20 +51,26 @@ const AIChat = ({
   onNewChat,
   onSelectMenuOption,
 }: IAIChatProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const {
     aiChats,
     appendAIChatMessages,
     cancelAIChatMessage,
-    connections,
     editAIChat,
-    runSql,
     sendAIChatMessage,
-  } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { aiChat: aiChatTheme, mainTab: theme },
-  } = useThemeContext();
+  } = useAIStore(
+    useShallow((state) => ({
+      aiChats: state.aiChats,
+      appendAIChatMessages: state.appendAIChatMessages,
+      cancelAIChatMessage: state.cancelAIChatMessage,
+      editAIChat: state.editAIChat,
+      sendAIChatMessage: state.sendAIChatMessage,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const runSql = useDatabaseStore((state) => state.runSql);
+  const showToast = useToastStore((state) => state.showToast);
+  const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
   const [draftMessage, setDraftMessage] = React.useState('');
   const [localMessages, setLocalMessages] = React.useState<IAIChatMessage[]>([]);
   const [loadingMessage, setLoadingMessage] = React.useState(false);
@@ -163,7 +168,7 @@ const AIChat = ({
           showToast({
             type: 'error',
             title: t('aiChat.sendFailed'),
-            description: getErrorMessage(error),
+            description: getErrorMessage(error, String(error)),
           });
           return;
         }
@@ -255,7 +260,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.sendFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       } finally {
         if (activeAssistantMessageIdRef.current === assistantMessageId) {
@@ -464,7 +469,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.sendFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       } finally {
         setLoadingMessage(false);
@@ -496,7 +501,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.queryApprovalCopyFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       }
     },

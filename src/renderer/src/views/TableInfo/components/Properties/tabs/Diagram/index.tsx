@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import {
   ReactFlow,
@@ -19,11 +20,11 @@ import { Bar } from '@renderer/components/Bar';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
 import { copyToClipboard } from '@renderer/utils/methods';
 
@@ -46,7 +47,7 @@ type TableNodeData = {
 };
 
 const TableNode = ({ data }: NodeProps<Node<TableNodeData>>) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const { label, isCurrent, columns, accentColor, secondaryAccentColor, color } = data;
   const nodeAccent = isCurrent ? accentColor : secondaryAccentColor;
   return (
@@ -123,17 +124,16 @@ const FlowController = ({ nodeCount, active }: { nodeCount: number; active: bool
 };
 
 const Diagram = ({
+  tableStore,
   id_connection,
   schema,
   table,
   active,
-}: ITableInfoProps & { active: boolean }) => {
+}: ITableInfoViewProps & { active: boolean }) => {
   const {
-    activeTheme: {
-      tableInfo: { tab: tableInfoTab, properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
+    tableInfo: { tab: tableInfoTab, properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
 
   const {
     references,
@@ -142,7 +142,17 @@ const Diagram = ({
     loadTableUsedAsReference,
     lastFetchDate,
     loading,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      references: state.references,
+      usedAsReference: state.usedAsReference,
+      loadTableReferences: state.loadTableReferences,
+      loadTableUsedAsReference: state.loadTableUsedAsReference,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);

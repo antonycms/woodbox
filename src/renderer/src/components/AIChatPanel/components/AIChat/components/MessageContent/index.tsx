@@ -1,5 +1,5 @@
 import React from 'react';
-import type { IAIQueryApproval } from '@renderer/contexts/Store';
+import type { IAIQueryApproval } from '@shared/types/ai';
 import { normalizeSqlForComparison } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
 import {

@@ -1,4 +1,4 @@
-import type { IAIQueryApproval, IAIQueryResult } from '@renderer/contexts/Store';
+import type { IAIQueryApproval, IAIQueryResult } from '@shared/types/ai';
 
 type RunSqlResultItem = {
   rows?: unknown;
@@ -63,10 +63,4 @@ export const getQueryResultForTable = (result: unknown): IAIQueryResult | undefi
     : undefined;
 
   return { rows, columns };
-};
-
-export const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-
-  return String(error);
 };

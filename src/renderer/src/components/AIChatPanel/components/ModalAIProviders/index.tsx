@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -8,17 +9,18 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import {
-  type AIProviderType,
-  type IAIProvider,
-  type IAIProviderCreate,
-  type ICodexChatGPTAccount,
-  type ICodexChatGPTLoginStart,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
-import { useToast } from '@renderer/contexts/Toast';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import type {
+  AIProviderType,
+  IAIProviderPublic as IAIProvider,
+  IAIProviderInput as IAIProviderCreate,
+  ICodexChatGPTAccount,
+  ICodexChatGPTLoginStart,
+} from '@shared/types/ai';
+import { useAIStore } from '@renderer/stores/AI';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useToastStore } from '@renderer/stores/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { AddIcon, RemoveIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
 
@@ -59,8 +61,8 @@ interface IModalAIProvidersProps {
 }
 
 export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProvidersProps) => {
-  const { t } = useI18n();
-  const { showToast } = useToast();
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
   const {
     aiProviders,
     addAIProvider,
@@ -70,10 +72,19 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     getCodexChatGPTAccount,
     startCodexChatGPTLogin,
     logoutCodexChatGPT,
-  } = useStoreContext();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  } = useAIStore(
+    useShallow((state) => ({
+      aiProviders: state.aiProviders,
+      addAIProvider: state.addAIProvider,
+      editAIProvider: state.editAIProvider,
+      removeAIProvider: state.removeAIProvider,
+      testAIProvider: state.testAIProvider,
+      getCodexChatGPTAccount: state.getCodexChatGPTAccount,
+      startCodexChatGPTLogin: state.startCodexChatGPTLogin,
+      logoutCodexChatGPT: state.logoutCodexChatGPT,
+    })),
+  );
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
   const [editingProvider, setEditingProvider] = React.useState<ProviderForm>();
   const [providerToRemove, setProviderToRemove] = React.useState<IAIProvider>();
   const [codexAccount, setCodexAccount] = React.useState<ICodexChatGPTAccount>();
