@@ -3,7 +3,6 @@ import React from 'react';
 import * as monaco from './monaco';
 
 import useDebounce from '@renderer/hooks/useDebounce';
-import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
 import {
   ContextMenu,
@@ -44,11 +43,6 @@ const Editor = ({
   const editorInstanceRef = React.useRef<monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
   const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
-
-  const { width, height } = useResize({
-    HTMLElement: outsideContainerRef.current,
-    ignoreZeroValue: true,
-  });
 
   const stopCtrlClickPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!props.onCtrlClick || !isPrimaryShortcutPressed(event)) return;
@@ -517,6 +511,44 @@ const Editor = ({
     return currentEditor;
   };
 
+  const observeEditorResize = React.useCallback(() => {
+    const element = outsideContainerRef.current;
+    const currentEditor = editorInstanceRef.current;
+
+    if (!element || !currentEditor) return;
+
+    let frameId: number | undefined;
+    let secondFrameId: number | undefined;
+
+    const layoutFromElement = () => {
+      if (!element.clientWidth || !element.clientHeight) return;
+
+      currentEditor.layout({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+    };
+
+    const scheduleLayout = () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+
+      frameId = window.requestAnimationFrame(() => {
+        layoutFromElement();
+        secondFrameId = window.requestAnimationFrame(layoutFromElement);
+      });
+    };
+
+    const observer = new ResizeObserver(scheduleLayout);
+    observer.observe(element);
+    scheduleLayout();
+
+    return () => {
+      observer.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
+      if (secondFrameId) window.cancelAnimationFrame(secondFrameId);
+    };
+  }, []);
+
   const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
     () => [
       {
@@ -622,7 +654,7 @@ const Editor = ({
     editorInstanceRef.current = undefined;
   }, []);
 
-  React.useEffect(resize, [width, height]);
+  React.useEffect(() => observeEditorResize(), [editor, observeEditorResize]);
 
   React.useEffect(() => {
     monaco.editor.setTheme('active-theme');
