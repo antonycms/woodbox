@@ -21,6 +21,7 @@ mac:
   target:
     - dmg
     - zip
+  x64ArchFiles: Contents/Resources/app.asar.unpacked/node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
