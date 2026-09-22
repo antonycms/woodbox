@@ -175,6 +175,7 @@ const TabSplit = <TTab extends ITab = ITab>(props: ITabSplitProps<TTab>) => {
   };
 
   const getPaneEvents = (paneId: string, paneActiveTabId?: string) => ({
+    onDragEnter: (event: React.DragEvent<HTMLDivElement>) => handlePaneDragOver(event, paneId),
     onDragOver: (event: React.DragEvent<HTMLDivElement>) => handlePaneDragOver(event, paneId),
     onDragLeave: (event: React.DragEvent<HTMLDivElement>) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node)) {
