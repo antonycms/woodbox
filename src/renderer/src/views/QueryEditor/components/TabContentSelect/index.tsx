@@ -633,7 +633,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   ]);
 
   const handleSetSelectedCellsNull = React.useCallback(() => {
-    const cells = contextMenuTable?.data?.selectedCells || [];
+    const cells = contextMenuTable?.data?.getSelectedCells() || [];
 
     cells.forEach(({ row, column, rowIndex }) => {
       if (!column.editable) return;
@@ -813,15 +813,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     return [
       {
         text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
       },
       {
         text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
       },
       {
         text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
       },
       {
         text: t('modal.exportData'),
@@ -830,7 +830,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       {
         text: t('context.setSelectedCellsNull'),
         onClick: handleSetSelectedCellsNull,
-        show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+        show: () => !!contextMenuTable?.data?.getSelectedCells().some(({ column }) => column.editable),
       },
       {
         text: t('context.deleteSelectedItems'),
@@ -847,7 +847,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
               dialect,
               singleResultTable.schema,
               singleResultTable.name,
-              contextMenuTable?.data?.rows || [],
+              contextMenuTable?.data?.getRows() || [],
               data.columns,
             ),
           );
@@ -865,7 +865,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
               dialect,
               singleResultTable.schema,
               singleResultTable.name,
-              contextMenuTable?.data?.selectedCellRows || [],
+              contextMenuTable?.data?.getSelectedCellRows() || [],
               data.columns,
             ),
           );

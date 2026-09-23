@@ -537,7 +537,7 @@ const Data = ({
   }, [applyPendingRows, columns]);
 
   const handleSetSelectedCellsNull = React.useCallback(() => {
-    const cells = contextMenuTable?.data?.selectedCells || [];
+    const cells = contextMenuTable?.data?.getSelectedCells() || [];
 
     cells.forEach(({ row, column, rowIndex }) => {
       if (!column.editable) return;
@@ -679,15 +679,15 @@ const Data = ({
     return [
       {
         text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
       },
       {
         text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
       },
       {
         text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
       },
       {
         text: t('modal.exportData'),
@@ -696,7 +696,7 @@ const Data = ({
       {
         text: t('context.setSelectedCellsNull'),
         onClick: handleSetSelectedCellsNull,
-        show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+        show: () => !!contextMenuTable?.data?.getSelectedCells().some(({ column }) => column.editable),
       },
       !isReadOnlyObject && {
         text: t('context.deleteSelectedItems'),
@@ -710,7 +710,7 @@ const Data = ({
               dialect,
               schema,
               table,
-              contextMenuTable?.data?.rows || [],
+              contextMenuTable?.data?.getRows() || [],
               columnNames,
             ),
           );
@@ -725,7 +725,7 @@ const Data = ({
               dialect,
               schema,
               table,
-              contextMenuTable?.data?.selectedCellRows || [],
+              contextMenuTable?.data?.getSelectedCellRows() || [],
               columnNames,
             ),
           );

@@ -249,7 +249,7 @@ const ReferencePreview = ({
     () => [
       {
         text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenu?.data.cellsText || ''),
+        onClick: () => copyToClipboard(contextMenu?.data.getCellsText() || ''),
       },
     ],
     [contextMenu, t],
