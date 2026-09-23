@@ -625,6 +625,7 @@ export const en = {
   'exportData.format.xlsx': 'XLSX',
   'exportData.format.json': 'JSON',
   'exportData.format.jsonl': 'JSONL',
+  'exportData.format.clipboard': 'Clipboard',
   'exportData.batchSize': 'Batch size',
   'exportData.columns': 'Columns',
   'exportData.selectColumns': 'Select columns',

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { dialog } from 'electron';
+import { clipboard, dialog } from 'electron';
 import ExcelJS from 'exceljs';
 import type { ExportDataFormat as ExportFormat, IExportDataParams, IExportDataResult } from '@shared/types/database';
 
@@ -8,14 +8,16 @@ export type ExportRowsBatchConsumer = (
   callback: (rows: Record<string, unknown>[]) => Promise<void>,
 ) => Promise<number>;
 
-const EXPORT_FORMAT_FILTERS: Record<ExportFormat, Electron.FileFilter> = {
+type FileExportFormat = Exclude<ExportFormat, 'clipboard'>;
+
+const EXPORT_FORMAT_FILTERS: Record<FileExportFormat, Electron.FileFilter> = {
   csv: { name: 'CSV', extensions: ['csv'] },
   json: { name: 'JSON', extensions: ['json'] },
   jsonl: { name: 'JSONL', extensions: ['jsonl'] },
   xlsx: { name: 'Excel', extensions: ['xlsx'] },
 };
 
-const EXPORT_MIME_EXTENSIONS: Record<ExportFormat, string> = {
+const EXPORT_MIME_EXTENSIONS: Record<FileExportFormat, string> = {
   csv: 'csv',
   json: 'json',
   jsonl: 'jsonl',
@@ -70,10 +72,39 @@ const serializeCsvCell = (value: unknown) => {
   return `"${text.replace(/"/g, '""')}"`;
 };
 
+const serializeClipboardCell = (value: unknown) => {
+  if (value === null || value === undefined) return '';
+
+  const serializedValue = serializeExportValue(value);
+  const text =
+    typeof serializedValue === 'object' ? jsonStringify(serializedValue) : String(serializedValue);
+
+  return text.replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
+};
+
+const serializeClipboardRow = (row: Record<string, unknown>, columns: string[]) =>
+  columns.map((column) => serializeClipboardCell(row[column])).join('\t');
+
+const exportRowsToClipboard = async (
+  { columns }: Pick<IExportDataParams, 'columns'>,
+  eachRowsBatch: ExportRowsBatchConsumer,
+): Promise<IExportDataResult> => {
+  const rows: string[] = [columns.map(serializeClipboardCell).join('\t')];
+  const totalRows = await eachRowsBatch(async (batchRows) => {
+    rows.push(...batchRows.map((row) => serializeClipboardRow(row, columns)));
+  });
+
+  clipboard.writeText(rows.join('\n'));
+
+  return { canceled: false, rows: totalRows };
+};
+
 export const exportRowsToFile = async (
   { columns, format, fileName }: Pick<IExportDataParams, 'columns' | 'format' | 'fileName'>,
   eachRowsBatch: ExportRowsBatchConsumer,
 ): Promise<IExportDataResult> => {
+  if (format === 'clipboard') return exportRowsToClipboard({ columns }, eachRowsBatch);
+
   const extension = EXPORT_MIME_EXTENSIONS[format];
   const result = await dialog.showSaveDialog({
     defaultPath: `${Date.now()}_${normalizeExportFileName(fileName)}.${extension}`,

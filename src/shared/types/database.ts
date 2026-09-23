@@ -139,7 +139,7 @@ export interface SerializedRunSqlResult extends IRunSqlResult {
   columns: string[];
 }
 
-export type ExportDataFormat = 'csv' | 'json' | 'jsonl' | 'xlsx';
+export type ExportDataFormat = 'csv' | 'json' | 'jsonl' | 'xlsx' | 'clipboard';
 
 export type ExportDataSource =
   | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }

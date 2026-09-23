@@ -629,6 +629,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'exportData.format.xlsx': 'XLSX',
   'exportData.format.json': 'JSON',
   'exportData.format.jsonl': 'JSONL',
+  'exportData.format.clipboard': 'Área de transferência',
   'exportData.batchSize': 'Tamanho do lote',
   'exportData.columns': 'Colunas',
   'exportData.selectColumns': 'Selecionar colunas',

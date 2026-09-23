@@ -16,7 +16,7 @@ const exportSource = z.discriminatedUnion('type', [
 ]);
 export const exportPreview = z.object({ source: exportSource });
 export const exportData = exportPreview.extend({
-  columns: z.array(z.string()), format: z.enum(['csv', 'json', 'jsonl', 'xlsx']),
+  columns: z.array(z.string()), format: z.enum(['csv', 'json', 'jsonl', 'xlsx', 'clipboard']),
   batchSize: z.number().optional(), fileName: z.string().optional(),
 });
 export const importTableData = tableFilters.extend({

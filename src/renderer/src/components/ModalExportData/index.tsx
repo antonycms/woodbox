@@ -29,12 +29,13 @@ interface IModalExportDataProps {
   onClose?(): void;
 }
 
-const FORMAT_OPTIONS: ExportDataFormat[] = ['csv', 'xlsx', 'json', 'jsonl'];
+const FORMAT_OPTIONS: ExportDataFormat[] = ['csv', 'xlsx', 'json', 'jsonl', 'clipboard'];
 const FORMAT_LABELS: Record<ExportDataFormat, TranslationKey> = {
   csv: 'exportData.format.csv',
   xlsx: 'exportData.format.xlsx',
   json: 'exportData.format.json',
   jsonl: 'exportData.format.jsonl',
+  clipboard: 'exportData.format.clipboard',
 };
 const FORMAT_ITEMS = FORMAT_OPTIONS.map((value) => ({ value }));
 
