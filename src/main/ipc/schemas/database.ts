@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const tableFilters = z.object({ table: z.string(), schema: z.string().optional() });
+const optionalStringFromNullable = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().optional(),
+);
+
+export const tableFilters = z.object({ table: z.string(), schema: optionalStringFromNullable });
 const orderBy = z.array(z.object({ columnName: z.string(), sortType: z.enum(['ASC', 'DESC']) }));
 export const tableData = tableFilters.extend({
   page: z.number(), limit: z.number().optional(), where: z.string().optional(),
