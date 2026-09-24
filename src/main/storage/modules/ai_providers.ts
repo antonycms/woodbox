@@ -23,7 +23,7 @@ const toPublicProvider = (provider: IAIProviderConfig): IAIProviderPublic => {
 
   return {
     ...publicProvider,
-    hasApiKey: !!provider.apiKey,
+    hasApiKey: provider.type !== 'codex-chatgpt' && !!provider.apiKey,
   };
 };
 
@@ -38,7 +38,10 @@ const normalizeProvider = (
   previous?: IAIProviderConfig,
 ): IAIProviderConfig => {
   const now = new Date().toISOString();
-  const apiKey = encodeSecret(store, data.apiKey) ?? previous?.apiKey;
+  const apiKey =
+    data.type === 'codex-chatgpt'
+      ? undefined
+      : encodeSecret(store, data.apiKey) ?? previous?.apiKey;
   const models = normalizeProviderModels(data);
 
   if (!models.length) {
@@ -62,7 +65,10 @@ const decodeProvider = (
   provider: IAIProviderConfig,
 ): IAIProviderConfig => ({
   ...provider,
-  apiKey: decodeSecret(store, provider.apiKey) || undefined,
+  apiKey:
+    provider.type === 'codex-chatgpt'
+      ? undefined
+      : decodeSecret(store, provider.apiKey) || undefined,
 });
 
 const migrateProviders = (store: Store<Record<string, unknown>>) => {
