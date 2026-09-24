@@ -29,15 +29,15 @@ interface IModalExportDataProps {
   onClose?(): void;
 }
 
-const FORMAT_OPTIONS: ExportDataFormat[] = ['csv', 'xlsx', 'json', 'jsonl', 'clipboard'];
 const FORMAT_LABELS: Record<ExportDataFormat, TranslationKey> = {
+  clipboard: 'exportData.format.clipboard',
   csv: 'exportData.format.csv',
   xlsx: 'exportData.format.xlsx',
   json: 'exportData.format.json',
   jsonl: 'exportData.format.jsonl',
-  clipboard: 'exportData.format.clipboard',
 };
-const FORMAT_ITEMS = FORMAT_OPTIONS.map((value) => ({ value }));
+
+const FORMAT_ITEMS = Object.keys(FORMAT_LABELS).map((value) => ({ value }));
 
 const uniqueColumns = (columns: string[] = []) => [...new Set(columns.filter(Boolean))];
 
@@ -58,7 +58,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const [availableColumns, setAvailableColumns] = React.useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = React.useState<string[]>([]);
   const [rowsPreview, setRowsPreview] = React.useState<Record<string, unknown>[]>([]);
-  const [format, setFormat] = React.useState<ExportDataFormat>('csv');
+  const [format, setFormat] = React.useState<ExportDataFormat>('clipboard');
   const [batchSize, setBatchSize] = React.useState<string | number>(1000);
   const [showColumnsModal, setShowColumnsModal] = React.useState(false);
   const [loadingPreview, setLoadingPreview] = React.useState(false);
@@ -185,7 +185,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
     setAvailableColumns([]);
     setSelectedColumns([]);
     setRowsPreview([]);
-    setFormat('csv');
+    setFormat('clipboard');
     setBatchSize(1000);
     setShowColumnsModal(false);
   }, [show, source]);
