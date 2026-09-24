@@ -26,13 +26,19 @@ const getInitialLanguage = (): LanguageCode => {
     if (availableLanguage) return availableLanguage.code;
 
     const availableBaseLanguage = availableLanguages.find((language) =>
-      language.systemCodes.some((code) => normalizedLanguage.startsWith(`${code.toLowerCase()}-`)),
+      language.systemCodes.some((code) => normalizedLanguage.startsWith(code.toLowerCase() + '-')),
     );
 
     if (availableBaseLanguage) return availableBaseLanguage.code;
   }
 
   return DEFAULT_LANGUAGE;
+};
+
+const getStoredLanguage = () => {
+  const stored = readStorageValue<unknown>('@language:active', getInitialLanguage());
+
+  return isLanguageCode(stored) ? stored : DEFAULT_LANGUAGE;
 };
 
 const formatMessage = (message: string, values?: TranslationValues) => {
@@ -66,18 +72,38 @@ const createTranslators = (language: LanguageCode) => {
   return { t, tText };
 };
 
-export const useI18nStore = create<II18nStore>()((set) => {
-  const stored = readStorageValue('@language:active', getInitialLanguage());
-  const language = isLanguageCode(stored) ? stored : DEFAULT_LANGUAGE;
-  if (stored !== language) writeStorageValue('@language:active', language);
+export const useI18nStore = create<II18nStore>()((set, get) => {
+  const writeLocalLanguage = (language: LanguageCode) => {
+    writeStorageValue('@language:active', language);
+  };
+
+  const persistLanguage = (language: LanguageCode) => {
+    writeStorageValue('@language:active', language);
+    void window.api.preferences.set({ language }).catch(console.error);
+  };
+
+  const language = getStoredLanguage();
+
   return {
     language,
     availableLanguages,
     ...createTranslators(language),
+    hydrate: async () => {
+      const preferences = await window.api.preferences.get();
+      const storedLanguage = isLanguageCode(preferences.language) ? preferences.language : undefined;
+      const language = storedLanguage ?? get().language;
+
+      set({ language, ...createTranslators(language) });
+      if (storedLanguage) {
+        writeLocalLanguage(language);
+      } else {
+        persistLanguage(language);
+      }
+    },
     changeLanguage: (nextLanguage) => {
       const language = isLanguageCode(nextLanguage) ? nextLanguage : DEFAULT_LANGUAGE;
       set({ language, ...createTranslators(language) });
-      writeStorageValue('@language:active', language);
+      persistLanguage(language);
     },
   };
 });

@@ -9,7 +9,6 @@ import { getErrorMessage } from '@shared/utils/error';
 export const StoreInitialization = () => {
   const activeTheme = useThemeStore((state) => state.activeTheme);
 
-  const t = useI18nStore((state) => state.t);
   const showToast = useToastStore((state) => state.showToast);
 
   React.useEffect(() => {
@@ -22,13 +21,13 @@ export const StoreInitialization = () => {
       if (active) {
         showToast({
           type: 'error',
-          title: t('toast.initializeStoresError'),
+          title: useI18nStore.getState().t('toast.initializeStoresError'),
           description: getErrorMessage(error),
         });
       }
     });
     return () => { active = false; };
-  }, [showToast, t]);
+  }, [showToast]);
 
   return null;
 };
