@@ -7,6 +7,7 @@ import type {
   IImportConnectionsPreview,
   IImportConnectionsResult,
 } from '@shared/types/imports';
+import type { AppPreferences, AppPreferencesPatch } from '@shared/types/preferences';
 import Store from 'electron-store';
 import { initialValue as projects, getModule as getModuleProjects } from './modules/projects';
 import {
@@ -48,6 +49,11 @@ const store = new Store<Record<string, unknown>>({
       type: ['object', 'null'],
       default: null,
     },
+    app_preferences: {
+      type: 'object',
+      default: {},
+      additionalProperties: true,
+    },
   },
 });
 
@@ -69,6 +75,13 @@ export const getWindowState = (): WindowState | null =>
 
 export const saveWindowState = (state: WindowState): void => {
   store.set('window_state', state);
+};
+
+export const getAppPreferences = (): AppPreferences =>
+  (store.get('app_preferences') as AppPreferences | undefined) ?? {};
+
+export const updateAppPreferences = (preferences: AppPreferencesPatch): void => {
+  store.set('app_preferences', { ...getAppPreferences(), ...preferences });
 };
 
 export const {

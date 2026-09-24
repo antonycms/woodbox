@@ -7,6 +7,7 @@ import type * as Bridge from './reactNativeBridge';
 import type * as Compare from './databaseCompare';
 import type * as Updates from './updates';
 
+import type * as Preferences from './preferences';
 export type Unsubscribe = () => void;
 
 type TableFilters = { table: string; schema?: string };
@@ -58,6 +59,10 @@ export interface WoodboxApi {
     appendMessages: (id: string, data: AI.IAIChatAppendMessagesInput) => Promise<void>;
     sendMessage: (data: AI.IAIChatRequest) => Promise<AI.IAIChatResponse>;
     cancelMessage: (requestId: string) => Promise<boolean>;
+  };
+  preferences: {
+    get: () => Promise<Preferences.AppPreferences>;
+    set: (preferences: Preferences.AppPreferencesPatch) => Promise<void>;
   };
   codex: {
     getAccount: () => Promise<AI.ICodexChatGPTAccount>;

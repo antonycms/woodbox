@@ -49,6 +49,10 @@ export const api: WoodboxApi = {
     sendMessage: request('@post:ai_chat_message'),
     cancelMessage: request('@post:cancel_ai_chat_message'),
   },
+  preferences: {
+    get: request('@get:app_preferences'),
+    set: request('@post:app_preferences'),
+  },
   codex: {
     getAccount: request('@get:codex_chatgpt_account'),
     startLogin: request('@post:codex_chatgpt_login'),

@@ -45,6 +45,8 @@ const schemas = {
   '@post:append_ai_chat_messages': z.tuple([id, appendMessages]),
   '@post:ai_chat_message': z.tuple([chatRequest]),
   '@post:cancel_ai_chat_message': z.tuple([id]),
+  '@get:app_preferences': z.tuple([]),
+  '@post:app_preferences': z.tuple([z.object({ language: z.string().optional(), themeActiveName: z.string().optional(), customThemes: z.array(z.unknown()).optional() })]),
   '@get:codex_chatgpt_account': z.tuple([]),
   '@post:codex_chatgpt_login': z.tuple([]),
   '@post:codex_chatgpt_logout': z.tuple([]),

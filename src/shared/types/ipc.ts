@@ -36,6 +36,8 @@ export interface IpcRequests {
   '@post:append_ai_chat_messages': WoodboxApi['aiChats']['appendMessages'];
   '@post:ai_chat_message': WoodboxApi['aiChats']['sendMessage'];
   '@post:cancel_ai_chat_message': WoodboxApi['aiChats']['cancelMessage'];
+  '@get:app_preferences': WoodboxApi['preferences']['get'];
+  '@post:app_preferences': WoodboxApi['preferences']['set'];
   '@get:codex_chatgpt_account': WoodboxApi['codex']['getAccount'];
   '@post:codex_chatgpt_login': WoodboxApi['codex']['startLogin'];
   '@post:codex_chatgpt_logout': WoodboxApi['codex']['logout'];

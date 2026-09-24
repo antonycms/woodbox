@@ -46,3 +46,7 @@ addListener('@add:ai_chats', store.addAIChat);
 addListener('@remove:ai_chats', store.removeAIChat);
 addListener('@edit:ai_chats', store.editAIChat);
 addListener('@post:append_ai_chat_messages', store.appendAIChatMessages);
+
+// preferences
+addListener('@get:app_preferences', store.getAppPreferences);
+addListener('@post:app_preferences', store.updateAppPreferences);
