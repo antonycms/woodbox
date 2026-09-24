@@ -45,6 +45,10 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
   connectionsInfo: new Map(),
 
   initialize: runPromiseOnce(async () => {
+    await get().refresh();
+  }),
+
+  refresh: async () => {
     const [projects, scripts, connections, connectionTypes] = await Promise.all([
       window.api.projects.list(),
       window.api.scripts.list(),
@@ -53,7 +57,7 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
     ]);
 
     set({ projects, scripts, connections, connectionTypes });
-  }),
+  },
 
   addProject: async (data) => {
     await get().initialize();
@@ -192,6 +196,12 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
     } finally {
       if (connectionInfoRequests.get(id) === request) connectionInfoRequests.delete(id);
     }
+  },
+
+  reloadConnectionInfo: async (id) => {
+    await closeConnectionInMain(id);
+    set((state) => ({ connectionsInfo: withoutConnectionsInfo(state.connectionsInfo, [id]) }));
+    await get().loadConnectionInfo(id);
   },
 
   closeConnection: async (id) => {

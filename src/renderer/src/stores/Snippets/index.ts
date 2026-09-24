@@ -6,8 +6,12 @@ import type { ISnippetsStore } from './types';
 export const useSnippetsStore = create<ISnippetsStore>()((set, get) => ({
   snippets: [],
   initialize: runPromiseOnce(async () => {
-    set({ snippets: await window.api.snippets.list() });
+    await get().refresh();
   }),
+
+  refresh: async () => {
+    set({ snippets: await window.api.snippets.list() });
+  },
 
   addSnippet: async (data) => {
     await get().initialize();

@@ -5,6 +5,7 @@ import type { IConnectionInfo } from '@shared/types/database';
 
 export interface IWorkspaceStore {
   initialize(): Promise<void>;
+  refresh(): Promise<void>;
   
   projects: IProject[];
   addProject(data: IProjectCreate): Promise<void>;
@@ -25,6 +26,7 @@ export interface IWorkspaceStore {
   removeConnection: WoodboxApi['connections']['remove'];
   testConnection: WoodboxApi['connections']['test'];
   loadConnectionInfo(id: string): Promise<void>;
+  reloadConnectionInfo(id: string): Promise<void>;
   closeConnection: WoodboxApi['connections']['close'];
   importConnectionsFromSource: WoodboxApi['connections']['import'];
   previewImportConnectionsFromSource: WoodboxApi['connections']['previewImport'];

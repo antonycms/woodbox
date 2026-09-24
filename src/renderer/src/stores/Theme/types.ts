@@ -6,6 +6,8 @@ export interface IThemeStore {
   addTheme(theme: ITheme, options?: IAddThemeOptions): void;
   removeTheme(themeName: string, fallbackThemeName?: string): void;
   changeTheme(themeName: string): void;
+  createThemeFromColors(themeName: string, colors: Record<string, string>, baseThemeName?: string): void;
+  updateActiveThemeColors(colors: Record<string, string>): void;
 }
 
 export interface IAddThemeOptions {
