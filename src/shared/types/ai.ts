@@ -106,9 +106,22 @@ export interface IAIChatRequest {
   messages: IAIChatMessageInput[];
 }
 
+export type IAIAppAction =
+  | { type: 'refresh_workspace' }
+  | { type: 'refresh_snippets' }
+  | { type: 'reload_connection'; connectionId: string }
+  | {
+      type: 'create_theme';
+      name: string;
+      baseThemeName?: string;
+      colors?: Record<string, string>;
+    }
+  | { type: 'update_theme_colors'; colors: Record<string, string> };
+
 export interface IAIChatResponse {
   content: string;
   queryApprovals?: IAIQueryApproval[];
+  appActions?: IAIAppAction[];
 }
 
 export interface ICodexChatGPTAccount {

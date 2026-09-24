@@ -13,6 +13,7 @@ import { resolveAIModel } from './providers';
 import {
   AI_TOOL_STOP_CONDITION,
   AI_QUERY_EXECUTION_TOOL_NAME,
+  getAIAppActionsFromToolOutput,
   buildAIDatabaseInstructions,
   createAIDatabaseTools,
   type AIQueryExecutionToolOutput,
@@ -57,6 +58,10 @@ const extractQueryApprovalsFromToolResults = (
 
   return Array.from(queryApprovals.values());
 };
+
+const extractAppActionsFromToolResults = (
+  toolResults: Array<{ output: unknown }>,
+) => toolResults.flatMap((toolResult) => getAIAppActionsFromToolOutput(toolResult.output));
 
 const aiChatAbortControllers = new Map<string, AbortController>();
 
@@ -150,6 +155,7 @@ export const sendAIChatMessage = async ({
     return {
       content: response.text,
       queryApprovals: extractQueryApprovalsFromToolResults(response.toolResults),
+      appActions: extractAppActionsFromToolResults(response.toolResults),
     };
   } catch (error) {
     if (abortController?.signal.aborted) {

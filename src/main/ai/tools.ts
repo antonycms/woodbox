@@ -1,8 +1,9 @@
 import type { ITable, IFunctionDb } from '@shared/types/database';
-import type { Dialect, ConnectionEnvironment } from '@shared/types/connections';
-import type { IAIQueryApproval } from '@shared/types/ai';
+import type { Dialect, ConnectionEnvironment, IConnectionConfig } from '@shared/types/connections';
+import type { IAIAppAction, IAIQueryApproval } from '@shared/types/ai';
 import { isStepCount, jsonSchema, type Schema, type ToolSet, tool } from 'ai';
 import {
+  closeConnection,
   getConnectionInfo,
   getFunctionDefinition,
   getTableColumns,
@@ -12,7 +13,16 @@ import {
   getTableRowsCount,
   runExplainSql,
 } from '../database/core';
-import { getConnectionsSaved } from '../storage/store';
+import { generateHash } from '@shared/utils/string';
+import {
+  addConnectionSaved,
+  addProject,
+  addSnippet,
+  editConnectionSaved,
+  getConnectionsSaved,
+  getInternalConnectionSaved,
+  getProjects,
+} from '../storage/store';
 
 const aiToolSchema = <T extends object>(schema: Parameters<typeof jsonSchema>[0]): Schema<T> =>
   jsonSchema<T>(schema);
@@ -52,14 +62,78 @@ type AIExplainQueryPlanInput = {
   query: string;
 };
 
+type AICreateProjectInput = {
+  name: string;
+};
+
+type AICreateConnectionInput = {
+  project: string;
+  description: string;
+  dialect: Dialect;
+  database: string;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  environment?: ConnectionEnvironment;
+  ssl?: boolean;
+  sslRejectUnauthorized?: boolean;
+};
+
+type AIEditConnectionInput = Partial<Omit<AICreateConnectionInput, 'project'>> & {
+  connection: string;
+  project?: string;
+};
+
+type AICreateSnippetInput = {
+  name: string;
+  prefix: string | string[];
+  body: string | string[];
+  scope?: string;
+  description?: string;
+};
+
+type AIThemeColorsInput = {
+  colors: Record<string, string>;
+};
+
+type AICreateThemeInput = AIThemeColorsInput & {
+  name: string;
+  baseThemeName?: string;
+};
+
 export type AIQueryExecutionToolOutput = {
   queryApproval: IAIQueryApproval;
   reason?: string;
 };
 
+export type AIAppActionToolOutput = {
+  message: string;
+  appAction?: IAIAppAction;
+  appActions?: IAIAppAction[];
+};
+
 type AIToolContext = Record<string, unknown>;
 
 export const AI_QUERY_EXECUTION_TOOL_NAME = 'request_query_execution';
+
+const isAIAppAction = (value: unknown): value is IAIAppAction => {
+  if (!value || typeof value !== 'object') return false;
+
+  return typeof (value as Partial<IAIAppAction>).type === 'string';
+};
+
+export const getAIAppActionsFromToolOutput = (output: unknown): IAIAppAction[] => {
+  if (!output || typeof output !== 'object') return [];
+
+  const toolOutput = output as Partial<AIAppActionToolOutput>;
+  const actions = [
+    ...(toolOutput.appAction ? [toolOutput.appAction] : []),
+    ...(toolOutput.appActions || []),
+  ];
+
+  return actions.filter(isAIAppAction);
+};
 
 const normalizeMention = (value: string) =>
   value
@@ -161,6 +235,41 @@ const getPublicConnections = (): AIConnectionContext[] =>
     port: connection.port,
     environment: connection.environment,
   }));
+
+const resolveProject = (value: string) => {
+  const normalizedValue = normalizeMention(value);
+  const compactValue = compactMention(value);
+  const project = getProjects().find((item) => {
+    if (item.id === value) return true;
+    if (normalizeMention(item.description) === normalizedValue) return true;
+    if (compactMention(item.description) === compactValue) return true;
+
+    return false;
+  });
+
+  if (!project) throw new Error('Projeto não encontrado: ' + value);
+
+  return project;
+};
+
+const getDefaultConnectionPort = (dialect: Dialect) => {
+  if (dialect === 'postgres') return 5432;
+  if (dialect === 'mysql') return 3306;
+
+  return 0;
+};
+
+const cleanUndefined = <T extends Record<string, unknown>>(value: T) =>
+  Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined),
+  ) as Partial<T>;
+
+const getNow = () => new Date().toISOString();
+
+const appActionResult = (message: string, appAction: IAIAppAction): AIAppActionToolOutput => ({
+  message,
+  appAction,
+});
 
 const getAllowedConnectionIds = (mentionedConnectionIds?: string[]) =>
   new Set((mentionedConnectionIds || []).filter(Boolean));
@@ -314,6 +423,91 @@ const explainQueryPlanSchema = {
   additionalProperties: false,
 } as const;
 
+const createProjectSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'Nome do projeto a criar.' },
+  },
+  required: ['name'],
+  additionalProperties: false,
+} as const;
+
+const createConnectionSchema = {
+  type: 'object',
+  properties: {
+    project: { type: 'string', description: 'ID ou nome do projeto onde a conexão será criada.' },
+    description: { type: 'string', description: 'Nome da conexão.' },
+    dialect: { type: 'string', enum: ['postgres', 'mysql', 'sqlite', 'react-native-sqlite'] },
+    database: { type: 'string', description: 'Database ou caminho do arquivo SQLite.' },
+    host: { type: 'string', description: 'Host para conexões de rede.' },
+    port: { type: 'number', description: 'Porta para conexões de rede.' },
+    username: { type: 'string' },
+    password: { type: 'string', description: 'Senha, apenas se o usuário tiver informado.' },
+    environment: { type: 'string', enum: ['development', 'production'] },
+    ssl: { type: 'boolean' },
+    sslRejectUnauthorized: { type: 'boolean' },
+  },
+  required: ['project', 'description', 'dialect', 'database'],
+  additionalProperties: false,
+} as const;
+
+const editConnectionSchema = {
+  type: 'object',
+  properties: {
+    connection: { type: 'string', description: 'ID, nome ou menção da conexão a editar.' },
+    project: { type: 'string', description: 'ID ou nome do novo projeto.' },
+    description: { type: 'string' },
+    dialect: { type: 'string', enum: ['postgres', 'mysql', 'sqlite', 'react-native-sqlite'] },
+    database: { type: 'string' },
+    host: { type: 'string' },
+    port: { type: 'number' },
+    username: { type: 'string' },
+    password: { type: 'string', description: 'Nova senha, apenas se o usuário tiver informado.' },
+    environment: { type: 'string', enum: ['development', 'production'] },
+    ssl: { type: 'boolean' },
+    sslRejectUnauthorized: { type: 'boolean' },
+  },
+  required: ['connection'],
+  additionalProperties: false,
+} as const;
+
+const createSnippetSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string' },
+    prefix: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    body: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+    scope: { type: 'string' },
+    description: { type: 'string' },
+  },
+  required: ['name', 'prefix', 'body'],
+  additionalProperties: false,
+} as const;
+
+const themeColorsSchema = {
+  type: 'object',
+  properties: {
+    colors: {
+      type: 'object',
+      description: 'Mapa de caminhos de tema para cores, ex: editor.backgroundColor -> #191622.',
+      additionalProperties: { type: 'string' },
+    },
+  },
+  required: ['colors'],
+  additionalProperties: false,
+} as const;
+
+const createThemeSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'Nome do novo tema.' },
+    baseThemeName: { type: 'string', description: 'Nome do tema base, se souber.' },
+    colors: themeColorsSchema.properties.colors,
+  },
+  required: ['name', 'colors'],
+  additionalProperties: false,
+} as const;
+
 export const getAIConnectionContexts = (mentionedConnectionIds?: string[]) => {
   const connections = getPublicConnections();
   const mentionedIds = getAllowedConnectionIds(mentionedConnectionIds);
@@ -362,10 +556,199 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
     'Se o usuário pedir apenas para revisar, explicar, otimizar ou melhorar uma query, use explain_query_plan quando o plano real ajudar; caso contrário responda com sugestões e SQL de exemplo sem pedir confirmação de execução.',
     'Não peça para o usuário digitar "confirmar" ou "rejeitar"; a interface exibirá botões.',
     'Quando receber uma mensagem informando que a query JÁ FOI APROVADA e JÁ FOI EXECUTADA, não chame request_query_execution para a mesma SQL; responda diretamente com base no JSON retornado.',
+    '',
+    'Ferramentas de aplicativo:',
+    'Use ferramentas de criação/edição/recarregamento apenas quando o usuário pedir explicitamente.',
+    'Não invente senha, host, porta, database, projeto ou nome de conexão; se faltar dado obrigatório, peça ao usuário.',
+    'Para temas, use caminhos por ponto iguais aos exibidos nas configurações, ex: editor.backgroundColor, mainTab.backgroundColor, aiChat.sendBackgroundColor.',
+    'Ao alterar cores do tema atual, a interface preserva temas predefinidos criando/aplicando um tema customizado quando necessário.',
   ].join('\n');
 };
 
 export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSet => ({
+  list_projects: tool({
+    description: 'Lista projetos do Woodbox disponíveis para organizar conexões.',
+    inputSchema: aiToolSchema<Record<string, never>>({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    }),
+    execute: async () => ({
+      projects: getProjects().map((project) => ({
+        id: project.id,
+        name: project.description,
+      })),
+    }),
+  }),
+
+  create_project: tool<AICreateProjectInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Cria um projeto no Woodbox. Use apenas quando o usuário pedir explicitamente.',
+    inputSchema: aiToolSchema<AICreateProjectInput>(createProjectSchema),
+    execute: async ({ name }) => {
+      const description = name.trim();
+
+      if (!description) throw new Error('Informe o nome do projeto.');
+
+      const project = { id: generateHash(), description };
+      addProject(project);
+
+      return appActionResult('Projeto criado: ' + description, { type: 'refresh_workspace' });
+    },
+  }),
+
+  create_connection: tool<AICreateConnectionInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Cria uma conexão salva no Woodbox. Não invente credenciais; peça dados ausentes.',
+    inputSchema: aiToolSchema<AICreateConnectionInput>(createConnectionSchema),
+    execute: async (input) => {
+      const project = resolveProject(input.project);
+      const description = input.description.trim();
+      const isNetworkConnection = input.dialect === 'postgres' || input.dialect === 'mysql';
+
+      if (!description) throw new Error('Informe o nome da conexão.');
+      if (input.dialect === 'react-native-sqlite') {
+        throw new Error('Conexões React Native SQLite precisam ser criadas pela interface.');
+      }
+      if (isNetworkConnection && !input.host?.trim()) {
+        throw new Error('Informe o host da conexão.');
+      }
+
+      const connection: IConnectionConfig = {
+        id: generateHash(),
+        id_project: project.id,
+        description,
+        dialect: input.dialect,
+        environment: input.environment || 'development',
+        database: input.database,
+        host: isNetworkConnection ? input.host?.trim() || '' : '',
+        port: isNetworkConnection ? input.port || getDefaultConnectionPort(input.dialect) : 0,
+        username: input.username,
+        password: input.password,
+        ssl: isNetworkConnection ? !!input.ssl : false,
+        sslRejectUnauthorized: isNetworkConnection && input.ssl ? !!input.sslRejectUnauthorized : false,
+        sslCaCert: '',
+        sslCert: '',
+        sslKey: '',
+      };
+
+      addConnectionSaved(connection);
+
+      return appActionResult('Conexão criada: ' + description, { type: 'refresh_workspace' });
+    },
+  }),
+
+  edit_connection: tool<AIEditConnectionInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Edita uma conexão salva no Woodbox. Use apenas para mudanças pedidas pelo usuário.',
+    inputSchema: aiToolSchema<AIEditConnectionInput>(editConnectionSchema),
+    execute: async (input) => {
+      const resolved = resolveConnection(input.connection);
+      const current = getInternalConnectionSaved(resolved.id);
+
+      if (!current) throw new Error('Conexão não encontrada: ' + input.connection);
+      if (input.dialect === 'react-native-sqlite') {
+        throw new Error('Conexões React Native SQLite precisam ser editadas pela interface.');
+      }
+
+      const { connection: _connection, project, ...patch } = input;
+      const nextProjectId = project ? resolveProject(project).id : current.id_project;
+      const next = {
+        ...current,
+        ...cleanUndefined(patch as Record<string, unknown>),
+        id: current.id,
+        id_project: nextProjectId,
+      } as IConnectionConfig;
+      const isNetworkConnection = next.dialect === 'postgres' || next.dialect === 'mysql';
+
+      if (!isNetworkConnection) {
+        next.host = '';
+        next.port = 0;
+        next.ssl = false;
+        next.sslRejectUnauthorized = false;
+        next.ssh = undefined;
+      } else {
+        next.port = next.port || getDefaultConnectionPort(next.dialect);
+      }
+
+      editConnectionSaved(current.id, next);
+      await closeConnection(current.id);
+
+      return {
+        message: 'Conexão editada: ' + next.description,
+        appActions: [
+          { type: 'refresh_workspace' },
+          { type: 'reload_connection', connectionId: current.id },
+        ],
+      };
+    },
+  }),
+
+  reload_connection: tool<{ connection: string }, AIAppActionToolOutput, AIToolContext>({
+    description: 'Recarrega uma conexão fechando a sessão atual e pedindo atualização dos metadados na interface.',
+    inputSchema: aiToolSchema<{ connection: string }>(connectionSchema),
+    execute: async ({ connection }) => {
+      const resolved = resolveConnection(connection, mentionedConnectionIds);
+      await closeConnection(resolved.id);
+
+      return appActionResult('Conexão recarregada: ' + resolved.description, {
+        type: 'reload_connection',
+        connectionId: resolved.id,
+      });
+    },
+  }),
+
+  create_snippet: tool<AICreateSnippetInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Cria um snippet SQL/editor no Woodbox. Use apenas quando o usuário pedir explicitamente.',
+    inputSchema: aiToolSchema<AICreateSnippetInput>(createSnippetSchema),
+    execute: async (input) => {
+      const now = getNow();
+      const snippet = {
+        id: generateHash(),
+        name: input.name.trim(),
+        prefix: input.prefix,
+        body: input.body,
+        scope: input.scope,
+        description: input.description,
+        created_at: now,
+        updated_at: now,
+      };
+
+      if (!snippet.name) throw new Error('Informe o nome do snippet.');
+
+      addSnippet(snippet);
+
+      return appActionResult('Snippet criado: ' + snippet.name, { type: 'refresh_snippets' });
+    },
+  }),
+
+  create_theme: tool<AICreateThemeInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Cria e ativa um tema do Woodbox a partir do tema atual ou de um tema base.',
+    inputSchema: aiToolSchema<AICreateThemeInput>(createThemeSchema),
+    execute: async ({ name, baseThemeName, colors }) => {
+      const themeName = name.trim();
+
+      if (!themeName) throw new Error('Informe o nome do tema.');
+
+      return appActionResult('Tema preparado: ' + themeName, {
+        type: 'create_theme',
+        name: themeName,
+        baseThemeName,
+        colors,
+      });
+    },
+  }),
+
+  update_theme_colors: tool<AIThemeColorsInput, AIAppActionToolOutput, AIToolContext>({
+    description: 'Altera cores do tema atual. Use caminhos por ponto, como editor.backgroundColor.',
+    inputSchema: aiToolSchema<AIThemeColorsInput>(themeColorsSchema),
+    execute: async ({ colors }) => {
+      if (!Object.keys(colors).length) throw new Error('Informe ao menos uma cor.');
+
+      return appActionResult('Cores do tema preparadas para aplicação.', {
+        type: 'update_theme_colors',
+        colors,
+      });
+    },
+  }),
+
   list_connections: tool({
     description: 'Lista conexões disponíveis, sem credenciais, em formato compacto.',
     inputSchema: aiToolSchema<Record<string, never>>({
