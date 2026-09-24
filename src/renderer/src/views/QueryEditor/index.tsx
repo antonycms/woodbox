@@ -314,7 +314,7 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
   explainCurrentSQLRef.current = explainCurrentSQL;
 
   React.useEffect(() => {
-    if (!refEditor.current?.element) return;
+    if (!refEditor.current?.element || !isEditorReady) return;
 
     const { element } = refEditor.current;
 
@@ -352,7 +352,7 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
     return () => {
       element.removeEventListener('keydown', keypressCallback);
     };
-  }, [refEditor.current?.element]);
+  }, [isEditorReady, refEditor.current?.element]);
 
   React.useEffect(() => {
     hasLoadedScriptContentRef.current = false;
