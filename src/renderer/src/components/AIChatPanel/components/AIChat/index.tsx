@@ -4,10 +4,11 @@ import { AIChatComposer } from '../AIChatComposer';
 import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
 import { useI18nStore } from '@renderer/stores/I18n';
-import type { IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
+import type { IAIAppAction, IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
 import { generateHash } from '@shared/utils/string';
 import { useAIStore } from '@renderer/stores/AI';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useSnippetsStore } from '@renderer/stores/Snippets';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
@@ -67,10 +68,24 @@ const AIChat = ({
       sendAIChatMessage: state.sendAIChatMessage,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
+  const { connections, refreshWorkspace, reloadConnectionInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      refreshWorkspace: state.refresh,
+      reloadConnectionInfo: state.reloadConnectionInfo,
+    })),
+  );
+  const refreshSnippets = useSnippetsStore((state) => state.refresh);
   const runSql = useDatabaseStore((state) => state.runSql);
   const showToast = useToastStore((state) => state.showToast);
-  const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
+  const { activeTheme, createThemeFromColors, updateActiveThemeColors } = useThemeStore(
+    useShallow((state) => ({
+      activeTheme: state.activeTheme,
+      createThemeFromColors: state.createThemeFromColors,
+      updateActiveThemeColors: state.updateActiveThemeColors,
+    })),
+  );
+  const { aiChat: aiChatTheme, mainTab: theme } = activeTheme;
   const [draftMessage, setDraftMessage] = React.useState('');
   const [localMessages, setLocalMessages] = React.useState<IAIChatMessage[]>([]);
   const [loadingMessage, setLoadingMessage] = React.useState(false);
@@ -148,6 +163,41 @@ const AIChat = ({
     [selectedConnectionId],
   );
 
+  const applyAIAppActions = React.useCallback(
+    async (actions?: IAIAppAction[]) => {
+      for (const action of actions || []) {
+        try {
+          if (action.type === 'refresh_workspace') {
+            await refreshWorkspace();
+          } else if (action.type === 'refresh_snippets') {
+            await refreshSnippets();
+          } else if (action.type === 'reload_connection') {
+            await reloadConnectionInfo(action.connectionId);
+          } else if (action.type === 'create_theme') {
+            createThemeFromColors(action.name, action.colors || {}, action.baseThemeName);
+          } else if (action.type === 'update_theme_colors') {
+            updateActiveThemeColors(action.colors);
+          }
+        } catch (error) {
+          showToast({
+            type: 'error',
+            title: t('aiChat.appActionFailed'),
+            description: getErrorMessage(error, String(error)),
+          });
+        }
+      }
+    },
+    [
+      createThemeFromColors,
+      refreshSnippets,
+      refreshWorkspace,
+      reloadConnectionInfo,
+      showToast,
+      t,
+      updateActiveThemeColors,
+    ],
+  );
+
   const submitMessageContent = React.useCallback(
     async (draftContent: string) => {
       const content = draftContent.trim();
@@ -221,6 +271,8 @@ const AIChat = ({
 
         if (stopGenerationRef.current) return;
 
+        await applyAIAppActions(response.appActions);
+
         const queryApprovals = getResponseQueryApprovals(
           response,
           selectedConnectionIds,
@@ -280,6 +332,7 @@ const AIChat = ({
     },
     [
       appendAIChatMessages,
+      applyAIAppActions,
       chat?.messages,
       connections,
       editAIChat,
@@ -437,6 +490,8 @@ const AIChat = ({
           ],
         });
 
+        await applyAIAppActions(response.appActions);
+
         const approvedSql = normalizeSqlForComparison(executableApproval.sql);
 
         const queryApprovals = getResponseQueryApprovals(
@@ -485,6 +540,7 @@ const AIChat = ({
     },
     [
       appendAIChatMessages,
+      applyAIAppActions,
       connections,
       id_chat,
       runSql,

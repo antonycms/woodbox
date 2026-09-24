@@ -846,6 +846,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiProvider.codexStatusFailed': 'Falha ao ler status do Codex',
   'aiProvider.codexLoginFailed': 'Falha ao iniciar login do ChatGPT',
   'aiProvider.codexLogoutFailed': 'Falha ao sair do ChatGPT',
+  'aiChat.appActionFailed': 'Falha ao aplicar ação da IA',
   'aiChat.sendFailed': 'Falha ao enviar mensagem',
   'aiChat.sending': 'Pensando...',
 

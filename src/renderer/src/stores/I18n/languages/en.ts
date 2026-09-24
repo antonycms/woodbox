@@ -842,6 +842,7 @@ export const en = {
   'aiProvider.codexStatusFailed': 'Failed to read Codex status',
   'aiProvider.codexLoginFailed': 'Failed to start ChatGPT login',
   'aiProvider.codexLogoutFailed': 'Failed to sign out of ChatGPT',
+  'aiChat.appActionFailed': 'Failed to apply AI action',
   'aiChat.sendFailed': 'Failed to send message',
   'aiChat.sending': 'Thinking...',
 
