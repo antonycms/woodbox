@@ -101,7 +101,6 @@ export const useSidebarReveal = (
       activeTabId: state.activeTabId,
     })),
   );
-  const lastRevealKeyRef = React.useRef('');
 
   const sidebarRevealIndex = React.useMemo(() => {
     return buildSidebarRevealIndex(projectsSerialized);
@@ -131,23 +130,11 @@ export const useSidebarReveal = (
   }, [activeTabId, tabs]);
 
   React.useEffect(() => {
-    if (!activeSidebarRevealTarget) {
-      lastRevealKeyRef.current = '';
-      return;
-    }
+    if (!activeSidebarRevealTarget) return
 
     const revealPath = getSidebarRevealPath(sidebarRevealIndex, activeSidebarRevealTarget);
 
-    if (!revealPath) {
-      lastRevealKeyRef.current = '';
-      return;
-    }
-
-    const revealKey = [activeTabId, revealPath.id, ...revealPath.parentIds].join('|');
-
-    if (lastRevealKeyRef.current === revealKey) return;
-
-    lastRevealKeyRef.current = revealKey;
+    if (!revealPath) return
 
     return scheduleSidebarReveal(() => {
       treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds, { focus: false });
