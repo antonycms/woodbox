@@ -84,10 +84,18 @@ const AIChat = ({
 
   const title = chat ? chat.title : t('aiChat.unknownTitle');
 
-  const messages = React.useMemo(
-    () => [...(chat?.messages || []), ...localMessages],
-    [chat, localMessages],
-  );
+  const messages = React.useMemo(() => {
+    const persistedMessages = chat?.messages || [];
+
+    if (!localMessages.length) return persistedMessages;
+
+    const persistedMessageIds = new Set(persistedMessages.map((message) => message.id));
+
+    return [
+      ...persistedMessages,
+      ...localMessages.filter((message) => !persistedMessageIds.has(message.id)),
+    ];
+  }, [chat?.messages, localMessages]);
 
   const canSendMessage =
     !!chat &&
