@@ -6,7 +6,7 @@
 
 **Lightweight desktop database manager for PostgreSQL, MySQL and SQLite**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)](https://electronjs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
@@ -210,4 +210,4 @@ src/
 
 ## License
 
-[MIT](LICENSE) © [Antony Santos](https://github.com/antonycms)
+[GPL-3.0-or-later](LICENSE) © [Antony Santos](https://github.com/antonycms)
