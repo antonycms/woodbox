@@ -424,16 +424,15 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     [checkScrollEnd, scroll.top, setScrollDebounced],
   );
 
-  const getSortLabel = React.useCallback(
+  const getSortState = React.useCallback(
     (column: IColumn<Row>) => {
       const sortIndex = sort?.findIndex((item) => item.columnName === column.attribute) ?? -1;
-      if (sortIndex === -1) return column.label;
+      if (sortIndex === -1) return undefined;
 
-      const sortItem = sort[sortIndex];
-      const icon = sortItem.sortType === 'ASC' ? '▲' : '▼';
-      const order = sort.length > 1 ? ` ${sortIndex + 1}` : '';
-
-      return `${column.label} ${icon}${order}`;
+      return {
+        sortType: sort[sortIndex].sortType,
+        order: sort.length > 1 ? sortIndex + 1 : undefined,
+      };
     },
     [sort],
   );
@@ -1435,7 +1434,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
           columnsIndexToRender={columnsDetails.columnsIndexToRender}
           firstRowIndex={rowsDetails.first}
           lastRowIndex={rowsDetails.last}
-          getSortLabel={getSortLabel}
+          getSortState={getSortState}
           onResizeColumn={onResize}
           onSort={onSort}
           onDoubleClick={handleDoubleClickCell}

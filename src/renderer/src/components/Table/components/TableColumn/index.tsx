@@ -46,6 +46,7 @@ interface ITableColumnProps<Row> {
   isNew?: boolean;
   value?: unknown;
   info?: string;
+  headerSuffix?: React.ReactNode;
   name?: string;
   rowColumnKey?: string;
   width?: number;
@@ -77,6 +78,7 @@ const TableColumn = <Row,>({
   title,
   value,
   info,
+  headerSuffix,
   indexRow,
   columnIndex,
   rowHeight,
@@ -294,10 +296,11 @@ const TableColumn = <Row,>({
     <span style={linkStyle} title={linkTitle} onClick={handleLinkClick}>
       {serializedValue}
     </span>
-  ) : info && isHeaderColumn ? (
+  ) : isHeaderColumn && (info || headerSuffix) ? (
     <span className={styles.header_content}>
       <span className={styles.header_label}>{serializedValue}</span>
-      <span className={styles.header_info}>{info}</span>
+      {info ? <span className={styles.header_info}>{info}</span> : null}
+      {headerSuffix}
     </span>
   ) : (
     serializedValue

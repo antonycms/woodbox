@@ -27,7 +27,7 @@ interface ITableDefaultViewProps<Row = Record<string, unknown>> {
   columnsIndexToRender: number[];
   firstRowIndex: number;
   lastRowIndex: number;
-  getSortLabel(column: IColumn<Row>): string;
+  getSortState(column: IColumn<Row>): { sortType: ISortDirection; order?: number } | undefined;
   onResizeColumn(index: number, size: number): void;
   onSort?(column: IColumn<Row>, sortType?: ISortDirection | null): void;
   onDoubleClick?(rowColumnKey: string): void;
@@ -70,7 +70,7 @@ const TableDefaultView = <Row,>({
   columnsIndexToRender,
   firstRowIndex,
   lastRowIndex,
-  getSortLabel,
+  getSortState,
   onResizeColumn,
   onSort,
   onDoubleClick,
@@ -153,7 +153,7 @@ const TableDefaultView = <Row,>({
             rowHeight={rowHeight}
             width={columnsSize[columnIndex]}
             minWidth={minColumnsSize[columnIndex]}
-            getSortLabel={getSortLabel}
+            getSortState={getSortState}
             onResizeColumn={onResizeColumn}
             onSelectColumn={onSelectColumn}
             onSort={onSort}
