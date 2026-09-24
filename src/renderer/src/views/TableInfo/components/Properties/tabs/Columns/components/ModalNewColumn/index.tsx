@@ -345,16 +345,6 @@ const ModalNewColumn = ({
           <label className={styles.checkbox} style={{ color: colors.color }}>
             <input
               type="checkbox"
-              name="required"
-              checked={state.required}
-              onChange={register('required').onChange}
-            />
-            {t('field.required')}
-          </label>
-
-          <label className={styles.checkbox} style={{ color: colors.color }}>
-            <input
-              type="checkbox"
               name="is_primary_key"
               checked={state.is_primary_key}
               disabled={hasPrimaryKey}
@@ -371,6 +361,16 @@ const ModalNewColumn = ({
               }}
             />
             {t('field.primaryKey')}
+          </label>
+
+          <label className={styles.checkbox} style={{ color: colors.color }}>
+            <input
+              type="checkbox"
+              name="required"
+              checked={state.required}
+              onChange={register('required').onChange}
+            />
+            {t('field.required')}
           </label>
 
           <label className={styles.checkbox} style={{ color: colors.color }}>
