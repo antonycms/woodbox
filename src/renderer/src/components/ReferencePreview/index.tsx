@@ -23,6 +23,7 @@ import styles from './styles.module.css';
 
 import IconMdiArrowLeft from '~icons/mdi/arrow-left';
 import IconMdiArrowRight from '~icons/mdi/arrow-right';
+import IconMdiClose from '~icons/mdi/close';
 import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiTable from '~icons/mdi/table';
 
@@ -31,6 +32,7 @@ interface IReferencePreviewProps {
   idConnection: string;
   initialReference?: IColumnReferenceInfo;
   initialValue: unknown;
+  onClose?: () => void;
   onOpenTable?: (
     idConnection: string,
     schema: string,
@@ -72,6 +74,7 @@ const ReferencePreview = ({
   idConnection,
   initialReference,
   initialValue,
+  onClose,
   onOpenTable,
 }: IReferencePreviewProps) => {
   const {
@@ -358,6 +361,18 @@ const ReferencePreview = ({
         >
           {viewMode === 'table' ? <IconMdiCodeJson width={16} /> : <IconMdiTable width={16} />}
         </Button>
+
+        {onClose && (
+          <Button
+            text
+            smallIcon
+            title={t('common.close')}
+            color={theme.bar.color}
+            onClick={onClose}
+          >
+            <IconMdiClose width={16} />
+          </Button>
+        )}
       </div>
 
       <div className={styles.content}>

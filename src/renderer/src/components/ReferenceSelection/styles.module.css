@@ -1,8 +1,10 @@
 .container {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .filterBar {
@@ -32,9 +34,30 @@
 .tableWrapper {
   display: flex;
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 
 .emptyState {
   padding: 12px;
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 42%);
+}
+
+.previewDialog {
+  width: min(640px, 100%);
+  height: min(380px, 100%);
+  min-height: min(300px, 100%);
+  overflow: hidden;
+  border: 2px solid var(--reference-border-color);
+  box-shadow: 0 18px 60px rgb(0 0 0 / 50%);
 }

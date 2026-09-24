@@ -1,5 +1,6 @@
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
+import ReferencePreview from '@renderer/components/ReferencePreview';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import type { IColumnReferenceInfo } from '@shared/types/database';
@@ -12,6 +13,12 @@ import { getNextSort } from '@renderer/utils/tableSort';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import styles from './styles.module.css';
+
+
+interface IReferenceSelectionPreview {
+  reference: IColumnReferenceInfo;
+  value: unknown;
+}
 
 interface IReferenceSelectionProps {
   active: boolean;
@@ -37,14 +44,16 @@ const ReferenceSelection = ({
   const {
     tableInfo: { data: theme },
   } = useThemeStore((state) => state.activeTheme);
-  const { getTableColumns, getTableData } = useDatabaseStore(
+  const { getTableColumns, getTableData, getTableReferences } = useDatabaseStore(
     useShallow((state) => ({
       getTableColumns: state.getTableColumns,
       getTableData: state.getTableData,
+      getTableReferences: state.getTableReferences,
     })),
   );
   const t = useI18nStore((state) => state.t);
   const [columns, setColumns] = React.useState<IColumn[]>([]);
+  const [references, setReferences] = React.useState<IColumnReferenceInfo[]>([]);
   const [items, setItems] = React.useState<ReturnType<typeof serializeRows>>([]);
   const [loading, setLoading] = React.useState(false);
   const [page, setPage] = React.useState(0);
@@ -52,6 +61,7 @@ const ReferenceSelection = ({
   const [whereInput, setWhereInput] = React.useState('');
   const [appliedWhere, setAppliedWhere] = React.useState('');
   const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [preview, setPreview] = React.useState<IReferenceSelectionPreview>();
   const lastPageSearch = React.useRef(0);
   const [filterHistory, addFilterHistory] = useFilterHistory([
     idConnection,
@@ -71,6 +81,11 @@ const ReferenceSelection = ({
 
   const columnNames = React.useMemo(() => columns.map((column) => column.attribute), [columns]);
 
+  const referenceMap = React.useMemo(
+    () => new Map(references.map((item) => [item.column_name, item])),
+    [references],
+  );
+
   const loadPage = React.useCallback(
     async (nextPage: number, nextWhere = appliedWhere, nextSort = sort, replace = false) => {
       if (!reference || loading) return false;
@@ -79,17 +94,26 @@ const ReferenceSelection = ({
 
       try {
         if (!columns.length) {
-          const tableColumns = await getTableColumns(idConnection, {
-            schema: reference.reference_table_schema,
-            table: reference.reference_table_name,
-          });
+          const [tableColumns, tableReferences] = await Promise.all([
+            getTableColumns(idConnection, {
+              schema: reference.reference_table_schema,
+              table: reference.reference_table_name,
+            }),
+            getTableReferences(idConnection, {
+              schema: reference.reference_table_schema,
+              table: reference.reference_table_name,
+            }),
+          ]);
+          const fkMap = new Map(tableReferences.map((item) => [item.column_name, item]));
 
+          setReferences(tableReferences);
           setColumns(
             tableColumns.map<IColumn>((column) => ({
               label: column.column_name,
               info: column.data_type,
               attribute: column.column_name,
               sortable: true,
+              isLink: fkMap.has(column.column_name),
             })),
           );
         }
@@ -122,6 +146,7 @@ const ReferenceSelection = ({
       columns.length,
       getTableColumns,
       getTableData,
+      getTableReferences,
       idConnection,
       loading,
       onDataError,
@@ -186,14 +211,35 @@ const ReferenceSelection = ({
     [onSelectValue, reference],
   );
 
+  const handleOpenPreview = React.useCallback(
+    (attribute: string, value: unknown) => {
+      const previewReference = referenceMap.get(attribute);
+
+      if (!previewReference || value === null || value === undefined) return;
+
+      setPreview({ reference: previewReference, value });
+    },
+    [referenceMap],
+  );
+
+  const handleClosePreview = React.useCallback(() => {
+    setPreview(undefined);
+  }, []);
+
+  const handlePreviewDialogMouseDown = React.useCallback((event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+  }, []);
+
   React.useEffect(() => {
     setColumns([]);
+    setReferences([]);
     setItems([]);
     setSort([]);
     setWhereInput('');
     setAppliedWhere('');
     setPage(0);
     setHasLoaded(false);
+    setPreview(undefined);
     lastPageSearch.current = 0;
   }, [referenceKey]);
 
@@ -212,15 +258,13 @@ const ReferenceSelection = ({
   }
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      style={{ "--reference-border-color": theme.bar.borderColor } as React.CSSProperties}
+    >
       <div
         className={styles.filterBar}
-        style={
-          {
-            backgroundColor: theme.bar.backgroundColor,
-            '--reference-border-color': theme.bar.borderColor,
-          } as React.CSSProperties
-        }
+        style={{ backgroundColor: theme.bar.backgroundColor }}
       >
         <ColumnFilterInput
           inputClassName={styles.filterInput}
@@ -248,8 +292,28 @@ const ReferenceSelection = ({
           onSort={handleSort}
           onScrollEnd={loadNextPage}
           onSelectCellData={handleSelectCell}
+          onCellLinkClick={handleOpenPreview}
+          cellLinkClickMode="single"
         />
       </div>
+
+      {preview && (
+        <div className={styles.previewOverlay} onMouseDown={handleClosePreview}>
+          <div
+            className={styles.previewDialog}
+            style={{ backgroundColor: theme.bar.backgroundColor }}
+            onMouseDown={handlePreviewDialogMouseDown}
+          >
+            <ReferencePreview
+              active={active}
+              idConnection={idConnection}
+              initialReference={preview.reference}
+              initialValue={preview.value}
+              onClose={handleClosePreview}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
