@@ -31,13 +31,16 @@ const selectSslFile = async () => {
   return result.canceled ? null : result.filePaths[0];
 };
 
-addListener('@dialog:select_sqlite_file', selectSqliteFile);
-addListener('@dialog:select_dbeaver_export_file', selectDbeaverExportFile);
-addListener('@dialog:select_ssl_file', selectSslFile);
-addListener('@dialog:select_ssh_key', async () => {
+const selectSshKey = async () => {
   const result = await dialog.showOpenDialog({
     title: 'Selecionar chave privada SSH',
     properties: ['openFile', 'showHiddenFiles'],
   });
+
   return result.canceled ? null : result.filePaths[0];
-});
+};
+
+addListener('@dialog:select_sqlite_file', selectSqliteFile);
+addListener('@dialog:select_dbeaver_export_file', selectDbeaverExportFile);
+addListener('@dialog:select_ssl_file', selectSslFile);
+addListener('@dialog:select_ssh_key', selectSshKey);
