@@ -88,7 +88,7 @@ jobs:
           fi
 
           shopt -s nullglob
-          assets=(dist/*.AppImage dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/*.yml)
+          assets=(dist/*.AppImage dist/*.deb dist/*.rpm dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/*.yml)
 
           if [ ${#assets[@]} -eq 0 ]; then
             echo "No release assets found"
