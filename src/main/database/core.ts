@@ -29,7 +29,7 @@ import type {
   IImportTableDataParams,
   IImportTableDataResult,
 } from '@shared/types/database';
-import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+import type { Dialect, IConnectionConfig, IConnectionTest } from '@shared/types/connections';
 import type { IConnection, ITableWithSchema } from './types';
 import { compareDatabases as compareDatabasesCore } from './compare';
 import { getSslConfig } from './ssl';
@@ -344,12 +344,14 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 
 export const getDialects = () => getDialectIds();
 
-export const testConnection = async (config: IConnectionConfig) => {
+export const testConnection = async (config: IConnectionTest) => {
   const storedConfig =
     config.id ? getInternalConnectionSaved(config.id) : undefined;
-  const mergedConfig = {
+  const mergedConfig: IConnectionConfig = {
     ...storedConfig,
     ...config,
+    id: config.id ?? storedConfig?.id ?? '',
+    id_project: config.id_project ?? storedConfig?.id_project ?? '',
     password: config.password || storedConfig?.password,
     ssh: mergeSshCredentials(config.ssh, storedConfig?.ssh),
   };

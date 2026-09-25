@@ -19,7 +19,7 @@ export interface WoodboxApi {
     add: (data: Connections.IConnectionConfig) => Promise<void>;
     edit: (id: string, data: Connections.IConnectionCreate) => Promise<void>;
     remove: (id: string) => Promise<void>;
-    test: (data: Connections.IConnectionCreate & { id?: string }) => Promise<void>;
+    test: (data: Connections.IConnectionTest) => Promise<void>;
     close: (id: string) => Promise<void>;
     getInfo: (id: string) => Promise<Database.IConnectionInfo | null>;
     previewImport: (params: Imports.IImportConnectionsParams) => Promise<Imports.IImportConnectionsPreview>;

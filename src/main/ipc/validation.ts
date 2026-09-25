@@ -15,7 +15,7 @@ const schemas = {
   '@add:config_connections_saved': z.tuple([connection.extend({ id })]),
   '@edit:config_connections_saved': z.tuple([id, connection]),
   '@remove:config_connections_saved': z.tuple([id]),
-  '@get:test_connection': z.tuple([connection.extend({ id: id.optional() })]),
+  '@get:test_connection': z.tuple([connection.extend({ id: id.optional(), id_project: z.string().optional() })]),
   '@get:close_connection': z.tuple([id]),
   '@get:connection_info': z.tuple([id]),
   '@post:preview_import_connections_from_source': z.tuple([importConnections]),
