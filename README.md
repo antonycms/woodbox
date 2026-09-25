@@ -4,7 +4,7 @@
 
 # Woodbox
 
-**Lightweight desktop database manager for PostgreSQL, MySQL and SQLite**
+**Fast desktop database manager for PostgreSQL, MySQL and SQLite**
 
 [![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)](https://electronjs.org)
@@ -38,11 +38,13 @@ Woodbox is a desktop application for managing database connections and executing
 
 ## Why Woodbox?
 
-- **Focused desktop workflow** — Manage projects, connections, schemas, tables and queries without leaving the app.
-- **SQL-first experience** — Monaco-powered editor with autocomplete, selected-query execution, snippets and query results.
-- **AI-assisted querying** — Generate, explain and refine SQL with your configured provider.
-- **Local-first storage** — Connections, projects, scripts, snippets and preferences are saved locally.
 - **Cross-platform** — Built with Electron for Windows, macOS and Linux.
+- **Fast central search** — Jump to projects, connections, tables, scripts and app actions with a keyboard-driven search.
+- **Visual table management** — Create and edit tables, columns and table data directly from the interface.
+- **Reusable SQL snippets** — Save, organize, import and export common queries for faster day-to-day work.
+- **Theme support** — Switch between dark and light themes to match your workflow.
+- **AI-assisted querying** — Generate, explain and refine SQL with your configured provider.
+- **And much more** — Database comparison, schema exploration, rich query results and workflow details built for daily use.
 
 ## Highlights
 
