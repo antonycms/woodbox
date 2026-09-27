@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { Text } from '@renderer/components/Text';
@@ -6,6 +7,7 @@ import styles from '@renderer/components/Tabs/styles.module.css';
 import IconMdiClose from '~icons/mdi/close';
 
 const Tab = (props: ITabProps) => {
+  const t = useI18nStore((state) => state.t);
   const {
     tabId,
     groupId,
@@ -57,7 +59,7 @@ const Tab = (props: ITabProps) => {
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
       onDragEnd={onDragEnd}
-      title={[title, subtitle, unsaved ? 'Modificado' : undefined].filter(Boolean).join(' - ')}
+      title={[title, subtitle, unsaved ? t('common.modified') : undefined].filter(Boolean).join(' - ')}
     >
       {!!Icon && <Icon />}
       <div className={classes(styles.ignoreTabDrag, styles.tabLabel)}>
@@ -74,7 +76,7 @@ const Tab = (props: ITabProps) => {
 
       {!!allowClose && (
         <button
-          title="Fechar"
+          title={t('common.close')}
           className={classes(
             styles.tabCloseBtn,
             unsaved && styles.unsaved,

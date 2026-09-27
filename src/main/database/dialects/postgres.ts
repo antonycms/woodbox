@@ -1,11 +1,13 @@
+import type { Knex } from 'knex';
+import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
+import type { DatabaseRow, SerializedRunSqlResult } from '@shared/types/database';
 import pg from 'pg';
-import queries from '@main/database/queries/postgres';
-import type { DatabaseDialectAdapter, SerializedRunSqlResult } from '../types';
+import queries from '../queries/postgres';
+import type { DatabaseDialectAdapter } from '../types';
 
 pg.types.setTypeParser(1114, (val) => val);
 pg.types.setTypeParser(1184, (val) => val);
 
-const quoteIdentifier = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 const postgresTypesByOid = new Map<number, string>(
   Object.entries(pg.types.builtins).map(([name, oid]) => [Number(oid), name.toLowerCase()]),
 );
@@ -25,10 +27,10 @@ const postgres: DatabaseDialectAdapter = {
     dateStrings: true,
     application_name: `Woodbox (${config.description})`,
   }),
-  getRows: (raw) => raw?.rows || [],
+  getRows: <Row = DatabaseRow>(raw: unknown): Row[] => (raw as { rows?: Row[] })?.rows || [],
   getExplainSql: (sql) => `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql};`,
   serializeRunSqlResult: (raw, context) => {
-    const rawArray = Array.isArray(raw) ? raw : [raw];
+    const rawArray = (Array.isArray(raw) ? raw : [raw]) as pg.QueryResult<DatabaseRow>[];
 
     return rawArray.map<SerializedRunSqlResult>((rawResult) => {
       const { command: type, fields: columns, rowCount: affected_rows, rows = [] } = rawResult;
@@ -48,7 +50,7 @@ const postgres: DatabaseDialectAdapter = {
     });
   },
   cancelQuery: async ({ instance, dbConnection }) => {
-    await (instance.client as any).cancelQuery(dbConnection);
+    await (instance.client as Knex.Client & { cancelQuery(connection: object): Promise<void> }).cancelQuery(dbConnection);
     return true;
   },
 };

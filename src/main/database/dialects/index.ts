@@ -1,3 +1,4 @@
+import type { Dialect } from '@shared/types/connections';
 import postgres from './postgres';
 import mysql from './mysql';
 import sqlite from './sqlite';

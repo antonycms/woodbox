@@ -1,8 +1,8 @@
 import React from 'react';
 import IconMdiAlertCircle from '~icons/mdi/alert-circle';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from '../../styles.module.css';
 import { IQueryResult } from '../../dtos';
 import { toDateTime } from '@renderer/utils/date';
@@ -13,10 +13,8 @@ interface ITabContentError {
 
 export const TabcontentError = (props: ITabContentError) => {
   const { data } = props;
-  const { t } = useI18n();
-  const {
-    activeTheme: { queryEditor: theme },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { queryEditor: theme } = useThemeStore((state) => state.activeTheme);
   const style = {
     '--errorBorderColor': theme.error.borderColor,
     '--errorAccentColor': theme.error.accentColor,

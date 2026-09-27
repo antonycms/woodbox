@@ -1,13 +1,18 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
+import { Column } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
-import { useI18n } from '@renderer/contexts/I18n';
-import {
-  type IReactNativeBridgeSession,
-  type IReactNativeBridgeStatus,
-  useStoreContext,
-} from '@renderer/contexts/Store';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import type {
+  ReactNativeBridgeSessionInfo as IReactNativeBridgeSession,
+  ReactNativeBridgeStatus as IReactNativeBridgeStatus,
+} from '@shared/types/reactNativeBridge';
+import { useReactNativeBridgeStore } from '@renderer/stores/ReactNativeBridge';
+import { toCssProperties } from '@renderer/styles/theme';
 import type { IDataNewConnection, SetConnectionFormState } from '../../types';
+import styles from '../../styles.module.css';
 
 interface IReactNativeBridgeFieldsProps {
   state: IDataNewConnection;
@@ -19,15 +24,23 @@ interface IReactNativeBridgeFieldsProps {
 const DEFAULT_BRIDGE_PORT = 8123;
 const REFRESH_INTERVAL_MS = 3000;
 const BRIDGE_SOURCE = 'modal:new-react-native-sqlite-connection';
+const BRIDGE_PLUGIN_URL = 'https://github.com/antonycms/woodbox-react-native-bridge';
 
 export const ReactNativeBridgeFields = React.memo(
   ({ state, setState, color, backgroundColor }: IReactNativeBridgeFieldsProps) => {
-    const { t } = useI18n();
+    const t = useI18nStore((state) => state.t);
+    const { feedback } = useThemeStore((state) => state.activeTheme);
     const {
-      getReactNativeBridgeStatus,
-      startReactNativeBridgeGateway,
-      stopReactNativeBridgeGateway,
-    } = useStoreContext();
+      getStatus: getReactNativeBridgeStatus,
+      start: startReactNativeBridgeGateway,
+      stop: stopReactNativeBridgeGateway,
+    } = useReactNativeBridgeStore(
+      useShallow((state) => ({
+        getStatus: state.getStatus,
+        start: state.start,
+        stop: state.stop,
+      })),
+    );
 
     const value = state.reactNativeBridge;
     const bridgePort = Number(value?.port || DEFAULT_BRIDGE_PORT);
@@ -37,6 +50,17 @@ export const ReactNativeBridgeFields = React.memo(
     const [sessions, setSessions] = React.useState<IReactNativeBridgeSession[]>([]);
     const [selectedSessionId, setSelectedSessionId] = React.useState('');
     const [loading, setLoading] = React.useState(false);
+
+    const noticeStyle = React.useMemo(
+      () => ({
+        ...toCssProperties({
+          warningBorderColor: feedback?.warningBorderColor,
+          warningBackgroundColor: feedback?.warningBackgroundColor,
+        }),
+        color,
+      }),
+      [color, feedback?.warningBackgroundColor, feedback?.warningBorderColor],
+    );
 
     const selectedSession = React.useMemo(() => {
       return sessions.find((session) => session.id === selectedSessionId);
@@ -175,6 +199,18 @@ export const ReactNativeBridgeFields = React.memo(
 
     return (
       <>
+        <Column xs={12}>
+          <div className={styles.bridgeNotice} role="note" style={noticeStyle}>
+            <span>
+              {t('reactNativeBridge.pluginNoticePrefix')}
+              <a href={BRIDGE_PLUGIN_URL} target="_blank" rel="noreferrer">
+                {t('reactNativeBridge.pluginNoticeLink')}
+              </a>
+              {t('reactNativeBridge.pluginNoticeSuffix')}
+            </span>
+          </div>
+        </Column>
+
         <Input
           required
           label={t('reactNativeBridge.port')}

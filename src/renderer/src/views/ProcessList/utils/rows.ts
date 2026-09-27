@@ -1,6 +1,6 @@
 import type { IColumn, ITableSort } from '@renderer/components/Table/dtos';
-import type { TranslateFn } from '@renderer/contexts/I18n';
-import type { IDatabaseProcess } from '@renderer/contexts/Store';
+import { TranslateFn } from '@renderer/stores/I18n/types';
+import type { IDatabaseProcess } from '@shared/types/database';
 import { sortRows } from '@renderer/utils/tableSort';
 
 export type ProcessListRow = Omit<IDatabaseProcess, 'is_current'> & { actions?: string };

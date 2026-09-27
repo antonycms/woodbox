@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import {
@@ -5,7 +6,7 @@ import {
   type ContextMenuPlacement,
   type IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { useLatestFunc } from '@renderer/hooks/useLatestFunc';
 import { IconRefresh } from '@renderer/styles/icons';
 
@@ -16,7 +17,7 @@ export const AUTO_REFRESH_OPTIONS = [
   { label: '30s', value: 30000 },
   { label: '1m', value: 60000 },
   { label: '5m', value: 300000 },
-  { label: 'Nenhum', value: null },
+  { label: '', value: null },
 ];
 
 interface IRefreshButtonProps {
@@ -30,11 +31,12 @@ interface IRefreshButtonProps {
 export const RefreshButton = ({
   color,
   disabled,
-  title = 'Atualizar dados',
+  title,
   menuPlacement,
   onRefresh,
 }: IRefreshButtonProps) => {
-  const { activeTheme } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const [menuPosition, setMenuPosition] = React.useState<IContextMenuPosition>();
   const [autoRefreshMs, setAutoRefreshMs] = React.useState<number | null>(null);
   const refreshingRef = React.useRef(false);
@@ -45,7 +47,9 @@ export const RefreshButton = ({
     [autoRefreshMs],
   );
 
-  const refreshTitle = autoRefreshMs ? `Cancelar auto-refresh (${selectedOption?.label})` : title;
+  const refreshTitle = autoRefreshMs
+    ? t('refresh.cancelAuto', { interval: selectedOption?.label })
+    : title ?? t('common.refreshData');
   const buttonColor = autoRefreshMs ? activeTheme.button.activeColor : color;
   const buttonDisabled = disabled && !autoRefreshMs;
 
@@ -110,7 +114,7 @@ export const RefreshButton = ({
         placement={menuPlacement}
         onClose={() => setMenuPosition(undefined)}
         options={AUTO_REFRESH_OPTIONS.map((option) => ({
-          text: `${option.value === autoRefreshMs ? '✓ ' : ''}${option.label}`,
+          text: `${option.value === autoRefreshMs ? '✓ ' : ''}${option.value === null ? t('refresh.none') : option.label}`,
           onClick: () => setAutoRefreshMs(option.value),
         }))}
       />

@@ -1,4 +1,4 @@
-import type { IOrderBy } from '../types';
+import type { IOrderBy } from '@shared/types/database';
 
 export const serializeOrderBy = (
   orderBy: IOrderBy[] | undefined,

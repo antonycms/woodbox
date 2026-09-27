@@ -43,7 +43,7 @@ export const serializePreviewValue = (value: unknown) => {
   return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
 };
 
-const isLikelySpatialColumn = (column?: IColumn) => {
+const isLikelySpatialColumn = (column?: Pick<IColumn, 'attribute' | 'info'>) => {
   const type = String(column?.info || '').toLowerCase();
   const attribute = String(column?.attribute || '').toLowerCase();
 
@@ -334,7 +334,7 @@ const parseSpatialString = (value: string, forceParse: boolean) => {
 
 export const getSpatialPreviewData = (
   value: unknown,
-  column?: IColumn,
+  column?: Pick<IColumn, 'attribute' | 'info'>,
 ): ISpatialPreviewData | undefined => {
   const forceParse = isLikelySpatialColumn(column);
   let geoJson: GeoJSON.GeoJsonObject | null = null;

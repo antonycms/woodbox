@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@shared/utils/error';
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -6,14 +8,11 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
-import {
-  useI18n,
-  type TranslateFn,
-  type TranslateTextFn,
-  type TranslationKey,
-} from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslateFn, type TranslateTextFn } from '@renderer/stores/I18n/types';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
 import type { ITheme } from '@renderer/styles/theme';
 import { builtinThemeNames } from '@renderer/styles/theme/builtin';
@@ -304,9 +303,17 @@ const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
 };
 
 export const SettingsCustomizationPanel = React.memo(() => {
-  const { activeTheme, availableThemes, addTheme, removeTheme, changeTheme } = useThemeContext();
-  const { showToast } = useToast();
-  const { t, tText } = useI18n();
+  const { activeTheme, availableThemes, addTheme, removeTheme, changeTheme } = useThemeStore(
+    useShallow((state) => ({
+      activeTheme: state.activeTheme,
+      availableThemes: state.availableThemes,
+      addTheme: state.addTheme,
+      removeTheme: state.removeTheme,
+      changeTheme: state.changeTheme,
+    })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
+  const { t, tText } = useI18nStore(useShallow((state) => ({ t: state.t, tText: state.tText })));
   const inputFileRef = React.useRef<HTMLInputElement>(null);
   const saveNameInputRef = React.useRef<HTMLInputElement>(null);
   const baseThemeNameRef = React.useRef(
@@ -498,11 +505,11 @@ export const SettingsCustomizationPanel = React.memo(() => {
             themeName: importedTheme.name,
           }),
         });
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('settings.customization.themeImportFailedTitle'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       }
     },
@@ -715,7 +722,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
         closeOutside
         onClose={() => setThemeToRemove(undefined)}
       >
-        <Text small color={colors.color}>
+        <Text userSelect={false} small color={colors.color}>
           {t('settings.customization.removeThemeQuestion', { themeName: themeToRemove || '' })}
         </Text>
 

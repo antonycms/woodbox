@@ -3,3 +3,5 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   sqlite3: true
+  cpu-features: true
+  ssh2: true

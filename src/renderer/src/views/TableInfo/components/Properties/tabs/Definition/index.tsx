@@ -1,28 +1,35 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import Editor from '@renderer/components/Editor';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
-const Definition = ({ id_connection, schema, table }: ITableInfoProps) => {
+const Definition = ({ tableStore, id_connection, schema, table }: ITableInfoViewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoContext();
-  const { connections } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      definition: state.definition,
+      loadTableDefinition: state.loadTableDefinition,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(

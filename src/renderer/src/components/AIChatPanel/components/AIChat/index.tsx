@@ -1,22 +1,23 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { AIChatComposer } from '../AIChatComposer';
 import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
-import { useI18n } from '@renderer/contexts/I18n';
-import {
-  type IAIChatMessage,
-  type IAIChatMessageInput,
-  type IAIQueryApproval,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IAIAppAction, IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
+import { generateHash } from '@shared/utils/string';
+import { useAIStore } from '@renderer/stores/AI';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useSnippetsStore } from '@renderer/stores/Snippets';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { BackIcon, OptionsIcon } from '@renderer/styles/icons';
-import { generateHash } from '@renderer/utils/string';
 import { MessageContent } from './components/MessageContent';
 import type { IQueryApprovalApproveOptions } from './components/QueryApprovalCards';
 import { QueryResultTable } from './components/QueryResultTable';
 import type { IAIChatProps } from './dtos';
+import { getErrorMessage } from '@shared/utils/error';
 import styles from './styles.module.css';
 import {
   getResponseQueryApprovals,
@@ -25,7 +26,6 @@ import {
 } from './utils/queryApprovals';
 import {
   getAssistantContent,
-  getErrorMessage,
   getExcerpt,
   getQueryResultForTable,
   serializeQueryResultForAI,
@@ -52,20 +52,40 @@ const AIChat = ({
   onNewChat,
   onSelectMenuOption,
 }: IAIChatProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const {
     aiChats,
     appendAIChatMessages,
     cancelAIChatMessage,
-    connections,
     editAIChat,
-    runSql,
     sendAIChatMessage,
-  } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { aiChat: aiChatTheme, mainTab: theme },
-  } = useThemeContext();
+  } = useAIStore(
+    useShallow((state) => ({
+      aiChats: state.aiChats,
+      appendAIChatMessages: state.appendAIChatMessages,
+      cancelAIChatMessage: state.cancelAIChatMessage,
+      editAIChat: state.editAIChat,
+      sendAIChatMessage: state.sendAIChatMessage,
+    })),
+  );
+  const { connections, refreshWorkspace, reloadConnectionInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      refreshWorkspace: state.refresh,
+      reloadConnectionInfo: state.reloadConnectionInfo,
+    })),
+  );
+  const refreshSnippets = useSnippetsStore((state) => state.refresh);
+  const runSql = useDatabaseStore((state) => state.runSql);
+  const showToast = useToastStore((state) => state.showToast);
+  const { activeTheme, createThemeFromColors, updateActiveThemeColors } = useThemeStore(
+    useShallow((state) => ({
+      activeTheme: state.activeTheme,
+      createThemeFromColors: state.createThemeFromColors,
+      updateActiveThemeColors: state.updateActiveThemeColors,
+    })),
+  );
+  const { aiChat: aiChatTheme, mainTab: theme } = activeTheme;
   const [draftMessage, setDraftMessage] = React.useState('');
   const [localMessages, setLocalMessages] = React.useState<IAIChatMessage[]>([]);
   const [loadingMessage, setLoadingMessage] = React.useState(false);
@@ -79,10 +99,18 @@ const AIChat = ({
 
   const title = chat ? chat.title : t('aiChat.unknownTitle');
 
-  const messages = React.useMemo(
-    () => [...(chat?.messages || []), ...localMessages],
-    [chat, localMessages],
-  );
+  const messages = React.useMemo(() => {
+    const persistedMessages = chat?.messages || [];
+
+    if (!localMessages.length) return persistedMessages;
+
+    const persistedMessageIds = new Set(persistedMessages.map((message) => message.id));
+
+    return [
+      ...persistedMessages,
+      ...localMessages.filter((message) => !persistedMessageIds.has(message.id)),
+    ];
+  }, [chat?.messages, localMessages]);
 
   const canSendMessage =
     !!chat &&
@@ -135,6 +163,41 @@ const AIChat = ({
     [selectedConnectionId],
   );
 
+  const applyAIAppActions = React.useCallback(
+    async (actions?: IAIAppAction[]) => {
+      for (const action of actions || []) {
+        try {
+          if (action.type === 'refresh_workspace') {
+            await refreshWorkspace();
+          } else if (action.type === 'refresh_snippets') {
+            await refreshSnippets();
+          } else if (action.type === 'reload_connection') {
+            await reloadConnectionInfo(action.connectionId);
+          } else if (action.type === 'create_theme') {
+            createThemeFromColors(action.name, action.colors || {}, action.baseThemeName);
+          } else if (action.type === 'update_theme_colors') {
+            updateActiveThemeColors(action.colors);
+          }
+        } catch (error) {
+          showToast({
+            type: 'error',
+            title: t('aiChat.appActionFailed'),
+            description: getErrorMessage(error, String(error)),
+          });
+        }
+      }
+    },
+    [
+      createThemeFromColors,
+      refreshSnippets,
+      refreshWorkspace,
+      reloadConnectionInfo,
+      showToast,
+      t,
+      updateActiveThemeColors,
+    ],
+  );
+
   const submitMessageContent = React.useCallback(
     async (draftContent: string) => {
       const content = draftContent.trim();
@@ -163,7 +226,7 @@ const AIChat = ({
           showToast({
             type: 'error',
             title: t('aiChat.sendFailed'),
-            description: getErrorMessage(error),
+            description: getErrorMessage(error, String(error)),
           });
           return;
         }
@@ -207,6 +270,8 @@ const AIChat = ({
         });
 
         if (stopGenerationRef.current) return;
+
+        await applyAIAppActions(response.appActions);
 
         const queryApprovals = getResponseQueryApprovals(
           response,
@@ -255,7 +320,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.sendFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       } finally {
         if (activeAssistantMessageIdRef.current === assistantMessageId) {
@@ -267,6 +332,7 @@ const AIChat = ({
     },
     [
       appendAIChatMessages,
+      applyAIAppActions,
       chat?.messages,
       connections,
       editAIChat,
@@ -424,6 +490,8 @@ const AIChat = ({
           ],
         });
 
+        await applyAIAppActions(response.appActions);
+
         const approvedSql = normalizeSqlForComparison(executableApproval.sql);
 
         const queryApprovals = getResponseQueryApprovals(
@@ -464,7 +532,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.sendFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       } finally {
         setLoadingMessage(false);
@@ -472,6 +540,7 @@ const AIChat = ({
     },
     [
       appendAIChatMessages,
+      applyAIAppActions,
       connections,
       id_chat,
       runSql,
@@ -496,7 +565,7 @@ const AIChat = ({
         showToast({
           type: 'error',
           title: t('aiChat.queryApprovalCopyFailed'),
-          description: getErrorMessage(error),
+          description: getErrorMessage(error, String(error)),
         });
       }
     },

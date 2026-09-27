@@ -141,7 +141,7 @@ export const VirtualizeList = (props: IVirtualizeListProps) => {
         }}
         ref={(ref) => {
           if (containerRef) containerRef.current = ref;
-          if (refScrollElement) (refScrollElement as any).current = ref;
+          if (refScrollElement) refScrollElement.current = ref;
         }}
       >
         <div style={{ position: 'relative', minHeight: totalHeight }}>

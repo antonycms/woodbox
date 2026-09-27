@@ -1,3 +1,5 @@
+import { defaultExtractLabel, defaultExtractValue } from '@renderer/components/Autocomplete/utils';
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { useDropdownFixedPosition } from '@renderer/components/Autocomplete/hooks/useDropdownFixedPosition';
@@ -6,25 +8,25 @@ import { SpinnerLoading } from '@renderer/components/Loaders';
 import { Input } from '@renderer/components/Input';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { IGridSystem } from '@renderer/components/Grid';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import useStateWithDebounce from '@renderer/hooks/useStateWithDebounce';
 import { classes, toCssProperties } from '@renderer/styles/theme';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 
 import IconMdiKeyboardArrowDown from '~icons/mdi/keyboard-arrow-down';
 import IconMdiClose from '~icons/mdi/close';
 
 import styles from '../Autocomplete/styles.module.css';
 
-const defaultExtractLabel = (item: any) => (typeof item === 'string' ? item : item?.label);
-const defaultExtractValue = (item: any) => (typeof item === 'string' ? item : item?.value);
+
 
 export interface IAutoCompleteRef {
   clear: () => void;
   open: () => void;
 }
 
-export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
+export function Autocomplete<T = unknown>(props: IAutocompleteProps<T>) {
+  const t = useI18nStore((state) => state.t);
   const {
     ref,
     data,
@@ -46,13 +48,11 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
     clearable = true,
     extractLabel = defaultExtractLabel,
     extractValue = defaultExtractValue,
-    emptyMessage = 'Não há opções disponíveis',
+    emptyMessage = t('common.noOptions'),
     renderOptionActions,
     ...gridSystem
   } = props;
-  const {
-    activeTheme: { autocomplete: theme },
-  } = useThemeContext();
+  const { autocomplete: theme } = useThemeStore((state) => state.activeTheme);
 
   const itemSize = 41;
 
@@ -302,7 +302,7 @@ export function Autocomplete<T = any>(props: IAutocompleteProps<T>) {
         if (selected && clearable) {
           return (
             <IconMdiClose
-              title="Desmarcar"
+              title={t('common.unselect')}
               color={color}
               cursor="pointer"
               onClick={() => onSelect(null, -1)}

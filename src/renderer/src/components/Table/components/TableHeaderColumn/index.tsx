@@ -1,7 +1,10 @@
 import React from 'react';
 import type { OnResizeCallback } from '@renderer/components/ResizableContainer';
 import type { IColumn, ISortDirection } from '../../dtos';
+import styles from '../../styles.module.css';
 import TableColumn from '../TableColumn';
+import IconMdiMenuUp from '~icons/mdi/menu-up';
+import IconMdiMenuDown from '~icons/mdi/menu-down';
 
 interface ITableHeaderColumnProps<Row = unknown> {
   column: IColumn<Row>;
@@ -9,7 +12,7 @@ interface ITableHeaderColumnProps<Row = unknown> {
   rowHeight: number;
   width: number;
   minWidth: number;
-  getSortLabel(column: IColumn<Row>): string;
+  getSortState(column: IColumn<Row>): { sortType: ISortDirection; order?: number } | undefined;
   onResizeColumn(index: number, size: number): void;
   onSort?(column: IColumn<Row>, sortType?: ISortDirection | null): void;
   onSelectColumn?(colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>): void;
@@ -25,7 +28,7 @@ const TableHeaderColumn = <Row,>({
   rowHeight,
   width,
   minWidth,
-  getSortLabel,
+  getSortState,
   onResizeColumn,
   onSort,
   onSelectColumn,
@@ -33,6 +36,8 @@ const TableHeaderColumn = <Row,>({
 }: ITableHeaderColumnProps<Row>) => {
   const canSort = !!column.sortable && !!onSort;
   const canResize = column.resizable !== false;
+  const sortState = getSortState(column);
+  const SortIcon = sortState?.sortType === 'DESC' ? IconMdiMenuDown : IconMdiMenuUp;
 
   const style = React.useMemo(
     () => ({ cursor: canSort ? 'pointer' : undefined }),
@@ -76,8 +81,18 @@ const TableHeaderColumn = <Row,>({
       onContextMenu={canSort ? handleContextMenu : undefined}
       style={style}
       minWidth={minWidth}
-      value={getSortLabel(column)}
+      value={column.label}
       info={column.info}
+      headerSuffix={
+        sortState ? (
+          <span className={styles.header_sort} aria-hidden="true">
+            <SortIcon className={styles.header_sort_icon} />
+            {sortState.order ? (
+              <span className={styles.header_sort_order}>{sortState.order}</span>
+            ) : null}
+          </span>
+        ) : undefined
+      }
     />
   );
 };

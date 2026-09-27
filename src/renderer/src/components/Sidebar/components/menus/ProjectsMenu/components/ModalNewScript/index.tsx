@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -6,20 +7,27 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { useForm } from '@renderer/hooks/useForm';
-import { useI18n } from '@renderer/contexts/I18n';
-import { IScript, useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IScriptMetadata as IScript } from '@shared/types/workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 
 export const ModalNewScript = React.memo(
   ({ idScript, idConnection, show, onClose, onNewScriptCreated }: IModalNewScriptProps) => {
-    const { t } = useI18n();
-    const { updateTab } = useAppTabContext();
-    const { addScript, editScript, scripts } = useStoreContext();
+    const t = useI18nStore((state) => state.t);
+    
+    const updateTab = useAppTabStore((state) => state.updateTab);
 
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const { addScript, editScript, scripts } = useWorkspaceStore(
+      useShallow((state) => ({
+        addScript: state.addScript,
+        editScript: state.editScript,
+        scripts: state.scripts,
+      })),
+    );
+
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const { register, handleSubmit, setState, reset } = useForm<IDataNewScript>({ name: '' });
 

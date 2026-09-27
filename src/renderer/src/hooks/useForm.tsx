@@ -1,7 +1,16 @@
 import { setObjectProperty } from '@renderer/utils/object';
 import { useCallback, useRef, useState } from 'react';
 
-export function useForm<Data = unknown>(initialValue = {} as Data) {
+export interface FormChangeValue {
+  type?: string;
+  name?: string;
+  value?: unknown;
+  checked?: boolean;
+}
+
+export type FormChangeEvent = FormChangeValue | { target: FormChangeValue };
+
+export function useForm<Data extends object = Record<string, unknown>>(initialValue = {} as Data) {
   const [state, setState] = useState<Data>(initialValue);
   const valueRef = useRef(state);
 
@@ -11,8 +20,8 @@ export function useForm<Data = unknown>(initialValue = {} as Data) {
 
   const getValue = useCallback(() => valueRef.current, []);
 
-  const onChange = useCallback((event: any) => {
-    const { type, name, value, checked } = event?.target || event || {};
+  const onChange = useCallback((event: FormChangeEvent) => {
+    const { type, name, value, checked } = 'target' in event ? event.target : event;
 
     if (!name) {
       throw new Error('Error on change event in [useForm], "name" is required.');
@@ -20,10 +29,10 @@ export function useForm<Data = unknown>(initialValue = {} as Data) {
 
     const v = type === 'checkbox' ? !!checked : (value ?? null);
 
-    setState((prevState) => setObjectProperty(prevState as any, name, v, true));
+    setState((prevState) => setObjectProperty(prevState, name, v, true));
   }, []);
 
-  const register = <U extends keyof Data>(name: U) => {
+  const register = <U extends Extract<keyof Data, string>>(name: U) => {
     return {
       name,
       onChange,

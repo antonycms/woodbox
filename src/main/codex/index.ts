@@ -1,4 +1,4 @@
-import addListener from '@main/utils/addListener';
+import addListener from '../utils/addListener';
 import {
   getCodexChatGPTAccount,
   logoutCodexChatGPT,

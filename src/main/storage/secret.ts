@@ -80,8 +80,12 @@ const loadEncryptionKey = (store: Store<Record<string, unknown>>) => {
   return cachedEncryptionKey;
 };
 
-export const encodeSecret = (store: Store<Record<string, unknown>>, secret?: string) => {
-  const value = secret?.trim();
+export const encodeSecret = (
+  store: Store<Record<string, unknown>>,
+  secret?: string,
+  options: { trim?: boolean } = {},
+) => {
+  const value = options.trim === false ? secret : secret?.trim();
 
   if (!value) return undefined;
   if (isLocalEncryptedSecret(value)) return value;

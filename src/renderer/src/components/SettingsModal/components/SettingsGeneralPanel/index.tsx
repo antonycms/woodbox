@@ -1,16 +1,23 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Divider } from '@renderer/components/Divider';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
-import { useI18n, type LanguageCode } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type LanguageCode } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 export const SettingsGeneralPanel = React.memo(() => {
-  const { language, availableLanguages, changeLanguage, t } = useI18n();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const { language, availableLanguages, changeLanguage, t } = useI18nStore(
+    useShallow((state) => ({
+      language: state.language,
+      availableLanguages: state.availableLanguages,
+      changeLanguage: state.changeLanguage,
+      t: state.t,
+    })),
+  );
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const extractLanguageLabel = React.useCallback(
     (item: (typeof availableLanguages)[number]) => t(item.labelKey),

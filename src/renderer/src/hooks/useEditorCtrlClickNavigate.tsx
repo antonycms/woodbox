@@ -1,12 +1,19 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useAppTabStore } from '@renderer/stores/AppTab';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 
 const useEditorCtrlClickNavigate = (id_connection: string) => {
-  const { connectionsInfo } = useStoreContext();
-  const { addTab, getTab, setActiveTabId } = useAppTabContext();
+  const connectionsInfo = useWorkspaceStore((state) => state.connectionsInfo);
+  const { addTab, getTab, setActiveTabId } = useAppTabStore(
+    useShallow((state) => ({
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+    })),
+  );
 
   const canNavigate = React.useCallback(
     (word: string, schema?: string) => {

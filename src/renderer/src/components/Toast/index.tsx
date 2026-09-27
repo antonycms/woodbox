@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
 
 import IconMdiCheckCircle from '~icons/mdi/check-circle';
@@ -13,9 +13,7 @@ export const Toast = ({ close, title, description, type, delay }: IToastProps) =
   const [isHovered, setIsHovered] = React.useState(false);
   const [remainingTime, setRemainingTime] = React.useState(delay);
 
-  const {
-    activeTheme: { toast: colors },
-  } = useThemeContext();
+  const { toast: colors } = useThemeStore((state) => state.activeTheme);
 
   const typeConfig: { [key in ToastType]: ITypeConfig } = {
     success: {

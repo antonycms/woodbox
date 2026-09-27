@@ -1,4 +1,5 @@
 import React from 'react';
+import { readStorageValue, writeStorageValue } from '@renderer/utils/storage';
 
 const FILTER_HISTORY_LIMIT = 8;
 const FILTER_HISTORY_STORAGE_PREFIX = '@filter-history';
@@ -7,14 +8,8 @@ const getStorageKey = (parts: string[]) =>
   [FILTER_HISTORY_STORAGE_PREFIX, ...parts.map((part) => encodeURIComponent(part))].join(':');
 
 const readHistory = (key: string) => {
-  try {
-    const value = window.localStorage.getItem(key);
-    const history = value ? JSON.parse(value) : [];
-
-    return Array.isArray(history) ? history.filter((item) => typeof item === 'string') : [];
-  } catch (_error) {
-    return [];
-  }
+  const history = readStorageValue<unknown>(key, []);
+  return Array.isArray(history) ? history.filter((item): item is string => typeof item === 'string') : [];
 };
 
 export default function useFilterHistory(parts: string[]) {
@@ -32,9 +27,7 @@ export default function useFilterHistory(parts: string[]) {
           ...prevState.filter((item) => item !== filter),
         ].slice(0, FILTER_HISTORY_LIMIT);
 
-        window.localStorage.setItem(storageKey, JSON.stringify(nextHistory));
-
-        return nextHistory;
+        return writeStorageValue(storageKey, nextHistory) ? nextHistory : prevState;
       });
     },
     [storageKey],

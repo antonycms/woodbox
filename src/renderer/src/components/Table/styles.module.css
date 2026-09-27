@@ -193,6 +193,27 @@
   font-weight: 400;
 }
 
+.header_sort {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  align-items: center;
+  gap: 2px;
+  color: color-mix(in srgb, var(--colorHeader) 78%, var(--backgroundColorHeader));
+  font-size: 11px;
+  line-height: 1;
+}
+
+.header_sort_icon {
+  width: 16px;
+  height: 16px;
+}
+
+.header_sort_order {
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .table_column.cell_selected {
   outline: 2px solid var(--selectedBorderColor) !important;
   outline-offset: -2px;

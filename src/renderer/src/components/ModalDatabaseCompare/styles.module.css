@@ -9,8 +9,8 @@
 }
 
 .warning {
-  border: 1px solid rgba(255, 193, 7, 0.35);
-  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid var(--database-compare-warning-border-color);
+  background: var(--database-compare-warning-background-color);
   border-radius: 6px;
   padding: 8px;
 }
@@ -24,7 +24,7 @@
 }
 
 .resultGroup {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--database-compare-border-color);
   border-radius: 7px;
 }
 
@@ -63,19 +63,19 @@
 }
 
 .modify .resultHeader {
-  background: rgba(70, 130, 255, 0.16);
+  background: color-mix(in srgb, var(--database-compare-modify-color) 16%, transparent);
 }
 
 .create .resultHeader {
-  background: rgba(28, 185, 95, 0.16);
+  background: var(--database-compare-create-background-color);
 }
 
 .delete .resultHeader {
-  background: rgba(255, 76, 90, 0.16);
+  background: var(--database-compare-delete-background-color);
 }
 
 .none .resultHeader {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--database-compare-row-background-color);
 }
 
 .resultItem {

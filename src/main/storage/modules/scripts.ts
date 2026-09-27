@@ -1,3 +1,4 @@
+import type { IScript } from '@shared/types/workspace';
 import type Store from 'electron-store';
 
 export type IScriptMeta = Omit<IScript, 'content'>;

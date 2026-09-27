@@ -1,4 +1,12 @@
 import type { Knex } from 'knex';
+import type { DatabaseRow, IOrderBy, SerializedRunSqlResult } from '@shared/types/database';
+import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+
+export interface IConnection {
+  id: string;
+  instance: Knex<DatabaseRow, unknown[]>;
+  dialect: Dialect;
+}
 
 export interface DatabaseDialectQueries {
   getTables(): string;
@@ -27,21 +35,6 @@ export interface DatabaseDialectQueries {
   cancelProcess?(pid: number): string;
 }
 
-export interface SerializedRunSqlColumn {
-  name: string;
-  type?: string;
-}
-
-export interface SerializedRunSqlResult {
-  type: string;
-  affected_rows?: number;
-  auto_paginated?: boolean;
-  execution_time_ms?: number;
-  rows: any[];
-  columns: string[];
-  columns_info?: SerializedRunSqlColumn[];
-}
-
 export interface SerializeRunSqlContext {
   auto_paginated: boolean;
   execution_time_ms: number;
@@ -50,7 +43,7 @@ export interface SerializeRunSqlContext {
 
 export interface ResolveRunSqlColumnsInfoContext {
   instance: Knex;
-  dbConnection: any;
+  dbConnection: object;
   sql: string;
   results: SerializedRunSqlResult[];
 }
@@ -61,15 +54,15 @@ export interface DatabaseDialectAdapter {
   queries: DatabaseDialectQueries;
   getConnectionConfig(config: IConnectionConfig): object;
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
-  getRows(raw: any): any[];
-  serializeRunSqlResult(raw: any, context: SerializeRunSqlContext): SerializedRunSqlResult[];
+  getRows<Row = DatabaseRow>(raw: unknown): Row[];
+  serializeRunSqlResult(raw: unknown, context: SerializeRunSqlContext): SerializedRunSqlResult[];
   getExplainSql(sql: string): string;
   resolveRunSqlColumnsInfo?(
     context: ResolveRunSqlColumnsInfoContext,
   ): Promise<SerializedRunSqlResult[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
-  cancelQuery?(params: { instance: Knex; dbConnection: any }): Promise<boolean>;
+  cancelQuery?(params: { instance: Knex; dbConnection: object }): Promise<boolean>;
 }
 
 export interface ITableWithSchema {
@@ -84,9 +77,4 @@ export interface IGetTableDataParams {
   actualPage?: number;
   where?: string;
   orderBy?: IOrderBy[];
-}
-
-export interface IOrderBy {
-  columnName: string;
-  sortType: 'DESC' | 'ASC';
 }

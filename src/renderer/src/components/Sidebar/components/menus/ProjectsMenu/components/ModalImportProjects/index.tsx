@@ -1,3 +1,6 @@
+import { getErrorMessage } from '@shared/utils/error';
+import { useShallow } from 'zustand/react/shallow';
+import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -7,15 +10,11 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import {
-  useStoreContext,
-  type IImportConnectionsPreview,
-  type ImportConnectionsSource,
-} from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
-import call from '@renderer/utils/call';
+import type { IImportConnectionsPreview, ImportConnectionsSource } from '@shared/types/imports';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import styles from './styles.module.css';
 
 const originOptions: { label: string; value: ImportConnectionsSource }[] = [
@@ -25,14 +24,22 @@ const originOptions: { label: string; value: ImportConnectionsSource }[] = [
 const makeSelectionKey = (sourceName: string, sourceId: string) => `${sourceName}:${sourceId}`;
 
 export const ModalImportProjects = React.memo((props: IModalImportProjectsProps) => {
+  const dialogs = useDialogsStore(
+    useShallow((state) => ({
+      selectDbeaverExportFile: state.selectDbeaverExportFile,
+    })),
+  );
   const { show, onClose } = props;
-  const { previewImportConnectionsFromSource, importConnectionsFromSource } = useStoreContext();
-  const { t } = useI18n();
-  const { showToast } = useToast();
+  const { previewImportConnectionsFromSource, importConnectionsFromSource } = useWorkspaceStore(
+    useShallow((state) => ({
+      previewImportConnectionsFromSource: state.previewImportConnectionsFromSource,
+      importConnectionsFromSource: state.importConnectionsFromSource,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
 
-  const {
-    activeTheme: { settings, modal: colors },
-  } = useThemeContext();
+  const { settings, modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const [source, setSource] = React.useState<ImportConnectionsSource>('dbeaver');
   const [masterPassword, setMasterPassword] = React.useState('');
@@ -83,11 +90,11 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
 
         setPreview(importPreview);
         selectPreviewItems(importPreview);
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('settings.import.readFileFailedTitle'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
         setLoadingPreview(false);
@@ -97,12 +104,12 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
   );
 
   const handleSelectFile = React.useCallback(async () => {
-    const path = await call<string | null>('@dialog:select_dbeaver_export_file');
+    const path = await dialogs.selectDbeaverExportFile();
 
     if (!path) return;
 
     await loadPreview(path);
-  }, [loadPreview]);
+  }, [dialogs, loadPreview]);
 
   const toggleProject = React.useCallback(
     (project: IImportConnectionsPreview['projects'][number], checked: boolean) => {
@@ -164,11 +171,11 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           count: importResult.connectionsImported,
         }),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('settings.import.importFailedTitle'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingImport(false);
@@ -313,27 +320,27 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           <Divider size={12} />
 
           <div className={styles.resultBox} style={themedPanelStyle}>
-            <Text small color={colors.color}>
+            <Text userSelect={false} small color={colors.color}>
               {t('settings.import.projectsSummary', {
                 created: result.projectsCreated,
                 reused: result.projectsReused,
               })}
             </Text>
-            <Text small color={colors.color}>
+            <Text userSelect={false} small color={colors.color}>
               {t('settings.import.connectionsSummary', {
                 imported: result.connectionsImported,
                 skipped: result.connectionsSkipped,
               })}
             </Text>
             {!!result.unsupportedConnections.length && (
-              <Text small color={settings.importWarningColor}>
+              <Text userSelect={false} small color={settings.importWarningColor}>
                 {t('settings.import.unsupportedConnections', {
                   count: result.unsupportedConnections.length,
                 })}
               </Text>
             )}
             {result.warnings.slice(0, 2).map((warning) => (
-              <Text key={warning} small color={settings.importWarningColor}>
+              <Text userSelect={false} key={warning} small color={settings.importWarningColor}>
                 {warning}
               </Text>
             ))}

@@ -1,20 +1,20 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import * as monaco from './monaco';
 
 import useDebounce from '@renderer/hooks/useDebounce';
-import useResize from '@renderer/hooks/useResize';
 import styles from './styles.module.css';
 import {
   ContextMenu,
   type IContextMenuOption,
   type IContextMenuPosition,
 } from '@renderer/components/ContextMenu';
-import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useAIChatPanelStore } from '@renderer/stores/AIChatPanel';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContentRange } from '@renderer/utils/sql';
-import type { Dialect } from '@renderer/database/dialects';
+import type { Dialect } from '@shared/types/connections';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 const Editor = ({
@@ -24,9 +24,14 @@ const Editor = ({
   language = 'sql',
   ...props
 }: IEditorProps) => {
-  const { t } = useI18n();
-  const { activeTheme } = useThemeContext();
-  const { activeChatId, addEditorSelectionToChatContext } = useAIChatPanelContext();
+  const t = useI18nStore((state) => state.t);
+  const activeTheme = useThemeStore((state) => state.activeTheme);
+  const { activeChatId, addEditorSelectionToChatContext } = useAIChatPanelStore(
+    useShallow((state) => ({
+      activeChatId: state.activeChatId,
+      addEditorSelectionToChatContext: state.addEditorSelectionToChatContext,
+    })),
+  );
   const [editor, setEditor] = React.useState<monaco.editor.IStandaloneCodeEditor>();
   const [editorContextMenu, setEditorContextMenu] = React.useState<{
     position: IContextMenuPosition;
@@ -34,10 +39,10 @@ const Editor = ({
   }>();
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const outsideContainerRef = React.useRef<HTMLDivElement>(null);
+  const editorInstanceRef = React.useRef<monaco.editor.IStandaloneCodeEditor | undefined>(undefined);
   const addEditorSelectionToChatContextRef = React.useRef(addEditorSelectionToChatContext);
   const onCtrlClickRef = React.useRef(props.onCtrlClick);
-
-  const { width, height } = useResize({ HTMLElement: containerRef.current });
 
   const stopCtrlClickPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!props.onCtrlClick || !isPrimaryShortcutPressed(event)) return;
@@ -45,7 +50,16 @@ const Editor = ({
     event.stopPropagation();
   };
 
-  const resize = useDebounce(() => editor?.layout?.(), 10);
+  const resize = useDebounce(() => {
+    const element = outsideContainerRef.current;
+
+    if (element?.clientWidth && element?.clientHeight) {
+      editor?.layout?.({ width: element.clientWidth, height: element.clientHeight });
+      return;
+    }
+
+    editor?.layout?.();
+  }, 10);
 
   const emitCurrentValueChange = useDebounce(() => {
     props.onChangeCurrentValue?.(getCurrentValue());
@@ -81,6 +95,13 @@ const Editor = ({
   };
 
   const layout = () => {
+    const element = outsideContainerRef.current;
+
+    if (element?.clientWidth && element?.clientHeight) {
+      editor?.layout?.({ width: element.clientWidth, height: element.clientHeight });
+      return;
+    }
+
     editor?.layout?.();
   };
 
@@ -490,6 +511,44 @@ const Editor = ({
     return currentEditor;
   };
 
+  const observeEditorResize = React.useCallback(() => {
+    const element = outsideContainerRef.current;
+    const currentEditor = editorInstanceRef.current;
+
+    if (!element || !currentEditor) return;
+
+    let frameId: number | undefined;
+    let secondFrameId: number | undefined;
+
+    const layoutFromElement = () => {
+      if (!element.clientWidth || !element.clientHeight) return;
+
+      currentEditor.layout({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+    };
+
+    const scheduleLayout = () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+
+      frameId = window.requestAnimationFrame(() => {
+        layoutFromElement();
+        secondFrameId = window.requestAnimationFrame(layoutFromElement);
+      });
+    };
+
+    const observer = new ResizeObserver(scheduleLayout);
+    observer.observe(element);
+    scheduleLayout();
+
+    return () => {
+      observer.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
+      if (secondFrameId) window.cancelAnimationFrame(secondFrameId);
+    };
+  }, []);
+
   const editorContextMenuOptions = React.useMemo<IContextMenuOption[]>(
     () => [
       {
@@ -567,17 +626,18 @@ const Editor = ({
     onCtrlClickRef.current = props.onCtrlClick;
   }, [props.onCtrlClick]);
 
-  React.useEffect(() => {
-    // Inicializa uma vez por montagem; mudanças de props são sincronizadas nos efeitos abaixo.
-    let currentEditor: monaco.editor.IStandaloneCodeEditor;
+  React.useLayoutEffect(() => {
+    // Suspense pode desanexar a ref antes do timer; reagenda quando a aba reaparecer.
+    if (editorInstanceRef.current) return;
     let frameId: number | undefined;
 
-    // fix startup freeze
     const timeoutId = setTimeout(() => {
       if (!containerRef.current) return;
 
-      currentEditor = initEditor();
+      const currentEditor = initEditor();
+      editorInstanceRef.current = currentEditor;
       setEditor(currentEditor);
+      props.onReady?.();
       if (props.autoFocus) currentEditor.focus();
       frameId = window.requestAnimationFrame(resize);
     });
@@ -585,11 +645,16 @@ const Editor = ({
     return () => {
       clearTimeout(timeoutId);
       if (frameId) window.cancelAnimationFrame(frameId);
-      currentEditor?.dispose?.();
     };
   }, []);
 
-  React.useEffect(resize, [width, height]);
+  React.useEffect(() => () => {
+    // Congelar uma aba preserva o editor; só a desmontagem libera a instância.
+    editorInstanceRef.current?.dispose();
+    editorInstanceRef.current = undefined;
+  }, []);
+
+  React.useEffect(() => observeEditorResize(), [editor, observeEditorResize]);
 
   React.useEffect(() => {
     monaco.editor.setTheme('active-theme');
@@ -673,6 +738,7 @@ const Editor = ({
     <>
       <div
         className={styles.outsideContainer}
+        ref={outsideContainerRef}
         onClickCapture={stopCtrlClickPropagation}
         onContextMenu={openEditorContextMenu}
       >
@@ -703,6 +769,7 @@ export interface IEditorProps {
   onChange?: (value: string) => void;
   onChangeCurrentValue?: (value: string) => void;
   onDidChangeContent?: () => void;
+  onReady?: () => void;
   onChangeSelections?(selections: monaco.Selection[]): void;
   autocomplete?: IDefineSQlAutocompleteParams;
   onCtrlClick?: IEditorCtrlClickHandler;

@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import {
@@ -9,9 +11,11 @@ import Editor from '@renderer/components/Editor';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext, type IColumnReferenceInfo } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import type { IColumnReferenceInfo } from '@shared/types/database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IColumn } from '@renderer/components/Table/dtos';
@@ -19,6 +23,7 @@ import styles from './styles.module.css';
 
 import IconMdiArrowLeft from '~icons/mdi/arrow-left';
 import IconMdiArrowRight from '~icons/mdi/arrow-right';
+import IconMdiClose from '~icons/mdi/close';
 import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiTable from '~icons/mdi/table';
 
@@ -26,7 +31,8 @@ interface IReferencePreviewProps {
   active: boolean;
   idConnection: string;
   initialReference?: IColumnReferenceInfo;
-  initialValue: any;
+  initialValue: unknown;
+  onClose?: () => void;
   onOpenTable?: (
     idConnection: string,
     schema: string,
@@ -38,7 +44,7 @@ interface IReferencePreviewProps {
 
 interface IReferenceHistoryItem {
   reference: IColumnReferenceInfo;
-  value: any;
+  value: unknown;
 }
 
 interface IReferenceContextMenu {
@@ -53,7 +59,7 @@ const getTableName = (reference?: IColumnReferenceInfo) =>
       }`
     : '';
 
-const getReferenceKey = (reference: IColumnReferenceInfo, value: any) =>
+const getReferenceKey = (reference: IColumnReferenceInfo, value: unknown) =>
   [
     reference.reference_table_schema,
     reference.reference_table_name,
@@ -68,15 +74,21 @@ const ReferencePreview = ({
   idConnection,
   initialReference,
   initialValue,
+  onClose,
   onOpenTable,
 }: IReferencePreviewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { data: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { connections, getTableColumns, getTableData, getTableReferences } = useStoreContext();
+    tableInfo: { data: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const connections = useWorkspaceStore((state) => state.connections);
+  const { getTableColumns, getTableData, getTableReferences } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableColumns: state.getTableColumns,
+      getTableData: state.getTableData,
+      getTableReferences: state.getTableReferences,
+    })),
+  );
   const dialect = React.useMemo(
     () =>
       getRendererDialect(connections.find((connection) => connection.id === idConnection)?.dialect),
@@ -88,7 +100,7 @@ const ReferencePreview = ({
   const [viewMode, setViewMode] = React.useState<'table' | 'json'>('table');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string>();
-  const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, any>>());
+  const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, unknown>>());
   const [columnsCache, setColumnsCache] = React.useState(new Map<string, IColumn[]>());
   const [referencesCache, setReferencesCache] = React.useState(
     new Map<string, IColumnReferenceInfo[]>(),
@@ -200,7 +212,7 @@ const ReferencePreview = ({
         });
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('reference.loadError'));
+      setError(getErrorMessage(error) || t('reference.loadError'));
     } finally {
       setLoading(false);
     }
@@ -240,14 +252,14 @@ const ReferencePreview = ({
     () => [
       {
         text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenu?.data.cellsText || ''),
+        onClick: () => copyToClipboard(contextMenu?.data.getCellsText() || ''),
       },
     ],
     [contextMenu, t],
   );
 
   const handleOpenNestedReference = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const reference = currentFkMap.get(attribute);
 
       if (!reference || value === null || value === undefined) return;
@@ -260,7 +272,7 @@ const ReferencePreview = ({
   );
 
   const handleOpenReferencedTable = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const reference = currentFkMap.get(attribute);
 
       if (!reference || value === null || value === undefined) return;
@@ -349,6 +361,18 @@ const ReferencePreview = ({
         >
           {viewMode === 'table' ? <IconMdiCodeJson width={16} /> : <IconMdiTable width={16} />}
         </Button>
+
+        {onClose && (
+          <Button
+            text
+            smallIcon
+            title={t('common.close')}
+            color={theme.bar.color}
+            onClick={onClose}
+          >
+            <IconMdiClose width={16} />
+          </Button>
+        )}
       </div>
 
       <div className={styles.content}>

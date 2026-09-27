@@ -3,18 +3,6 @@ import { resolve } from 'path';
 import fs from 'fs';
 import fsPromise from 'fs/promises';
 
-export const generateHash = (len = 5) => {
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const charactersLength = characters.length;
-
-  for (let i = 0; i < len; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-
-  return result;
-};
-
 export const getLocalDirPath = () => {
   const root_path = app.getPath('userData');
   return resolve(root_path, 'local_app_files');

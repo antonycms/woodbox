@@ -1,4 +1,4 @@
-import type { IColumnRestrictionsInfo } from '@renderer/contexts/Store';
+import type { IColumnRestrictionsInfo } from '@shared/types/database';
 
 export const getRestrictionSelectionKey = (restriction: IColumnRestrictionsInfo) =>
   (restriction as IColumnRestrictionsInfo & { __pendingId?: string }).__pendingId ||

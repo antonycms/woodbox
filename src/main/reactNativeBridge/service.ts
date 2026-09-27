@@ -1,3 +1,4 @@
+import type { IReactNativeBridgeConnectionConfig } from '@shared/types/reactNativeBridge';
 import { findReactNativeBridgeSession } from './sessions';
 import { requestReactNativeBridge } from './rpc';
 import type { ExecuteSqlParams, SqliteExecutionResult } from './protocol';

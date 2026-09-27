@@ -1,8 +1,17 @@
+import type {
+  IAIProviderConfig,
+  IAIChatMessageInput,
+  IAIAppAction,
+  IAIQueryApproval,
+  IAIChatRequest,
+  IAIChatResponse,
+} from '@shared/types/ai';
 import { asSchema, type Tool, type ToolSet } from 'ai';
 import {
   AI_QUERY_EXECUTION_TOOL_NAME,
+  getAIAppActionsFromToolOutput,
   type AIQueryExecutionToolOutput,
-} from '@main/ai/tools';
+} from '../ai/tools';
 import { getValidCodexCredential } from './account';
 
 type CodexTextContent = { type?: string; text?: string };
@@ -416,6 +425,7 @@ export const sendCodexChatGPTMessage = async (
   const input = toCodexInput(request.messages);
   let latestText = '';
   const queryApprovals = new Map<string, IAIQueryApproval>();
+  const appActions: IAIAppAction[] = [];
 
   for (let step = 0; step < MAX_CODEX_TOOL_STEPS; step++) {
     const result = await createCodexResponse({
@@ -433,6 +443,7 @@ export const sendCodexChatGPTMessage = async (
       return {
         content: result.text,
         queryApprovals: Array.from(queryApprovals.values()),
+        appActions,
       };
     }
 
@@ -448,8 +459,11 @@ export const sendCodexChatGPTMessage = async (
         return {
           content: latestText,
           queryApprovals: Array.from(queryApprovals.values()),
+          appActions,
         };
       }
+
+      appActions.push(...getAIAppActionsFromToolOutput(output));
 
       console.log({
         toolName: toolCall.name,
@@ -478,5 +492,6 @@ export const sendCodexChatGPTMessage = async (
       latestText ||
       'O Codex atingiu o limite de chamadas de ferramentas antes de concluir a resposta.',
     queryApprovals: Array.from(queryApprovals.values()),
+    appActions,
   };
 };

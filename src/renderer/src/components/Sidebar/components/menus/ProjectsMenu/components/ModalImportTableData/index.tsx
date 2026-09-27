@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@shared/utils/error';
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import ExcelJS from 'exceljs';
 import { Autocomplete } from '@renderer/components/Autocomplete';
@@ -9,10 +11,12 @@ import { Modal } from '@renderer/components/Modal';
 import { Input } from '@renderer/components/Input';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { DbCellValue, IColumnInfo, useStoreContext } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import type { DbCellValue, IColumnInfo } from '@shared/types/database';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
 import styles from './styles.module.css';
 
@@ -102,19 +106,17 @@ const parseMatrix = (
 const isCsvFile = (file: File) => file.name.toLowerCase().endsWith('.csv');
 
 const getExcelCellValue = (value: ExcelJS.CellValue): unknown => {
-  const valueType = typeof value;
-
   if (
     !value ||
     value instanceof Date ||
-    valueType === 'string' ||
-    valueType === 'number' ||
-    valueType === 'boolean'
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
   ) {
     return value;
   }
 
-  const cellValue = value as Record<string, any>;
+  const cellValue = value;
 
   if ('result' in cellValue) return cellValue.result;
   if ('text' in cellValue) return cellValue.text;
@@ -228,12 +230,18 @@ const parseImportFile = async (
 
 export const ModalImportTableData = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalImportTableDataProps) => {
-    const { getTableColumns, importTableData, loadConnectionInfo } = useStoreContext();
-    const { t, language } = useI18n();
-    const { showToast } = useToast();
-    const {
-      activeTheme: { settings, modal: colors },
-    } = useThemeContext();
+    const { getTableColumns, importTableData } = useDatabaseStore(
+      useShallow((state) => ({
+        getTableColumns: state.getTableColumns,
+        importTableData: state.importTableData,
+      })),
+    );
+    const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
+    const { t, language } = useI18nStore(
+      useShallow((state) => ({ t: state.t, language: state.language })),
+    );
+    const showToast = useToastStore((state) => state.showToast);
+    const { settings, modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loadingColumns, setLoadingColumns] = React.useState(false);
     const [loadingFile, setLoadingFile] = React.useState(false);
@@ -280,11 +288,11 @@ export const ModalImportTableData = React.memo(
         setLoadingColumns(true);
         const columns = await getTableColumns(idConnection, { schema, table });
         setTableColumns(columns);
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.loadTableColumnsError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {
@@ -312,14 +320,14 @@ export const ModalImportTableData = React.memo(
             ),
           );
           return parsed;
-        } catch (error: any) {
+        } catch (error: unknown) {
           setParsedFile(undefined);
           setMapping({});
           setCsvParsedSeparator('');
           showToast({
             type: 'error',
             title: t('toast.readFileError'),
-            description: error?.message,
+            description: getErrorMessage(error, t('common.unknownError')),
             delay: 8000,
           });
         } finally {
@@ -414,11 +422,11 @@ export const ModalImportTableData = React.memo(
           });
 
           close();
-        } catch (error: any) {
+        } catch (error: unknown) {
           showToast({
             type: 'error',
             title: t('toast.dataImportError'),
-            description: error?.message,
+            description: getErrorMessage(error, t('common.unknownError')),
             delay: 8000,
           });
         } finally {
@@ -498,14 +506,14 @@ export const ModalImportTableData = React.memo(
             )}
           </Row>
 
-          {!!loadingColumns && <Text color={colors.color}>{t('import.loadingColumns')}</Text>}
-          {!!loadingFile && <Text color={colors.color}>{t('import.readingFile')}</Text>}
+          {!!loadingColumns && <Text userSelect={false} color={colors.color}>{t('import.loadingColumns')}</Text>}
+          {!!loadingFile && <Text userSelect={false} color={colors.color}>{t('import.readingFile')}</Text>}
 
           {!!parsedFile && (
             <>
               <Divider />
 
-              <Text color={colors.color} small>
+              <Text userSelect={false} color={colors.color} small>
                 {t('import.fileSummary', {
                   fileName: parsedFile.fileName,
                   rows: parsedFile.rows.length.toLocaleString(language),

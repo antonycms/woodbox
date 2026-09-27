@@ -1,4 +1,4 @@
-export type Dialect = 'postgres' | 'mysql' | 'sqlite' | 'react-native-sqlite';
+import type { Dialect } from '@shared/types/connections';
 
 export interface DdlColumnInfo {
   column_name: string;

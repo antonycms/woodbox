@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
 import useDebounce from '@renderer/hooks/useDebounce';
@@ -7,13 +8,14 @@ import styles from './styles.module.css';
 import TableAnalysisView from './components/TableAnalysisView';
 import TableDefaultView from './components/TableDefaultView';
 import TableSearchBar from './components/TableSearchBar';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import type {
   IColumn,
   ISortDirection,
   ITableSort,
   TableCellEditValue,
+  TableSerializedRow,
   TableCellPosition,
   TableDragSelectionState,
   TableScrollState,
@@ -40,41 +42,41 @@ import {
 
 const TABLE_SEARCH_CLOSE_ANIMATION_MS = 120;
 
-export interface ITableContextMenuCellData<Row = any> {
-  row: Row;
+export interface ITableContextMenuCellData<Row = Record<string, unknown>> {
+  row: TableSerializedRow<Row>;
   column: IColumn<Row>;
   rowIndex: number;
   colIndex: number;
 }
 
-export interface ITableContextMenuData<Row = any> {
-  cellsText: string;
-  rowsText: string;
-  rowsJson: string;
-  rows: Record<string, any>[];
-  selectedCellRows: Record<string, any>[];
-  selectedCells: ITableContextMenuCellData<Row>[];
+export interface ITableContextMenuData<Row = Record<string, unknown>> {
+  getCellsText(): string;
+  getRowsText(): string;
+  getRowsJson(): string;
+  getRows(): Record<string, unknown>[];
+  getSelectedCellRows(): Record<string, unknown>[];
+  getSelectedCells(): ITableContextMenuCellData<Row>[];
 }
 
-export interface ITableSelectedCellData<Row = any> {
-  row: Row;
+export interface ITableSelectedCellData<Row = Record<string, unknown>> {
+  row: TableSerializedRow<Row>;
   column: IColumn<Row>;
-  value: any;
+  value: unknown;
   rowIndex: number;
   colIndex: number;
 }
 
-interface ITableProps<Row = any> {
+interface ITableProps<Row = Record<string, unknown>> {
   rowKeyExtractor?(rowData: Row, index: number): React.Key;
   onContextMenu?(
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     data: ITableContextMenuData<Row>,
   ): void;
   onScrollEnd?(): void;
-  onEditRow?(indexRow: number, attribute: string, value: any, rowKey?: React.Key): void;
-  onEditNewRow?(rowKey: React.Key, attribute: string, value: any): void;
-  editedRows?: Map<React.Key, any>;
-  newRows?: Map<React.Key, any>;
+  onEditRow?(indexRow: number, attribute: string, value: unknown, rowKey?: React.Key): void;
+  onEditNewRow?(rowKey: React.Key, attribute: string, value: unknown): void;
+  editedRows?: Map<React.Key, Partial<Row>>;
+  newRows?: Map<React.Key, Partial<Row>>;
   newRowsPosition?: 'start' | 'end';
   removedRows?: Set<React.Key>;
   rows: Row[];
@@ -84,15 +86,15 @@ interface ITableProps<Row = any> {
   loading?: boolean;
   onSelectRow?(selectedRows: Row[]): void;
   onSelectCellData?(data: ITableSelectedCellData<Row>): void;
-  onCellLinkClick?(attribute: string, value: any): void;
-  onCellLinkPreviewClick?(attribute: string, value: any): void;
+  onCellLinkClick?(attribute: string, value: unknown): void;
+  onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
   initialAnalysisMode?: boolean;
 }
 
-const rowKeyExtractorDefault: ITableProps['rowKeyExtractor'] = (_, index) => index;
+const rowKeyExtractorDefault = (_: unknown, index: number): React.Key => index;
 
-function Table<Row = any>(props: ITableProps<Row>) {
+function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
   const {
     columns = [],
     rows = [],
@@ -116,15 +118,14 @@ function Table<Row = any>(props: ITableProps<Row>) {
     initialAnalysisMode,
   } = props;
 
-  const {
-    activeTheme: { table: theme },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { table: theme } = useThemeStore((state) => state.activeTheme);
   const refScrollContainer = React.useRef<HTMLDivElement>(null);
   const refAnalysisScrollContainer = React.useRef<HTMLDivElement>(null);
   const [cellEditingKey, setCellEditingKey] = React.useState<string>();
   const [cellEditInitialValue, setCellEditInitialValue] = React.useState<string | number>();
   const [analysisMode, setAnalysisMode] = React.useState(false);
-  const [analysisRows, setAnalysisRows] = React.useState<any[]>([]);
+  const [analysisRows, setAnalysisRows] = React.useState<TableSerializedRow<Row>[]>([]);
   const [analysisColumnsSize, setAnalysisColumnsSize] = React.useState<number[]>([]);
   const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
   const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
@@ -174,13 +175,13 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const columnsSizeRef = React.useRef(columnsSize);
   columnsSizeRef.current = columnsSize;
 
-  const serializedRows = React.useMemo(() => {
+  const serializedRows = React.useMemo<TableSerializedRow<Row>[]>(() => {
     const newRowsLength = newRows?.size ?? 0;
     const newRowsStartIndex = newRowsPosition === 'end' ? rows.length : 0;
     const rowsStartIndex = newRowsPosition === 'end' ? 0 : newRowsLength;
 
     const serializedNewRows = [...(newRows?.entries() ?? [])].map(([keyRow, row], index) => ({
-      ...row,
+      ...(row as Row),
       __index_row: newRowsStartIndex + index,
       __row_index: index,
       __key_row: keyRow,
@@ -275,7 +276,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   });
 
   const selectedRows = React.useMemo(() => {
-    const map = new Map<React.Key, any>();
+    const map = new Map<React.Key, TableSerializedRow<Row>>();
     selectedCells.forEach((key) => {
       const rowIndex = parseInt(key.split(':')[0], 10);
       const row = serializedRows[rowIndex];
@@ -293,7 +294,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
   );
 
   const getResolvedCellValue = React.useCallback(
-    (row: any, column?: IColumn<Row>) => {
+    (row: TableSerializedRow<Row>, column?: IColumn<Row>) => {
       if (!row || !column) return undefined;
 
       const editedRow = editedRows?.get(row.__key_row);
@@ -319,7 +320,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
     };
     const occurrences: TableSearchOccurrence[] = [];
 
-    searchableRows.forEach((row: any) => {
+    searchableRows.forEach((row) => {
       columns.forEach((column, colIndex) => {
         const value = getResolvedCellValue(row, column);
         const serializedValue = serializeTableValue(value, column.type, { nullAsEmpty: true });
@@ -423,16 +424,15 @@ function Table<Row = any>(props: ITableProps<Row>) {
     [checkScrollEnd, scroll.top, setScrollDebounced],
   );
 
-  const getSortLabel = React.useCallback(
+  const getSortState = React.useCallback(
     (column: IColumn<Row>) => {
       const sortIndex = sort?.findIndex((item) => item.columnName === column.attribute) ?? -1;
-      if (sortIndex === -1) return column.label;
+      if (sortIndex === -1) return undefined;
 
-      const sortItem = sort[sortIndex];
-      const icon = sortItem.sortType === 'ASC' ? '▲' : '▼';
-      const order = sort.length > 1 ? ` ${sortIndex + 1}` : '';
-
-      return `${column.label} ${icon}${order}`;
+      return {
+        sortType: sort[sortIndex].sortType,
+        order: sort.length > 1 ? sortIndex + 1 : undefined,
+      };
     },
     [sort],
   );
@@ -1063,98 +1063,151 @@ function Table<Row = any>(props: ITableProps<Row>) {
   const handleContextMenu = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (!onContextMenu) return;
 
-    const cells = analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current;
-    const rowMap = new Map<number, number[]>();
+    type SelectedRowEntry = [rowIndex: number, colIndices: number[]];
 
-    cells.forEach((key) => {
-      const [r, c] = key.split(':').map(Number);
-      if (!rowMap.has(r)) rowMap.set(r, []);
-      rowMap.get(r)!.push(c);
-    });
+    const cellKeys = [...(analysisMode ? analysisSelectedCellsRef.current : selectedCellsRef.current)];
+    const rows = serializedRowsRef.current;
+    const currentColumns = columnsRef.current;
 
-    const cellLines = [...rowMap.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([rowIndex, colIndices]) => {
-        colIndices.sort((a, b) => a - b);
-        return colIndices
-          .map((ci) => {
-            const row = serializedRowsRef.current[rowIndex];
-            const column = columnsRef.current[ci];
-            const v = getResolvedCellValue(row, column);
-            return serializeTableCopyValue(v);
-          })
-          .join(', ');
-      });
+    let selectedRowEntriesCache: SelectedRowEntry[] | undefined;
+    let cellsTextCache: string | undefined;
+    let rowsTextCache: string | undefined;
+    let rowsJsonCache: string | undefined;
+    let rowsCache: Record<string, unknown>[] | undefined;
+    let selectedCellRowsCache: Record<string, unknown>[] | undefined;
+    let selectedCellsCache: ITableContextMenuCellData<Row>[] | undefined;
 
-    const rowLines = [...rowMap.keys()]
-      .sort((a, b) => a - b)
-      .map((rowIndex) => {
-        const row = serializedRowsRef.current[rowIndex];
-        return columnsRef.current
-          .map((col) => {
-            const v = getResolvedCellValue(row, col);
-            return serializeTableCopyValue(v);
-          })
-          .join(', ');
-      });
+    const getCellValue = (rowIndex: number, column?: IColumn<Row>) => {
+      return getResolvedCellValue(rows[rowIndex], column);
+    };
 
-    const sortedRowIndices = [...rowMap.keys()].sort((a, b) => a - b);
-
-    const rowObjects = sortedRowIndices.map((rowIndex) => {
-      const row = serializedRowsRef.current[rowIndex];
+    const buildRowObject = (rowIndex: number, columnsToUse: IColumn<Row>[]) => {
       return Object.fromEntries(
-        columnsRef.current.map((col) => [col.attribute, getResolvedCellValue(row, col) ?? null]),
+        columnsToUse.map((column) => [column.attribute, getCellValue(rowIndex, column) ?? null]),
       );
-    });
+    };
 
-    const selectedCellRows = [...rowMap.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([rowIndex, colIndices]) => {
-        const row = serializedRowsRef.current[rowIndex];
-        const sortedColIndices = [...colIndices].sort((a, b) => a - b);
+    const getSelectedRowEntries = () => {
+      if (selectedRowEntriesCache !== undefined) return selectedRowEntriesCache;
 
-        return Object.fromEntries(
-          sortedColIndices
-            .map((colIndex) => {
-              const col = columnsRef.current[colIndex];
-              if (!col) return null;
+      const rowMap = new Map<number, number[]>();
 
-              return [col.attribute, getResolvedCellValue(row, col) ?? null];
-            })
-            .filter((entry): entry is [string, any] => !!entry),
-        );
+      cellKeys.forEach((key) => {
+        const [rowIndex, colIndex] = key.split(':').map(Number);
+
+        if (!rowMap.has(rowIndex)) rowMap.set(rowIndex, []);
+        rowMap.get(rowIndex)!.push(colIndex);
       });
 
-    const selectedCells = [...cells]
-      .map((key) => {
-        const [rowIndex, colIndex] = key.split(':').map(Number);
-        const row = serializedRowsRef.current[rowIndex];
-        const column = columnsRef.current[colIndex];
+      selectedRowEntriesCache = [...rowMap.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([rowIndex, colIndices]) => [
+          rowIndex,
+          [...colIndices].sort((a, b) => a - b),
+        ]);
 
-        if (!row || !column) return null;
+      return selectedRowEntriesCache;
+    };
 
-        return { row, column, rowIndex, colIndex };
-      })
-      .filter((cell): cell is ITableContextMenuCellData<Row> => !!cell);
+    const getRows = () => {
+      if (rowsCache !== undefined) return rowsCache;
 
-    const rowsJson =
-      rowObjects.length === 1
-        ? JSON.stringify(rowObjects[0], null, 2)
-        : JSON.stringify(rowObjects, null, 2);
+      rowsCache = getSelectedRowEntries().map(([rowIndex]) => {
+        return buildRowObject(rowIndex, currentColumns);
+      });
+
+      return rowsCache;
+    };
+
+    const getSelectedCellRows = () => {
+      if (selectedCellRowsCache !== undefined) return selectedCellRowsCache;
+
+      selectedCellRowsCache = getSelectedRowEntries().map(([rowIndex, colIndices]) => {
+        const selectedColumns = colIndices
+          .map((colIndex) => currentColumns[colIndex])
+          .filter((column): column is IColumn<Row> => !!column);
+
+        return buildRowObject(rowIndex, selectedColumns);
+      });
+
+      return selectedCellRowsCache;
+    };
+
+    const getSelectedCells = () => {
+      if (selectedCellsCache !== undefined) return selectedCellsCache;
+
+      const selectedCells: ITableContextMenuCellData<Row>[] = [];
+
+      getSelectedRowEntries().forEach(([rowIndex, colIndices]) => {
+        const row = rows[rowIndex];
+        if (!row) return;
+
+        colIndices.forEach((colIndex) => {
+          const column = currentColumns[colIndex];
+          if (!column) return;
+
+          selectedCells.push({ row, column, rowIndex, colIndex });
+        });
+      });
+
+      selectedCellsCache = selectedCells;
+      return selectedCellsCache;
+    };
+
+    const getCellsText = () => {
+      if (cellsTextCache !== undefined) return cellsTextCache;
+
+      cellsTextCache = getSelectedRowEntries()
+        .map(([rowIndex, colIndices]) => {
+          return colIndices
+            .map((colIndex) => serializeTableCopyValue(getCellValue(rowIndex, currentColumns[colIndex])))
+            .join(', ');
+        })
+        .join('\n');
+
+      return cellsTextCache;
+    };
+
+    const getRowsText = () => {
+      if (rowsTextCache !== undefined) return rowsTextCache;
+
+      rowsTextCache = getSelectedRowEntries()
+        .map(([rowIndex]) => {
+          return currentColumns
+            .map((column) => serializeTableCopyValue(getCellValue(rowIndex, column)))
+            .join(', ');
+        })
+        .join('\n');
+
+      return rowsTextCache;
+    };
+
+    const getRowsJson = () => {
+      if (rowsJsonCache !== undefined) return rowsJsonCache;
+
+      const rowObjects = getRows();
+
+      rowsJsonCache =
+        rowObjects.length === 1
+          ? JSON.stringify(rowObjects[0], null, 2)
+          : JSON.stringify(rowObjects, null, 2);
+
+      return rowsJsonCache;
+    };
 
     onContextMenu(event, {
-      cellsText: cellLines.join('\n'),
-      rowsText: rowLines.join('\n'),
-      rowsJson,
-      rows: rowObjects,
-      selectedCellRows,
-      selectedCells,
+      getCellsText,
+      getRowsText,
+      getRowsJson,
+      getRows,
+      getSelectedCellRows,
+      getSelectedCells,
     });
   };
 
   const enterAnalysisMode = React.useCallback(
     (
-      rowsToAnalyze: Array<{ __index_row: number }>,
+      rowsToAnalyze: TableSerializedRow<Row>[],
       selectedCells: Set<string>,
       anchor?: TableCellPosition | null,
     ) => {
@@ -1170,7 +1223,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           40,
       );
       const rowColumnsMinSize = rowsToAnalyze.map((row) =>
-        Math.ceil(calculateTextHtmlWidth(`Linha #${Number(row.__index_row) + 1}`) + 40),
+        Math.ceil(calculateTextHtmlWidth(t('table.rowNumber', { number: Number(row.__index_row) + 1 })) + 40),
       );
       const minSizes = [firstColumnMinSize, ...rowColumnsMinSize];
       const sizes = minSizes.map((size) => {
@@ -1197,7 +1250,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
       captureDefaultScroll();
       setAnalysisMode(true);
     },
-    [captureDefaultScroll, defaultColumnSize, maxColumnSize],
+    [captureDefaultScroll, defaultColumnSize, maxColumnSize, t],
   );
 
   const resetAnalysisMode = React.useCallback(() => {
@@ -1381,7 +1434,7 @@ function Table<Row = any>(props: ITableProps<Row>) {
           columnsIndexToRender={columnsDetails.columnsIndexToRender}
           firstRowIndex={rowsDetails.first}
           lastRowIndex={rowsDetails.last}
-          getSortLabel={getSortLabel}
+          getSortState={getSortState}
           onResizeColumn={onResize}
           onSort={onSort}
           onDoubleClick={handleDoubleClickCell}

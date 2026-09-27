@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { createServer, type Server } from 'http';
 import type { Socket } from 'net';
-import { emitEvent } from '@main/utils/emitEvent';
+import { emitEvent } from '../utils/emitEvent';
 import {
   createSessionId,
   getReactNativeBridgeSessions,
@@ -13,11 +13,11 @@ import {
   rejectReactNativeBridgeSessionRequests,
   resolveReactNativeBridgeResponse,
 } from './rpc';
+import type { ReactNativeBridgeStatus } from '@shared/types/reactNativeBridge';
 import type {
   BridgeHelloMessage,
   BridgeMessage,
   BridgeResponseMessage,
-  ReactNativeBridgeStatus,
 } from './protocol';
 
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';

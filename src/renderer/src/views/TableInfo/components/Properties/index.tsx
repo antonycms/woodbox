@@ -1,13 +1,14 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 import { useForm } from '@renderer/hooks/useForm';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { useI18n } from '@renderer/contexts/I18n';
-import { ITableInfoProps } from '../../dtos';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { ITableInfoViewProps } from '../../dtos';
 import Columns from './tabs/Columns';
 import ForeingKeys from './tabs/ForeingKeys';
 import Restrictios from './tabs/Restrictions';
@@ -18,7 +19,7 @@ import Indexes from './tabs/Indexes';
 import Diagram from './tabs/Diagram';
 import styles from './styles.module.css';
 
-interface IPropertiesProps extends ITableInfoProps {
+interface IPropertiesProps extends ITableInfoViewProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
   onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
 }
@@ -30,12 +31,10 @@ const Properties = (props: IPropertiesProps) => {
   const supportsIndexes = props.supportsIndexes ?? !isReadOnlyObject;
   const supportsTriggers = props.supportsTriggers ?? !isReadOnlyObject;
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
 
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const [id] = React.useState(generateHash());
   const [activeTabId, setActiveTabId] = React.useState<string>('1');
   const {
@@ -46,7 +45,18 @@ const Properties = (props: IPropertiesProps) => {
     loadTableDefinition,
     loadTableIndexes,
     loadTableTriggers,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    props.tableStore,
+    useShallow((state) => ({
+      loadTableColumns: state.loadTableColumns,
+      loadTableReferences: state.loadTableReferences,
+      loadTableUsedAsReference: state.loadTableUsedAsReference,
+      loadTableRestrictions: state.loadTableRestrictions,
+      loadTableDefinition: state.loadTableDefinition,
+      loadTableIndexes: state.loadTableIndexes,
+      loadTableTriggers: state.loadTableTriggers,
+    })),
+  );
 
   const { state, register } = useForm({
     table: table || '',
@@ -169,49 +179,49 @@ const Properties = (props: IPropertiesProps) => {
           tabs={tabs}
         />
 
-        <TabWindow activeTabId={activeTabId}>
-          <TabContent idTab="1">
+        <TabWindow>
+          <TabContent activeTabId={activeTabId} idTab="1">
             <Columns {...props} table={tableName} tableComment={state.comment} />
           </TabContent>
 
           {supportsIndexes && (
-            <TabContent idTab="8">
+            <TabContent activeTabId={activeTabId} idTab="8">
               <Indexes {...props} table={tableName} tableComment={state.comment} />
             </TabContent>
           )}
 
           {!isReadOnlyObject && (
-            <TabContent idTab="2">
+            <TabContent activeTabId={activeTabId} idTab="2">
               <Restrictios {...props} table={tableName} tableComment={state.comment} />
             </TabContent>
           )}
 
           {!isReadOnlyObject && (
-            <TabContent idTab="3">
+            <TabContent activeTabId={activeTabId} idTab="3">
               <ForeingKeys {...props} table={tableName} tableComment={state.comment} />
             </TabContent>
           )}
 
           {!isCreateMode && !isReadOnlyObject && (
-            <TabContent idTab="4">
+            <TabContent activeTabId={activeTabId} idTab="4">
               <References {...props} />
             </TabContent>
           )}
 
           {!isCreateMode && !isReadOnlyObject && (
-            <TabContent idTab="7">
+            <TabContent activeTabId={activeTabId} idTab="7">
               <Diagram active={activeTabId === '7'} {...props} />
             </TabContent>
           )}
 
           {!isCreateMode && (
-            <TabContent idTab="5">
+            <TabContent activeTabId={activeTabId} idTab="5">
               <Definition {...props} />
             </TabContent>
           )}
 
           {!isCreateMode && supportsTriggers && (
-            <TabContent idTab="6">
+            <TabContent activeTabId={activeTabId} idTab="6">
               <Triggers {...props} />
             </TabContent>
           )}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Modal } from '@renderer/components/Modal';
-import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes } from '@renderer/styles/theme';
 import { SettingsCustomizationPanel } from './components/SettingsCustomizationPanel';
 import { SettingsGeneralPanel } from './components/SettingsGeneralPanel';
@@ -26,10 +27,8 @@ const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: T
   ];
 
 export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps) => {
-  const { t } = useI18n();
-  const {
-    activeTheme: { modal: colors, settings },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { modal: colors, settings } = useThemeStore((state) => state.activeTheme);
 
   const [activeMenu, setActiveMenu] = React.useState<SettingsMenu>('general');
   const layoutStyle = React.useMemo(

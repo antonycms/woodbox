@@ -12,7 +12,7 @@
   flex-shrink: 0;
   align-items: center;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--data-border-color);
+  border-bottom: 2px solid var(--data-border-color);
 }
 
 .filterInput {
@@ -43,29 +43,6 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-}
-
-.previewResizable {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.preview {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  border-left: 2px solid var(--data-border-color);
-}
-
-.previewHeader {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.previewHeader > :first-child {
-  flex: 1;
-  min-width: 0;
 }
 
 .actions {

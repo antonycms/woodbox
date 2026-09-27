@@ -3,7 +3,7 @@ import type { IColumn, TableCellEditValue, TableMutableRef, TableSerializedRow }
 import styles from '../styles.module.css';
 import { parseClipboardGrid } from '../utils';
 
-interface UseTableClipboardPasteParams<Row = any> {
+interface UseTableClipboardPasteParams<Row = Record<string, unknown>> {
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   analysisModeRef: TableMutableRef<boolean>;
   cellEditingKeyRef: TableMutableRef<string | undefined>;
@@ -11,8 +11,8 @@ interface UseTableClipboardPasteParams<Row = any> {
   analysisSelectedCellsRef: TableMutableRef<Set<string>>;
   serializedRowsRef: TableMutableRef<TableSerializedRow<Row>[]>;
   columnsRef: TableMutableRef<IColumn<Row>[]>;
-  onEditRow?(indexRow: number, attribute: string, value: any, rowKey?: React.Key): void;
-  onEditNewRow?(rowKey: React.Key, attribute: string, value: any): void;
+  onEditRow?(indexRow: number, attribute: string, value: unknown, rowKey?: React.Key): void;
+  onEditNewRow?(rowKey: React.Key, attribute: string, value: unknown): void;
   onSaveCell(
     indexRow: number,
     rowColumnKey: string,

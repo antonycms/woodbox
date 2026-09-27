@@ -1,3 +1,7 @@
+import { useShallow } from 'zustand/react/shallow';
+import { useUpdatesStore } from '@renderer/stores/Updates';
+import type { UpdateAvailablePayload as UpdateInfo } from '@shared/types/updates';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -5,29 +9,9 @@ import { Row } from '@renderer/components/Grid';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import call from '@renderer/utils/call';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
-
-type UpdateInfo = {
-  version: string;
-  currentVersion: string;
-  releaseNotes?: string | null;
-  releaseDate?: string;
-  manualDownloadUrl?: string;
-};
-
-type UpdateProgress = {
-  version?: string;
-  percent: number;
-  transferred: number;
-  total: number;
-};
-
-type UpdateError = {
-  message?: string;
-};
 
 type UpdateStatus = 'available' | 'downloading' | 'downloaded' | 'error';
 
@@ -47,10 +31,18 @@ const formatDate = (date?: string) => {
 };
 
 export const UpdateAvailableModal = React.memo(() => {
-  const { t } = useI18n();
-  const {
-    activeTheme: { modal },
-  } = useThemeContext();
+  const updates = useUpdatesStore(
+    useShallow((state) => ({
+      quitAndInstall: state.quitAndInstall,
+      download: state.download,
+      onAvailable: state.onAvailable,
+      onProgress: state.onProgress,
+      onDownloaded: state.onDownloaded,
+      onError: state.onError,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
+  const { modal } = useThemeStore((state) => state.activeTheme);
 
   const [update, setUpdate] = React.useState<UpdateInfo | null>(null);
   const [status, setStatus] = React.useState<UpdateStatus>('available');
@@ -85,57 +77,45 @@ export const UpdateAvailableModal = React.memo(() => {
 
       if (status === 'downloaded') {
         setErrorMessage(null);
-        await call('@post:quit_and_install_update');
+        await updates.quitAndInstall();
         return;
       }
 
       setStatus('downloading');
       setErrorMessage(null);
-      await call('@post:download_update');
+      await updates.download();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : null);
+      setErrorMessage(getErrorMessage(error) || null);
       setStatus('error');
     }
-  }, [status, update?.manualDownloadUrl]);
+  }, [status, update?.manualDownloadUrl, updates]);
 
   React.useEffect(() => {
-    const removeAvailableListener = window.electron.ipcRenderer.on(
-      '@event:update_available',
-      (_event, nextUpdate: UpdateInfo) => {
-        const ignoredVersion = window.localStorage.getItem(ignoredUpdateStorageKey);
+    const removeAvailableListener = updates.onAvailable((nextUpdate: UpdateInfo) => {
+      const ignoredVersion = window.localStorage.getItem(ignoredUpdateStorageKey);
 
-        if (ignoredVersion === nextUpdate.version) return;
+      if (ignoredVersion === nextUpdate.version) return;
 
-        setUpdate(nextUpdate);
-        setStatus('available');
-        setProgress(0);
-        setErrorMessage(null);
-      },
-    );
+      setUpdate(nextUpdate);
+      setStatus('available');
+      setProgress(0);
+      setErrorMessage(null);
+    });
 
-    const removeProgressListener = window.electron.ipcRenderer.on(
-      '@event:update_download_progress',
-      (_event, nextProgress: UpdateProgress) => {
-        setProgress(Math.min(100, Math.max(0, nextProgress.percent)));
-      },
-    );
+    const removeProgressListener = updates.onProgress((nextProgress) => {
+      setProgress(Math.min(100, Math.max(0, nextProgress.percent)));
+    });
 
-    const removeDownloadedListener = window.electron.ipcRenderer.on(
-      '@event:update_downloaded',
-      (_event, nextUpdate: UpdateInfo) => {
-        setUpdate(nextUpdate);
-        setStatus('downloaded');
-        setProgress(100);
-      },
-    );
+    const removeDownloadedListener = updates.onDownloaded((nextUpdate: UpdateInfo) => {
+      setUpdate(nextUpdate);
+      setStatus('downloaded');
+      setProgress(100);
+    });
 
-    const removeErrorListener = window.electron.ipcRenderer.on(
-      '@event:update_error',
-      (_event, error: UpdateError) => {
-        setErrorMessage(error.message || null);
-        setStatus('error');
-      },
-    );
+    const removeErrorListener = updates.onError((error) => {
+      setErrorMessage(error.message || null);
+      setStatus('error');
+    });
 
     return () => {
       removeAvailableListener();
@@ -143,7 +123,7 @@ export const UpdateAvailableModal = React.memo(() => {
       removeDownloadedListener();
       removeErrorListener();
     };
-  }, []);
+  }, [updates]);
 
   if (!update) return null;
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import ArrowDownIcon from '@renderer/assets/icons/arrow-down.svg?react';
 import ChevronDownIcon from '@renderer/assets/icons/chevron-down-compact.svg?react';
 import ChevronRightIcon from '@renderer/assets/icons/chevron-right-compact.svg?react';
@@ -60,7 +60,7 @@ const TableSearchBar = ({
   onPrevious,
   onClose,
 }: ITableSearchBarProps) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const counter = total ? `${activeIndex + 1} de ${total}` : '0 de 0';
   const barClassName = [

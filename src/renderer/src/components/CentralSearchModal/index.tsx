@@ -1,8 +1,12 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useStoreContext, type IFunctionDb, type IScript } from '@renderer/contexts/Store';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import type { IFunctionDb, DatabaseObjectType } from '@shared/types/database';
+import type { IScriptMetadata as IScript } from '@shared/types/workspace';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useDatabaseStore } from '@renderer/stores/Database';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
@@ -10,30 +14,42 @@ import IconItemTreeView from '@renderer/components/TreeView/IconItemTreeView';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
 import * as constants from './constants';
 
 export const CentralSearchModal = React.memo(() => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
   const resultsRef = React.useRef<HTMLDivElement>(null);
   const loadingTableColumnsRef = React.useRef(new Set<string>());
 
-  const { tabs, addTab, getTab, activeTabId, setActiveTabId } = useAppTabContext();
-  const { scripts, connections, connectionsInfo, getTableColumns } = useStoreContext();
+  const { tabs, addTab, getTab, activeTabId, setActiveTabId } = useAppTabStore(
+    useShallow((state) => ({
+      tabs: state.tabs,
+      addTab: state.addTab,
+      getTab: state.getTab,
+      activeTabId: state.activeTabId,
+      setActiveTabId: state.setActiveTabId,
+    })),
+  );
+  const { scripts, connections, connectionsInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      scripts: state.scripts,
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+    })),
+  );
+  const getTableColumns = useDatabaseStore((state) => state.getTableColumns);
   const {
-    activeTheme: {
-      centralSearch,
-      modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
-    },
-  } = useThemeContext();
+    centralSearch,
+    modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
+  } = useThemeStore((state) => state.activeTheme);
 
   const parsedSearch = constants.parseSearchText(searchText);
   const [columnNamesByTable, setColumnNamesByTable] = React.useState<Map<string, string[]>>(
@@ -66,7 +82,7 @@ export const CentralSearchModal = React.memo(() => {
           id_script: script.id,
           name: script.name,
         },
-        component: () => <QueryEditor id_connection={script.id_connection} id_script={script.id} />,
+        component: ({ isActiveTab }) => <QueryEditor isActiveTab={isActiveTab} id_connection={script.id_connection} id_script={script.id} />,
       });
     },
     [addTab, getTab, setActiveTabId],

@@ -1,7 +1,7 @@
+import { quoteSqlIdentifier as quoteIdent } from '@shared/utils/sql';
 import type { RendererDialect, RendererDialectDdl } from './types';
 import { getIndexColumnsDdl } from './utils';
 
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 
 const postgresNumericPrecisionTypes = new Set(['decimal', 'numeric']);
 

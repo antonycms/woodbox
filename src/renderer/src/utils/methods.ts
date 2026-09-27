@@ -4,7 +4,7 @@ export const getScrollbarWidth = () => {
 
   outer.style.visibility = 'hidden';
   outer.style.overflow = 'scroll'; // forcing scrollbar to appear
-  (outer.style as any).msOverflowStyle = 'scrollbar'; // needed for WinJS apps
+  (outer.style as CSSStyleDeclaration & { msOverflowStyle?: string }).msOverflowStyle = 'scrollbar'; // needed for WinJS apps
 
   document.body.appendChild(outer);
 
@@ -33,7 +33,7 @@ export function calculateTextHtmlWidth(
     fontWeight?: string | number;
   } = {},
 ) {
-  const w = window as any;
+  const w = window as Window & { canvas?: HTMLCanvasElement; canvasCalculateText?: HTMLCanvasElement };
 
   let { fontWeight, fontSize, fontFamily } = options;
 
@@ -54,7 +54,7 @@ export function calculateTextHtmlWidth(
   return metrics.width;
 }
 
-export function copyToClipboard(value: any) {
+export function copyToClipboard(value: unknown) {
   let v = value;
 
   try {
@@ -67,14 +67,14 @@ export function copyToClipboard(value: any) {
   }
 }
 
-export function isElement(o: any) {
+export function isElement(o: unknown) {
   return typeof HTMLElement === 'object'
     ? o instanceof HTMLElement //DOM2
     : o &&
         typeof o === 'object' &&
         o !== null &&
-        o.nodeType === 1 &&
-        typeof o.nodeName === 'string';
+        'nodeType' in o && o.nodeType === 1 &&
+        'nodeName' in o && typeof o.nodeName === 'string';
 }
 
 export function formatSizeFromBytes(bytes: number): string {

@@ -1,5 +1,5 @@
 import { formatSizeFromBytes } from '@renderer/utils/methods';
-import type { IIndexInfo } from '@renderer/contexts/Store';
+import type { IIndexInfo } from '@shared/types/database';
 import type { IIndexInfoSerialized } from './dtos';
 
 export const getIndexSelectionKey = (index: IIndexInfo) =>

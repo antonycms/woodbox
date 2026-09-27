@@ -1,5 +1,5 @@
 import React from 'react';
-import type { IAIChat, IAIProvider } from '@renderer/contexts/Store';
+import type { IAIChat, IAIProviderPublic as IAIProvider } from '@shared/types/ai';
 import type { IAIChatModelSelection, IAIChatModelSelectionProps } from '../types';
 import { normalizeAIModelList } from '../utils/aiModels';
 

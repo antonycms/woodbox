@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
@@ -6,17 +7,17 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import { useStoreContext } from '@renderer/contexts/Store';
-import {
-  type IPendingReferenceCreate,
-  useTableInfoContext,
-} from '@renderer/contexts/TableInfoContext';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import type {
+  IPendingReferenceCreate,
+} from '@renderer/database/ddl/types';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
@@ -24,17 +25,17 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateReferencesDdl } from '../Columns/ddl';
+import { generateReferencesDdl } from '@renderer/database/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { IReferenceSerialized } from './dtos';
 import { getReferenceSearchValues, getReferenceSelectionKey } from './utils';
 
-interface IForeingKeysProps extends ITableInfoProps {
+interface IForeingKeysProps extends ITableInfoViewProps {
   onOpenTable?: (idConnection: string, schema: string, table: string) => void;
 }
 
-const ForeingKeys = ({
+const ForeingKeys = ({ tableStore,
   id_connection,
   schema,
   table,
@@ -44,12 +45,15 @@ const ForeingKeys = ({
   onOpenTable,
 }: IForeingKeysProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { t } = useI18n();
-  const { connections, connectionsInfo } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
+  const { connections, connectionsInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+    })),
+  );
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -57,7 +61,7 @@ const ForeingKeys = ({
       ),
     [connections, id_connection],
   );
-  const { showToast } = useToast();
+  const showToast = useToastStore((state) => state.showToast);
   const {
     columns,
     pendingColumns,
@@ -74,7 +78,26 @@ const ForeingKeys = ({
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      columns: state.columns,
+      pendingColumns: state.pendingColumns,
+      pendingDroppedColumns: state.pendingDroppedColumns,
+      references: state.references,
+      pendingReferences: state.pendingReferences,
+      pendingDroppedReferences: state.pendingDroppedReferences,
+      addPendingReference: state.addPendingReference,
+      removePendingReference: state.removePendingReference,
+      addPendingDroppedReferences: state.addPendingDroppedReferences,
+      removePendingDroppedReferences: state.removePendingDroppedReferences,
+      clearPendingChanges: state.clearPendingChanges,
+      loadTableReferences: state.loadTableReferences,
+      openPendingChangesSqlModal: state.openPendingChangesSqlModal,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
   const [referenceFilterText, setReferenceFilterText] = React.useState('');

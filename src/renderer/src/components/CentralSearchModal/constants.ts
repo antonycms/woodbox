@@ -4,7 +4,7 @@ import type {
   ICentralSearchRow,
   IParsedSearch,
 } from './dtos';
-import type { IConnection } from '@renderer/contexts/Store';
+import type { IConnectionPublic as IConnection } from '@shared/types/connections';
 
 export const containerElement = document.getElementById('modal-root');
 

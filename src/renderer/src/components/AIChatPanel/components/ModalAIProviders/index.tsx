@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@shared/utils/error';
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -8,17 +10,18 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import {
-  type AIProviderType,
-  type IAIProvider,
-  type IAIProviderCreate,
-  type ICodexChatGPTAccount,
-  type ICodexChatGPTLoginStart,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
-import { useToast } from '@renderer/contexts/Toast';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import type {
+  AIProviderType,
+  IAIProviderPublic as IAIProvider,
+  IAIProviderInput as IAIProviderCreate,
+  ICodexChatGPTAccount,
+  ICodexChatGPTLoginStart,
+} from '@shared/types/ai';
+import { useAIStore } from '@renderer/stores/AI';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useToastStore } from '@renderer/stores/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { AddIcon, RemoveIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
 
@@ -59,8 +62,8 @@ interface IModalAIProvidersProps {
 }
 
 export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProvidersProps) => {
-  const { t } = useI18n();
-  const { showToast } = useToast();
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
   const {
     aiProviders,
     addAIProvider,
@@ -70,10 +73,19 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     getCodexChatGPTAccount,
     startCodexChatGPTLogin,
     logoutCodexChatGPT,
-  } = useStoreContext();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  } = useAIStore(
+    useShallow((state) => ({
+      aiProviders: state.aiProviders,
+      addAIProvider: state.addAIProvider,
+      editAIProvider: state.editAIProvider,
+      removeAIProvider: state.removeAIProvider,
+      testAIProvider: state.testAIProvider,
+      getCodexChatGPTAccount: state.getCodexChatGPTAccount,
+      startCodexChatGPTLogin: state.startCodexChatGPTLogin,
+      logoutCodexChatGPT: state.logoutCodexChatGPT,
+    })),
+  );
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
   const [editingProvider, setEditingProvider] = React.useState<ProviderForm>();
   const [providerToRemove, setProviderToRemove] = React.useState<IAIProvider>();
   const [codexAccount, setCodexAccount] = React.useState<ICodexChatGPTAccount>();
@@ -190,11 +202,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
         showToast({ type: 'success', title: t('aiProvider.saved') });
         setEditingProvider(undefined);
-      } catch (error) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('aiProvider.saveFailed'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
         setLoadingSave(false);
@@ -210,11 +222,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       setLoadingTest(true);
       await testAIProvider(editingProvider);
       showToast({ type: 'success', title: t('aiProvider.testSuccess') });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.testFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingTest(false);
@@ -229,12 +241,12 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
       setCodexAccount(account);
       if (account.authenticated) setCodexLogin(undefined);
-    } catch (error) {
+    } catch (error: unknown) {
       if (!silent) {
         showToast({
           type: 'error',
           title: t('aiProvider.codexStatusFailed'),
-          description: error.message,
+          description: getErrorMessage(error, t('common.unknownError')),
         });
       }
     } finally {
@@ -249,11 +261,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
 
       setCodexLogin(login);
       window.open(login.verificationUrl, '_blank');
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.codexLoginFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingCodexLogin(false);
@@ -266,11 +278,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
       await logoutCodexChatGPT();
       setCodexLogin(undefined);
       await loadCodexAccount();
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.codexLogoutFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setLoadingCodexAccount(false);
@@ -283,11 +295,11 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
     try {
       await removeAIProvider(providerToRemove.id);
       showToast({ type: 'success', title: t('aiProvider.removed') });
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('aiProvider.removeFailed'),
-        description: error.message,
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     } finally {
       setProviderToRemove(undefined);
@@ -519,7 +531,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
                   required
                   label={t('aiProvider.field.baseURL')}
                   value={editingProvider.baseURL}
-                  placeholder="http://localhost:11434/v1"
+                  placeholder={t('aiProvider.baseUrlPlaceholder')}
                   md={12}
                   color={colors.fieldColor}
                   backgroundColor={colors.fieldBackgroundColor}

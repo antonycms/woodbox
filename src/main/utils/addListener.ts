@@ -1,19 +1,21 @@
 import { ipcMain } from 'electron';
+import type { IpcArgs, IpcChannel, IpcData, IpcResponse } from '@shared/types/ipc';
+import { assertTrustedSender } from '../ipc/security';
+import { parseIpcArgs } from '../ipc/validation';
+import { serializeIpcError } from '../ipc/errors';
 
-export default async function addListener<Params extends unknown[], Data>(
-  event: string,
-  callbackFunction: CallbackFunction<Params, Data>,
+export default function addListener<C extends IpcChannel>(
+  channel: C,
+  callbackFunction: (...params: IpcArgs<C>) => IpcData<C> | Promise<IpcData<C>>,
 ) {
-  ipcMain.handle(event, async (_, ...params) => {
+  ipcMain.handle(channel, async (event, ...params): Promise<IpcResponse<IpcData<C>>> => {
     try {
-      const data = await callbackFunction(...(params as Params));
+      assertTrustedSender(event);
+      const data = await callbackFunction(...parseIpcArgs(channel, params));
       return { data, error: null };
     } catch (error) {
       console.error(error);
-      const errorObj = JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      return { data: null, error: errorObj };
+      return { data: null, error: serializeIpcError(error) };
     }
   });
 }
-
-type CallbackFunction<Params extends unknown[], Data> = (...params: Params) => Data | Promise<Data>;

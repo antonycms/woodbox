@@ -1,5 +1,5 @@
 import Store from 'electron-store';
-import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '@main/storage/secret';
+import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '../storage/secret';
 
 const ISSUER = 'https://auth.openai.com';
 const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
 
 interface IFilterBarProps {
@@ -10,10 +10,8 @@ interface IFilterBarProps {
 
 const FilterBar = ({ placeholder, value, onChange }: IFilterBarProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
 
   return (
     <div

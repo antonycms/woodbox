@@ -1,18 +1,20 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
 import { Column, IGridSystem } from '@renderer/components/Grid';
 import { Label } from '@renderer/components/Label';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { classes } from '@renderer/styles/theme/utils';
 import styles from './styles.module.css';
 
 export const FilePicker = (props: IFilePickerProps) => {
+  const t = useI18nStore((state) => state.t);
   const {
     ref,
     accept,
     autoFocus,
     backgroundColor,
-    buttonText = 'Escolher arquivo',
+    buttonText = t('file.choose'),
     className,
     color,
     disabled,
@@ -27,16 +29,14 @@ export const FilePicker = (props: IFilePickerProps) => {
     onChange,
     onClick,
     onFocus,
-    placeholder = 'Nenhum arquivo selecionado',
+    placeholder = t('file.noneSelected'),
     placeholderColor,
     required,
     style,
     title,
     ...gridSystem
   } = props;
-  const {
-    activeTheme: { field: theme },
-  } = useThemeContext();
+  const { field: theme } = useThemeStore((state) => state.activeTheme);
 
   const id = React.useMemo(() => externalId || generateHash(), [externalId]);
   const inputTitle = title ? title : !label && placeholder ? placeholder : undefined;

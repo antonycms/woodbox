@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, IButtonProps } from '@renderer/components/Button';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
 
 export interface IButtonDropdownOption {
@@ -29,9 +29,7 @@ export const ButtonDropdown = React.memo((props: IButtonDropdownProps) => {
     dropdownHoverBackground,
     ...buttonProps
   } = props;
-  const {
-    activeTheme: { button: theme },
-  } = useThemeContext();
+  const { button: theme } = useThemeStore((state) => state.activeTheme);
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 

@@ -13,7 +13,7 @@ export const arrayToCSV = (data: Record<string, unknown>[]): string => {
   return [headers.join(','), ...rows].join('\n');
 };
 
-export const arrayIsEquals = (array1: any[], array2: any[]) => {
+export const arrayIsEquals = (array1: unknown[], array2: unknown[]) => {
   if (array1 === array2) return true;
   if (array1.length !== array2.length) return false;
 
@@ -26,9 +26,9 @@ export const arrayIsEquals = (array1: any[], array2: any[]) => {
     else {
       if (!array2[index]) return false;
 
-      const attributes = Object.keys(item);
+      const attributes = Object.keys(item as object);
 
-      return attributes.every((attribute) => array1[index][attribute] === array2[index][attribute]);
+      return attributes.every((attribute) => (array1[index] as Record<string, unknown>)[attribute] === (array2[index] as Record<string, unknown>)[attribute]);
     }
   });
 

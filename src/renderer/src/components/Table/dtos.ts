@@ -5,7 +5,7 @@ export interface ITableSort {
   sortType: ISortDirection;
 }
 
-export interface IColumn<ColumnType = any> {
+export interface IColumn<ColumnType = Record<string, unknown>> {
   title?: string;
   label: string;
   info?: string;
@@ -18,7 +18,7 @@ export interface IColumn<ColumnType = any> {
   isLink?: boolean;
   type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-free' | 'autocomplete-multi';
   dataAutocomplete?: string[];
-  getEditValue?: TableCellValueResolver<ColumnType>;
+  getEditValue?(row: TableSerializedRow<ColumnType>, column: IColumn<ColumnType>): string | number;
   renderIcon?(): React.ReactElement;
   render?(row: TableSerializedRow<ColumnType>, column: IColumn<ColumnType>): React.ReactNode;
 }
@@ -42,19 +42,19 @@ export type TableDragSelectionState = {
   hasMoved: boolean;
 };
 
-export type TableSerializedRow<Row = any> = Row & {
+export type TableSerializedRow<Row = Record<string, unknown>> = Row & {
   __index_row: number;
   __row_index?: number;
   __key_row: React.Key;
   __is_new_row?: boolean;
   __is_removed?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
-export type TableCellValueResolver<Row = any> = (
+export type TableCellValueResolver<Row = Record<string, unknown>> = (
   row: TableSerializedRow<Row> | undefined,
   column?: IColumn<Row>,
-) => any;
+) => unknown;
 
 export type TableMutableRef<Value> = {
   current: Value;

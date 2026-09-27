@@ -1,21 +1,22 @@
-.checkboxes {
+.bridgeNotice {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 4px 10px;
-}
-
-.checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--warningBorderColor, rgba(255, 193, 7, 0.35));
+  border-radius: 6px;
+  background: var(--warningBackgroundColor, rgba(255, 193, 7, 0.08));
   font-size: 13px;
+  line-height: 1.35;
   user-select: none;
 }
 
-.checkbox input:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+.bridgeNotice a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  user-select: text;
 }

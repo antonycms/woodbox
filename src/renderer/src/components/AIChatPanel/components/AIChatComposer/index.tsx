@@ -1,5 +1,5 @@
 import React from 'react';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { IconArrowUp, IconStop } from '@renderer/styles/icons';
 import type {
   IAIChatConnectionOption,
@@ -128,7 +128,7 @@ export const AIChatComposer = React.memo(
     onKeyUp,
     onKeyDown,
   }: IAIChatComposerProps) => {
-    const { t } = useI18n();
+    const t = useI18nStore((state) => state.t);
     const [openConnections, setOpenConnections] = React.useState(false);
     const [openModels, setOpenModels] = React.useState(false);
     const [connectionFilter, setConnectionFilter] = React.useState('');

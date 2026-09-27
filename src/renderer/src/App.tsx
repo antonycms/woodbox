@@ -2,6 +2,7 @@ import React from 'react';
 import '@renderer/styles/reset.css';
 import '@renderer/init';
 
+import { StoreInitialization } from '@renderer/components/StoreInitialization';
 import { ContainerApp } from '@renderer/components/ContainerApp';
 import { Sidebar } from '@renderer/components/Sidebar';
 import { MainContent } from '@renderer/components/MainContent';
@@ -9,38 +10,21 @@ import { CentralSearchModal } from '@renderer/components/CentralSearchModal';
 import { AIChatPanel } from '@renderer/components/AIChatPanel';
 import { UpdateAvailableModal } from '@renderer/components/UpdateAvailableModal';
 
-import AIChatPanelProvider from '@renderer/contexts/AIChatPanel';
-import AppTabProvider from '@renderer/contexts/AppTab';
-import StoreContextProvider from '@renderer/contexts/Store';
-import ToastProvider from '@renderer/contexts/Toast';
-import ThemeProvider from '@renderer/contexts/Theme';
-import I18nProvider from '@renderer/contexts/I18n';
+import { ToastHost } from '@renderer/components/ToastHost';
+import { AppTabLifecycle } from '@renderer/components/AppTabLifecycle';
 
 const App = () => {
   return (
-    <I18nProvider>
-      <ThemeProvider>
-        <StoreContextProvider>
-          <ContainerApp>
-            <ToastProvider>
-              <AppTabProvider>
-                <AIChatPanelProvider>
-                  <Sidebar />
-
-                  <MainContent />
-
-                  <AIChatPanel />
-
-                  <CentralSearchModal />
-
-                  <UpdateAvailableModal />
-                </AIChatPanelProvider>
-              </AppTabProvider>
-            </ToastProvider>
-          </ContainerApp>
-        </StoreContextProvider>
-      </ThemeProvider>
-    </I18nProvider>
+    <ContainerApp>
+      <StoreInitialization />
+      <AppTabLifecycle />
+      <Sidebar />
+      <MainContent />
+      <AIChatPanel />
+      <CentralSearchModal />
+      <UpdateAvailableModal />
+      <ToastHost />
+    </ContainerApp>
   );
 };
 

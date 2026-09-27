@@ -2,8 +2,8 @@ import React from 'react';
 import { IQueryResult } from '../../dtos';
 import styles from '../../styles.module.css';
 import { Text } from '@renderer/components/Text';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { toDateTime } from '@renderer/utils/date';
 
 interface ITabContentAlter {
@@ -11,8 +11,8 @@ interface ITabContentAlter {
 }
 
 export const TabContentAlter = (props: ITabContentAlter) => {
-  const { t } = useI18n();
-  const { activeTheme } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const activeTheme = useThemeStore((state) => state.activeTheme);
   const { data } = props;
 
   return (

@@ -6,7 +6,7 @@ import type {
 } from '../dtos';
 import { cellKey } from '../utils';
 
-interface UseTableAnalysisModeEffectsParams<Row = any> {
+interface UseTableAnalysisModeEffectsParams<Row = Record<string, unknown>> {
   analysisMode: boolean;
   analysisModeRef: TableMutableRef<boolean>;
   analysisRowsRef: TableMutableRef<TableSerializedRow<Row>[]>;

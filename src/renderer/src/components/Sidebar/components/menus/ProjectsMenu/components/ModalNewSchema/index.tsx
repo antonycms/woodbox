@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -5,20 +6,20 @@ import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import { useForm } from '@renderer/hooks/useForm';
 
 export const ModalNewSchema = React.memo(
   ({ show, idConnection, onClose }: IModalNewSchemaProps) => {
-    const { runSql, loadConnectionInfo } = useStoreContext();
-    const { t } = useI18n();
-    const { showToast } = useToast();
-    const {
-      activeTheme: { modal: colors },
-    } = useThemeContext();
+    const runSql = useDatabaseStore((state) => state.runSql);
+    const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
+    const t = useI18nStore((state) => state.t);
+    const showToast = useToastStore((state) => state.showToast);
+    const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
     const { register, handleSubmit, reset } = useForm<IDataNewSchema>({ name: '' });
@@ -45,11 +46,11 @@ export const ModalNewSchema = React.memo(
         });
 
         close();
-      } catch (error: any) {
+      } catch (error: unknown) {
         showToast({
           type: 'error',
           title: t('toast.schemaCreateError'),
-          description: error?.message,
+          description: getErrorMessage(error, t('common.unknownError')),
           delay: 8000,
         });
       } finally {

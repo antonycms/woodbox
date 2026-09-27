@@ -2,7 +2,8 @@ import postgres from './postgres';
 import mysql from './mysql';
 import sqlite from './sqlite';
 import reactNativeSqlite from './reactNativeSqlite';
-import type { Dialect, RendererDialect } from './types';
+import type { Dialect } from '@shared/types/connections';
+import type { RendererDialect } from './types';
 
 export type * from './types';
 

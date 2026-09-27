@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
 import { Spacer } from '@renderer/components/Spacer';
@@ -6,15 +7,18 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import type { IIndexInfo } from '@renderer/contexts/Store';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { type IPendingIndexCreate, useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { ITableInfoProps } from '@renderer/views/TableInfo/dtos';
+import type { IIndexInfo } from '@shared/types/database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import type {
+  IPendingIndexCreate,
+} from '@renderer/database/ddl/types';
+import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
@@ -22,7 +26,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterBar from '../../components/FilterBar';
-import { generateIndexesDdl } from '../Columns/ddl';
+import { generateIndexesDdl } from '@renderer/database/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { IIndexInfoSerialized } from './dtos';
@@ -33,22 +37,20 @@ import {
   getIndexSizeText,
 } from './utils';
 
-const Indexes = ({
+const Indexes = ({ tableStore,
   id_connection,
   schema,
   table,
   mode,
   tableComment,
   onCreateApplied,
-}: ITableInfoProps) => {
+}: ITableInfoViewProps) => {
   const {
-    activeTheme: {
-      tableInfo: { properties: theme },
-    },
-  } = useThemeContext();
-  const { showToast } = useToast();
-  const { t } = useI18n();
-  const { connections } = useStoreContext();
+    tableInfo: { properties: theme },
+  } = useThemeStore((state) => state.activeTheme);
+  const showToast = useToastStore((state) => state.showToast);
+  const t = useI18nStore((state) => state.t);
+  const connections = useWorkspaceStore((state) => state.connections);
   const dialect = React.useMemo(
     () =>
       getRendererDialect(
@@ -72,7 +74,26 @@ const Indexes = ({
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
-  } = useTableInfoContext();
+  } = useTableInfoStore(
+    tableStore,
+    useShallow((state) => ({
+      columns: state.columns,
+      pendingColumns: state.pendingColumns,
+      pendingDroppedColumns: state.pendingDroppedColumns,
+      indexes: state.indexes,
+      pendingIndexes: state.pendingIndexes,
+      pendingDroppedIndexes: state.pendingDroppedIndexes,
+      addPendingIndex: state.addPendingIndex,
+      removePendingIndex: state.removePendingIndex,
+      addPendingDroppedIndexes: state.addPendingDroppedIndexes,
+      removePendingDroppedIndexes: state.removePendingDroppedIndexes,
+      clearPendingChanges: state.clearPendingChanges,
+      loadTableIndexes: state.loadTableIndexes,
+      openPendingChangesSqlModal: state.openPendingChangesSqlModal,
+      lastFetchDate: state.lastFetchDate,
+      loading: state.loading,
+    })),
+  );
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
   const [indexFilterText, setIndexFilterText] = React.useState('');

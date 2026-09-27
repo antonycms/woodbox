@@ -1,3 +1,4 @@
+import type { IAIProviderConfig } from '@shared/types/ai';
 import type { LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';

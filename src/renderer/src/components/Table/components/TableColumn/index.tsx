@@ -1,3 +1,4 @@
+import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import { classes } from '@renderer/styles/theme';
 import ResizableContainer, { OnResizeCallback } from '@renderer/components/ResizableContainer';
@@ -18,11 +19,8 @@ const linkStyle: React.CSSProperties = {
 
 const emptyStyle: React.CSSProperties = {};
 const primaryShortcutKeyLabel = getPrimaryShortcutKeyLabel();
-const singleLinkTitle = 'Clique para abrir linha referenciada';
-const previewLinkTitle = `Clique para visualizar referência; ${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
-const openLinkTitle = `${primaryShortcutKeyLabel}+click para abrir linha referenciada`;
 
-interface ITableColumnProps {
+interface ITableColumnProps<Row> {
   indexRow?: number;
   minWidth?: number;
   columnIndex: number;
@@ -46,16 +44,17 @@ interface ITableColumnProps {
   isEdited?: boolean;
   isRemoved?: boolean;
   isNew?: boolean;
-  value?: number | string | boolean | null | (string | number)[];
+  value?: unknown;
   info?: string;
+  headerSuffix?: React.ReactNode;
   name?: string;
   rowColumnKey?: string;
   width?: number;
   isLink?: boolean;
   type?: 'text' | 'number' | 'autocomplete' | 'autocomplete-free' | 'autocomplete-multi';
   dataAutocomplete?: string[];
-  onFkCellClick?(name: string, value: any): void;
-  onFkCellPreviewClick?(name: string, value: any): void;
+  onFkCellClick?(name: string, value: unknown): void;
+  onFkCellPreviewClick?(name: string, value: unknown): void;
   linkClickMode?: 'ctrl' | 'single';
   isSelectedCell?: boolean;
   isSearchMatch?: boolean;
@@ -67,11 +66,11 @@ interface ITableColumnProps {
     event: React.MouseEvent<HTMLElement, MouseEvent>,
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
-  row?: TableSerializedRow;
-  column?: IColumn;
+  row?: TableSerializedRow<Row>;
+  column?: IColumn<Row>;
 }
 
-const TableColumn = ({
+const TableColumn = <Row,>({
   isEditing,
   isEdited,
   isRemoved,
@@ -79,6 +78,7 @@ const TableColumn = ({
   title,
   value,
   info,
+  headerSuffix,
   indexRow,
   columnIndex,
   rowHeight,
@@ -109,16 +109,17 @@ const TableColumn = ({
   onMoveCellDrag,
   row,
   column,
-}: ITableColumnProps) => {
+}: ITableColumnProps<Row>) => {
+  const t = useI18nStore((state) => state.t);
   const isHeaderColumn = indexRow === undefined;
   const isLinkClickable = isLink && !isHeaderColumn && value !== null && value !== undefined;
   const linkTitle = !isLinkClickable
     ? undefined
     : linkClickMode === 'single'
-      ? singleLinkTitle
+      ? t('tooltip.clickOpenReferencedRow')
       : onFkCellPreviewClick
-        ? previewLinkTitle
-        : openLinkTitle;
+        ? t('tooltip.previewOrOpenReferencedRow', { shortcut: primaryShortcutKeyLabel })
+        : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: primaryShortcutKeyLabel });
 
   const className = React.useMemo(() => {
     return classes(
@@ -295,10 +296,11 @@ const TableColumn = ({
     <span style={linkStyle} title={linkTitle} onClick={handleLinkClick}>
       {serializedValue}
     </span>
-  ) : info && isHeaderColumn ? (
+  ) : isHeaderColumn && (info || headerSuffix) ? (
     <span className={styles.header_content}>
       <span className={styles.header_label}>{serializedValue}</span>
-      <span className={styles.header_info}>{info}</span>
+      {info ? <span className={styles.header_info}>{info}</span> : null}
+      {headerSuffix}
     </span>
   ) : (
     serializedValue
@@ -329,7 +331,7 @@ const TableColumn = ({
           autoFocus
           backgroundColor={'var(--backgroundColor)'}
           data={dataAutocomplete ?? []}
-          value={Array.isArray(value) ? null : value}
+          value={Array.isArray(value) ? null : value as string | number | boolean | null}
           defaultValue={editInitialValue}
           name={name}
           containerClassName={classes(className, styles.autocomplete_cell)}
@@ -349,7 +351,7 @@ const TableColumn = ({
           autoFocus
           backgroundColor={'var(--backgroundColor)'}
           data={dataAutocomplete ?? []}
-          value={Array.isArray(value) ? null : value}
+          value={Array.isArray(value) ? null : value as string | number | boolean | null}
           name={name}
           containerClassName={classes(className, styles.autocomplete_cell)}
           containerStyle={style}
@@ -415,4 +417,4 @@ const TableColumn = ({
   );
 };
 
-export default React.memo(TableColumn);
+export default React.memo(TableColumn) as typeof TableColumn;

@@ -1,17 +1,17 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import {
   TabBar,
-  TabWindow,
-  TabContent,
   TabSplit,
   IActiveTabContextMenu,
 } from '@renderer/components/Tabs';
 import { Welcolme } from '@renderer/components/Welcome';
-import { useAppTabContext, type IAppTab, type IAppTabData } from '@renderer/contexts/AppTab';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useAIChatPanelContext } from '@renderer/contexts/AIChatPanel';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { type IAppTab, type IAppTabData } from '@renderer/stores/AppTab/types';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useAIChatPanelStore } from '@renderer/stores/AIChatPanel';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { IContextMenuOption } from '@renderer/components/ContextMenu';
 import styles from './styles.module.css';
@@ -38,13 +38,26 @@ export const MainContent = () => {
     updateTabGroup,
     ungroupTabGroup,
     closeTabGroup,
-  } = useAppTabContext();
-  const { visible: aiChatVisible } = useAIChatPanelContext();
-  const { t } = useI18n();
-  const { connections } = useStoreContext();
-  const {
-    activeTheme: { mainTab: theme },
-  } = useThemeContext();
+  } = useAppTabStore(
+    useShallow((state) => ({
+      tabs: state.tabs,
+      tabGroups: state.tabGroups,
+      removeTab: state.removeTab,
+      moveTab: state.moveTab,
+      activeTabId: state.activeTabId,
+      setActiveTabId: state.setActiveTabId,
+      createTabGroup: state.createTabGroup,
+      addTabToGroup: state.addTabToGroup,
+      removeTabFromGroup: state.removeTabFromGroup,
+      updateTabGroup: state.updateTabGroup,
+      ungroupTabGroup: state.ungroupTabGroup,
+      closeTabGroup: state.closeTabGroup,
+    })),
+  );
+  const aiChatVisible = useAIChatPanelStore((state) => state.visible);
+  const t = useI18nStore((state) => state.t);
+  const connections = useWorkspaceStore((state) => state.connections);
+  const { mainTab: theme } = useThemeStore((state) => state.activeTheme);
 
   const connectionNameById = React.useMemo(() => {
     return new Map(connections.map((connection) => [connection.id, connection.description]));
@@ -154,47 +167,33 @@ export const MainContent = () => {
         isTabVisible={(tab) => !tab.groupId || !collapsedGroupIds.has(tab.groupId)}
         borderColor={theme.bar.borderColor}
         backgroundColor={theme.bar.backgroundColor}
-        dropOverlayTop="42px"
-      >
-        {({ paneTabs, activeTabId: paneActiveTabId, isLastPane, tabBarProps }) => (
-          <>
-            <TabBar
-              {...tabBarProps}
-              allowClose
-              draggable
-              borderBottom
-              padding={isLastPane && !aiChatVisible ? '0 34px 0 0' : undefined}
-              color={theme.color}
-              ascentColor={theme.ascentColor}
-              backgroundColor={theme.backgroundColor}
-              backgroundColorBar={theme.bar.backgroundColor}
-              borderColor={theme.bar.borderColor}
-              onRemoveTab={(tab) => removeTab(tab.idTab)}
-              groups={tabGroups}
-              onAddTabToGroup={addTabToGroup}
-              onRemoveTabFromGroup={removeTabFromGroup}
-              onUpdateTabGroup={updateTabGroup}
-              onUngroupTabGroup={ungroupTabGroup}
-              onCloseTabGroup={closeTabGroup}
-              groupEditorRequest={groupEditorRequest}
-              height="42px"
-              contextMenuOptions={contextMenuOptions}
-            />
-
-            {!paneActiveTabId ? (
-              <Welcolme />
-            ) : (
-              <TabWindow activeTabId={paneActiveTabId}>
-                {paneTabs.map(({ id, component: TabComponent }) => (
-                  <TabContent key={id} idTab={id}>
-                    <TabComponent />
-                  </TabContent>
-                ))}
-              </TabWindow>
-            )}
-          </>
+        renderTabContent={({ component: TabComponent }, isActiveTab) => <TabComponent isActiveTab={isActiveTab} />}
+        emptyPane={<Welcolme />}
+        renderBar={({ isLastPane, tabBarProps }) => (
+          <TabBar
+            {...tabBarProps}
+            allowClose
+            draggable
+            borderBottom
+            padding={isLastPane && !aiChatVisible ? '0 34px 0 0' : undefined}
+            color={theme.color}
+            ascentColor={theme.ascentColor}
+            backgroundColor={theme.backgroundColor}
+            backgroundColorBar={theme.bar.backgroundColor}
+            borderColor={theme.bar.borderColor}
+            onRemoveTab={(tab) => removeTab(tab.idTab)}
+            groups={tabGroups}
+            onAddTabToGroup={addTabToGroup}
+            onRemoveTabFromGroup={removeTabFromGroup}
+            onUpdateTabGroup={updateTabGroup}
+            onUngroupTabGroup={ungroupTabGroup}
+            onCloseTabGroup={closeTabGroup}
+            groupEditorRequest={groupEditorRequest}
+            height="42px"
+            contextMenuOptions={contextMenuOptions}
+          />
         )}
-      </TabSplit>
+      />
     </div>
   );
 };

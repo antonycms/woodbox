@@ -1,33 +1,33 @@
 import React from 'react';
 import { ContextMenu, IContextMenuPosition } from '@renderer/components/ContextMenu';
-import type { IColumn, ISortDirection } from '../../dtos';
+import type { IColumn, ISortDirection, TableSerializedRow } from '../../dtos';
 import styles from '../../styles.module.css';
 import TableRow from '../TableRow';
 import TableColumn from '../TableColumn';
 import TableHeaderColumn from '../TableHeaderColumn';
 import TableRowNumber from '../TableRowNumber';
-import { useI18n } from '@renderer/contexts/I18n';
+import { useI18nStore } from '@renderer/stores/I18n';
 
 type TableCellEditValue = string | number | (string | number)[];
 
-interface ITableDefaultViewProps<Row = any> {
+interface ITableDefaultViewProps<Row = Record<string, unknown>> {
   columns: IColumn<Row>[];
-  rows: Row[];
+  rows: TableSerializedRow<Row>[];
   rowHeight: number;
   columnsSize: number[];
   minColumnsSize: number[];
-  editedRows?: Map<React.Key, any>;
-  newRows?: Map<React.Key, any>;
+  editedRows?: Map<React.Key, Partial<Row>>;
+  newRows?: Map<React.Key, Partial<Row>>;
   cellEditingKey?: string;
   cellEditInitialValue?: string | number;
   selectedCells?: Set<string>;
   searchMatches?: Set<string>;
   activeSearchCellKey?: string;
-  selectedRows: Map<React.Key, any>;
+  selectedRows: Map<React.Key, TableSerializedRow<Row>>;
   columnsIndexToRender: number[];
   firstRowIndex: number;
   lastRowIndex: number;
-  getSortLabel(column: IColumn<Row>): string;
+  getSortState(column: IColumn<Row>): { sortType: ISortDirection; order?: number } | undefined;
   onResizeColumn(index: number, size: number): void;
   onSort?(column: IColumn<Row>, sortType?: ISortDirection | null): void;
   onDoubleClick?(rowColumnKey: string): void;
@@ -46,8 +46,8 @@ interface ITableDefaultViewProps<Row = any> {
   ): void;
   onMoveCellDrag?(rowIndex: number, colIndex: number): void;
   onSelectColumn?(colIndex: number, event: React.MouseEvent<HTMLElement, MouseEvent>): void;
-  onCellLinkClick?(attribute: string, value: any): void;
-  onCellLinkPreviewClick?(attribute: string, value: any): void;
+  onCellLinkClick?(attribute: string, value: unknown): void;
+  onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
 }
 
@@ -70,7 +70,7 @@ const TableDefaultView = <Row,>({
   columnsIndexToRender,
   firstRowIndex,
   lastRowIndex,
-  getSortLabel,
+  getSortState,
   onResizeColumn,
   onSort,
   onDoubleClick,
@@ -84,7 +84,7 @@ const TableDefaultView = <Row,>({
   onCellLinkPreviewClick,
   cellLinkClickMode,
 }: ITableDefaultViewProps<Row>) => {
-  const { t } = useI18n();
+  const t = useI18nStore((state) => state.t);
 
   const [sortContextMenu, setSortContextMenu] = React.useState<{
     column: IColumn<Row>;
@@ -153,7 +153,7 @@ const TableDefaultView = <Row,>({
             rowHeight={rowHeight}
             width={columnsSize[columnIndex]}
             minWidth={minColumnsSize[columnIndex]}
-            getSortLabel={getSortLabel}
+            getSortState={getSortState}
             onResizeColumn={onResizeColumn}
             onSelectColumn={onSelectColumn}
             onSort={onSort}
@@ -162,14 +162,14 @@ const TableDefaultView = <Row,>({
         ))}
       </TableRow>
 
-      {rowsToRender.map((row: any) => {
+      {rowsToRender.map((row) => {
         const indexRow = row.__index_row;
         const keyRow = row.__key_row;
         const editedRow = editedRows?.get(keyRow);
         const newRow = newRows?.get(keyRow);
 
         return (
-          <TableRow key={keyRow} row={row} isSelected={selectedRows.get(keyRow)}>
+          <TableRow key={keyRow} row={row} isSelected={selectedRows.has(keyRow)}>
             <TableRowNumber indexRow={indexRow} />
 
             {columnsIndexToRender.map((columnIndex) => {

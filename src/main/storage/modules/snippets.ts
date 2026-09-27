@@ -1,10 +1,11 @@
+import type { ISnippet } from '@shared/types/workspace';
 import type Store from 'electron-store';
 import {
   makeFnAddItemInStoredArray,
   makeFnEditItemInStoredArray,
   makeFnGetItemInStoredArray,
   makeFnRemoveStoredItemFromArray,
-} from '@main/storage/utils';
+} from '../utils';
 
 export const initialValue = {
   type: 'array',

@@ -1,6 +1,6 @@
 import type { IDataUpdateabResult, IQueryResult } from '../dtos';
+import { getErrorMessage } from '@shared/utils/error';
 
-type QueryExecutionError = Error & { position?: string | number };
 type QueryErrorMarkerPosition = {
   lineNumber: number;
   column: number;
@@ -18,9 +18,8 @@ export const makeCanceledQueryResult = (
   queryExecutionId: undefined,
 });
 
-export const formatQueryErrorMessage = (error: unknown) => {
-  const queryError = error as QueryExecutionError;
-  const message = queryError?.message || 'Erro desconhecido';
+export const formatQueryErrorMessage = (error: unknown, fallback: string) => {
+  const message = getErrorMessage(error, fallback);
   const separatorIndex = message.lastIndexOf(' - ');
 
   if (separatorIndex < 0) return message;
@@ -33,16 +32,16 @@ export const formatQueryErrorMessage = (error: unknown) => {
   return `${errorMessage}\n\n${query}`;
 };
 
-export const formatQueryExecutionErrorMessage = (error: unknown, markErrors?: boolean) => {
-  const queryError = error as QueryExecutionError;
+export const formatQueryExecutionErrorMessage = (error: unknown, fallback: string, markErrors?: boolean) => {
+  const message = getErrorMessage(error, fallback);
 
   return markErrors
-    ? queryError?.message?.split?.(' - ')?.[1] || queryError?.message
-    : formatQueryErrorMessage(error);
+    ? message.split(' - ')[1] || message
+    : formatQueryErrorMessage(error, fallback);
 };
 
 export const getQueryErrorOffset = (error: unknown) => {
-  const position = Number((error as QueryExecutionError)?.position);
+  const position = Number(error && typeof error === 'object' && 'position' in error ? error.position : undefined);
 
   return Number.isFinite(position) && position > 0 ? position - 1 : undefined;
 };

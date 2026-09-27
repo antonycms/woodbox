@@ -1,4 +1,4 @@
-import type { IColumnReferenceInfo } from '@renderer/contexts/Store';
+import type { IColumnReferenceInfo } from '@shared/types/database';
 import type { IReferenceSerialized } from './dtos';
 
 export const getReferenceSelectionKey = (reference: IColumnReferenceInfo) =>

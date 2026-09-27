@@ -1,3 +1,6 @@
+import { useRowChanges } from '@renderer/hooks/useRowChanges';
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
@@ -16,9 +19,9 @@ import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import type { ITab } from '@renderer/components/Tabs/components/TabBar';
 import { Text } from '@renderer/components/Text';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import {
   AddIcon,
   CancelIcon,
@@ -30,22 +33,20 @@ import {
 } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { copyToClipboard } from '@renderer/utils/methods';
-import { generateHash } from '@renderer/utils/string';
+import { generateHash } from '@shared/utils/string';
+import type { IColumnReferenceInfo, IColumnRestrictionsInfo } from '@shared/types/database';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
-import {
-  IColumnReferenceInfo,
-  IColumnRestrictionsInfo,
-  useStoreContext,
-} from '@renderer/contexts/Store';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
-import { useToast } from '@renderer/contexts/Toast';
+import { useToastStore } from '@renderer/stores/Toast';
 import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
 import {
   generateDeleteDdl,
   generateInsertDdl,
   generateUpdateDdl,
-} from '@renderer/views/TableInfo/components/Properties/tabs/Columns/ddl';
+} from '@renderer/database/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
@@ -62,7 +63,7 @@ interface ITabContentSelectProps {
   references: Map<string, IColumnReferenceInfo[]>;
   readOnly?: boolean;
   onScrollEnd(): void;
-  onSort(column: IColumn<any>, sortType?: ISortDirection | null): void;
+  onSort(column: IColumn, sortType?: ISortDirection | null): void;
   onRefresh(): void;
   onCancelQuery(): void;
   onToggleCapture(): void;
@@ -94,18 +95,26 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     readOnly,
   } = props;
 
-  const { activeTheme } = useThemeContext();
-  const { t, language } = useI18n();
-  const { addTab, getTab, setActiveTabId } = useAppTabContext();
-  const { getTableRestrictions, getQueryRowsCount, runSql, connections } = useStoreContext();
-  const { showToast } = useToast();
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
+  const activeTheme = useThemeStore((state) => state.activeTheme);
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
   );
+  const { addTab, getTab, setActiveTabId } = useAppTabStore(
+    useShallow((state) => ({
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+    })),
+  );
+  const { getTableRestrictions, getQueryRowsCount, runSql } = useDatabaseStore(
+    useShallow((state) => ({
+      getTableRestrictions: state.getTableRestrictions,
+      getQueryRowsCount: state.getQueryRowsCount,
+      runSql: state.runSql,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
+  const showToast = useToastStore((state) => state.showToast);
 
   const [saving, setSaving] = React.useState(false);
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
@@ -118,14 +127,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [restrictionsCache, setRestrictionsCache] = React.useState(
     new Map<string, IColumnRestrictionsInfo[]>(),
   );
-  const [editedFieldsRows, setEditedFieldsRows] = React.useState(
-    new Map<number, Record<string, any>>(),
-  );
-  const [droppedRows, setDroppedRows] = React.useState<Map<React.Key, Record<string, any>>>(
-    new Map(),
-  );
-  const [newRows, setNewRows] = React.useState<Map<React.Key, Record<string, any>>>(new Map());
-  const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
@@ -135,6 +136,38 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const singleResultTable = data.tables_info?.length === 1 ? data.tables_info[0] : undefined;
   const editableTable = readOnly ? undefined : singleResultTable;
+
+  const closeContextMenuTable = React.useCallback(() => {
+    setContextMenuTable(undefined);
+  }, []);
+
+  const {
+    editedFieldsRows,
+    droppedRows,
+    newRows,
+    removedRowKeys,
+    handleEditRow,
+    handleEditNewRow,
+    handleAddItem: handleAddRow,
+    handleCancelSelectedRowsEditions,
+    handleUndoSelectedDroppedRows,
+    handleRemoveSelectedRows,
+    setSelectedRows,
+    resetRows,
+  } = useRowChanges({
+    items: data.rows || [],
+    onCloseMenu: closeContextMenuTable,
+    readOnly: !editableTable,
+    discardNewRowsOnCancel: true,
+  });
+
+  const dialect = React.useMemo(
+    () =>
+      getRendererDialect(
+        connections.find((connection) => connection.id === id_connection)?.dialect,
+      ),
+    [connections, id_connection],
+  );
 
   const executionTimeMs = React.useMemo(() => {
     if (data.loading && data.date_run) {
@@ -269,19 +302,19 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     () =>
       [
         {
-          text: data.capture?.active ? 'Parar captura' : 'Iniciar captura',
+          text: data.capture?.active ? t('capture.stop') : t('capture.start'),
           onClick: onToggleCapture,
         },
         hasCapturedRows && {
-          text: 'Exportar captura como JSONL',
+          text: t('capture.exportJsonl'),
           onClick: handleExportCaptureJsonl,
         },
         hasCapturedRows && {
-          text: 'Exportar captura como CSV',
+          text: t('capture.exportCsv'),
           onClick: handleExportCaptureCsv,
         },
         hasCapturedRows && {
-          text: 'Descartar captura',
+          text: t('capture.discard'),
           onClick: onClearCapture,
         },
       ].filter(Boolean) as IContextMenuOption[],
@@ -292,6 +325,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       hasCapturedRows,
       onClearCapture,
       onToggleCapture,
+      t,
     ],
   );
 
@@ -305,11 +339,11 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       const total = await getQueryRowsCount(id_connection, preparedQuery);
 
       setRowsCount(total);
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('toast.countRowsError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     } finally {
@@ -334,7 +368,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
 
-    const row = selectedCell.row as any;
+    const row = selectedCell.row;
     const attribute = String(selectedCell.column.attribute);
     const editedRow = editedFieldsRows.get(row.__key_row);
     const newRow = newRows.get(row.__key_row);
@@ -403,10 +437,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     setShowExportModal(false);
   }, []);
 
-  const closeContextMenuTable = React.useCallback(() => {
-    setContextMenuTable(undefined);
-  }, []);
-
   const closeCaptureMenu = React.useCallback(() => {
     setCaptureMenuPosition(undefined);
   }, []);
@@ -416,63 +446,18 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       showToast({
         type: 'error',
         title: t('toast.selectionLoadError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     },
     [showToast, t],
   );
 
-  const removedRowKeys = React.useMemo(
-    () => new Set(droppedRows.keys()),
-    [droppedRows],
-  );
-
-  const handleEditRow = React.useCallback(
-    (index: number, attribute: string, value: any) => {
-      const normalizedValue = value === '' ? null : value;
-      const row = data.rows[index];
-
-      setEditedFieldsRows((prevState) => {
-        const nextState = new Map(prevState);
-        const prevRowEdited = { ...(prevState.get(index) || {}) };
-        const originalValue = row?.[attribute];
-
-        if (String(originalValue ?? '') === String(normalizedValue ?? '')) {
-          delete prevRowEdited[attribute];
-
-          if (Object.keys(prevRowEdited).length) nextState.set(index, prevRowEdited);
-          else nextState.delete(index);
-
-          return nextState;
-        }
-
-        nextState.set(index, { ...prevRowEdited, [attribute]: normalizedValue });
-
-        return nextState;
-      });
-    },
-    [data.rows],
-  );
-
-  const handleEditNewRow = React.useCallback((rowKey: React.Key, attribute: string, value: any) => {
-    const normalizedValue = value === '' ? null : value;
-
-    setNewRows((prevState) => {
-      const nextState = new Map(prevState);
-      const prevRowEdited = { ...(nextState.get(rowKey) || {}) };
-
-      nextState.set(rowKey, { ...prevRowEdited, [attribute]: normalizedValue });
-
-      return nextState;
-    });
-  }, []);
-
   const handleApplySelectedCellValue = React.useCallback(
-    (value: any) => {
+    (value: unknown) => {
       if (!selectedCell?.column.editable) return;
 
-      const row = selectedCell.row as any;
+      const row = selectedCell.row;
       const attribute = String(selectedCell.column.attribute);
       const normalizedValue = value === '' ? null : value;
 
@@ -587,7 +572,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         if (editedFieldsRows.size) {
           const rowsToUpdate = [...editedFieldsRows.entries()]
             .map(([index, changes]) => ({
-              originalRow: data.rows[index],
+              originalRow: data.rows[Number(index)],
               changes,
               rowKey: index,
             }))
@@ -616,16 +601,14 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
       await runSql(id_connection, sql);
 
-      setNewRows(new Map());
-      setEditedFieldsRows(new Map());
-      setDroppedRows(new Map());
+      resetRows();
       showToast({ type: 'success', title: t('toast.dataSaved') });
       onRefresh();
-    } catch (error) {
+    } catch (error: unknown) {
       showToast({
         type: 'error',
         title: t('toast.dataSaveError'),
-        description: error?.message,
+        description: getErrorMessage(error, t('common.unknownError')),
         delay: 8000,
       });
     } finally {
@@ -642,42 +625,20 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     newRows,
     onRefresh,
     runSql,
+    resetRows,
+    dialect,
     saving,
     showToast,
     t,
   ]);
 
-  const handleCancelSelectedRowsEditions = React.useCallback(() => {
-    if (!selectedRows.length) return;
-
-    setNewRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        if (row.__is_new_row) nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-
-    setEditedFieldsRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-  }, [selectedRows]);
-
   const handleSetSelectedCellsNull = React.useCallback(() => {
-    const cells = contextMenuTable?.data?.selectedCells || [];
+    const cells = contextMenuTable?.data?.getSelectedCells() || [];
 
     cells.forEach(({ row, column, rowIndex }) => {
       if (!column.editable) return;
 
-      const rowData = row as any;
+      const rowData = row;
       const attribute = String(column.attribute);
 
       if (rowData.__is_new_row) {
@@ -690,65 +651,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     setContextMenuTable(undefined);
   }, [contextMenuTable, handleEditNewRow, handleEditRow]);
-
-  const handleUndoSelectedDroppedRows = React.useCallback(() => {
-    if (!selectedRows.length) return;
-
-    setDroppedRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-  }, [selectedRows]);
-
-  const handleRemoveSelectedRows = React.useCallback(() => {
-    if (!editableTable) return;
-
-    if (!selectedRows.length) {
-      showToast({ type: 'warn', title: t('toast.selectRowsRemove') });
-      return;
-    }
-
-    setNewRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        if (row.__is_new_row) nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-
-    setDroppedRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        if (!row.__is_new_row) nextState.set(row.__key_row, row);
-      });
-
-      return nextState;
-    });
-
-    setEditedFieldsRows((prevState) => {
-      const nextState = new Map(prevState);
-
-      selectedRows.forEach((row) => {
-        nextState.delete(row.__key_row);
-      });
-
-      return nextState;
-    });
-
-    setContextMenuTable(undefined);
-  }, [editableTable, selectedRows, showToast, t]);
-
-  const handleAddRow = React.useCallback(() => {
-    setNewRows((prevState) => new Map(prevState).set(`new_${generateHash()}`, {}));
-  }, []);
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -783,17 +685,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       handleUndoSelectedDroppedRows,
     ],
   );
-
-  React.useEffect(() => {
-    if (!selectedReference && activePreviewTab !== 'value') {
-      setActivePreviewTab('value');
-      return;
-    }
-
-    if (activePreviewTab === 'selection' && !canSelectReferenceValue) {
-      setActivePreviewTab(selectedReference ? 'reference' : 'value');
-    }
-  }, [activePreviewTab, canSelectReferenceValue, selectedReference]);
 
   const onContextMenuTable = React.useCallback((
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -861,7 +752,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   );
 
   const onCellLinkClick = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const ref = tabFkMap.get(attribute);
 
       if (!ref || value === null || value === undefined) return;
@@ -878,7 +769,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   );
 
   const handleFkPreviewClick = React.useCallback(
-    (attribute: string, value: any) => {
+    (attribute: string, value: unknown) => {
       const ref = tabFkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
 
@@ -887,27 +778,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     },
     [tabFkMap],
   );
-
-  React.useEffect(() => {
-    setEditedFieldsRows(new Map());
-    setDroppedRows(new Map());
-    setNewRows(new Map());
-    setSelectedRows([]);
-  }, [data.rows, data.columns, data.query]);
-
-  React.useEffect(() => {
-    setRowsCount(undefined);
-  }, [data.query, data.variableValues]);
-
-  React.useEffect(() => {
-    if (!data.loading) return;
-
-    setNow(Date.now());
-
-    const interval = setInterval(() => setNow(Date.now()), 100);
-
-    return () => clearInterval(interval);
-  }, [data.loading, data.date_run, data.queryExecutionId]);
 
   const resultColumnsInfo = React.useMemo(
     () =>
@@ -943,15 +813,15 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     return [
       {
         text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.cellsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
       },
       {
         text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsText || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
       },
       {
         text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.rowsJson || ''),
+        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
       },
       {
         text: t('modal.exportData'),
@@ -960,7 +830,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       {
         text: t('context.setSelectedCellsNull'),
         onClick: handleSetSelectedCellsNull,
-        show: () => !!contextMenuTable?.data?.selectedCells?.some(({ column }) => column.editable),
+        show: () => !!contextMenuTable?.data?.getSelectedCells().some(({ column }) => column.editable),
       },
       {
         text: t('context.deleteSelectedItems'),
@@ -977,7 +847,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
               dialect,
               singleResultTable.schema,
               singleResultTable.name,
-              contextMenuTable?.data?.rows || [],
+              contextMenuTable?.data?.getRows() || [],
               data.columns,
             ),
           );
@@ -995,7 +865,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
               dialect,
               singleResultTable.schema,
               singleResultTable.name,
-              contextMenuTable?.data?.selectedCellRows || [],
+              contextMenuTable?.data?.getSelectedCellRows() || [],
               data.columns,
             ),
           );
@@ -1015,6 +885,36 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     singleResultTable,
     t,
   ]);
+
+  React.useEffect(() => {
+    if (!selectedReference && activePreviewTab !== 'value') {
+      setActivePreviewTab('value');
+      return;
+    }
+
+    if (activePreviewTab === 'selection' && !canSelectReferenceValue) {
+      setActivePreviewTab(selectedReference ? 'reference' : 'value');
+    }
+  }, [activePreviewTab, canSelectReferenceValue, selectedReference]);
+
+  React.useEffect(() => {
+    resetRows();
+    setSelectedRows([]);
+  }, [data.rows, data.columns, data.query, resetRows, setSelectedRows]);
+
+  React.useEffect(() => {
+    setRowsCount(undefined);
+  }, [data.query, data.variableValues]);
+
+  React.useEffect(() => {
+    if (!data.loading) return;
+
+    setNow(Date.now());
+
+    const interval = setInterval(() => setNow(Date.now()), 100);
+
+    return () => clearInterval(interval);
+  }, [data.loading, data.date_run, data.queryExecutionId]);
 
   return (
     <div
@@ -1083,8 +983,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 />
               </div>
 
-              <TabWindow activeTabId={activePreviewTab}>
-                <TabContent idTab="value">
+              <TabWindow>
+                <TabContent activeTabId={activePreviewTab} idTab="value">
                   <ReferenceValuePreview
                     key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
                     column={selectedCell?.column}
@@ -1096,7 +996,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 </TabContent>
 
                 {!!selectedReference && (
-                  <TabContent idTab="reference">
+                  <TabContent activeTabId={activePreviewTab} idTab="reference">
                     <ReferencePreview
                       active={activePreviewTab === 'reference'}
                       idConnection={id_connection}
@@ -1108,7 +1008,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 )}
 
                 {canSelectReferenceValue && (
-                  <TabContent idTab="selection">
+                  <TabContent activeTabId={activePreviewTab} idTab="selection">
                     <ReferenceSelection
                       active={activePreviewTab === 'selection'}
                       idConnection={id_connection}

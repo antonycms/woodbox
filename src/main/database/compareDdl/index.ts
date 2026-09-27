@@ -1,3 +1,4 @@
+import type { Dialect } from '@shared/types/connections';
 import { createMysqlCompareDdlBuilder } from './mysql';
 import { createPostgresCompareDdlBuilder } from './postgres';
 import { createSqliteCompareDdlBuilder } from './sqlite';

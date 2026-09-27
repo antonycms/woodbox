@@ -1,4 +1,5 @@
-import type { DatabaseObjectType } from '@renderer/contexts/Store/context';
+import type { TableInfoStoreApi } from '@renderer/stores/TableInfo';
+import type { DatabaseObjectType } from '@shared/types/database';
 
 export interface ITableInfoProps {
   id_connection: string;
@@ -15,4 +16,8 @@ export interface ITableInfoProps {
   objectType?: DatabaseObjectType;
   supportsIndexes?: boolean;
   supportsTriggers?: boolean;
+}
+
+export interface ITableInfoViewProps extends ITableInfoProps {
+  tableStore: TableInfoStoreApi;
 }

@@ -1,3 +1,5 @@
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { useForm } from '@renderer/hooks/useForm';
 import { Button } from '@renderer/components/Button';
@@ -5,14 +7,19 @@ import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Spacer } from '@renderer/components/Spacer';
-import { useStoreContext } from '@renderer/contexts/Store';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { useThemeStore } from '@renderer/stores/Theme';
 
 export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectProps) => {
-  const { projects, addProject, editProject } = useStoreContext();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const { projects, addProject, editProject } = useWorkspaceStore(
+    useShallow((state) => ({
+      projects: state.projects,
+      addProject: state.addProject,
+      editProject: state.editProject,
+    })),
+  );
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const { register, handleSubmit, reset, setState } = useForm({ description: '' });
 
@@ -45,14 +52,14 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
   }, [idProject]);
 
   return (
-    <Modal title={idProject ? 'Editar Projeto' : 'Novo Projeto'} width="500px" show={show}>
+    <Modal title={idProject ? t('context.editProject') : t('project.new')} width="500px" show={show}>
       <form onSubmit={onSubmit}>
         <Input
           autoFocus
           required
           backgroundColor={colors.fieldBackgroundColor}
           color={colors.fieldColor}
-          label="Descrição"
+          label={t('field.description')}
           labelColor={colors.fieldLabelColor}
           md={12}
           {...register('description')}
@@ -69,7 +76,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
             sm={4}
             md={3}
           >
-            Cancelar
+            {t('common.cancel')}
           </Button>
 
           <Button
@@ -80,7 +87,7 @@ export const ModalNewProject = ({ idProject, show, onClose }: IModalNewProjectPr
             sm={4}
             md={3}
           >
-            Salvar
+            {t('common.save')}
           </Button>
         </Row>
       </form>

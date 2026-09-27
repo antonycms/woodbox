@@ -70,7 +70,7 @@ export const replaceSearchValue = (
 };
 
 export const serializeTableValue = (
-  value: any,
+  value: unknown,
   type?: IColumn['type'],
   options?: { nullAsEmpty?: boolean },
 ): string => {
@@ -81,7 +81,7 @@ export const serializeTableValue = (
   return String(value);
 };
 
-export const serializeTableCopyValue = (value: any): string => {
+export const serializeTableCopyValue = (value: unknown): string => {
   if (value === undefined) return '';
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);

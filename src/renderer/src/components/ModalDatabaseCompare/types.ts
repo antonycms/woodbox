@@ -1,8 +1,5 @@
-import type {
-  IDatabaseCompareItem,
-  IFunctionDb,
-  ITable,
-} from '@renderer/contexts/Store';
+import type { DatabaseCompareItem as IDatabaseCompareItem } from '@shared/types/databaseCompare';
+import type { IFunctionDb, ITable } from '@shared/types/database';
 
 export interface IModalDatabaseCompareProps {
   show?: boolean;
@@ -38,14 +35,11 @@ export interface IDdlModalProps {
 
 export interface IObjectsModalProps {
   show?: boolean;
-  filterText: string;
-  groups: ObjectGroup[];
+  objects: DatabaseCompareSelectableObject[];
+  supportsSchemas: boolean;
   selectedObjectSet: Set<string>;
-  collapsedSchemaSet: Set<string>;
   loading?: boolean;
   onClose(): void;
-  onFilterTextChange(value: string): void;
   onToggleGroup(objects: DatabaseCompareSelectableObject[]): void;
   onToggleObject(object: DatabaseCompareSelectableObject): void;
-  onToggleSchemaVisibility(groupKey: string): void;
 }

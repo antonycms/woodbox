@@ -1,12 +1,13 @@
+import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { TabBar, TabWindow, TabContent } from '@renderer/components/Tabs';
-import { generateHash } from '@renderer/utils/string';
-import TableInfoProvider from '@renderer/contexts/TableInfoContext';
-import { useTableInfoContext } from '@renderer/contexts/TableInfoContext';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useAppTabContext } from '@renderer/contexts/AppTab';
-import { useStoreContext } from '@renderer/contexts/Store';
+import { generateHash } from '@shared/utils/string';
+import { createTableInfoStore, useTableInfoStore } from '@renderer/stores/TableInfo';
+import { PendingDdlModal } from './components/PendingDdlModal';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useAppTabStore } from '@renderer/stores/AppTab';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ModalConfirmDiscardChanges from '@renderer/components/ModalConfirmDiscardChanges';
 import {
@@ -18,7 +19,7 @@ import {
 import Data from './components/Data';
 import Properties from './components/Properties';
 import styles from './styles.module.css';
-import { ITableInfoProps } from './dtos';
+import { ITableInfoProps, ITableInfoViewProps } from './dtos';
 
 import IconFaRegularListAlt from '~icons/fa-regular/list-alt';
 import IconFaSolidGripLines from '~icons/fa-solid/grip-lines';
@@ -30,10 +31,8 @@ type OpenTableWithFilterParams = {
   initialWhere: string;
 };
 
-const TableInfo = (props: ITableInfoProps) => {
-  const {
-    activeTheme: { tableInfo: theme },
-  } = useThemeContext();
+const TableInfo = (props: ITableInfoViewProps) => {
+  const { tableInfo: theme } = useThemeStore((state) => state.activeTheme);
   const {
     pendingColumns,
     pendingDroppedColumns,
@@ -44,10 +43,30 @@ const TableInfo = (props: ITableInfoProps) => {
     pendingDroppedRestrictions,
     pendingReferences,
     pendingDroppedReferences,
-  } = useTableInfoContext();
-  const { t } = useI18n();
-  const { addTab, getTab, setActiveTabId, updateTab } = useAppTabContext();
-  const { connections } = useStoreContext();
+  } = useTableInfoStore(
+    props.tableStore,
+    useShallow((state) => ({
+      pendingColumns: state.pendingColumns,
+      pendingDroppedColumns: state.pendingDroppedColumns,
+      pendingChangedColumns: state.pendingChangedColumns,
+      pendingIndexes: state.pendingIndexes,
+      pendingDroppedIndexes: state.pendingDroppedIndexes,
+      pendingRestrictions: state.pendingRestrictions,
+      pendingDroppedRestrictions: state.pendingDroppedRestrictions,
+      pendingReferences: state.pendingReferences,
+      pendingDroppedReferences: state.pendingDroppedReferences,
+    })),
+  );
+  const t = useI18nStore((state) => state.t);
+  const { addTab, getTab, setActiveTabId, updateTab } = useAppTabStore(
+    useShallow((state) => ({
+      addTab: state.addTab,
+      getTab: state.getTab,
+      setActiveTabId: state.setActiveTabId,
+      updateTab: state.updateTab,
+    })),
+  );
+  const connections = useWorkspaceStore((state) => state.connections);
   const [id] = React.useState(generateHash());
   const [mode, setMode] = React.useState(props.mode || 'view');
   const [table, setTable] = React.useState(props.table);
@@ -113,7 +132,7 @@ const TableInfo = (props: ITableInfoProps) => {
             table: createdTable,
           },
           component: () => (
-            <TableInfoWithContext
+            <TableInfoWithStore
               id_connection={props.id_connection}
               schema={props.schema}
               table={createdTable}
@@ -147,7 +166,7 @@ const TableInfo = (props: ITableInfoProps) => {
             table,
           },
           component: () => (
-            <TableInfoWithContext
+            <TableInfoWithStore
               id_connection={idConnection}
               schema={schema}
               table={table}
@@ -186,7 +205,7 @@ const TableInfo = (props: ITableInfoProps) => {
           initialTab: 'tabData',
         },
         component: () => (
-          <TableInfoWithContext
+          <TableInfoWithStore
             id_connection={idConnection}
             schema={schema}
             table={table}
@@ -288,8 +307,8 @@ const TableInfo = (props: ITableInfoProps) => {
         ].filter(Boolean)}
       />
 
-      <TabWindow activeTabId={activeTableInfoTabId}>
-        <TabContent idTab="tabProperties">
+      <TabWindow>
+        <TabContent activeTabId={activeTableInfoTabId} idTab="tabProperties">
           <Properties
             {...tabsProps}
             onOpenTable={handleOpenTableSimple}
@@ -301,7 +320,7 @@ const TableInfo = (props: ITableInfoProps) => {
         </TabContent>
 
         {!isCreateMode && (
-          <TabContent idTab="tabData">
+          <TabContent activeTabId={activeTableInfoTabId} idTab="tabData">
             <Data
               {...tabsProps}
               onOpenTable={handleOpenTable}
@@ -327,12 +346,14 @@ const TableInfo = (props: ITableInfoProps) => {
   );
 };
 
-const TableInfoWithContext = (props: ITableInfoProps) => {
+const TableInfoWithStore = (props: ITableInfoProps) => {
+  const [tableStore] = React.useState(createTableInfoStore);
   return (
-    <TableInfoProvider>
-      <TableInfo {...props} />
-    </TableInfoProvider>
+    <>
+      <TableInfo {...props} tableStore={tableStore} />
+      <PendingDdlModal tableStore={tableStore} />
+    </>
   );
 };
 
-export default TableInfoWithContext;
+export default TableInfoWithStore;
