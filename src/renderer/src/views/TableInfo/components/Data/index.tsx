@@ -39,11 +39,9 @@ import { useToastStore } from '@renderer/stores/Toast';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { generateHash } from '@shared/utils/string';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
-import {
-  generateDeleteDdl,
-  generateInsertDdl,
-  generateUpdateDdl,
-} from '@renderer/database/ddl';
+import { generateInsertDdl } from '@renderer/database/ddl';
+import type { ITableDataConflict } from '@shared/types/database';
+import { ModalDataConflict } from './components/ModalDataConflict';
 import ModalDataError from './components/ModalDataError';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
@@ -102,11 +100,11 @@ const Data = ({
     })),
   );
 
-  const { getTableData, getTableRowsCount, runSql } = useDatabaseStore(
+  const { getTableData, getTableRowsCount, saveTableChanges } = useDatabaseStore(
     useShallow((state) => ({
       getTableData: state.getTableData,
       getTableRowsCount: state.getTableRowsCount,
-      runSql: state.runSql,
+      saveTableChanges: state.saveTableChanges,
     })),
   );
   const connections = useWorkspaceStore((state) => state.connections);
@@ -125,6 +123,7 @@ const Data = ({
   const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
+  const [dataConflicts, setDataConflicts] = React.useState<ITableDataConflict[]>([]);
   const [whereInput, setWhereInput] = React.useState(initialWhere || '');
   const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
@@ -312,10 +311,10 @@ const Data = ({
         attribute: column.column_name,
         required: !!column.is_nullable,
         sortable: true,
-        editable: !isReadOnlyObject,
+        editable: !isReadOnlyObject && !applyingChanges,
         isLink: fkMap.has(column.column_name),
       })),
-    [columns, fkMap, isReadOnlyObject],
+    [columns, fkMap, isReadOnlyObject, applyingChanges],
   );
 
   const columnNames = React.useMemo(() => columns.map((column) => column.column_name), [columns]);
@@ -462,31 +461,34 @@ const Data = ({
             row.originalRow && Object.keys(row.changes).length && !droppedRows.has(row.rowKey),
         );
 
-      const deleteSql = generateDeleteDdl(
-        dialect,
-        schema,
-        table,
-        [...droppedRows.values()],
-        whereColumns,
-      );
-      const insertSql = generateInsertDdl(
-        dialect,
-        schema,
-        table,
-        rowsToInsert,
-        columns.map((column) => column.column_name),
-      );
-      const updateSql = generateUpdateDdl(dialect, schema, table, rowsToUpdate, whereColumns);
-      const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
-
-      if (!sql.trim()) return;
+      const cleanRow = (row: Record<string, unknown>) =>
+        Object.fromEntries(columns.map((column) => [column.column_name, row[column.column_name]]));
 
       setApplyingChanges(true);
 
       try {
-        await runSql(id_connection, sql);
-        resetRows();
+        const result = await saveTableChanges(id_connection, {
+          schema,
+          table,
+          keyColumns: whereColumns,
+          inserts: rowsToInsert,
+          updates: rowsToUpdate.map(({ rowKey, originalRow, changes }) => ({
+            rowKey: String(rowKey),
+            original: cleanRow(originalRow),
+            changes,
+          })),
+          deletes: [...droppedRows.entries()].map(([rowKey, originalRow]) => ({
+            rowKey: String(rowKey),
+            original: cleanRow(originalRow),
+          })),
+        });
         setShowNoPkModal(false);
+        if (result.conflicts.length) {
+          setDataConflicts(result.conflicts);
+          return;
+        }
+        setDataConflicts([]);
+        resetRows();
         showToast({ type: 'success', title: t('toast.dataSaved') });
         await handleRefresh();
       } catch (error: unknown) {
@@ -509,8 +511,7 @@ const Data = ({
       schema,
       table,
       columns,
-      dialect,
-      runSql,
+      saveTableChanges,
       id_connection,
       showToast,
       handleRefresh,
@@ -518,6 +519,13 @@ const Data = ({
       t,
     ],
   );
+
+  const closeDataConflicts = React.useCallback(() => setDataConflicts([]), []);
+
+  const discardConflictsAndReload = React.useCallback(() => {
+    setDataConflicts([]);
+    void handleRefresh();
+  }, [handleRefresh]);
 
   const handleSaveItems = React.useCallback(() => {
     const hasNewRows = [...newRows.values()].some((row) => Object.keys(row).length);
@@ -788,7 +796,8 @@ const Data = ({
   return (
     <div
       className={styles.container}
-      onKeyDown={isReadOnlyObject ? undefined : handleKeyDown}
+      inert={applyingChanges}
+      onKeyDown={isReadOnlyObject || applyingChanges ? undefined : handleKeyDown}
       style={
         {
           '--data-border-color': theme.bar.borderColor,
@@ -831,8 +840,8 @@ const Data = ({
             removedRows={removedRowKeys}
             onCellLinkClick={handleFkCellClick}
             onCellLinkPreviewClick={handleFkPreviewClick}
-            onEditNewRow={isReadOnlyObject ? undefined : handleEditNewRow}
-            onEditRow={isReadOnlyObject ? undefined : handleEditRow}
+            onEditNewRow={isReadOnlyObject || applyingChanges ? undefined : handleEditNewRow}
+            onEditRow={isReadOnlyObject || applyingChanges ? undefined : handleEditRow}
           />
         </div>
 
@@ -953,6 +962,12 @@ const Data = ({
         source={exportSource}
         fileName={[schema, table].filter(Boolean).join('.')}
         onClose={closeExportModal}
+      />
+
+      <ModalDataConflict
+        conflicts={dataConflicts}
+        onClose={closeDataConflicts}
+        onDiscardAndReload={discardConflictsAndReload}
       />
 
       <ModalDataError message={dataErrorMessage} onClose={closeDataErrorModal} />

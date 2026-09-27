@@ -35,8 +35,12 @@
 }
 
 .containerItemLabelInfo {
+  min-width: 0;
+  max-width: min(42vw, 420px);
   margin-left: 6px;
-  font-size: 11px;
-  opacity: 0.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  opacity: 0.72;
   white-space: nowrap;
 }

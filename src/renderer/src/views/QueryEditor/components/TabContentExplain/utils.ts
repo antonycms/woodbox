@@ -3,7 +3,7 @@ import type { IQueryResult } from '../../dtos';
 
 export type ExplainRow = Record<string, unknown>;
 
-type Bottleneck = {
+export type Bottleneck = {
   label: string;
   detail?: string;
   timeMs?: number;
@@ -14,7 +14,7 @@ type Bottleneck = {
   severity: 'ok' | 'warn' | 'danger';
 };
 
-type ExplainAnalysis = {
+export type ExplainAnalysis = {
   planText: string;
   totalTimeMs?: number;
   planningTimeMs?: number;
@@ -22,6 +22,27 @@ type ExplainAnalysis = {
   warnings: string[];
   riskLevel: 'low' | 'medium' | 'high';
 };
+
+export interface ExplainMetricComparison {
+  current?: number;
+  baseline?: number;
+  delta?: number;
+  percentage?: number;
+}
+
+export interface ExplainBottleneckComparison {
+  label: string;
+  current?: Bottleneck;
+  baseline?: Bottleneck;
+  time: ExplainMetricComparison;
+  rows: ExplainMetricComparison;
+}
+
+export interface ExplainComparison {
+  totalTime: ExplainMetricComparison;
+  planningTime: ExplainMetricComparison;
+  bottlenecks: ExplainBottleneckComparison[];
+}
 
 type PostgresPlanNode = Record<string, unknown> & {
   Plans?: PostgresPlanNode[];
@@ -156,6 +177,48 @@ const getRiskLevel = (
   if (warnings.length || bottlenecks.some((item) => item.severity === 'warn')) return 'medium';
 
   return 'low';
+};
+
+const compareMetric = (current?: number, baseline?: number): ExplainMetricComparison => {
+  if (current === undefined && baseline === undefined) return {};
+
+  const delta = current !== undefined && baseline !== undefined ? current - baseline : undefined;
+  const percentage =
+    delta !== undefined && baseline !== undefined && baseline !== 0
+      ? (delta / baseline) * 100
+      : undefined;
+
+  return { current, baseline, delta, percentage };
+};
+
+export const compareExplain = (
+  current: ExplainAnalysis,
+  baseline: ExplainAnalysis,
+): ExplainComparison => {
+  const bottlenecksByLabel = new Map<string, { current?: Bottleneck; baseline?: Bottleneck }>();
+
+  current.bottlenecks.forEach((item) => {
+    bottlenecksByLabel.set(item.label, { current: item });
+  });
+  baseline.bottlenecks.forEach((item) => {
+    const previous = bottlenecksByLabel.get(item.label) || {};
+    bottlenecksByLabel.set(item.label, { ...previous, baseline: item });
+  });
+
+  const bottlenecks = [...bottlenecksByLabel.entries()]
+    .map(([label, values]) => ({
+      label,
+      ...values,
+      time: compareMetric(values.current?.timeMs, values.baseline?.timeMs),
+      rows: compareMetric(values.current?.rows, values.baseline?.rows),
+    }))
+    .sort((left, right) => (right.time.current ?? 0) - (left.time.current ?? 0));
+
+  return {
+    totalTime: compareMetric(current.totalTimeMs, baseline.totalTimeMs),
+    planningTime: compareMetric(current.planningTimeMs, baseline.planningTimeMs),
+    bottlenecks,
+  };
 };
 
 const getTextBottlenecks = (planText: string): Bottleneck[] => {

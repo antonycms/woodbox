@@ -32,6 +32,8 @@ import type {
 import type { Dialect, IConnectionConfig, IConnectionTest } from '@shared/types/connections';
 import type { IConnection, ITableWithSchema } from './types';
 import { compareDatabases as compareDatabasesCore } from './compare';
+import { applyTableChanges } from './tableChanges';
+import type { IApplyTableChangesParams } from '@shared/types/database';
 import { getSslConfig } from './ssl';
 import { openSshTunnel, type SshTunnel } from './ssh';
 import { verifySshHost } from './sshHostVerification';
@@ -61,6 +63,7 @@ const activeRunSqlQueries = new Map<
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
+const activeExports = new Map<string, { connectionId: string; canceled: boolean }>();
 
 type IExportPreviewParams = Pick<IExportDataParams, 'source'>;
 
@@ -159,10 +162,8 @@ const getExportSourceBaseSql = (
   return `SELECT * FROM (${sql}) AS __export_query`;
 };
 
-const getExportSourceOrderBy = (
-  source: ExportSource,
-  quoteIdentifier: (value: string) => string,
-) => serializeOrderBy(source.orderBy, quoteIdentifier);
+const getExportSourceOrderBy = (source: ExportSource, quoteIdentifier: (value: string) => string) =>
+  serializeOrderBy(source.orderBy, quoteIdentifier);
 
 const getExportSql = (
   source: ExportSource,
@@ -176,17 +177,6 @@ const getExportSql = (
   const pagination = Number(limit) > 0 ? `LIMIT ${Number(limit)} OFFSET ${offset}` : '';
 
   return [baseSql, orderBy, pagination].filter(Boolean).join('\n');
-};
-
-const readExportRows = async (
-  instance: Knex,
-  source: ExportSource,
-  quoteIdentifier: (value: string) => string,
-  options?: { limit?: number; offset?: number },
-) => {
-  const raw = await instance.raw(getExportSql(source, quoteIdentifier, options));
-
-  return raw;
 };
 
 const getSerializedExportResult = (
@@ -229,7 +219,9 @@ export const closeAllConnections = async () => {
         if (connection?.instance) await destroyConnectionInstance(connection.instance);
       } finally {
         if (isReactNativeBridgeDialect(connection.dialect)) {
-          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+          await releaseReactNativeBridgeGateway(
+            getReactNativeBridgeConnectionSource(connection.id),
+          );
         }
       }
     }),
@@ -270,7 +262,7 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   try {
     instance = knex<DatabaseRow, unknown[]>({
       pool,
-      debug: process.env.NODE_ENV === 'development',
+      debug: false, // A detached development terminal must not interrupt database queries.
       client: adapter.client,
       connection: {
         ...connectionConfig,
@@ -360,7 +352,10 @@ export const testConnection = async (config: IConnectionTest) => {
     : undefined;
 
   if (bridgeSource) {
-    await retainReactNativeBridgeGateway(bridgeSource, getReactNativeBridgeGatewayOptions(mergedConfig));
+    await retainReactNativeBridgeGateway(
+      bridgeSource,
+      getReactNativeBridgeGatewayOptions(mergedConfig),
+    );
   }
 
   try {
@@ -434,7 +429,9 @@ export const closeConnection = async (connectionId: string) => {
         if (index >= 0) activeConnections.splice(index, 1);
 
         if (isReactNativeBridgeDialect(connection.dialect)) {
-          await releaseReactNativeBridgeGateway(getReactNativeBridgeConnectionSource(connection.id));
+          await releaseReactNativeBridgeGateway(
+            getReactNativeBridgeConnectionSource(connection.id),
+          );
         }
       }
     }),
@@ -606,7 +603,6 @@ export const getFunctionDefinition = async (
   return adapter.getRows<{ definition: string }>(raw);
 };
 
-
 export const compareDatabases = async (params: DatabaseCompareParams) => {
   return compareDatabasesCore(params, getConnection);
 };
@@ -690,47 +686,62 @@ export const getExportDataPreview = async (
   };
 };
 
-export const exportData = async (
+export const getExportDataCount = async (
   connectionId: string,
-  { source, columns, format, batchSize = 1000, fileName }: IExportDataParams,
+  { source }: IExportPreviewParams,
 ) => {
-  if (!columns?.length) throw new Error('Selecione ao menos uma coluna para exportar.');
-
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
   const adapter = getDialectAdapter(dialect);
-  const safeBatchSize = Math.max(1, Math.min(Number(batchSize) || 1000, 100000));
-  const readPage = async (page?: number) => {
-    const limit = safeBatchSize;
-    const offset = page ? (page - 1) * safeBatchSize : 0;
-    const sql = getExportSql(source, adapter.quoteIdentifier, { limit, offset });
-    const raw = await readExportRows(instance, source, adapter.quoteIdentifier, { limit, offset });
-    const { rows } = getSerializedExportResult(adapter, raw, sql);
+  const sourceSql = getExportSourceBaseSql(source, adapter.quoteIdentifier);
+  const raw = await instance.raw(
+    `SELECT COUNT(*) AS total_rows FROM (${sourceSql}) AS __export_count`,
+  );
+  const [row] = adapter.getRows(raw);
 
-    return rows as Record<string, unknown>[];
-  };
+  return Number(row?.total_rows ?? 0);
+};
 
-  const eachRowsBatch = async (callback: (rows: Record<string, unknown>[]) => Promise<void>) => {
-    let page = 1;
-    let totalRows = 0;
+export const cancelExport = (connectionId: string, exportId: string) => {
+  const job = activeExports.get(exportId);
+  if (!job || job.connectionId !== connectionId) return false;
+  job.canceled = true;
+  return true;
+};
 
-    while (true) {
-      const rows = await readPage(page);
+export const exportData = async (
+  connectionId: string,
+  { source, columns, format, batchSize = 1000, fileName, exportId }: IExportDataParams,
+) => {
+  if (!columns?.length) throw new Error('Selecione ao menos uma coluna para exportar.');
+  if (!exportId || activeExports.has(exportId))
+    throw new Error('Identificador de exportação inválido.');
 
-      if (!rows.length) break;
-
-      totalRows += rows.length;
-      await callback(rows);
-
-      if (rows.length < safeBatchSize) break;
-
-      page += 1;
-    }
-
-    return totalRows;
-  };
-
-  return exportRowsToFile({ columns, format, fileName }, eachRowsBatch);
+  const job = { connectionId, canceled: false };
+  activeExports.set(exportId, job);
+  try {
+    const { instance, dialect } = await getConnection(connectionId);
+    const adapter = getDialectAdapter(dialect);
+    const safeBatchSize = Math.max(1, Math.min(Math.floor(Number(batchSize)) || 1000, 100000));
+    return await exportRowsToFile({
+      fileName,
+      format,
+      columns,
+      batchSize: safeBatchSize,
+      isCanceled: () => job.canceled,
+      onProgress: (rows) => emitEvent('@event:export_progress', { exportId, connectionId, rows }),
+      readPage: async (page) => {
+        const sql = getExportSql(source, adapter.quoteIdentifier, {
+          limit: safeBatchSize,
+          offset: (page - 1) * safeBatchSize,
+        });
+        const raw = await instance.raw(sql);
+        return getSerializedExportResult(adapter, raw, sql).rows as Record<string, unknown>[];
+      },
+    });
+  } finally {
+    activeExports.delete(exportId);
+  }
 };
 
 export const runSql = async (
@@ -867,4 +878,9 @@ export const importTableData = async (
   });
 
   return { insertedRows };
+};
+
+export const saveTableChanges = async (connectionId: string, params: IApplyTableChangesParams) => {
+  const { instance, dialect } = await getConnection(connectionId);
+  return applyTableChanges(instance, dialect, params);
 };

@@ -46,10 +46,12 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const { t, language } = useI18nStore(
     useShallow((state) => ({ t: state.t, language: state.language })),
   );
-  const { getExportPreview: getExportDataPreview, exportData } = useDatabaseStore(
+  const { getExportPreview: getExportDataPreview, getExportDataCount, exportData, cancelExport } = useDatabaseStore(
     useShallow((state) => ({
       getExportPreview: state.getExportPreview,
       exportData: state.exportData,
+      getExportDataCount: state.getExportDataCount,
+      cancelExport: state.cancelExport,
     })),
   );
   const showToast = useToastStore((state) => state.showToast);
@@ -63,6 +65,11 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const [showColumnsModal, setShowColumnsModal] = React.useState(false);
   const [loadingPreview, setLoadingPreview] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
+  const [canceling, setCanceling] = React.useState(false);
+  const [preparingExport, setPreparingExport] = React.useState(false);
+  const [exportedRows, setExportedRows] = React.useState(0);
+  const [totalRows, setTotalRows] = React.useState(0);
+  const exportJob = React.useRef<{ id: string; connectionId: string } | undefined>(undefined);
 
   const previewColumns = React.useMemo<IColumn[]>(
     () =>
@@ -132,10 +139,21 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
       return;
     }
 
+    const exportId = crypto.randomUUID();
+    exportJob.current = { id: exportId, connectionId: idConnection };
+    setExportedRows(0);
+    setTotalRows(0);
+    setCanceling(false);
+    setPreparingExport(true);
     setExporting(true);
 
     try {
+      const count = await getExportDataCount(idConnection, { source });
+      setTotalRows(count);
+      setPreparingExport(false);
+
       const result = await exportData(idConnection, {
+        exportId,
         source,
         columns: selectedColumns,
         format,
@@ -143,7 +161,12 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         fileName,
       });
 
-      if (result.canceled) return;
+      if (result.canceled) {
+        showToast({ type: 'warn', title: t('exportData.canceled') });
+        return;
+      }
+
+      setExportedRows(result.rows);
 
       showToast({
         type: 'success',
@@ -162,11 +185,15 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         delay: 8000,
       });
     } finally {
+      exportJob.current = undefined;
+      setCanceling(false);
+      setPreparingExport(false);
       setExporting(false);
     }
   }, [
     batchSize,
     exportData,
+    getExportDataCount,
     exporting,
     fileName,
     format,
@@ -178,6 +205,44 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
     source,
     t,
   ]);
+
+  const handleCancelExport = React.useCallback(async () => {
+    const job = exportJob.current;
+    if (!job || canceling) return;
+    setCanceling(true);
+    try {
+      await cancelExport(job.connectionId, job.id);
+    } catch (error) {
+      setCanceling(false);
+      showToast({
+        type: 'error',
+        title: t('exportData.cancelError'),
+        description: getErrorMessage(error, t('common.unknownError')),
+      });
+    }
+  }, [cancelExport, canceling, showToast, t]);
+
+  React.useEffect(() => {
+    const unsubscribe = window.api.database.onExportProgress(
+      (progress) => {
+        const job = exportJob.current;
+        if (job && progress.exportId === job.id && progress.connectionId === job.connectionId) {
+          setExportedRows(progress.rows);
+        }
+      },
+    );
+    return () => {
+      unsubscribe();
+      const job = exportJob.current;
+      if (job) void cancelExport(job.connectionId, job.id).catch(() => {});
+    };
+  }, [cancelExport]);
+
+  const progressPercentage = totalRows
+    ? Math.min(100, Math.round((exportedRows / totalRows) * 100))
+    : exporting
+      ? 0
+      : 100;
 
   React.useEffect(() => {
     if (!show) return;
@@ -238,7 +303,17 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         onClose={handleClose}
       >
         <Form id="modal_export_data_form" onSubmit={handleExport}>
-          <div className={styles.container}>
+          <div
+            className={styles.container}
+            style={
+              {
+                '--export-progress-color':
+                  colors.neutralButtonBackgroundColor ||
+                  colors.saveButtonBackgroundColor ||
+                  colors.color,
+              } as React.CSSProperties
+            }
+          >
             <Row>
               <Autocomplete
                 xs={6}
@@ -298,6 +373,37 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
 
             <Divider />
 
+            {exporting && (
+              <div className={styles.progress} role="status" aria-live="polite">
+                <Text userSelect={false} color={colors.color}>
+                  {t(
+                    preparingExport
+                      ? 'exportData.preparing'
+                      : canceling
+                        ? 'exportData.canceling'
+                        : 'exportData.progress',
+                    {
+                      count: exportedRows.toLocaleString(language),
+                      total: totalRows.toLocaleString(language),
+                      percentage: progressPercentage,
+                    },
+                  )}
+                </Text>
+                <div
+                  className={styles.progressTrack}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progressPercentage}
+                >
+                  <div
+                    className={styles.progressValue}
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <Row>
               <Button
                 xs={12}
@@ -313,28 +419,35 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
                   total: availableColumns.length,
                 })}
               </Button>
-              
+
               <Spacer />
 
               <Button
-                color={colors.cancelButtonColor}
-                backgroundColor={colors.cancelButtonBackgroundColor}
-                onClick={handleClose}
-                disabled={exporting}
+                color={colors.neutralButtonColor || colors.cancelButtonColor}
+                backgroundColor={
+                  colors.neutralButtonBackgroundColor || colors.cancelButtonBackgroundColor
+                }
+                onClick={exporting ? handleCancelExport : handleClose}
+                disabled={canceling}
                 xs={6}
                 sm={3}
                 md={2}
               >
-                {t('settings.customization.cancel')}
+                {t(exporting ? 'exportData.cancel' : 'settings.customization.cancel')}
               </Button>
 
               <Button
                 type="submit"
                 form="modal_export_data_form"
-                color={colors.saveButtonColor}
-                backgroundColor={colors.saveButtonBackgroundColor}
-                loading={exporting}
-                disabled={!selectedColumns.length || !source || !idConnection}
+                color={
+                  exporting ? colors.neutralButtonColor || colors.color : colors.saveButtonColor
+                }
+                backgroundColor={
+                  exporting
+                    ? colors.neutralButtonBackgroundColor || colors.fieldBackgroundColor
+                    : colors.saveButtonBackgroundColor
+                }
+                disabled={exporting || !selectedColumns.length || !source || !idConnection}
                 xs={6}
                 sm={3}
                 md={2}
@@ -402,8 +515,10 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
           <Spacer />
 
           <Button
-            color={colors.saveButtonColor}
-            backgroundColor={colors.cancelButtonBackgroundColor}
+            color={colors.neutralButtonColor || colors.saveButtonColor}
+            backgroundColor={
+              colors.neutralButtonBackgroundColor || colors.cancelButtonBackgroundColor
+            }
             onClick={closeColumnsModal}
             xs={6}
             sm={4}

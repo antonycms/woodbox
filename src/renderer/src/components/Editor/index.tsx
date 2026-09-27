@@ -189,21 +189,18 @@ const Editor = ({
     [editor],
   );
 
-  const getClipboardSelectedText = React.useCallback(
-    (currentEditor: monaco.editor.ICodeEditor) => {
-      const model = currentEditor.getModel();
-      if (!model) return;
+  const getClipboardSelectedText = React.useCallback((currentEditor: monaco.editor.ICodeEditor) => {
+    const model = currentEditor.getModel();
+    if (!model) return;
 
-      const selectedValues = (currentEditor.getSelections() || [])
-        .filter((selection) => !selection.isEmpty())
-        .map((selection) => model.getValueInRange(selection));
+    const selectedValues = (currentEditor.getSelections() || [])
+      .filter((selection) => !selection.isEmpty())
+      .map((selection) => model.getValueInRange(selection));
 
-      if (!selectedValues.length) return;
+    if (!selectedValues.length) return;
 
-      return selectedValues.join(model.getEOL());
-    },
-    [],
-  );
+    return selectedValues.join(model.getEOL());
+  }, []);
 
   const isPositionInSelection = React.useCallback(
     (position: monaco.IPosition) => {
@@ -372,6 +369,9 @@ const Editor = ({
       {
         language,
         tabSize: 2,
+        fontSize: 14,
+        lineHeight: 22,
+        fontLigatures: false,
         lineNumbersMinChars: 3,
         value: initialValue,
         theme: 'active-theme',
@@ -733,7 +733,6 @@ const Editor = ({
 
     return () => disposable?.dispose();
   }, [editor, props.autocomplete]);
-
 
   return (
     <>
