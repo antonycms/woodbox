@@ -83,6 +83,10 @@ export interface WoodboxApi {
     getTableData: (connectionId: string, params: Database.IParamsGetTableData) => Promise<Database.IDataTable>;
     getTableRowsCount: (connectionId: string, params: Omit<Database.IParamsGetTableData, 'page' | 'limit' | 'orderBy'>) => Promise<number>;
     getQueryRowsCount: (connectionId: string, sql: string) => Promise<number>;
+    getExportDataCount: (connectionId: string, params: Pick<Database.IExportDataParams, 'source'>) => Promise<number>;
+    cancelExport: (connectionId: string, exportId: string) => Promise<boolean>;
+    saveTableChanges: (connectionId: string, params: Database.IApplyTableChangesParams) => Promise<Database.IApplyTableChangesResult>;
+    onExportProgress: (listener: (data: Database.IExportProgress) => void) => Unsubscribe;
     getExportPreview: (connectionId: string, params: Pick<Database.IExportDataParams, 'source'>) => Promise<Database.IExportDataPreview>;
     getTableColumns: (connectionId: string, filters: TableFilters) => Promise<Database.IColumnInfo[]>;
     getColumnTypes: (connectionId: string) => Promise<{ name: string }[]>;

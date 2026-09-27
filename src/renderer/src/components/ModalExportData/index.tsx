@@ -1,3 +1,5 @@
+import { useShallow } from 'zustand/react/shallow';
+import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -11,15 +13,12 @@ import { Spacer } from '@renderer/components/Spacer';
 import Table from '@renderer/components/Table';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { Text } from '@renderer/components/Text';
-import {
-  type IExportProgress,
-  type ExportDataFormat,
-  type ExportDataSource,
-  useStoreContext,
-} from '@renderer/contexts/Store';
-import { useI18n, type TranslationKey } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
-import { useToast } from '@renderer/contexts/Toast';
+import type { ExportDataFormat, ExportDataSource } from '@shared/types/database';
+import { useDatabaseStore } from '@renderer/stores/Database';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { type TranslationKey } from '@renderer/stores/I18n/translations';
+import { useThemeStore } from '@renderer/stores/Theme';
+import { useToastStore } from '@renderer/stores/Toast';
 import styles from './styles.module.css';
 
 interface IModalExportDataProps {
@@ -30,30 +29,38 @@ interface IModalExportDataProps {
   onClose?(): void;
 }
 
-const FORMAT_OPTIONS: ExportDataFormat[] = ['csv', 'xlsx', 'json', 'jsonl'];
 const FORMAT_LABELS: Record<ExportDataFormat, TranslationKey> = {
+  clipboard: 'exportData.format.clipboard',
   csv: 'exportData.format.csv',
   xlsx: 'exportData.format.xlsx',
   json: 'exportData.format.json',
   jsonl: 'exportData.format.jsonl',
 };
-const FORMAT_ITEMS = FORMAT_OPTIONS.map((value) => ({ value }));
+
+const FORMAT_ITEMS = Object.keys(FORMAT_LABELS).map((value) => ({ value }));
 
 const uniqueColumns = (columns: string[] = []) => [...new Set(columns.filter(Boolean))];
 
 export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const { show, idConnection, source, fileName, onClose } = props;
-  const { t, language } = useI18n();
-  const { getExportDataPreview, getExportDataCount, exportData, cancelExport } = useStoreContext();
-  const { showToast } = useToast();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const { t, language } = useI18nStore(
+    useShallow((state) => ({ t: state.t, language: state.language })),
+  );
+  const { getExportPreview: getExportDataPreview, getExportDataCount, exportData, cancelExport } = useDatabaseStore(
+    useShallow((state) => ({
+      getExportPreview: state.getExportPreview,
+      exportData: state.exportData,
+      getExportDataCount: state.getExportDataCount,
+      cancelExport: state.cancelExport,
+    })),
+  );
+  const showToast = useToastStore((state) => state.showToast);
+  const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
   const [availableColumns, setAvailableColumns] = React.useState<string[]>([]);
   const [selectedColumns, setSelectedColumns] = React.useState<string[]>([]);
-  const [rowsPreview, setRowsPreview] = React.useState<Record<string, any>[]>([]);
-  const [format, setFormat] = React.useState<ExportDataFormat>('csv');
+  const [rowsPreview, setRowsPreview] = React.useState<Record<string, unknown>[]>([]);
+  const [format, setFormat] = React.useState<ExportDataFormat>('clipboard');
   const [batchSize, setBatchSize] = React.useState<string | number>(1000);
   const [showColumnsModal, setShowColumnsModal] = React.useState(false);
   const [loadingPreview, setLoadingPreview] = React.useState(false);
@@ -76,7 +83,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const previewRowsSerialized = React.useMemo(
     () =>
       rowsPreview.map((row) =>
-        selectedColumns.reduce<Record<string, any>>((acc, column) => {
+        selectedColumns.reduce<Record<string, unknown>>((acc, column) => {
           acc[column] = row?.[column];
           return acc;
         }, {}),
@@ -174,7 +181,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
       showToast({
         type: 'error',
         title: t('toast.dataExportError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error) || t('common.unknownError'),
         delay: 8000,
       });
     } finally {
@@ -210,15 +217,14 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
       showToast({
         type: 'error',
         title: t('exportData.cancelError'),
-        description: error instanceof Error ? error.message : t('common.unknownError'),
+        description: getErrorMessage(error, t('common.unknownError')),
       });
     }
   }, [cancelExport, canceling, showToast, t]);
 
   React.useEffect(() => {
-    const unsubscribe = window.electron.ipcRenderer.on(
-      '@event:export_progress',
-      (_, progress: IExportProgress) => {
+    const unsubscribe = window.api.database.onExportProgress(
+      (progress) => {
         const job = exportJob.current;
         if (job && progress.exportId === job.id && progress.connectionId === job.connectionId) {
           setExportedRows(progress.rows);
@@ -244,7 +250,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
     setAvailableColumns([]);
     setSelectedColumns([]);
     setRowsPreview([]);
-    setFormat('csv');
+    setFormat('clipboard');
     setBatchSize(1000);
     setShowColumnsModal(false);
   }, [show, source]);
@@ -271,7 +277,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         showToast({
           type: 'error',
           title: t('toast.previewLoadError'),
-          description: error instanceof Error ? error.message : t('common.unknownError'),
+          description: getErrorMessage(error) || t('common.unknownError'),
           delay: 8000,
         });
       } finally {

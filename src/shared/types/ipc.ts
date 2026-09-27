@@ -49,6 +49,9 @@ export interface IpcRequests {
   '@get:table_data': WoodboxApi['database']['getTableData'];
   '@get:table_rows_count': WoodboxApi['database']['getTableRowsCount'];
   '@get:query_rows_count': WoodboxApi['database']['getQueryRowsCount'];
+  '@get:export_data_count': WoodboxApi['database']['getExportDataCount'];
+  '@post:cancel_export': WoodboxApi['database']['cancelExport'];
+  '@post:save_table_changes': WoodboxApi['database']['saveTableChanges'];
   '@get:export_data_preview': WoodboxApi['database']['getExportPreview'];
   '@get:table_columns': WoodboxApi['database']['getTableColumns'];
   '@get:column_types': WoodboxApi['database']['getColumnTypes'];
@@ -78,6 +81,7 @@ export interface IpcRequests {
 }
 
 export interface IpcEvents {
+  '@event:export_progress': Parameters<Parameters<WoodboxApi['database']['onExportProgress']>[0]>[0];
   '@event:server_output': Parameters<Parameters<WoodboxApi['database']['onServerOutput']>[0]>[0];
   '@event:update_available': Parameters<Parameters<WoodboxApi['updates']['onAvailable']>[0]>[0];
   '@event:update_download_progress': Parameters<Parameters<WoodboxApi['updates']['onProgress']>[0]>[0];

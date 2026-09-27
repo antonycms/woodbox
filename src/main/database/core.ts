@@ -1,19 +1,43 @@
-import path from 'path';
-import { app, BrowserWindow, dialog } from 'electron';
+import { getErrorMessage } from '@shared/utils/error';
+import { exportRowsToFile } from '../files/exportData';
+import { connect as connectSocket, isIP } from 'node:net';
+import { checkServerIdentity } from 'node:tls';
 import knex, { Knex } from 'knex';
-import { getInternalConnectionSaved } from '@main/storage/store';
-import { emitEvent } from '@main/utils/emitEvent';
+import { getInternalConnectionSaved } from '../storage/store';
+import { emitEvent } from '../utils/emitEvent';
 import {
   releaseReactNativeBridgeGateway,
   retainReactNativeBridgeGateway,
-} from '@main/reactNativeBridge/gateway';
+} from '../reactNativeBridge/gateway';
 import { getDialectAdapter, getDialectIds } from './dialects';
-import { compareDatabases as compareDatabasesCore, type DatabaseCompareParams } from './compare';
-import { getSslConfig } from './ssl';
-import type { IOrderBy } from './types';
-import { writeExportFile, type ExportFormat } from '@main/files/export';
+import type { DatabaseCompareParams } from '@shared/types/databaseCompare';
+import type {
+  DatabaseRow,
+  IDatabaseProcess,
+  ITable,
+  IFunctionDb,
+  IColumnInfo,
+  IColumnReferenceInfo,
+  IColumnRestrictionsInfo,
+  IIndexInfo,
+  ITriggerInfo,
+  IParamsGetTableData,
+  IOptionsRunSql,
+  IExportDataParams,
+  ExportDataSource as ExportSource,
+  IServerOutputMessage,
+  IImportTableDataParams,
+  IImportTableDataResult,
+} from '@shared/types/database';
+import type { Dialect, IConnectionConfig, IConnectionTest } from '@shared/types/connections';
+import type { IConnection, ITableWithSchema } from './types';
+import { compareDatabases as compareDatabasesCore } from './compare';
 import { applyTableChanges } from './tableChanges';
-import type { IApplyTableChangesParams } from '../../preload/database';
+import type { IApplyTableChangesParams } from '@shared/types/database';
+import { getSslConfig } from './ssl';
+import { openSshTunnel, type SshTunnel } from './ssh';
+import { verifySshHost } from './sshHostVerification';
+import { mergeSshCredentials } from '../storage/modules/ssh_credentials';
 import { serializeOrderBy } from './utils/orderBy';
 import {
   hasSqlStatementSeparator,
@@ -23,46 +47,25 @@ import {
 } from './utils/sql';
 
 const activeConnections: IConnection[] = [];
+const connectionTunnels = new WeakMap<Knex, SshTunnel>();
+const destroyConnectionInstance = async (instance: Knex) => {
+  try {
+    await instance.destroy();
+  } finally {
+    await connectionTunnels.get(instance)?.close();
+    connectionTunnels.delete(instance);
+  }
+};
 const pendingConnections = new Map<string, Promise<IConnection>>();
 const activeRunSqlQueries = new Map<
   string,
-  { connectionId: string; instance: Knex; dbConnection: any; dialect: Dialect }
+  { connectionId: string; instance: Knex; dbConnection: object; dialect: Dialect }
 >();
 const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
-
 const activeExports = new Map<string, { connectionId: string; canceled: boolean }>();
 
-type ExportSource =
-  | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }
-  | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
-
-interface IExportDataParams {
-  exportId: string;
-  source: ExportSource;
-  columns: string[];
-  format: ExportFormat;
-  batchSize?: number;
-  fileName?: string;
-}
-
-interface IExportPreviewParams {
-  source: ExportSource;
-}
-
-const EXPORT_FORMAT_FILTERS: Record<ExportFormat, Electron.FileFilter> = {
-  csv: { name: 'CSV', extensions: ['csv'] },
-  json: { name: 'JSON', extensions: ['json'] },
-  jsonl: { name: 'JSONL', extensions: ['jsonl'] },
-  xlsx: { name: 'Excel', extensions: ['xlsx'] },
-};
-
-const EXPORT_MIME_EXTENSIONS: Record<ExportFormat, string> = {
-  csv: 'csv',
-  json: 'json',
-  jsonl: 'jsonl',
-  xlsx: 'xlsx',
-};
+type IExportPreviewParams = Pick<IExportDataParams, 'source'>;
 
 const isReactNativeBridgeDialect = (dialect: Dialect) => dialect === 'react-native-sqlite';
 const getReactNativeBridgeConnectionSource = (connectionId: string) => `connection:${connectionId}`;
@@ -72,18 +75,7 @@ const getReactNativeBridgeGatewayOptions = (config: IConnectionConfig) => ({
   port: config.reactNativeBridge?.port,
 });
 
-interface IServerOutputMessage {
-  id: string;
-  connectionId: string;
-  date: string;
-  severity?: string;
-  message: string;
-  detail?: string;
-  hint?: string;
-  where?: string;
-}
-
-const addServerOutput = (connectionId: string, notice: any) => {
+const addServerOutput = (connectionId: string, notice: Pick<IServerOutputMessage, 'severity' | 'message' | 'detail' | 'hint' | 'where'>) => {
   if (!connectionId) return;
 
   const message: IServerOutputMessage = {
@@ -123,7 +115,7 @@ export const getProcessList = async (connectionId: string) => {
 
   const raw = await instance.raw(query.getProcessList());
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IDatabaseProcess>(raw);
 };
 
 export const cancelProcess = async (connectionId: string, pid: string | number) => {
@@ -142,13 +134,6 @@ export const cancelProcess = async (connectionId: string, pid: string | number) 
   const [row] = adapter.getRows(raw);
 
   return row?.canceled === undefined ? true : Boolean(row.canceled);
-};
-
-const normalizeExportFileName = (value?: string) => {
-  const name =
-    value?.trim?.() || `woodbox-export-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-
-  return name.replace(/[\\/:*?"<>|]+/g, '-').slice(0, 180);
 };
 
 const getExportSourceBaseSql = (
@@ -231,7 +216,7 @@ export const closeAllConnections = async () => {
   await Promise.all(
     activeConnections.map(async (connection) => {
       try {
-        await connection?.instance?.destroy?.();
+        if (connection?.instance) await destroyConnectionInstance(connection.instance);
       } finally {
         if (isReactNativeBridgeDialect(connection.dialect)) {
           await releaseReactNativeBridgeGateway(
@@ -249,8 +234,13 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   const adapter = getDialectAdapter(dialect);
   const connectionConfig = adapter.getConnectionConfig(config);
   const sslConfig = getSslConfig(config);
+  if (config.ssh?.enabled && dialect !== 'postgres' && dialect !== 'mysql') {
+    throw new Error('Túnel SSH disponível apenas para PostgreSQL e MySQL.');
+  }
+  const tunnel = config.ssh?.enabled
+    ? await openSshTunnel(config.ssh, config, verifySshHost) : undefined;
 
-  let instance: null | Knex<any, unknown[]>;
+  let instance: null | Knex<DatabaseRow, unknown[]>;
 
   const pool = noPool
     ? undefined
@@ -269,18 +259,37 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
         },
       };
 
-  instance = knex({
-    pool,
-    // Knex debug writes every query to stdout, which can throw EPIPE when the
-    // Electron process is detached from its original terminal.
-    debug: false,
-    client: adapter.client,
-    connection: {
-      ...connectionConfig,
-      ...(sslConfig ? { ssl: sslConfig } : {}),
-    },
-    ...adapter.getKnexConfig?.(config),
-  });
+  try {
+    instance = knex<DatabaseRow, unknown[]>({
+      pool,
+      debug: false, // A detached development terminal must not interrupt database queries.
+      client: adapter.client,
+      connection: {
+        ...connectionConfig,
+        ...(sslConfig ? { ssl: sslConfig } : {}),
+        ...(tunnel ? dialect === 'mysql' ? {
+          // Preserve the original host for MySQL TLS/SNI, connecting through the local tunnel.
+          stream: () => connectSocket(tunnel.port, tunnel.host),
+        } : {
+          host: tunnel.host,
+          port: tunnel.port,
+          ...(sslConfig ? { ssl: {
+            ...sslConfig,
+            ...(!isIP(config.host) ? { servername: config.host } : {}),
+            checkServerIdentity: (_host, certificate) => checkServerIdentity(config.host, certificate),
+          } } : {}),
+        } : {}),
+      },
+      ...adapter.getKnexConfig?.(config),
+    });
+  } catch (error) {
+    await tunnel?.close();
+    throw error;
+  }
+
+  if (tunnel) {
+    connectionTunnels.set(instance, tunnel);
+  }
 
   const errorsHandled = {
     authentication: {
@@ -289,17 +298,17 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
     },
   };
 
-  const getError = (error: Error) => {
+  const getError = (error: unknown) => {
     let serializedError = error;
 
-    if (!serializedError?.message) {
+    if (!getErrorMessage(serializedError)) {
       return new Error('Ocorreu um erro desconhecido.');
     }
 
     Object.keys(errorsHandled).some((key) => {
       const { message, errors = [] } = errorsHandled[key];
 
-      const checkErrorMessage = errors.some((textError) => error.message.includes(textError));
+      const checkErrorMessage = errors.some((textError) => getErrorMessage(error).includes(textError));
 
       if (checkErrorMessage) {
         serializedError = new Error(message);
@@ -314,11 +323,11 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 
   try {
     await instance.raw('SELECT 1');
-  } catch (error: any) {
-    instance.destroy();
+  } catch (error: unknown) {
+    await destroyConnectionInstance(instance);
     instance = null;
 
-    const serializedError = getError(error);
+    const serializedError = getError(tunnel?.getError() || error);
     throw serializedError;
   }
 
@@ -327,13 +336,16 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
 
 export const getDialects = () => getDialectIds();
 
-export const testConnection = async (config: IConnectionConfig) => {
+export const testConnection = async (config: IConnectionTest) => {
   const storedConfig =
-    config.id && !config.password ? getInternalConnectionSaved(config.id) : undefined;
-  const mergedConfig = {
+    config.id ? getInternalConnectionSaved(config.id) : undefined;
+  const mergedConfig: IConnectionConfig = {
     ...storedConfig,
     ...config,
+    id: config.id ?? storedConfig?.id ?? '',
+    id_project: config.id_project ?? storedConfig?.id_project ?? '',
     password: config.password || storedConfig?.password,
+    ssh: mergeSshCredentials(config.ssh, storedConfig?.ssh),
   };
   const bridgeSource = isReactNativeBridgeDialect(mergedConfig.dialect)
     ? getReactNativeBridgeTestSource(mergedConfig.id)
@@ -348,7 +360,7 @@ export const testConnection = async (config: IConnectionConfig) => {
 
   try {
     const instance = await makeConnectionInstance(mergedConfig, true);
-    await instance.destroy();
+    await destroyConnectionInstance(instance);
   } finally {
     if (bridgeSource) await releaseReactNativeBridgeGateway(bridgeSource);
   }
@@ -408,7 +420,7 @@ export const closeConnection = async (connectionId: string) => {
   await Promise.all(
     connections.map(async (connection) => {
       try {
-        await connection.instance.destroy();
+        await destroyConnectionInstance(connection.instance);
       } catch (error) {
         console.error(error);
       } finally {
@@ -432,7 +444,9 @@ const getConnection = async (connectionId: string) => {
   );
 
   if (connectionAlreadyStarted) {
-    return connectionAlreadyStarted;
+    const tunnel = connectionTunnels.get(connectionAlreadyStarted.instance);
+    if (!tunnel || tunnel.isOpen()) return connectionAlreadyStarted;
+    await closeConnection(connectionId);
   }
 
   const pendingConnection = pendingConnections.get(connectionId);
@@ -467,16 +481,16 @@ export const getConnectionInfo = async (connectionId: string) => {
     query.getFunctions ? instance.raw(query.getFunctions()) : undefined,
   ]);
 
-  const tables = adapter.getRows(tablesRaw);
+  const tables = adapter.getRows<ITable>(tablesRaw);
   const schemas = schemasRaw
-    ? adapter.getRows(schemasRaw).map((row) => row?.schema_name)
+    ? adapter.getRows<{ schema_name: string }>(schemasRaw).map((row) => row?.schema_name)
     : undefined;
-  const functions = functionsRaw ? adapter.getRows(functionsRaw) : [];
+  const functions = functionsRaw ? adapter.getRows<IFunctionDb>(functionsRaw) : [];
 
   return { tables, schemas, functions };
 };
 
-export const getTableColumns = async (connectionId: string, { table, schema }) => {
+export const getTableColumns = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -485,7 +499,7 @@ export const getTableColumns = async (connectionId: string, { table, schema }) =
 
   const raw = await instance.raw(query.getTableColumns({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnInfo>(raw);
 };
 
 export const getColumnTypes = async (connectionId: string) => {
@@ -497,10 +511,10 @@ export const getColumnTypes = async (connectionId: string) => {
 
   const raw = await instance.raw(query.getColumnTypes());
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ name: string }>(raw);
 };
 
-export const getTableReferences = async (connectionId: string, { table, schema }) => {
+export const getTableReferences = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -509,10 +523,10 @@ export const getTableReferences = async (connectionId: string, { table, schema }
 
   const raw = await instance.raw(query.getTableReferences({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnReferenceInfo>(raw);
 };
 
-export const getTableUsedAsReference = async (connectionId: string, { table, schema }) => {
+export const getTableUsedAsReference = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -521,10 +535,10 @@ export const getTableUsedAsReference = async (connectionId: string, { table, sch
 
   const raw = await instance.raw(query.getTableUsedAsReference({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnReferenceInfo>(raw);
 };
 
-export const getTableRestrictions = async (connectionId: string, { table, schema }) => {
+export const getTableRestrictions = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -533,10 +547,10 @@ export const getTableRestrictions = async (connectionId: string, { table, schema
 
   const raw = await instance.raw(query.getTableRestrictions({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IColumnRestrictionsInfo>(raw);
 };
 
-export const getTableDefinition = async (connectionId: string, { table, schema }) => {
+export const getTableDefinition = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -545,10 +559,10 @@ export const getTableDefinition = async (connectionId: string, { table, schema }
 
   const raw = await instance.raw(query.getTableDefinition({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ definition: string }>(raw);
 };
 
-export const getTableIndexes = async (connectionId: string, { table, schema }) => {
+export const getTableIndexes = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -557,10 +571,10 @@ export const getTableIndexes = async (connectionId: string, { table, schema }) =
 
   const raw = await instance.raw(query.getTableIndexes({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<IIndexInfo>(raw);
 };
 
-export const getTableTriggers = async (connectionId: string, { table, schema }) => {
+export const getTableTriggers = async (connectionId: string, { table, schema }: ITableWithSchema) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
@@ -569,7 +583,7 @@ export const getTableTriggers = async (connectionId: string, { table, schema }) 
 
   const raw = await instance.raw(query.getTableTriggers({ table, schema }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<ITriggerInfo>(raw);
 };
 
 export const getFunctionDefinition = async (
@@ -586,7 +600,7 @@ export const getFunctionDefinition = async (
 
   const raw = await instance.raw(query.getFunctionDefinition({ schema, functionName }));
 
-  return adapter.getRows(raw);
+  return adapter.getRows<{ definition: string }>(raw);
 };
 
 export const compareDatabases = async (params: DatabaseCompareParams) => {
@@ -605,14 +619,7 @@ export const getTableData = async (
     limit = 200,
     where,
     orderBy,
-  }: {
-    table: string;
-    schema: string;
-    page?: number;
-    limit?: number;
-    where?: string;
-    orderBy?: IOrderBy[];
-  },
+  }: IParamsGetTableData,
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -709,8 +716,6 @@ export const exportData = async (
   if (!columns?.length) throw new Error('Selecione ao menos uma coluna para exportar.');
   if (!exportId || activeExports.has(exportId))
     throw new Error('Identificador de exportação inválido.');
-  if (!Object.hasOwn(EXPORT_MIME_EXTENSIONS, format))
-    throw new Error('Formato de exportação inválido.');
 
   const job = { connectionId, canceled: false };
   activeExports.set(exportId, job);
@@ -718,27 +723,8 @@ export const exportData = async (
     const { instance, dialect } = await getConnection(connectionId);
     const adapter = getDialectAdapter(dialect);
     const safeBatchSize = Math.max(1, Math.min(Math.floor(Number(batchSize)) || 1000, 100000));
-    const extension = EXPORT_MIME_EXTENSIONS[format];
-    if (job.canceled) return { canceled: true, rows: 0 };
-    const saveOptions: Electron.SaveDialogOptions = {
-      defaultPath: path.join(
-        app.getPath('downloads'),
-        `${Date.now()}_${normalizeExportFileName(fileName)}.${extension}`,
-      ),
-      filters: [EXPORT_FORMAT_FILTERS[format]],
-    };
-    const parentWindow = BrowserWindow.getFocusedWindow();
-    const result = parentWindow
-      ? await dialog.showSaveDialog(parentWindow, saveOptions)
-      : await dialog.showSaveDialog(saveOptions);
-    if (job.canceled || result.canceled || !result.filePath) return { canceled: true, rows: 0 };
-    const filePath =
-      path.extname(result.filePath).toLowerCase() === `.${extension}`
-        ? result.filePath
-        : `${result.filePath}.${extension}`;
-
-    return await writeExportFile({
-      filePath,
+    return await exportRowsToFile({
+      fileName,
       format,
       columns,
       batchSize: safeBatchSize,
@@ -761,7 +747,7 @@ export const exportData = async (
 export const runSql = async (
   connectionId: string,
   sql: string,
-  options?: { page?: number; limit?: number; orderBy?: IOrderBy[]; queryExecutionId?: string },
+  options?: IOptionsRunSql,
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -797,7 +783,7 @@ export const runSql = async (
     }
   }
 
-  const dbConnection = await (instance.client as any).acquireConnection();
+  const dbConnection = await instance.client.acquireConnection();
 
   try {
     if (options?.queryExecutionId) {
@@ -812,7 +798,7 @@ export const runSql = async (
     const t0 = Date.now();
     const statements =
       !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
-    const results: { raw: any; statement: string }[] = [];
+    const results: { raw: unknown; statement: string }[] = [];
 
     try {
       for (const statement of statements) {
@@ -843,14 +829,14 @@ export const runSql = async (
     }
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
-    await (instance.client as any).releaseConnection(dbConnection);
+    await instance.client.releaseConnection(dbConnection);
   }
 };
 
 export const runExplainSql = async (
   connectionId: string,
   sql: string,
-  options?: { queryExecutionId?: string },
+  options?: Pick<IOptionsRunSql, 'queryExecutionId'>,
 ) => {
   const connection = await getConnection(connectionId);
   const adapter = getDialectAdapter(connection.dialect);

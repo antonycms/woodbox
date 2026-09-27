@@ -1,3 +1,4 @@
+import type { Dialect } from '@shared/types/connections';
 import { isDeepStrictEqual } from 'util';
 import type { Knex } from 'knex';
 import type {
@@ -5,7 +6,7 @@ import type {
   IApplyTableChangesResult,
   ITableDataConflict,
   ITableRowChange,
-} from '../../preload/database';
+} from '@shared/types/database';
 
 const normalize = (value: unknown): unknown => {
   // Electron transports driver Buffers as Uint8Arrays.

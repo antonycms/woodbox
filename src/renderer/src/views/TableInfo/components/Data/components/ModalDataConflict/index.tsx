@@ -4,9 +4,9 @@ import { Text } from '@renderer/components/Text';
 import { Button } from '@renderer/components/Button';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import type { ITableDataConflict } from '@renderer/contexts/Store';
-import { useI18n } from '@renderer/contexts/I18n';
-import { useThemeContext } from '@renderer/contexts/Theme';
+import type { ITableDataConflict } from '@shared/types/database';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import styles from './styles.module.css';
 
 interface Props {
@@ -55,10 +55,8 @@ const getConflictColumns = (conflict: ITableDataConflict) => {
 };
 
 export const ModalDataConflict = ({ conflicts, onClose, onDiscardAndReload }: Props) => {
-  const { t } = useI18n();
-  const {
-    activeTheme: { modal: colors },
-  } = useThemeContext();
+  const t = useI18nStore((state) => state.t);
+  const colors = useThemeStore((state) => state.activeTheme.modal);
 
   return (
     <Modal

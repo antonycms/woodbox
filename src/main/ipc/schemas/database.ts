@@ -21,6 +21,7 @@ const exportSource = z.discriminatedUnion('type', [
 ]);
 export const exportPreview = z.object({ source: exportSource });
 export const exportData = exportPreview.extend({
+  exportId: z.string().min(1),
   columns: z.array(z.string()), format: z.enum(['csv', 'json', 'jsonl', 'xlsx', 'clipboard']),
   batchSize: z.number().optional(), fileName: z.string().optional(),
 });
@@ -58,4 +59,17 @@ export const compare = z.object({
     detectTableRenames: z.boolean(),
     enableRollback: z.boolean(),
   }),
+});
+
+const rowValues = z.record(z.string(), z.unknown());
+const rowChange = z.object({
+  rowKey: z.string(),
+  original: rowValues,
+  changes: rowValues.optional(),
+});
+export const saveTableChanges = tableFilters.extend({
+  keyColumns: z.array(z.string()),
+  inserts: z.array(rowValues),
+  updates: z.array(rowChange),
+  deletes: z.array(rowChange),
 });
