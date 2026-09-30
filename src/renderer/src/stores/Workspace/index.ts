@@ -75,6 +75,8 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
     }));
   },
 
+  exportProjects: (...args) => window.api.projects.export(...args),
+
   removeProject: async (id) => {
     await get().initialize();
     const connectionIds = get().connections

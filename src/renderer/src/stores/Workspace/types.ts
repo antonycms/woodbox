@@ -11,6 +11,7 @@ export interface IWorkspaceStore {
   addProject(data: IProjectCreate): Promise<void>;
   editProject(id: string, data: IProjectCreate): Promise<void>;
   removeProject: WoodboxApi['projects']['remove'];
+  exportProjects: WoodboxApi['projects']['export'];
 
   scripts: IScriptMetadata[];
   addScript(data: Omit<IScriptMetadata, 'id'>): Promise<IScriptMetadata>;

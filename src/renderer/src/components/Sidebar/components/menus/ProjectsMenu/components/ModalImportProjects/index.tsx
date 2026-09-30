@@ -18,6 +18,7 @@ import { useToastStore } from '@renderer/stores/Toast';
 import styles from './styles.module.css';
 
 const originOptions: { label: string; value: ImportConnectionsSource }[] = [
+  { label: 'Woodbox', value: 'woodbox' },
   { label: 'DBeaver', value: 'dbeaver' },
 ];
 
@@ -26,7 +27,7 @@ const makeSelectionKey = (sourceName: string, sourceId: string) => `${sourceName
 export const ModalImportProjects = React.memo((props: IModalImportProjectsProps) => {
   const dialogs = useDialogsStore(
     useShallow((state) => ({
-      selectDbeaverExportFile: state.selectDbeaverExportFile,
+      selectProjectImportFile: state.selectProjectImportFile,
     })),
   );
   const { show, onClose } = props;
@@ -41,7 +42,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
 
   const { settings, modal: colors } = useThemeStore((state) => state.activeTheme);
 
-  const [source, setSource] = React.useState<ImportConnectionsSource>('dbeaver');
+  const [source, setSource] = React.useState<ImportConnectionsSource>('woodbox');
   const [masterPassword, setMasterPassword] = React.useState('');
   const [loadingPreview, setLoadingPreview] = React.useState(false);
   const [loadingImport, setLoadingImport] = React.useState(false);
@@ -104,12 +105,12 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
   );
 
   const handleSelectFile = React.useCallback(async () => {
-    const path = await dialogs.selectDbeaverExportFile();
+    const path = await dialogs.selectProjectImportFile(source);
 
     if (!path) return;
 
     await loadPreview(path);
-  }, [dialogs, loadPreview]);
+  }, [dialogs, loadPreview, source]);
 
   const toggleProject = React.useCallback(
     (project: IImportConnectionsPreview['projects'][number], checked: boolean) => {
@@ -211,7 +212,12 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           color={colors.fieldColor}
           backgroundColor={colors.fieldBackgroundColor}
           xs={12}
-          onChange={(event) => setSource(event.value as ImportConnectionsSource)}
+          onChange={(event) => {
+            setSource(event.value as ImportConnectionsSource);
+            setPreview(undefined);
+            setResult(undefined);
+            setSelectedItems(new Set());
+          }}
         />
       </Row>
 

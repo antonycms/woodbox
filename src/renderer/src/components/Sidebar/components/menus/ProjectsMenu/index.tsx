@@ -47,6 +47,7 @@ import { ModalDeleteSchema } from './components/ModalDeleteSchema';
 import { ModalDeleteProject } from './components/ModalDeleteProject';
 import { ModalRenameSchema } from './components/ModalRenameSchema';
 import { ModalImportProjects } from './components/ModalImportProjects';
+import { ModalExportProjects } from './components/ModalExportProjects';
 import styles from './styles.module.css';
 
 const PROCESS_LIST_DIALECTS = new Set<Dialect>(['postgres', 'mysql']);
@@ -90,6 +91,7 @@ const ProjectsMenu = () => {
   const [projectEditing, setProjectEditing] = React.useState<ProjectTreeItemData>();
   const [projectToDelete, setProjectToDelete] = React.useState<ProjectTreeItemData>();
   const [showImportProjects, setShowImportProjects] = React.useState(false);
+  const [showExportProjects, setShowExportProjects] = React.useState(false);
 
   const [isNewConnection, setIsNewConnection] = React.useState(false);
   const [connectionEditing, setConnectionEditing] = React.useState<ProjectTreeItemData>();
@@ -452,6 +454,10 @@ const ProjectsMenu = () => {
         onClick: () => setShowImportProjects(true),
       },
       {
+        text: t('project.export'),
+        onClick: () => setShowExportProjects(true),
+      },
+      {
         text: t('databaseCompare.title'),
         onClick: () => openDatabaseCompare(),
       },
@@ -638,6 +644,10 @@ const ProjectsMenu = () => {
     setShowImportProjects(false);
   }, []);
 
+  const closeExportProjectsModal = React.useCallback(() => {
+    setShowExportProjects(false);
+  }, []);
+
   const closeDatabaseCompareModal = React.useCallback(() => {
     setShowDatabaseCompare(false);
   }, []);
@@ -646,6 +656,7 @@ const ProjectsMenu = () => {
     () => [
       { id: 'add', label: t('project.add') },
       { id: 'import-projects', label: t('project.import') },
+      { id: 'export-projects', label: t('project.export') },
       { id: 'database-compare', label: t('databaseCompare.title') },
     ],
     [t],
@@ -655,6 +666,7 @@ const ProjectsMenu = () => {
     (option: IButtonDropdownOption) => {
       if (option.id === 'add') openNewProject();
       if (option.id === 'import-projects') setShowImportProjects(true);
+      if (option.id === 'export-projects') setShowExportProjects(true);
       if (option.id === 'database-compare') openDatabaseCompare();
     },
     [openDatabaseCompare, openNewProject],
@@ -749,6 +761,7 @@ const ProjectsMenu = () => {
       />
 
       <ModalImportProjects show={showImportProjects} onClose={closeImportProjectsModal} />
+      <ModalExportProjects show={showExportProjects} onClose={closeExportProjectsModal} />
 
       <ModalDatabaseCompare
         show={showDatabaseCompare}
