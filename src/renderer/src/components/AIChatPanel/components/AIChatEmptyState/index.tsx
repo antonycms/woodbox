@@ -13,7 +13,7 @@ import type {
   IAIChatModelSelectionProps,
   IAIChatReferenceOption,
 } from '../../types';
-import styles from '../../styles.module.css';
+import styles from './styles.module.css';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -85,6 +85,14 @@ export const AIChatEmptyState = React.memo(
     return (
       <div className={styles.emptyState}>
         <div className={styles.recentHeader}>
+          <p
+            className={styles.titleBlock}
+            title={t('aiChat.toggleList')}
+            aria-label={t('aiChat.toggleList')}
+          >
+            {t('aiChat.title')}
+          </p>
+
           <ButtonDropdown
             smallIcon
             text

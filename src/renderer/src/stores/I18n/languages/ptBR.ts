@@ -764,6 +764,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'aiChat.delete': 'Apagar chat',
   'aiChat.deleteQuestion': 'Apagar o chat “{{name}}”?',
   'aiChat.messagesCount': '{{count}} mensagens',
+  'aiChat.title': 'Chat com IA',
   'aiChat.unknownTitle': 'Conversa de IA',
   'aiChat.unknownSummary': 'Conversa não encontrada.',
   'aiChat.userLabel': 'Você',

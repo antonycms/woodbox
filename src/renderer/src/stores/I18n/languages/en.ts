@@ -760,6 +760,7 @@ export const en = {
   'aiChat.delete': 'Delete chat',
   'aiChat.deleteQuestion': 'Delete chat “{{name}}”?',
   'aiChat.messagesCount': '{{count}} messages',
+  'aiChat.title': 'AI chat',
   'aiChat.unknownTitle': 'AI chat',
   'aiChat.unknownSummary': 'Chat not found.',
   'aiChat.userLabel': 'You',

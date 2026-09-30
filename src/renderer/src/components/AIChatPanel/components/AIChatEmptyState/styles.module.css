@@ -1,0 +1,127 @@
+.titleBlock {
+  font-size: 13px;
+  flex: 1;
+  color: var(--color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  padding: 0 8px;
+  font-weight: bold;
+}
+
+.emptyState {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.recentHeader {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  min-width: 0;
+  padding: 0 6px;
+  /* border-bottom: 2px solid var(--borderColor); */
+  background-color: var(--barBackgroundColor);
+}
+
+.recentHeader > p {
+  flex: 1;
+}
+
+.chatItemMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--color);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+}
+
+.chatItemMain span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.chatItemMain time {
+  color: color-mix(in srgb, var(--color) 58%, transparent);
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.chatItemMain:focus-visible,
+.deleteChatButton:focus-visible {
+  outline: 1px solid var(--color);
+}
+
+.deleteChatButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--color) 52%, transparent);
+  cursor: pointer;
+  opacity: 0;
+  background: transparent;
+}
+
+.recentItem:hover .deleteChatButton,
+.deleteChatButton:focus-visible {
+  opacity: 1;
+}
+
+.deleteChatButton:hover {
+  color: var(--queryRejectedColor, var(--color));
+  background-color: color-mix(in srgb, var(--color) 9%, transparent);
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  padding: 0 16px;
+}
+
+.recentItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 31px;
+  padding: 0 2px;
+}
+
+.recentItem:hover .chatItemMain {
+  color: var(--ascentColor, var(--color));
+}
+
+.emptyMark {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  color: color-mix(in srgb, var(--color) 18%, transparent);
+}
