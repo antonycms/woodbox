@@ -69,6 +69,8 @@ export const useQueryExecution = ({
 
     updateTabResultData({
       type: 'SELECT',
+      query,
+      variableValues,
       loading: true,
       queryExecutionId,
       date_run: new Date().toISOString(),
@@ -217,7 +219,7 @@ export const useQueryExecution = ({
       canceled = await cancelRunSql(id_connection, tab.queryExecutionId);
 
       if (canceled) {
-        makeUpdateResultTab(idTab)(makeCanceledQueryResult(t('toast.queryCanceled')));
+        makeUpdateResultTab(idTab)(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
       }
     } finally {
       if (!canceled) forgetCanceledQuery(tab.queryExecutionId);
