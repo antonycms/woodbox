@@ -180,6 +180,7 @@ export interface IDatabaseProcess {
   username?: string;
   database?: string;
   client?: string;
+  client_port?: string | number | null;
   application?: string;
   state?: string;
   wait?: string;

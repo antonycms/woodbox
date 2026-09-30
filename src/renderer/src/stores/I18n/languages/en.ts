@@ -269,6 +269,7 @@ export const en = {
   'processList.user': 'User',
   'processList.database': 'Database',
   'processList.client': 'Client',
+  'processList.clientPort': 'Client port',
   'processList.application': 'Application',
   'processList.state': 'State',
   'processList.wait': 'Wait',

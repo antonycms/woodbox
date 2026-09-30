@@ -272,6 +272,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'processList.user': 'Usuário',
   'processList.database': 'Banco de dados',
   'processList.client': 'Cliente',
+  'processList.clientPort': 'Porta do cliente',
   'processList.application': 'Aplicativo',
   'processList.state': 'Estado',
   'processList.wait': 'Espera',

@@ -470,6 +470,7 @@ const getProcessList = () => /* sql */ `
     usename AS username,
     datname AS database,
     COALESCE(host(client_addr), 'local') AS client,
+    client_port,
     application_name AS application,
     state,
     concat_ws(':', wait_event_type, wait_event) AS wait,

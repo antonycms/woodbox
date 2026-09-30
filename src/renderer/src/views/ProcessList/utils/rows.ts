@@ -33,6 +33,13 @@ export const getProcessListColumns = (t: TranslateFn): IColumn<ProcessListRow>[]
   },
   { label: t('processList.client'), attribute: 'client', resizable: true, sortable: true },
   {
+    label: t('processList.clientPort'),
+    attribute: 'client_port',
+    resizable: true,
+    sortable: true,
+    type: 'number',
+  },
+  {
     label: t('processList.application'),
     attribute: 'application',
     resizable: true,
@@ -65,6 +72,8 @@ export const normalizeProcessRow = (row: IDatabaseProcess): ProcessListRow => ({
   username: row.username || '—',
   database: row.database || '—',
   client: row.client || '—',
+  client_port:
+    row.client_port === null || row.client_port === undefined ? '—' : Number(row.client_port),
   application: row.application || '—',
   state: row.state || '—',
   wait: row.wait || '—',

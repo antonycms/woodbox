@@ -215,7 +215,11 @@ const getProcessList = () => /* sql */ `
     ID AS pid,
     USER AS username,
     DB AS database,
-    HOST AS client,
+    SUBSTRING_INDEX(HOST, ':', 1) AS client,
+    CASE
+      WHEN HOST LIKE '%:%' THEN CAST(SUBSTRING_INDEX(HOST, ':', -1) AS UNSIGNED)
+      ELSE NULL
+    END AS client_port,
     NULL AS application,
     COMMAND AS state,
     STATE AS wait,
