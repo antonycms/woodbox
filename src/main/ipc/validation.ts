@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { IpcArgs, IpcChannel } from '@shared/types/ipc';
-import { connection, importConnections } from './schemas/connections';
+import { connection, exportProjects, importConnections, projectExportFormat, projectImportFormat } from './schemas/connections';
 import { project, script, snippet } from './schemas/workspace';
 import { provider, chat, chatPatch, appendMessages, chatRequest } from './schemas/ai';
 import {
@@ -24,6 +24,7 @@ const schemas = {
   '@add:projects': z.tuple([project]),
   '@edit:projects': z.tuple([id, project]),
   '@remove:projects': z.tuple([id]),
+  '@post:export_projects': z.tuple([exportProjects]),
   '@get:scripts_meta': z.tuple([]),
   '@get:script_content': z.tuple([id]),
   '@add:scripts': z.tuple([script]),
@@ -80,6 +81,8 @@ const schemas = {
   '@post:compare_databases': z.tuple([compare]),
   '@dialog:select_sqlite_file': z.tuple([]),
   '@dialog:select_dbeaver_export_file': z.tuple([]),
+  '@dialog:select_project_import_file': z.tuple([projectImportFormat]),
+  '@dialog:select_project_export_file': z.tuple([projectExportFormat]),
   '@dialog:select_ssl_file': z.tuple([]),
   '@dialog:select_ssh_key': z.tuple([]),
   '@post:download_update': z.tuple([]),

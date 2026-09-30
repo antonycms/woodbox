@@ -15,6 +15,7 @@ export interface IpcRequests {
   '@add:projects': WoodboxApi['projects']['add'];
   '@edit:projects': WoodboxApi['projects']['edit'];
   '@remove:projects': WoodboxApi['projects']['remove'];
+  '@post:export_projects': WoodboxApi['projects']['export'];
   '@get:scripts_meta': WoodboxApi['scripts']['list'];
   '@get:script_content': WoodboxApi['scripts']['getContent'];
   '@add:scripts': WoodboxApi['scripts']['add'];
@@ -71,6 +72,8 @@ export interface IpcRequests {
   '@post:compare_databases': WoodboxApi['database']['compare'];
   '@dialog:select_sqlite_file': WoodboxApi['dialogs']['selectSqliteFile'];
   '@dialog:select_dbeaver_export_file': WoodboxApi['dialogs']['selectDbeaverExportFile'];
+  '@dialog:select_project_import_file': WoodboxApi['dialogs']['selectProjectImportFile'];
+  '@dialog:select_project_export_file': WoodboxApi['dialogs']['selectProjectExportFile'];
   '@dialog:select_ssl_file': WoodboxApi['dialogs']['selectSslFile'];
   '@dialog:select_ssh_key': WoodboxApi['dialogs']['selectSshKey'];
   '@post:download_update': WoodboxApi['updates']['download'];

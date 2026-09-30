@@ -20,6 +20,7 @@ addListener(
   store.previewImportConnectionsFromSource,
 );
 addListener('@post:import_connections_from_source', store.importConnectionsFromSource);
+addListener('@post:export_projects', store.exportProjects);
 
 // scripts
 addListener('@get:scripts_meta', store.getScriptsMeta);

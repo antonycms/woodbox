@@ -1,0 +1,104 @@
+import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+import type { IProject } from '@shared/types/workspace';
+import type {
+  ParsedProjectImportConnection,
+  ProjectImportParseResult,
+} from '../../../types';
+import {
+  decryptWoodboxFile,
+  WOODBOX_TRANSFER_FORMAT,
+  WOODBOX_TRANSFER_VERSION,
+  type WoodboxTransferFile,
+} from '../../../utils/woodboxEncryption';
+
+const DIALECTS = new Set<Dialect>(['postgres', 'mysql', 'sqlite', 'react-native-sqlite']);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === 'object' && !Array.isArray(value);
+
+const isProject = (value: unknown): value is IProject =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.description === 'string';
+
+const isConnection = (value: unknown): value is IConnectionConfig =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.id_project === 'string' &&
+  typeof value.description === 'string' &&
+  typeof value.dialect === 'string' &&
+  DIALECTS.has(value.dialect as Dialect) &&
+  typeof value.database === 'string' &&
+  typeof value.host === 'string' &&
+  typeof value.port === 'number';
+
+const parseWoodboxTransferFile = (content: string): WoodboxTransferFile => {
+  let data: unknown;
+
+  try {
+    data = JSON.parse(decryptWoodboxFile(content));
+  } catch {
+    throw new Error('Arquivo Woodbox inválido.');
+  }
+
+  if (
+    !isRecord(data) ||
+    data.format !== WOODBOX_TRANSFER_FORMAT ||
+    data.version !== WOODBOX_TRANSFER_VERSION ||
+    typeof data.exportedAt !== 'string' ||
+    !Array.isArray(data.projects) ||
+    !Array.isArray(data.connections)
+  ) {
+    throw new Error('Arquivo Woodbox incompatível.');
+  }
+
+  const projects = data.projects.filter(isProject);
+  const connections = data.connections.filter(isConnection);
+
+  if (projects.length !== data.projects.length || connections.length !== data.connections.length) {
+    throw new Error('Arquivo Woodbox contém projetos ou conexões inválidos.');
+  }
+
+  return {
+    format: WOODBOX_TRANSFER_FORMAT,
+    version: WOODBOX_TRANSFER_VERSION,
+    exportedAt: data.exportedAt,
+    projects,
+    connections,
+  };
+};
+
+const toParsedConnection = (connection: IConnectionConfig): ParsedProjectImportConnection => {
+  const { id, id_project: _idProject, ...data } = connection;
+
+  return {
+    ...data,
+    sourceId: id,
+    sourceDriver: connection.dialect,
+  };
+};
+
+const makeImportResult = (data: WoodboxTransferFile): ProjectImportParseResult => {
+  const credentialsImported = data.connections.filter(
+    (connection) => connection.username || connection.password,
+  ).length;
+
+  return {
+    projects: data.projects.map((project) => ({
+      sourceName: project.id,
+      description: project.description,
+      connections: data.connections
+        .filter((connection) => connection.id_project === project.id)
+        .map(toParsedConnection),
+    })).filter((project) => project.connections.length),
+    unsupportedConnections: [],
+    credentialsFiles: 0,
+    credentialsImported,
+    credentialsMissing: data.connections.length - credentialsImported,
+    requiresMasterPassword: false,
+    warnings: [],
+  };
+};
+
+export const parseWoodboxExport = (content: string): ProjectImportParseResult =>
+  makeImportResult(parseWoodboxTransferFile(content));

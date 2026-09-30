@@ -26,7 +26,8 @@ import {
   initialValue as app_preferences,
   getModule as getModuleAppPreferences,
 } from './modules/app_preferences';
-import { getModule as getModuleImportConnections } from './modules/import_connections';
+import { getModule as getModuleImportConnections } from './modules/importProjects';
+import { getModule as getModuleExportProjects } from './modules/exportProjects';
 
 const store = new Store<Record<string, unknown>>({
   schema: {
@@ -107,3 +108,7 @@ export const {
   preview: previewImportConnectionsFromSource,
   execute: importConnectionsFromSource,
 } = getModuleImportConnections(store);
+
+export const {
+  execute: exportProjects,
+} = getModuleExportProjects(store);

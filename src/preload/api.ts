@@ -19,6 +19,7 @@ export const api: WoodboxApi = {
     add: request('@add:projects'),
     edit: request('@edit:projects'),
     remove: request('@remove:projects'),
+    export: request('@post:export_projects'),
   },
   scripts: {
     list: request('@get:scripts_meta'),
@@ -97,6 +98,8 @@ export const api: WoodboxApi = {
   dialogs: {
     selectSqliteFile: request('@dialog:select_sqlite_file'),
     selectDbeaverExportFile: request('@dialog:select_dbeaver_export_file'),
+    selectProjectImportFile: request('@dialog:select_project_import_file'),
+    selectProjectExportFile: request('@dialog:select_project_export_file'),
     selectSslFile: request('@dialog:select_ssl_file'),
     selectSshKey: request('@dialog:select_ssh_key'),
   },

@@ -24,9 +24,17 @@ export const connection = z.object({
   }).optional(),
 });
 
+export const projectImportFormat = z.enum(['dbeaver', 'woodbox']);
+
 export const importConnections = z.object({
-  source: z.literal('dbeaver'), path: z.string(), masterPassword: z.string().optional(),
+  source: projectImportFormat, path: z.string(), masterPassword: z.string().optional(),
   selection: z.object({
     projects: z.array(z.object({ sourceName: z.string(), connections: z.array(z.string()) })),
   }).optional(),
+});
+
+export const projectExportFormat = z.enum(['dbeaver', 'woodbox']);
+
+export const exportProjects = z.object({
+  format: projectExportFormat, path: z.string(),
 });

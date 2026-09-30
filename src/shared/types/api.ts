@@ -30,6 +30,7 @@ export interface WoodboxApi {
     add: (data: Workspace.IProject) => Promise<void>;
     edit: (id: string, data: Workspace.IProject) => Promise<void>;
     remove: (id: string) => Promise<void>;
+    export: (params: Imports.IExportProjectsParams) => Promise<Imports.IExportProjectsResult>;
   };
   scripts: {
     list: () => Promise<Workspace.IScriptMetadata[]>;
@@ -108,6 +109,8 @@ export interface WoodboxApi {
   dialogs: {
     selectSqliteFile: () => Promise<string | null>;
     selectDbeaverExportFile: () => Promise<string | null>;
+    selectProjectImportFile: (format: Imports.ProjectImportFormat) => Promise<string | null>;
+    selectProjectExportFile: (format: Imports.ProjectExportFormat) => Promise<string | null>;
     selectSslFile: () => Promise<string | null>;
     selectSshKey: () => Promise<string | null>;
   };

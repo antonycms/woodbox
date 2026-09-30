@@ -1,4 +1,5 @@
 import type { IConnectionConfig } from '@shared/types/connections';
+import { generateHash } from '@shared/utils/string';
 import type {
   ImportConnectionsSource,
   IImportConnectionsSelection,
@@ -8,11 +9,8 @@ import type {
 } from '@shared/types/imports';
 import type { IProject } from '@shared/types/workspace';
 import type Store from 'electron-store';
-import {
-  parseDbeaverExport,
-  toStoredDbeaverConnection,
-  toStoredDbeaverProject,
-} from '../../files/importers/dbeaver';
+import { getProjectImportAdapter } from '../../files/importProjects';
+import type { ParsedProjectImportConnection } from '../../files/types';
 import { encodeConnectionSecretsForStore } from './saved_connections';
 
 type AppStore = Store<Record<string, unknown>>;
@@ -46,10 +44,29 @@ const getSelectionKeys = (selection?: IImportConnectionsSelection) => {
 };
 
 const assertSupportedImportSource = (source: ImportConnectionsSource) => {
-  if (source !== 'dbeaver') {
-    throw new Error(`Origem de importação não suportada: ${source}`);
-  }
+  getProjectImportAdapter(source);
 };
+
+const toStoredImportedProject = (description: string): IProject => ({
+  id: generateHash(),
+  description,
+});
+
+const toStoredImportedConnection = (
+  connection: ParsedProjectImportConnection,
+  idProject: string,
+): IConnectionConfig => ({
+  id: generateHash(),
+  id_project: idProject,
+  description: connection.description,
+  dialect: connection.dialect,
+  environment: connection.environment,
+  database: connection.database,
+  host: connection.host,
+  port: connection.port,
+  username: connection.username,
+  password: connection.password,
+});
 
 export const getModule = (store: AppStore) => {
   const preview = async ({
@@ -59,7 +76,7 @@ export const getModule = (store: AppStore) => {
   }: IImportConnectionsParams): Promise<IImportConnectionsPreview> => {
     assertSupportedImportSource(source);
 
-    const parsed = await parseDbeaverExport(path, { masterPassword });
+    const parsed = await getProjectImportAdapter(source).parse(path, { masterPassword });
     const projects = getStoredProjects(store);
     const connections = getStoredConnections(store);
 
@@ -74,7 +91,7 @@ export const getModule = (store: AppStore) => {
           sourceName: parsedProject.sourceName,
           description: parsedProject.description,
           connections: parsedProject.connections.map((parsedConnection) => {
-            const connection = toStoredDbeaverConnection(parsedConnection, project?.id || '');
+            const connection = toStoredImportedConnection(parsedConnection, project?.id || '');
 
             return {
               sourceId: parsedConnection.sourceId,
@@ -109,7 +126,7 @@ export const getModule = (store: AppStore) => {
   }: IImportConnectionsParams): Promise<IImportConnectionsResult> => {
     assertSupportedImportSource(source);
 
-    const parsed = await parseDbeaverExport(path, { masterPassword });
+    const parsed = await getProjectImportAdapter(source).parse(path, { masterPassword });
     const selectionKeys = getSelectionKeys(selection);
     const projects = getStoredProjects(store);
     const connections = getStoredConnections(store);
@@ -138,13 +155,13 @@ export const getModule = (store: AppStore) => {
       if (project) {
         projectsReused++;
       } else {
-        project = toStoredDbeaverProject(parsedProject.description);
+        project = toStoredImportedProject(parsedProject.description);
         nextProjects.push(project);
         projectsCreated++;
       }
 
       for (const parsedConnection of selectedConnections) {
-        const connection = toStoredDbeaverConnection(parsedConnection, project.id);
+        const connection = toStoredImportedConnection(parsedConnection, project.id);
 
         if (nextConnections.some((item) => isSameConnection(item, connection))) {
           connectionsSkipped++;

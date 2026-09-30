@@ -1,6 +1,8 @@
 import type { Dialect } from './connections';
 
-export type ImportConnectionsSource = 'dbeaver';
+export type ImportConnectionsSource = 'dbeaver' | 'woodbox';
+export type ProjectImportFormat = ImportConnectionsSource;
+export type ProjectExportFormat = 'dbeaver' | 'woodbox';
 
 export interface IImportConnectionsSelection {
   projects: { sourceName: string; connections: string[] }[];
@@ -52,4 +54,15 @@ export interface IImportConnectionsResult {
   credentialsImported: number;
   credentialsMissing: number;
   warnings: string[];
+}
+
+export interface IExportProjectsParams {
+  format: ProjectExportFormat;
+  path: string;
+}
+
+export interface IExportProjectsResult {
+  projectsExported: number;
+  connectionsExported: number;
+  unsupportedConnections: { name: string; dialect: string }[];
 }
