@@ -199,14 +199,17 @@ export const en = {
     '{{count}} connections with unsupported dialects were skipped.',
   'settings.export.title': 'Export',
   'settings.export.format': 'Format',
-  'settings.export.instructions': 'Select the format and destination to export all projects and connections.',
+  'settings.export.instructions':
+    'Select the format and destination to export all projects, connections and scripts.',
   'settings.export.filePath': 'Destination file',
   'settings.export.selectFile': 'Select destination',
   'settings.export.confirmExport': 'Confirm export',
   'settings.export.exportCompletedTitle': 'Export completed',
-  'settings.export.connectionsExportedDescription': '{{count}} connections exported',
+  'settings.export.connectionsExportedDescription':
+    '{{connections}} connections and {{scripts}} scripts exported',
   'settings.export.exportFailedTitle': 'Failed to export',
-  'settings.export.projectsSummary': 'Projects exported: {{projects}} | connections: {{connections}}',
+  'settings.export.projectsSummary':
+    'Projects exported: {{projects}} | connections: {{connections}} | scripts: {{scripts}}',
   'settings.export.unsupportedConnections':
     '{{count}} connections with unsupported formats were skipped.',
   'common.confirm': 'Confirm',

@@ -72,7 +72,8 @@ export const ModalExportProjects = React.memo((props: IModalExportProjectsProps)
         type: 'success',
         title: t('settings.export.exportCompletedTitle'),
         description: t('settings.export.connectionsExportedDescription', {
-          count: exportResult.connectionsExported,
+          connections: exportResult.connectionsExported,
+          scripts: exportResult.scriptsExported,
         }),
       });
     } catch (error: unknown) {
@@ -156,6 +157,7 @@ export const ModalExportProjects = React.memo((props: IModalExportProjectsProps)
               {t('settings.export.projectsSummary', {
                 projects: result.projectsExported,
                 connections: result.connectionsExported,
+                scripts: result.scriptsExported,
               })}
             </Text>
             {!!result.unsupportedConnections.length && (

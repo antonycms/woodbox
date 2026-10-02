@@ -202,14 +202,17 @@ export const ptBR: Record<TranslationKey, string> = {
     '{{count}} conexões de dialetos não suportados foram ignoradas.',
   'settings.export.title': 'Exportação',
   'settings.export.format': 'Formato',
-  'settings.export.instructions': 'Selecione o formato e o destino para exportar todos os projetos e conexões.',
+  'settings.export.instructions':
+    'Selecione o formato e o destino para exportar todos os projetos, conexões e scripts.',
   'settings.export.filePath': 'Arquivo de destino',
   'settings.export.selectFile': 'Selecionar destino',
   'settings.export.confirmExport': 'Confirmar exportação',
   'settings.export.exportCompletedTitle': 'Exportação concluída',
-  'settings.export.connectionsExportedDescription': '{{count}} conexões exportadas',
+  'settings.export.connectionsExportedDescription':
+    '{{connections}} conexões e {{scripts}} scripts exportados',
   'settings.export.exportFailedTitle': 'Falha ao exportar',
-  'settings.export.projectsSummary': 'Projetos exportados: {{projects}} | conexões: {{connections}}',
+  'settings.export.projectsSummary':
+    'Projetos exportados: {{projects}} | conexões: {{connections}} | scripts: {{scripts}}',
   'settings.export.unsupportedConnections':
     '{{count}} conexões de formatos não suportados foram ignoradas.',
   'common.confirm': 'Confirmar',
