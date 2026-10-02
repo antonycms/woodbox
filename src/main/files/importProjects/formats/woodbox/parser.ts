@@ -1,5 +1,5 @@
 import type { Dialect, IConnectionConfig } from '@shared/types/connections';
-import type { IProject } from '@shared/types/workspace';
+import type { IProject, IScript } from '@shared/types/workspace';
 import type {
   ParsedProjectImportConnection,
   ProjectImportParseResult,
@@ -32,6 +32,15 @@ const isConnection = (value: unknown): value is IConnectionConfig =>
   typeof value.host === 'string' &&
   typeof value.port === 'number';
 
+const isScript = (value: unknown): value is IScript =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.name === 'string' &&
+  typeof value.id_connection === 'string' &&
+  typeof value.content === 'string' &&
+  typeof value.created_at === 'string' &&
+  typeof value.updated_at === 'string';
+
 const parseWoodboxTransferFile = (content: string): WoodboxTransferFile => {
   let data: unknown;
 
@@ -54,9 +63,15 @@ const parseWoodboxTransferFile = (content: string): WoodboxTransferFile => {
 
   const projects = data.projects.filter(isProject);
   const connections = data.connections.filter(isConnection);
+  const rawScripts = Array.isArray(data.scripts) ? data.scripts : [];
+  const scripts = rawScripts.filter(isScript);
 
-  if (projects.length !== data.projects.length || connections.length !== data.connections.length) {
-    throw new Error('Arquivo Woodbox contém projetos ou conexões inválidos.');
+  if (
+    projects.length !== data.projects.length ||
+    connections.length !== data.connections.length ||
+    scripts.length !== rawScripts.length
+  ) {
+    throw new Error('Arquivo Woodbox contém projetos, conexões ou scripts inválidos.');
   }
 
   return {
@@ -65,6 +80,7 @@ const parseWoodboxTransferFile = (content: string): WoodboxTransferFile => {
     exportedAt: data.exportedAt,
     projects,
     connections,
+    scripts,
   };
 };
 
@@ -97,6 +113,14 @@ const makeImportResult = (data: WoodboxTransferFile): ProjectImportParseResult =
     credentialsMissing: data.connections.length - credentialsImported,
     requiresMasterPassword: false,
     warnings: [],
+    scripts: (data.scripts ?? []).map((script) => ({
+      sourceId: script.id,
+      sourceConnectionId: script.id_connection,
+      name: script.name,
+      content: script.content,
+      created_at: script.created_at,
+      updated_at: script.updated_at,
+    })),
   };
 };
 

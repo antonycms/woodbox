@@ -40,6 +40,33 @@ const sanitizeZipSegment = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim() || 'General';
 
+const makeSqlFileName = (value: string) => {
+  const name = sanitizeZipSegment(value || 'script');
+
+  return /\.sql$/i.test(name) ? name : `${name}.sql`;
+};
+
+const makeUniqueZipPath = (path: string, usedPaths: Set<string>) => {
+  if (!usedPaths.has(path)) {
+    usedPaths.add(path);
+    return path;
+  }
+
+  const extensionIndex = path.toLowerCase().lastIndexOf('.sql');
+  const basePath = extensionIndex >= 0 ? path.slice(0, extensionIndex) : path;
+  const extension = extensionIndex >= 0 ? path.slice(extensionIndex) : '';
+  let index = 2;
+  let nextPath = `${basePath}-${index}${extension}`;
+
+  while (usedPaths.has(nextPath)) {
+    index++;
+    nextPath = `${basePath}-${index}${extension}`;
+  }
+
+  usedPaths.add(nextPath);
+  return nextPath;
+};
+
 const makeJdbcUrl = (connection: IConnectionConfig) => {
   if (connection.dialect === 'sqlite') return `jdbc:sqlite:${connection.database}`;
   if (connection.dialect === 'postgres') {
@@ -85,14 +112,19 @@ export const exportDbeaverProjects = async (
   path: string,
 ): Promise<ProjectExportResult> => {
     const entries: ZipFileEntry[] = [];
+    const connectionsById = new Map(
+      data.connections.map((connection) => [connection.id, connection] as const),
+    );
     const connectionsByProject = new Map(
       data.projects.map((project) => [
         project.id,
         data.connections.filter((connection) => connection.id_project === project.id),
       ]),
     );
+    const usedScriptPaths = new Set<string>();
     const unsupportedConnections: { name: string; dialect: string }[] = [];
     let connectionsExported = 0;
+    let scriptsExported = 0;
 
     for (const project of data.projects) {
       const connections = connectionsByProject.get(project.id) || [];
@@ -134,6 +166,28 @@ export const exportDbeaverProjects = async (
           content: encryptDbeaverCredentials(credentials),
         });
       }
+
+      for (const script of data.scripts ?? []) {
+        const connection = connectionsById.get(script.id_connection);
+
+        if (!connection || connection.id_project !== project.id) continue;
+
+        const scriptPath = makeUniqueZipPath(
+          [
+            sanitizeZipSegment(project.description),
+            'Scripts',
+            sanitizeZipSegment(connection.description),
+            makeSqlFileName(script.name),
+          ].join('/'),
+          usedScriptPaths,
+        );
+
+        entries.push({
+          name: scriptPath,
+          content: script.content,
+        });
+        scriptsExported++;
+      }
     }
 
     await writeZipFile(path, entries);
@@ -141,6 +195,7 @@ export const exportDbeaverProjects = async (
     return {
       projectsExported: data.projects.length,
       connectionsExported,
+      scriptsExported,
       unsupportedConnections,
     };
 };

@@ -3,7 +3,7 @@ import type Store from 'electron-store';
 
 export type IScriptMeta = Omit<IScript, 'content'>;
 
-const contentKey = (id: string) => `script_content_${id}`;
+export const getScriptContentKey = (id: string) => `script_content_${id}`;
 
 export const initialValue = {
   type: 'array',
@@ -16,7 +16,7 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
   };
 
   const getContent = (id: string): string => {
-    return (store.get(contentKey(id)) as string) ?? '';
+    return (store.get(getScriptContentKey(id)) as string) ?? '';
   };
 
   const add = (script: IScript) => {
@@ -26,7 +26,7 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
     const items = (store.get('scripts_meta') as IScriptMeta[]) || [];
 
     store.set('scripts_meta', [...items, meta]);
-    store.set(contentKey(id), content);
+    store.set(getScriptContentKey(id), content);
   };
 
   const remove = (id: string) => {
@@ -37,14 +37,14 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
       items.filter((s) => s.id !== id),
     );
 
-    store.delete(contentKey(id));
+    store.delete(getScriptContentKey(id));
   };
 
   const patch = (id: string, data: Partial<IScript>) => {
     const { content, ...metaChanges } = data;
 
     if (content !== undefined) {
-      store.set(contentKey(id), content);
+      store.set(getScriptContentKey(id), content);
     }
 
     if (Object.keys(metaChanges).length) {

@@ -17,6 +17,7 @@ export const exportWoodboxProjects = async (
     exportedAt: new Date().toISOString(),
     projects: data.projects,
     connections: data.connections,
+    scripts: data.scripts ?? [],
   };
 
   await fs.writeFile(path, encryptWoodboxFile(JSON.stringify(file)), 'utf8');
@@ -24,6 +25,7 @@ export const exportWoodboxProjects = async (
   return {
     projectsExported: data.projects.length,
     connectionsExported: data.connections.length,
+    scriptsExported: data.scripts?.length ?? 0,
     unsupportedConnections: [],
   };
 };

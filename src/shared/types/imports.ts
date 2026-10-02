@@ -64,5 +64,6 @@ export interface IExportProjectsParams {
 export interface IExportProjectsResult {
   projectsExported: number;
   connectionsExported: number;
+  scriptsExported: number;
   unsupportedConnections: { name: string; dialect: string }[];
 }

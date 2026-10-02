@@ -4,11 +4,16 @@ import type {
   ProjectExportFormat,
   ProjectImportFormat,
 } from '@shared/types/imports';
-import type { IProject } from '@shared/types/workspace';
+import type { IProject, IScript } from '@shared/types/workspace';
 
 export type ParsedProjectImportConnection = Omit<IConnectionConfig, 'id' | 'id_project'> & {
   sourceId: string;
   sourceDriver?: string;
+};
+
+export type ParsedProjectImportScript = Omit<IScript, 'id' | 'id_connection'> & {
+  sourceId: string;
+  sourceConnectionId: string;
 };
 
 export type ParsedProjectImportProject = {
@@ -25,16 +30,19 @@ export type ProjectImportParseResult = {
   credentialsMissing: number;
   requiresMasterPassword: boolean;
   warnings: string[];
+  scripts?: ParsedProjectImportScript[];
 };
 
 export type ProjectTransferData = {
   projects: IProject[];
   connections: IConnectionConfig[];
+  scripts?: IScript[];
 };
 
 export type ProjectExportResult = {
   projectsExported: number;
   connectionsExported: number;
+  scriptsExported: number;
   unsupportedConnections: { name: string; dialect: string }[];
 };
 

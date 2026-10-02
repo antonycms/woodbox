@@ -1,9 +1,10 @@
 import type { IConnectionConfig } from '@shared/types/connections';
 import type { IExportProjectsParams, IExportProjectsResult } from '@shared/types/imports';
-import type { IProject } from '@shared/types/workspace';
+import type { IProject, IScript } from '@shared/types/workspace';
 import type Store from 'electron-store';
 import { getProjectExportAdapter } from '../../files/exportProjects';
 import { decodeConnectionSecrets } from './saved_connections';
+import { getScriptContentKey, type IScriptMeta } from './scripts';
 
 type AppStore = Store<Record<string, unknown>>;
 
@@ -12,6 +13,12 @@ const getStoredProjects = (store: AppStore) =>
 
 const getStoredConnections = (store: AppStore) =>
   (store.get('saved_connections') as IConnectionConfig[] | undefined) ?? [];
+
+const getStoredScripts = (store: AppStore): IScript[] =>
+  ((store.get('scripts_meta') as IScriptMeta[] | undefined) ?? []).map((script) => ({
+    ...script,
+    content: (store.get(getScriptContentKey(script.id)) as string | undefined) ?? '',
+  }));
 
 export const getModule = (store: AppStore) => {
   const execute = async ({
@@ -23,8 +30,9 @@ export const getModule = (store: AppStore) => {
     const connections = getStoredConnections(store).map((connection) =>
       decodeConnectionSecrets(store, connection),
     );
+    const scripts = getStoredScripts(store);
 
-    return adapter.export({ projects, connections }, path);
+    return adapter.export({ projects, connections, scripts }, path);
   };
 
   return { execute };

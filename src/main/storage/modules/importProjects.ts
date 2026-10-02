@@ -7,11 +7,12 @@ import type {
   IImportConnectionsPreview,
   IImportConnectionsResult,
 } from '@shared/types/imports';
-import type { IProject } from '@shared/types/workspace';
+import type { IProject, IScript } from '@shared/types/workspace';
 import type Store from 'electron-store';
 import { getProjectImportAdapter } from '../../files/importProjects';
 import type { ParsedProjectImportConnection } from '../../files/types';
 import { encodeConnectionSecretsForStore } from './saved_connections';
+import { getScriptContentKey, type IScriptMeta } from './scripts';
 
 type AppStore = Store<Record<string, unknown>>;
 
@@ -20,6 +21,12 @@ const getStoredProjects = (store: AppStore) =>
 
 const getStoredConnections = (store: AppStore) =>
   (store.get('saved_connections') as IConnectionConfig[] | undefined) ?? [];
+
+const getStoredScriptsMeta = (store: AppStore) =>
+  (store.get('scripts_meta') as IScriptMeta[] | undefined) ?? [];
+
+const getStoredScriptContent = (store: AppStore, id: string) =>
+  (store.get(getScriptContentKey(id)) as string | undefined) ?? '';
 
 const normalizeText = (value?: string) => value?.trim?.().toLowerCase?.() || '';
 
@@ -130,8 +137,15 @@ export const getModule = (store: AppStore) => {
     const selectionKeys = getSelectionKeys(selection);
     const projects = getStoredProjects(store);
     const connections = getStoredConnections(store);
+    const scriptsMeta = getStoredScriptsMeta(store);
     const nextProjects = [...projects];
     const nextConnections = [...connections];
+    const nextScriptsMeta = [...scriptsMeta];
+    const nextScriptContents = new Map(
+      nextScriptsMeta.map((script) =>
+        [script.id, getStoredScriptContent(store, script.id)] as const),
+    );
+    const connectionIdBySourceId = new Map<string, string>();
     let projectsCreated = 0;
     let projectsReused = 0;
     let connectionsImported = 0;
@@ -162,8 +176,10 @@ export const getModule = (store: AppStore) => {
 
       for (const parsedConnection of selectedConnections) {
         const connection = toStoredImportedConnection(parsedConnection, project.id);
+        const existingConnection = nextConnections.find((item) => isSameConnection(item, connection));
 
-        if (nextConnections.some((item) => isSameConnection(item, connection))) {
+        if (existingConnection) {
+          connectionIdBySourceId.set(parsedConnection.sourceId, existingConnection.id);
           connectionsSkipped++;
           continue;
         }
@@ -175,8 +191,44 @@ export const getModule = (store: AppStore) => {
         }
 
         nextConnections.push(connection);
+        connectionIdBySourceId.set(parsedConnection.sourceId, connection.id);
         connectionsImported++;
       }
+    }
+
+    const importedScripts: IScript[] = [];
+
+    for (const parsedScript of parsed.scripts ?? []) {
+      const idConnection = connectionIdBySourceId.get(parsedScript.sourceConnectionId);
+
+      if (!idConnection) continue;
+
+      const alreadyExists = nextScriptsMeta.some((script) =>
+        script.id_connection === idConnection &&
+        normalizeText(script.name) === normalizeText(parsedScript.name) &&
+        nextScriptContents.get(script.id) === parsedScript.content,
+      );
+
+      if (alreadyExists) continue;
+
+      const script: IScript = {
+        id: generateHash(),
+        id_connection: idConnection,
+        name: parsedScript.name,
+        content: parsedScript.content,
+        created_at: parsedScript.created_at,
+        updated_at: parsedScript.updated_at,
+      };
+
+      importedScripts.push(script);
+      nextScriptsMeta.push({
+        id: script.id,
+        id_connection: script.id_connection,
+        name: script.name,
+        created_at: script.created_at,
+        updated_at: script.updated_at,
+      });
+      nextScriptContents.set(script.id, script.content);
     }
 
     store.set('projects', nextProjects);
@@ -184,6 +236,13 @@ export const getModule = (store: AppStore) => {
       'saved_connections',
       nextConnections.map((connection) => encodeConnectionSecretsForStore(store, connection)),
     );
+
+    if (importedScripts.length) {
+      store.set('scripts_meta', nextScriptsMeta);
+      for (const script of importedScripts) {
+        store.set(getScriptContentKey(script.id), script.content);
+      }
+    }
 
     return {
       projectsCreated,
