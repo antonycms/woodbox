@@ -33,13 +33,13 @@ export const TabcontentError = (props: ITabContentError) => {
           </Text>
         </div>
 
-        <div className={styles.resultMessage}>
-          <Text color={theme.error.messageColor}>{data.message || t('common.unknownErrorNoDot')}</Text>
-        </div>
-
         <Text small color={theme.error.mutedColor}>
           {t('query.executedAt', { date: toDateTime(data.date_run) })}
         </Text>
+
+        <div className={styles.resultMessage}>
+          <Text color={theme.error.messageColor}>{data.message || t('common.unknownErrorNoDot')}</Text>
+        </div>
       </div>
     </div>
   );
