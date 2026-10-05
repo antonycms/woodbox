@@ -1,6 +1,7 @@
 import { selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
 import { useShallow } from 'zustand/react/shallow';
 import { getErrorMessage } from '@shared/utils/error';
+import { generateHash } from '@shared/utils/string';
 import React from 'react';
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import ResizableContainer from '@renderer/components/ResizableContainer';
@@ -37,8 +38,10 @@ export const AIChatPanel = React.memo(() => {
   const {
     activeChatId,
     clearEditorContextRequest,
+    clearInitialMessageRequest,
     closeChatPanel,
     editorContextRequest,
+    initialMessageRequest,
     openChatPanel,
     toggleChatPanel,
     visible,
@@ -46,8 +49,10 @@ export const AIChatPanel = React.memo(() => {
     useShallow((state) => ({
       activeChatId: state.activeChatId,
       clearEditorContextRequest: state.clearEditorContextRequest,
+      clearInitialMessageRequest: state.clearInitialMessageRequest,
       closeChatPanel: state.closeChatPanel,
       editorContextRequest: state.editorContextRequest,
+      initialMessageRequest: state.initialMessageRequest,
       openChatPanel: state.openChatPanel,
       toggleChatPanel: state.toggleChatPanel,
       visible: state.visible,
@@ -96,6 +101,7 @@ export const AIChatPanel = React.memo(() => {
   const [chatToRemove, setChatToRemove] = React.useState<IAIChat>();
   const [emptyAISelection, setEmptyAISelection] = React.useState<IAIChatModelSelection>();
   const [selectedConnectionId, setSelectedConnectionId] = React.useState<string>();
+  const [pendingInitialMessage, setPendingInitialMessage] = React.useState(false);
   const manualConnectionSelectionRef = React.useRef(false);
   const loadingConnectionRef = React.useRef(new Set<string>());
   const setWidth = useDebounce(_setWidth);
@@ -450,6 +456,48 @@ export const AIChatPanel = React.memo(() => {
   ]);
 
   React.useEffect(() => {
+    if (!initialMessageRequest) return;
+
+    const contexts: IAIChatDraftContext[] = (initialMessageRequest.contexts || []).map((context) => ({
+      ...context,
+      id: generateHash(),
+    }));
+
+    setDraftNewChat(true);
+    setInitialMessage(buildAIChatMessageContent(initialMessageRequest.content, contexts));
+    setEmptyDraft(initialMessageRequest.content);
+    setChatDraftContexts([]);
+    setEmptyDraftContexts(contexts);
+    setEmptyAISelection(undefined);
+    setPendingInitialMessage(true);
+    clearInitialMessageRequest();
+  }, [clearInitialMessageRequest, initialMessageRequest]);
+
+  React.useEffect(() => {
+    if (
+      !pendingInitialMessage ||
+      !initialMessage ||
+      visibleChat ||
+      !emptyChatModelSelection.selectedProviderId ||
+      !emptyChatModelSelection.selectedModel ||
+      !selectedConnectionId
+    ) {
+      return;
+    }
+
+    setPendingInitialMessage(false);
+    createChat().then(() => setEmptyDraft(''));
+  }, [
+    createChat,
+    emptyChatModelSelection.selectedModel,
+    emptyChatModelSelection.selectedProviderId,
+    initialMessage,
+    pendingInitialMessage,
+    selectedConnectionId,
+    visibleChat,
+  ]);
+
+  React.useEffect(() => {
     if (!visible) {
       manualConnectionSelectionRef.current = false;
       return;
@@ -559,6 +607,7 @@ export const AIChatPanel = React.memo(() => {
                     modelSelection={activeChatModelSelection}
                     selectedConnectionId={selectedConnectionId}
                     onClose={closeChatPanel}
+                    onConfigureProviders={() => setShowProvidersModal(true)}
                     onConnectionChange={handleConnectionChange}
                     onClearDraftContexts={() => setChatDraftContexts([])}
                     onOpenReference={openReference}
@@ -587,6 +636,7 @@ export const AIChatPanel = React.memo(() => {
                     selectedConnectionId={selectedConnectionId}
                     onChange={setEmptyDraft}
                     onClose={closeChatPanel}
+                    onConfigureProviders={() => setShowProvidersModal(true)}
                     onConnectionChange={handleConnectionChange}
                     onDeleteChat={setChatToRemove}
                     onOpenReference={openReference}

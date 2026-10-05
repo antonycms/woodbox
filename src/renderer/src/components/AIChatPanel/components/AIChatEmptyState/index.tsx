@@ -28,6 +28,7 @@ interface IAIChatEmptyStateProps {
   onChange(value: string): void;
   onClose(): void;
   onConnectionChange(connectionId: string): void;
+  onConfigureProviders?(): void;
   onDeleteChat(chat: IAIChat): void;
   onOpenReference(option: IAIChatReferenceOption): void;
   onRemoveContext(contextId: string): void;
@@ -48,6 +49,7 @@ export const AIChatEmptyState = React.memo(
     onChange,
     onClose,
     onConnectionChange,
+    onConfigureProviders,
     onDeleteChat,
     onOpenReference,
     onRemoveContext,
@@ -161,6 +163,7 @@ export const AIChatEmptyState = React.memo(
           selectedModel={modelSelection.selectedModel}
           onConnectionChange={onConnectionChange}
           onModelChange={modelSelection.onModelChange}
+          onConfigureProviders={onConfigureProviders}
           onSubmit={onSubmit}
           onChange={(event) => onChange(event.target.value)}
           onOpenReference={onOpenReference}

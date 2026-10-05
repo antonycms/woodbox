@@ -1,5 +1,9 @@
 import React from 'react';
 import type { IAIQueryApproval } from '@shared/types/ai';
+import { getErrorMessage } from '@shared/utils/error';
+import { useI18nStore } from '@renderer/stores/I18n';
+import { useToastStore } from '@renderer/stores/Toast';
+import { CopyIcon } from '@renderer/styles/icons';
 import { normalizeSqlForComparison } from '../../utils/queryApprovals';
 import styles from '../../styles.module.css';
 import {
@@ -20,8 +24,10 @@ interface IRenderMarkdownOptions {
   queryApprovals?: IAIQueryApproval[];
   usedQueryApprovalIds: Set<string>;
   onApprove?: (approval: IAIQueryApproval, options?: IQueryApprovalApproveOptions) => void;
+  onCopyCode?: (code: string) => void;
   onCopy?: (approval: IAIQueryApproval) => void;
   onReject?: (approval: IAIQueryApproval) => void;
+  copyTitle: string;
 }
 
 const renderInlineText = (text: string, keyPrefix: string) => {
@@ -134,9 +140,21 @@ const renderMarkdownBlocks = (
       }
 
       return (
-        <pre key={`${keyPrefix}_code_${index}`}>
-          <code>{code.trim()}</code>
-        </pre>
+        <div key={`${keyPrefix}_code_${index}`} className={styles.messageCodeBlock}>
+          <button
+            type="button"
+            className={styles.messageCodeCopyButton}
+            title={options.copyTitle}
+            aria-label={options.copyTitle}
+            onClick={() => options.onCopyCode?.(code.trim())}
+          >
+            <CopyIcon size={13} />
+          </button>
+
+          <pre>
+            <code>{code.trim()}</code>
+          </pre>
+        </div>
       );
     }
 
@@ -157,7 +175,25 @@ export const MessageContent = React.memo(({
   onCopy,
   onReject,
 }: IMessageContentProps) => {
+  const t = useI18nStore((state) => state.t);
+  const showToast = useToastStore((state) => state.showToast);
   const [activeContextKey, setActiveContextKey] = React.useState<string>();
+
+  const copyCode = React.useCallback(
+    async (code: string) => {
+      try {
+        await navigator.clipboard.writeText(code);
+        showToast({ type: 'success', title: t('common.contentCopied') });
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: t('aiChat.codeCopyFailed'),
+          description: getErrorMessage(error, String(error)),
+        });
+      }
+    },
+    [showToast, t],
+  );
 
   if (!content.trim()) {
     if (queryApprovals?.length && onApprove && onReject) {
@@ -177,7 +213,7 @@ export const MessageContent = React.memo(({
   }
 
   const contextPattern =
-    /(Contexto do editor|Editor context):\n\n```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
+    /(Contexto do editor|Editor context|Query enviada|Submitted query|Erro retornado|Returned error):\n\n```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let contextIndex = 0;
@@ -186,8 +222,10 @@ export const MessageContent = React.memo(({
     queryApprovals,
     usedQueryApprovalIds,
     onApprove,
+    onCopyCode: copyCode,
     onCopy,
     onReject,
+    copyTitle: t('common.copy'),
   };
 
   for (const match of content.matchAll(contextPattern)) {

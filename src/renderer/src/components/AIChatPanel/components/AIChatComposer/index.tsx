@@ -30,6 +30,7 @@ interface IAIChatComposerProps {
   selectedModel?: string;
   onConnectionChange?(connectionId: string): void;
   onModelChange?(providerId: string, model: string): void;
+  onConfigureProviders?(): void;
   onSubmit(event: React.FormEvent<HTMLFormElement>): void;
   onChange(event: React.ChangeEvent<HTMLTextAreaElement>): void;
   onOpenReference?(option: IAIChatReferenceOption): void;
@@ -118,6 +119,7 @@ export const AIChatComposer = React.memo(
     selectedModel,
     onConnectionChange,
     onModelChange,
+    onConfigureProviders,
     onSubmit,
     onChange,
     onOpenReference,
@@ -624,6 +626,17 @@ export const AIChatComposer = React.memo(
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {!hasModelOptions && !!onConfigureProviders && (
+                    <button
+                      className={styles.modelBadgeButton}
+                      type="button"
+                      title={t('aiProvider.addProvider')}
+                      onClick={onConfigureProviders}
+                    >
+                      {t('aiProvider.addProvider')}
+                    </button>
                   )}
 
                   <button

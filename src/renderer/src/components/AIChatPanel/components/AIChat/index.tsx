@@ -45,6 +45,7 @@ const AIChat = ({
   selectedConnectionId,
   onClose,
   onConnectionChange,
+  onConfigureProviders,
   onClearDraftContexts,
   onOpenReference,
   onRemoveDraftContext,
@@ -612,6 +613,7 @@ const AIChat = ({
 
   React.useEffect(() => {
     setLocalMessages([]);
+    handledInitialMessageRef.current = undefined;
   }, [id_chat]);
 
   React.useEffect(() => {
@@ -780,6 +782,7 @@ const AIChat = ({
             selectedModel={modelSelection.selectedModel}
             onConnectionChange={onConnectionChange}
             onModelChange={modelSelection.onModelChange}
+            onConfigureProviders={onConfigureProviders}
             onSubmit={handleSubmitMessage}
             onChange={handleComposerChange}
             onOpenReference={onOpenReference}

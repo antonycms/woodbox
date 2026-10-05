@@ -15,6 +15,7 @@ export interface IAIChatProps {
   modelSelection: IAIChatModelSelectionProps;
   selectedConnectionId?: string;
   onConnectionChange(connectionId: string): void;
+  onConfigureProviders?(): void;
   onClearDraftContexts?(): void;
   onOpenReference?(option: IAIChatReferenceOption): void;
   onRemoveDraftContext?(contextId: string): void;
