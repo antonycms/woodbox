@@ -3,7 +3,7 @@
   min-height: 58px;
   position: relative;
   overflow: hidden;
-  padding: 12px 36px 12px 12px;
+  padding: 12px 12px 12px 12px;
   border-radius: 10px;
   user-select: none;
   margin-top: 10px;
@@ -47,10 +47,11 @@
 }
 
 .description {
-  margin-top: 6px;
   font-size: 12px;
   line-height: 16px;
-  margin-left: 40px;
+  max-height: 80px;
+  overflow: auto;
+  padding: 6px 16px 0 40px;
   opacity: 0.9;
 }
 
