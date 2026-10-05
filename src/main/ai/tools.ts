@@ -520,7 +520,10 @@ export const getAIConnectionContexts = (mentionedConnectionIds?: string[]) => {
   };
 };
 
-export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) => {
+export const buildAIDatabaseInstructions = (
+  mentionedConnectionIds?: string[],
+  language?: 'en' | 'pt-BR',
+) => {
   const { connections, mentionedConnections } = getAIConnectionContexts(mentionedConnectionIds);
   const connectionLines = connections.length
     ? connections
@@ -535,6 +538,36 @@ export const buildAIDatabaseInstructions = (mentionedConnectionIds?: string[]) =
         .map((connection) => `- id=${connection.id}; nome="${connection.description}"`)
         .join('\n')
     : '- nenhuma conexão selecionada nesta mensagem';
+
+  if (language === 'en') {
+    return [
+      'Database connections available to tools:',
+      connectionLines,
+      '',
+      'Connection selected by the user for this message:',
+      mentionedLines,
+      '',
+      'Use the selected connection as the default database context for tools.',
+      'The user may reference tables with @table or @schema.table; treat this as a table from the selected connection.',
+      'Before answering about tables, schemas, or functions, use the available tools.',
+      'You do not have a tool to view table rows or values directly without user approval.',
+      'Do not invent metadata. If the connection/table/function does not exist, say so.',
+      'You have the request_query_execution tool to propose a query that needs execution.',
+      'When you need to query data, call request_query_execution with a single query and briefly explain why.',
+      'For data or structure changes, call request_query_execution only if the user explicitly asks for the change.',
+      'If the user asks for performance analysis or an execution plan of a SELECT/WITH query, use explain_query_plan.',
+      'Do not write ```sql``` blocks for execution; the interface will show the approval card.',
+      'If the user only asks to review, explain, optimize, or improve a query, use explain_query_plan when the real plan helps; otherwise answer with suggestions and example SQL without asking for execution approval.',
+      'Do not ask the user to type "confirm" or "reject"; the interface will show buttons.',
+      'When you receive a message saying the query WAS ALREADY APPROVED and ALREADY EXECUTED, do not call request_query_execution for the same SQL; answer directly based on the returned JSON.',
+      '',
+      'Application tools:',
+      'Use creation/editing/reload tools only when the user explicitly asks.',
+      'Do not invent passwords, hosts, ports, databases, projects, or connection names; if required data is missing, ask the user.',
+      'For themes, use dot paths exactly as shown in settings, e.g. editor.backgroundColor, mainTab.backgroundColor, aiChat.sendBackgroundColor.',
+      'When changing current theme colors, the interface preserves predefined themes by creating/applying a custom theme when needed.',
+    ].join('\n');
+  }
 
   return [
     'Conexões disponíveis para ferramentas de banco:',

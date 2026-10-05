@@ -53,6 +53,7 @@ const AIChat = ({
   onSelectMenuOption,
 }: IAIChatProps) => {
   const t = useI18nStore((state) => state.t);
+  const language = useI18nStore((state) => state.language);
   const {
     aiChats,
     appendAIChatMessages,
@@ -262,6 +263,7 @@ const AIChat = ({
           requestId,
           providerId: modelSelection.selectedProviderId,
           model: modelSelection.selectedModel,
+          language,
           mentionedConnectionIds: selectedConnectionIds,
           messages: nextMessages.map((message) => ({
             role: message.role,
@@ -337,6 +339,7 @@ const AIChat = ({
       connections,
       editAIChat,
       id_chat,
+      language,
       loadingMessage,
       localMessages,
       modelSelection.selectedModel,
@@ -480,6 +483,7 @@ const AIChat = ({
         const response = await sendAIChatMessage({
           providerId: modelSelection.selectedProviderId,
           model: modelSelection.selectedModel,
+          language,
           mentionedConnectionIds: [executableApproval.connectionId],
           messages: [
             ...modelMessages.map((message) => ({
@@ -543,6 +547,7 @@ const AIChat = ({
       applyAIAppActions,
       connections,
       id_chat,
+      language,
       runSql,
       modelSelection.selectedModel,
       modelSelection.selectedProviderId,

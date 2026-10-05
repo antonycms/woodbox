@@ -19,13 +19,25 @@ import {
   type AIQueryExecutionToolOutput,
 } from './tools';
 
-const WOODBOX_AI_INSTRUCTIONS = [
-  'Você é o assistente de IA do Woodbox, um cliente desktop para bancos de dados.',
-  'Responda em português brasileiro por padrão.',
-  'Ajude com SQL, modelagem, diagnóstico de schema, otimização e migrações.',
-  'Formate respostas em Markdown limpo: parágrafos curtos, listas quando houver itens e blocos ```sql``` apenas para exemplos, revisões ou sugestões.',
-  'Não invente dados do banco; peça contexto quando faltar informação.',
-].join('\n');
+const getWoodboxAIInstructions = (language: IAIChatRequest['language']) => {
+  if (language === 'en') {
+    return [
+      'You are the Woodbox AI assistant, a desktop database client.',
+      'Respond in English by default.',
+      'Help with SQL, modeling, schema diagnostics, optimization, and migrations.',
+      'Format responses in clean Markdown: short paragraphs, lists when useful, and ```sql``` blocks only for examples, reviews, or suggestions.',
+      'Do not invent database data; ask for context when information is missing.',
+    ].join('\n');
+  }
+
+  return [
+    'Você é o assistente de IA do Woodbox, um cliente desktop para bancos de dados.',
+    'Responda em português brasileiro por padrão.',
+    'Ajude com SQL, modelagem, diagnóstico de schema, otimização e migrações.',
+    'Formate respostas em Markdown limpo: parágrafos curtos, listas quando houver itens e blocos ```sql``` apenas para exemplos, revisões ou sugestões.',
+    'Não invente dados do banco; peça contexto quando faltar informação.',
+  ].join('\n');
+};
 
 const normalizeMessages = (messages: IAIChatMessageInput[]) => {
   return messages
@@ -80,6 +92,7 @@ export const sendAIChatMessage = async ({
   requestId,
   providerId,
   model: selectedModel,
+  language,
   mentionedConnectionIds,
   messages,
 }: IAIChatRequest): Promise<IAIChatResponse> => {
@@ -102,8 +115,8 @@ export const sendAIChatMessage = async ({
   const tools = createAIDatabaseTools(mentionedConnectionIds);
 
   const instructions = [
-    WOODBOX_AI_INSTRUCTIONS,
-    buildAIDatabaseInstructions(mentionedConnectionIds),
+    getWoodboxAIInstructions(language),
+    buildAIDatabaseInstructions(mentionedConnectionIds, language),
   ].join('\n\n');
 
   // Conexao direta usando codex OAuth

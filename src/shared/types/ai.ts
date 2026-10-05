@@ -102,6 +102,7 @@ export interface IAIChatRequest {
   requestId?: string;
   providerId?: string;
   model?: string;
+  language?: 'en' | 'pt-BR';
   mentionedConnectionIds?: string[];
   messages: IAIChatMessageInput[];
 }
