@@ -22,8 +22,6 @@ export const TabContentDelete = (props: ITabContentDelete) => {
         {t('query.deleteSuccess')}
       </Text>
 
-      <Text color={activeTheme.queryEditor.tab.color}>{data.query}</Text>
-
       <Text color={activeTheme.queryEditor.tab.color}>
         {t('query.affectedRows', { count: data.affected_rows || 0 })}
       </Text>
@@ -31,6 +29,8 @@ export const TabContentDelete = (props: ITabContentDelete) => {
       <Text color={activeTheme.queryEditor.tab.color}>
         {t('query.executedAt', { date: toDateTime(data.date_run) })}
       </Text>
+
+      <pre className={styles.queryText} style={{ color: activeTheme.queryEditor.tab.color }}>{data.query}</pre>
     </div>
   );
 };

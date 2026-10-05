@@ -27,6 +27,17 @@
   overflow: auto;
 }
 
+.queryText {
+  cursor: default;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  background-color: rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  border-radius: 8px;
+  margin: 14px 0px;
+}
+
 .resultTabsContent {
   display: flex;
   flex: 1;
