@@ -152,6 +152,7 @@ export const ModalExportProjects = React.memo((props: IModalExportProjectsProps)
           scripts: exportResult.scriptsExported,
         }),
       });
+      onClose?.();
     } catch (error: unknown) {
       showToast({
         type: 'error',
@@ -165,6 +166,7 @@ export const ModalExportProjects = React.memo((props: IModalExportProjectsProps)
     connectionsByProject,
     exportProjects,
     format,
+    onClose,
     path,
     projects,
     selectedConnectionIds,

@@ -172,6 +172,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
           count: importResult.connectionsImported,
         }),
       });
+      onClose?.();
     } catch (error: unknown) {
       showToast({
         type: 'error',
@@ -188,6 +189,7 @@ export const ModalImportProjects = React.memo((props: IModalImportProjectsProps)
     source,
     masterPassword,
     importConnectionsFromSource,
+    onClose,
     showToast,
     t,
   ]);
