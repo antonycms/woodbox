@@ -203,7 +203,11 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.export.title': 'Exportação',
   'settings.export.format': 'Formato',
   'settings.export.instructions':
-    'Selecione o formato e o destino para exportar todos os projetos, conexões e scripts.',
+    'Selecione o formato, os projetos, as conexões e o destino da exportação.',
+  'settings.export.emptySelection': 'Nenhum projeto disponível para exportar.',
+  'settings.export.selectedConnectionsMeta': '({{selected}}/{{total}} conexões)',
+  'settings.export.userMeta': 'usuário: {{username}}',
+  'settings.export.withPassword': 'com senha',
   'settings.export.filePath': 'Arquivo de destino',
   'settings.export.selectFile': 'Selecionar destino',
   'settings.export.confirmExport': 'Confirmar exportação',

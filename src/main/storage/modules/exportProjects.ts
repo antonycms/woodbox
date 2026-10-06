@@ -24,6 +24,7 @@ export const getModule = (store: AppStore) => {
   const execute = async ({
     format,
     path,
+    selection,
   }: IExportProjectsParams): Promise<IExportProjectsResult> => {
     const adapter = getProjectExportAdapter(format);
     const projects = getStoredProjects(store);
@@ -32,7 +33,26 @@ export const getModule = (store: AppStore) => {
     );
     const scripts = getStoredScripts(store);
 
-    return adapter.export({ projects, connections, scripts }, path);
+    if (!selection) return adapter.export({ projects, connections, scripts }, path);
+
+    const selectedProjectIds = new Set(selection.projects.map((project) => project.id));
+    const selectedConnectionIds = new Set(
+      selection.projects.flatMap((project) => project.connections),
+    );
+    const selectedProjects = projects.filter((project) => selectedProjectIds.has(project.id));
+    const selectedConnections = connections.filter(
+      (connection) =>
+        selectedProjectIds.has(connection.id_project) && selectedConnectionIds.has(connection.id),
+    );
+    const exportedConnectionIds = new Set(selectedConnections.map((connection) => connection.id));
+    const selectedScripts = scripts.filter((script) =>
+      exportedConnectionIds.has(script.id_connection),
+    );
+
+    return adapter.export(
+      { projects: selectedProjects, connections: selectedConnections, scripts: selectedScripts },
+      path,
+    );
   };
 
   return { execute };

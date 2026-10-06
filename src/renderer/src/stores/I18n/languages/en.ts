@@ -200,7 +200,11 @@ export const en = {
   'settings.export.title': 'Export',
   'settings.export.format': 'Format',
   'settings.export.instructions':
-    'Select the format and destination to export all projects, connections and scripts.',
+    'Select the format, projects, connections and destination to export.',
+  'settings.export.emptySelection': 'No projects available to export.',
+  'settings.export.selectedConnectionsMeta': '({{selected}}/{{total}} connections)',
+  'settings.export.userMeta': 'user: {{username}}',
+  'settings.export.withPassword': 'with password',
   'settings.export.filePath': 'Destination file',
   'settings.export.selectFile': 'Select destination',
   'settings.export.confirmExport': 'Confirm export',

@@ -59,6 +59,9 @@ export interface IImportConnectionsResult {
 export interface IExportProjectsParams {
   format: ProjectExportFormat;
   path: string;
+  selection?: {
+    projects: { id: string; connections: string[] }[];
+  };
 }
 
 export interface IExportProjectsResult {

@@ -37,4 +37,7 @@ export const projectExportFormat = z.enum(['dbeaver', 'woodbox']);
 
 export const exportProjects = z.object({
   format: projectExportFormat, path: z.string(),
+  selection: z.object({
+    projects: z.array(z.object({ id: z.string(), connections: z.array(z.string()) })),
+  }).optional(),
 });
