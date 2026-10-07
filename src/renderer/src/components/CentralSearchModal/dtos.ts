@@ -1,6 +1,6 @@
 import { AvalailableTreeViewIcon } from '@renderer/components/TreeView/IconItemTreeView';
 
-export type ICentralSearchItemType = 'script' | 'table' | 'function';
+export type ICentralSearchItemType = 'connection' | 'script' | 'table' | 'function';
 
 export interface IParsedSearch {
   filter: string;
@@ -28,5 +28,8 @@ export interface ICentralSearchItem {
   };
   isOpen?: boolean;
   isActive?: boolean;
-  onOpen(argument?: string): void;
+  isLoading?: boolean;
+  isConnected?: boolean;
+  closeOnOpen?: boolean;
+  onOpen(argument?: string): void | Promise<void>;
 }

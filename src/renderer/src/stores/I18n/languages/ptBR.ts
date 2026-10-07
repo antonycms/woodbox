@@ -234,6 +234,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'common.execute': 'Executar',
   'common.proceed': 'Prosseguir',
   'common.clear': 'Limpar',
+  'common.connected': 'Conectado',
   'common.loading': 'Carregando...',
   'common.selectAll': 'Selecionar todas',
   'message.confirmProductionQuery':
@@ -329,6 +330,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'tabs.collapseGroup': 'Recolher grupo',
   'tabs.ungroup': 'Desagrupar',
   'tabs.closeGroup': 'Fechar grupo',
+  'tabs.connections': 'Conexões',
   'tabs.openTabs': 'Abas abertas',
   'tabs.scripts': 'Scripts',
   'tabs.tables': 'Tabelas',

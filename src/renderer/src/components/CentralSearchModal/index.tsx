@@ -7,6 +7,7 @@ import type { IFunctionDb, DatabaseObjectType } from '@shared/types/database';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useDatabaseStore } from '@renderer/stores/Database';
+import { useToastStore } from '@renderer/stores/Toast';
 import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
@@ -17,6 +18,7 @@ import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { getErrorMessage } from '@shared/utils/error';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
 import styles from './styles.module.css';
 import * as constants from './constants';
@@ -26,6 +28,7 @@ export const CentralSearchModal = React.memo(() => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
   const [highlightedIndex, setHighlightedIndex] = React.useState(0);
+  const [loadingConnectionIds, setLoadingConnectionIds] = React.useState<string[]>([]);
   const resultsRef = React.useRef<HTMLDivElement>(null);
   const loadingTableColumnsRef = React.useRef(new Set<string>());
 
@@ -38,14 +41,18 @@ export const CentralSearchModal = React.memo(() => {
       setActiveTabId: state.setActiveTabId,
     })),
   );
-  const { scripts, connections, connectionsInfo } = useWorkspaceStore(
-    useShallow((state) => ({
-      scripts: state.scripts,
-      connections: state.connections,
-      connectionsInfo: state.connectionsInfo,
-    })),
-  );
+  const { scripts, connections, connectionsInfo, loadConnectionInfo, reloadConnectionInfo } =
+    useWorkspaceStore(
+      useShallow((state) => ({
+        scripts: state.scripts,
+        connections: state.connections,
+        connectionsInfo: state.connectionsInfo,
+        loadConnectionInfo: state.loadConnectionInfo,
+        reloadConnectionInfo: state.reloadConnectionInfo,
+      })),
+    );
   const getTableColumns = useDatabaseStore((state) => state.getTableColumns);
+  const showToast = useToastStore((state) => state.showToast);
   const {
     centralSearch,
     modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
@@ -206,6 +213,63 @@ export const CentralSearchModal = React.memo(() => {
     },
     [addTab, getTab, setActiveTabId],
   );
+
+  const connectionItems = React.useMemo(() => {
+    if (!isOpen) return constants.EMPTY_CLOSED_ITEMS.connection;
+
+    const items = connections.map((connection) => {
+      const title = connection.description || connection.database || connection.host || connection.id;
+      const isConnected = connectionsInfo.has(connection.id);
+      const isLoading = loadingConnectionIds.includes(connection.id);
+
+      return constants.makeSearchItem({
+        id: `connection:${connection.id}`,
+        tabId: `connection_${connection.id}`,
+        type: 'connection',
+        title,
+        searchableTitle: title,
+        connectionDescription: [connection.database, connection.dialect, connection.host]
+          .filter(Boolean)
+          .join(' · '),
+        icon: 'database',
+        isLoading,
+        isConnected,
+        closeOnOpen: false,
+        onOpen: async () => {
+          if (isLoading) return;
+
+          setLoadingConnectionIds((prevState) => [...prevState, connection.id]);
+
+          try {
+            await (isConnected
+              ? reloadConnectionInfo(connection.id)
+              : loadConnectionInfo(connection.id));
+          } catch (error: unknown) {
+            showToast({
+              type: 'error',
+              title: t('toast.connectionError'),
+              description: getErrorMessage(error, t('common.unknownError')),
+            });
+          } finally {
+            setLoadingConnectionIds((prevState) =>
+              prevState.filter((idConnection) => idConnection !== connection.id),
+            );
+          }
+        },
+      });
+    });
+
+    return items.sort(constants.sortByTitle);
+  }, [
+    connections,
+    connectionsInfo,
+    isOpen,
+    loadConnectionInfo,
+    loadingConnectionIds,
+    reloadConnectionInfo,
+    showToast,
+    t,
+  ]);
 
   const { openTabItems, openTabIds } = React.useMemo(() => {
     if (!isOpen) return constants.EMPTY_OPEN_TAB_RESULT;
@@ -403,6 +467,7 @@ export const CentralSearchModal = React.memo(() => {
     closedFunctions.sort(constants.sortByTitle);
 
     return {
+      connection: [],
       script: closedScripts,
       table: closedTables,
       function: closedFunctions,
@@ -436,6 +501,10 @@ export const CentralSearchModal = React.memo(() => {
     }
 
     const filteredSections = [
+      {
+        title: t('tabs.connections'),
+        items: filterAndSortItems(connectionItems),
+      },
       {
         title: t('tabs.openTabs'),
         items: filterAndSortItems(openTabItems),
@@ -473,7 +542,7 @@ export const CentralSearchModal = React.memo(() => {
       visibleItems: items,
       visibleRows: rows,
     };
-  }, [closedItemsByType, isOpen, openTabItems, parsedSearch.filter, t]);
+  }, [closedItemsByType, connectionItems, isOpen, openTabItems, parsedSearch.filter, t]);
 
   const activeTableFilterTarget = React.useMemo(() => {
     const shouldLoadColumns = /\S+\s/.test(searchText);
@@ -518,8 +587,13 @@ export const CentralSearchModal = React.memo(() => {
 
   const runItem = React.useCallback(
     (item: ICentralSearchItem) => {
+      if (item.isLoading) return;
+
       item.onOpen(parsedSearch.argument);
-      closeModal();
+
+      if (item.closeOnOpen !== false) {
+        closeModal();
+      }
     },
     [closeModal, parsedSearch.argument],
   );
@@ -693,6 +767,7 @@ export const CentralSearchModal = React.memo(() => {
                   <button
                     type="button"
                     className={classes(styles.item, active && styles.itemActive)}
+                    disabled={item.isLoading}
                     onMouseEnter={() => setHighlightedIndex(itemIndex)}
                     onClick={() => runItem(item)}
                   >
@@ -705,8 +780,16 @@ export const CentralSearchModal = React.memo(() => {
                       <span className={styles.connection}>{item.connectionDescription}</span>
                     </span>
 
-                    {item.isActive && <span className={styles.badge}>{t('common.current')}</span>}
-                    {item.isOpen && !item.isActive && (
+                    {item.isLoading && <span className={styles.badge}>{t('common.loading')}</span>}
+                    {item.isConnected && !item.isLoading && (
+                      <span className={classes(styles.badge, styles.badgeConnected)}>
+                        {t('common.connected')}
+                      </span>
+                    )}
+                    {item.isActive && !item.isLoading && !item.isConnected && (
+                      <span className={styles.badge}>{t('common.current')}</span>
+                    )}
+                    {item.isOpen && !item.isActive && !item.isLoading && (
                       <span className={styles.badge}>{t('common.open')}</span>
                     )}
                   </button>

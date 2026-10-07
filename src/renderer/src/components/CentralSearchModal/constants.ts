@@ -13,9 +13,10 @@ export const SECTION_ROW_HEIGHT = 33;
 export const ITEM_ROW_HEIGHT = 52;
 
 export const ITEM_TYPE_ORDER: Record<ICentralSearchItemType, number> = {
-  script: 0,
-  table: 1,
-  function: 2,
+  connection: 0,
+  script: 1,
+  table: 2,
+  function: 3,
 };
 
 export const EMPTY_CONNECTIONS_BY_ID = new Map<string, IConnection>();
@@ -29,6 +30,7 @@ export const EMPTY_OPEN_TAB_RESULT: {
 };
 
 export const EMPTY_CLOSED_ITEMS: Record<ICentralSearchItemType, ICentralSearchItem[]> = {
+  connection: [],
   script: [],
   table: [],
   function: [],

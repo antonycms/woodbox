@@ -231,6 +231,7 @@ export const en = {
   'common.execute': 'Execute',
   'common.proceed': 'Proceed',
   'common.clear': 'Clear',
+  'common.connected': 'Connected',
   'common.loading': 'Loading...',
   'common.selectAll': 'Select all',
   'message.confirmProductionQuery':
@@ -326,6 +327,7 @@ export const en = {
   'tabs.collapseGroup': 'Collapse group',
   'tabs.ungroup': 'Ungroup',
   'tabs.closeGroup': 'Close group',
+  'tabs.connections': 'Connections',
   'tabs.openTabs': 'Open tabs',
   'tabs.scripts': 'Scripts',
   'tabs.tables': 'Tables',
