@@ -422,11 +422,18 @@ export const CentralSearchModal = React.memo(() => {
     if (!isOpen) return constants.EMPTY_VISIBLE_RESULT;
 
     const filter = constants.normalizeSearch(parsedSearch.filter);
+    const compactFilter = constants.normalizeCompactSearch(filter);
 
-    const matchItem = (item: ICentralSearchItem) => !filter || item.search.includes(filter);
+    const matchItem = (item: ICentralSearchItem) => {
+      if (item.search.includes(filter)) return true;
 
-    const filterAndSortItems = (items: ICentralSearchItem[]) =>
-      constants.sortBySearchRelevance(items.filter(matchItem), filter);
+      return compactFilter ? item.compactSearch.includes(compactFilter) : false;
+    };
+
+    const filterAndSortItems = (items: ICentralSearchItem[]) => {
+      const filteredItems = filter ? items.filter(matchItem) : items;
+      return constants.sortBySearchRelevance(filteredItems, filter);
+    }
 
     const filteredSections = [
       {

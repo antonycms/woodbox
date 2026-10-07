@@ -18,6 +18,7 @@ export interface ICentralSearchItem {
   title: string;
   searchableTitle: string;
   search: string;
+  compactSearch: string;
   connectionDescription: string;
   icon: AvalailableTreeViewIcon;
   tableRef?: {

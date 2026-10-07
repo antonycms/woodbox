@@ -70,6 +70,10 @@ export function normalizeSearch(value: string) {
     .trim();
 }
 
+export function normalizeCompactSearch(value: string) {
+  return normalizeSearch(value).replace(/[\s_.-]+/g, '');
+}
+
 export function parseSearchText(value: string): IParsedSearch {
   const match = value.trim().match(/^(\S+)(?:\s+([\s\S]+))?$/);
 
@@ -79,14 +83,18 @@ export function parseSearchText(value: string): IParsedSearch {
   };
 }
 
-export function makeSearchItem(item: Omit<ICentralSearchItem, 'search'>): ICentralSearchItem {
+export function makeSearchItem(
+  item: Omit<ICentralSearchItem, 'search' | 'compactSearch'>,
+): ICentralSearchItem {
   const title = item.title || item.searchableTitle || '';
+  const search = normalizeSearch(`${item.searchableTitle || title} ${item.connectionDescription}`);
 
   return {
     ...item,
     title,
     searchableTitle: item.searchableTitle || title,
-    search: normalizeSearch(`${item.searchableTitle || title} ${item.connectionDescription}`),
+    search,
+    compactSearch: normalizeCompactSearch(search),
   };
 }
 
@@ -101,28 +109,115 @@ export function sortByTypeThenTitle(a: ICentralSearchItem, b: ICentralSearchItem
 export function sortBySearchRelevance(items: ICentralSearchItem[], filter: string) {
   if (!filter) return items;
 
-  return [...items].sort((a, b) => {
-    const rankA = getSearchRank(a, filter);
-    const rankB = getSearchRank(b, filter);
+  const compactFilter = normalizeCompactSearch(filter);
+  const scoredItems = items.map((item) => ({
+    item,
+    score: getSearchScore(item, filter, compactFilter),
+  }));
 
-    return rankA - rankB || sortByTitle(a, b);
+  scoredItems.sort((a, b) => {
+    return (
+      a.score.rank - b.score.rank ||
+      a.score.distance - b.score.distance ||
+      sortByTitle(a.item, b.item)
+    );
   });
+
+  return scoredItems.map(({ item }) => item);
 }
 
-export function getSearchRank(item: ICentralSearchItem, filter: string) {
+function getSearchDistance(
+  title: string,
+  objectName: string,
+  connection: string,
+  compactTitle: string,
+  compactObjectName: string,
+  compactConnection: string,
+  filter: string,
+  compactFilter: string,
+) {
+  return Math.min(
+    getTextMatchDistance(objectName, filter),
+    getTextMatchDistance(title, filter),
+    getTextMatchDistance(connection, filter),
+    compactFilter ? getTextMatchDistance(compactObjectName, compactFilter) : Number.MAX_SAFE_INTEGER,
+    compactFilter ? getTextMatchDistance(compactTitle, compactFilter) : Number.MAX_SAFE_INTEGER,
+    compactFilter ? getTextMatchDistance(compactConnection, compactFilter) : Number.MAX_SAFE_INTEGER,
+  );
+}
+
+function getTextMatchDistance(value: string, filter: string) {
+  if (!filter) return 0;
+  if (value === filter) return 0;
+  if (value.startsWith(filter)) return value.length - filter.length;
+
+  const index = value.indexOf(filter);
+
+  if (index >= 0) return value.length - filter.length + index;
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function getSearchScore(item: ICentralSearchItem, filter: string, compactFilter: string) {
   const title = normalizeSearch(item.searchableTitle);
   const objectName = title.split('.').pop() || title;
   const connection = normalizeSearch(item.connectionDescription);
+  const compactTitle = normalizeCompactSearch(title);
+  const compactObjectName = normalizeCompactSearch(objectName);
+  const compactConnection = normalizeCompactSearch(connection);
+
+  return {
+    rank: getSearchRank(
+      title,
+      objectName,
+      connection,
+      compactTitle,
+      compactObjectName,
+      compactConnection,
+      filter,
+      compactFilter,
+    ),
+    distance: getSearchDistance(
+      title,
+      objectName,
+      connection,
+      compactTitle,
+      compactObjectName,
+      compactConnection,
+      filter,
+      compactFilter,
+    ),
+  };
+}
+
+function getSearchRank(
+  title: string,
+  objectName: string,
+  connection: string,
+  compactTitle: string,
+  compactObjectName: string,
+  compactConnection: string,
+  filter: string,
+  compactFilter: string,
+) {
+  const hasCompactFilter = compactFilter.length > 0;
 
   if (objectName === filter) return 0;
-  if (objectName.startsWith(filter)) return 1;
-  if (title === filter) return 2;
-  if (title.startsWith(filter)) return 3;
-  if (objectName.includes(filter)) return 4;
-  if (title.includes(filter)) return 5;
-  if (connection.startsWith(filter)) return 6;
+  if (title === filter) return 1;
+  if (hasCompactFilter && compactObjectName === compactFilter) return 2;
+  if (hasCompactFilter && compactTitle === compactFilter) return 3;
+  if (objectName.startsWith(filter)) return 4;
+  if (title.startsWith(filter)) return 5;
+  if (hasCompactFilter && compactObjectName.startsWith(compactFilter)) return 6;
+  if (hasCompactFilter && compactTitle.startsWith(compactFilter)) return 7;
+  if (objectName.includes(filter)) return 8;
+  if (title.includes(filter)) return 9;
+  if (hasCompactFilter && compactObjectName.includes(compactFilter)) return 10;
+  if (hasCompactFilter && compactTitle.includes(compactFilter)) return 11;
+  if (connection.startsWith(filter)) return 12;
+  if (hasCompactFilter && compactConnection.startsWith(compactFilter)) return 13;
 
-  return 7;
+  return 14;
 }
 
 export function getRowSize(row: ICentralSearchRow) {
