@@ -62,7 +62,7 @@ const Tab = (props: ITabProps) => {
       title={[title, subtitle, unsaved ? t('common.modified') : undefined].filter(Boolean).join(' - ')}
     >
       {!!Icon && <Icon />}
-      <div className={classes(styles.ignoreTabDrag, styles.tabLabel)}>
+      <div className={classes(styles.ignoreTabDrag, styles.tabLabel, allowClose && styles.closable)}>
         <Text userSelect={false} color={active ? ascentColor : color} className={styles.title}>
           {title}
         </Text>
