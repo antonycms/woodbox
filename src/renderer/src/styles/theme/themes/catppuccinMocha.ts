@@ -21,7 +21,7 @@ const catppuccinMochaTheme: ITheme = {
     fieldLabelColor: '#cdd6f4',
     borderColor: '#11111b',
     borderMutedColor: '#45475a7f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#3b3d52',
     panelBackgroundColor: '#181825',
     neutralButtonColor: '#cdd6f4',
     neutralButtonBackgroundColor: '#7f849c',

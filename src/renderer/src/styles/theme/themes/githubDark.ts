@@ -21,7 +21,7 @@ const githubDarkTheme: ITheme = {
     fieldLabelColor: '#c9d1d9',
     borderColor: '#30363d',
     borderMutedColor: '#30363d7f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#263341',
     panelBackgroundColor: '#161b22',
     neutralButtonColor: '#c9d1d9',
     neutralButtonBackgroundColor: '#8b949e',

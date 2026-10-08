@@ -21,7 +21,7 @@ const oneLightProTheme: ITheme = {
     fieldLabelColor: '#383a42',
     borderColor: '#d0d0d0',
     borderMutedColor: '#d0d0d07f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#d8dce3',
     panelBackgroundColor: '#f0f0f0',
     neutralButtonColor: '#383a42',
     neutralButtonBackgroundColor: '#696c77',

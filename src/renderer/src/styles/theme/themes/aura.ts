@@ -21,7 +21,7 @@ const defaultTheme: ITheme = {
     fieldLabelColor: '#edecee',
     borderColor: '#191622',
     borderMutedColor: '#3838387f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#352f46',
     panelBackgroundColor: '#1f1f26',
     neutralButtonColor: '#edecee',
     neutralButtonBackgroundColor: '#6d6d6d',

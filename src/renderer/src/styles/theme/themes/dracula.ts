@@ -21,7 +21,7 @@ const draculaTheme: ITheme = {
     fieldLabelColor: '#f8f8f2',
     borderColor: '#191a21',
     borderMutedColor: '#44475a7f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#343746',
     panelBackgroundColor: '#21222c',
     neutralButtonColor: '#f8f8f2',
     neutralButtonBackgroundColor: '#6272a4',

@@ -21,7 +21,7 @@ const githubLightTheme: ITheme = {
     fieldLabelColor: '#24292f',
     borderColor: '#c6ced8',
     borderMutedColor: '#c6ced87f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#cad7e6',
     panelBackgroundColor: '#e9eef5',
     neutralButtonColor: '#24292f',
     neutralButtonBackgroundColor: '#57606a',

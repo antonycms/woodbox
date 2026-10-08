@@ -21,7 +21,7 @@ const amberTheme: ITheme = {
     fieldLabelColor: '#edecee',
     borderColor: '#17120d',
     borderMutedColor: '#3838387f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#302820',
     panelBackgroundColor: '#29231c',
     neutralButtonColor: '#edecee',
     neutralButtonBackgroundColor: '#6d6d6d',

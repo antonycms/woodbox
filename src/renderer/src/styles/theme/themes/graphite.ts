@@ -21,7 +21,7 @@ const graphiteTheme: ITheme = {
     fieldLabelColor: '#edecee',
     borderColor: '#101217',
     borderMutedColor: '#3838387f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#303744',
     panelBackgroundColor: '#202329',
     neutralButtonColor: '#edecee',
     neutralButtonBackgroundColor: '#6d6d6d',

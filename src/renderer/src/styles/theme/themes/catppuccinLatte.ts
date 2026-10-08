@@ -21,7 +21,7 @@ const catppuccinLatteTheme: ITheme = {
     fieldLabelColor: '#4c4f69',
     borderColor: '#ccd0da',
     borderMutedColor: '#ccd0da7f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#cad0dd',
     panelBackgroundColor: '#e6e9ef',
     neutralButtonColor: '#4c4f69',
     neutralButtonBackgroundColor: '#6c6f85',

@@ -21,7 +21,7 @@ const omniTheme: ITheme = {
     fieldLabelColor: '#E1E1E6',
     borderColor: '#15121E',
     borderMutedColor: '#41414D7f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#302942',
     panelBackgroundColor: '#201B2D',
     neutralButtonColor: '#E1E1E6',
     neutralButtonBackgroundColor: '#5A4B81',

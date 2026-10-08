@@ -21,7 +21,7 @@ const oneDarkProTheme: ITheme = {
     fieldLabelColor: '#abb2bf',
     borderColor: '#181a1f',
     borderMutedColor: '#3e44517f',
-    selectedBackgroundColor: '#302d3a',
+    selectedBackgroundColor: '#343b47',
     panelBackgroundColor: '#21252b',
     neutralButtonColor: '#abb2bf',
     neutralButtonBackgroundColor: '#5c6370',
