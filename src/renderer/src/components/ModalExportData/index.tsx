@@ -304,7 +304,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
                 sm={3}
                 md={3}
                 color={colors.neutralButtonColor || colors.color}
-                backgroundColor={colors.fieldBackgroundColor}
+                backgroundColor={colors.neutralButtonBackgroundColor || colors.fieldBackgroundColor}
                 disabled={exporting || !availableColumns.length}
                 onClick={openColumnsModal}
               >
