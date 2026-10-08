@@ -24,8 +24,8 @@ const defaultTheme: ITheme = {
     selectedBackgroundColor: '#352f46',
     panelBackgroundColor: '#1f1f26',
     neutralButtonColor: '#edecee',
-    neutralButtonBackgroundColor: '#6d6d6d',
-    dangerButtonColor: '#edecee',
+    neutralButtonBackgroundColor: '#565263',
+    dangerButtonColor: '#1c1b22',
     dangerButtonBackgroundColor: '#ff6767',
   },
   mainTab: {
@@ -39,7 +39,7 @@ const defaultTheme: ITheme = {
     borderColor: '#191622',
     hoverBackgroundColor: '#242329',
     draggingBackgroundColor: '#242329',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#100d18a3',
     groupColors: [
       '#82e2ff',
       '#ff6767',
@@ -64,7 +64,7 @@ const defaultTheme: ITheme = {
       color: '#edecee',
       backgroundColor: '#E73C3C',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#100d18a3',
     iconBackgroundColor: '#44475a3d',
   },
   contextMenu: {
@@ -119,8 +119,8 @@ const defaultTheme: ITheme = {
     panelBackgroundColor: '#242329',
     mutedColor: '#6d6d6d',
     neutralButtonColor: '#edecee',
-    neutralButtonBackgroundColor: '#6d6d6d',
-    dangerButtonColor: '#edecee',
+    neutralButtonBackgroundColor: '#565263',
+    dangerButtonColor: '#1c1b22',
     dangerButtonBackgroundColor: '#ff6767',
   },
   button: {
@@ -133,13 +133,13 @@ const defaultTheme: ITheme = {
     selectedBackgroundColor: '#72a1ff59',
     activeBackgroundColor: '#3d375e7f',
     borderColor: '#3838387f',
-    shadowColor: '#00000033',
+    shadowColor: '#100d1833',
     blank: {
       hoverBackgroundColor: '#44475a3d',
       selectedBackgroundColor: '#242329',
       activeBackgroundColor: '#242329',
       borderColor: '#3838387f',
-      shadowColor: '#00000033',
+      shadowColor: '#100d1833',
     },
   },
   field: {
@@ -176,7 +176,7 @@ const defaultTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#3838387f',
-    shadowColor: '#00000052',
+    shadowColor: '#100d18a3',
     subtleBackgroundColor: '#44475a3d',
     hoverBackgroundColor: '#242329',
     mutedColor: '#6d6d6d',

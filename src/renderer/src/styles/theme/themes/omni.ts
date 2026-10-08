@@ -25,7 +25,7 @@ const omniTheme: ITheme = {
     panelBackgroundColor: '#201B2D',
     neutralButtonColor: '#E1E1E6',
     neutralButtonBackgroundColor: '#5A4B81',
-    dangerButtonColor: '#E1E1E6',
+    dangerButtonColor: '#191622',
     dangerButtonBackgroundColor: '#E96379',
   },
   mainTab: {
@@ -39,7 +39,7 @@ const omniTheme: ITheme = {
     borderColor: '#15121E',
     hoverBackgroundColor: '#252131',
     draggingBackgroundColor: '#252131',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#0c0a12a3',
     groupColors: [
       '#78D1E1',
       '#E96379',
@@ -64,7 +64,7 @@ const omniTheme: ITheme = {
       color: '#E1E1E6',
       backgroundColor: '#E96379',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#0c0a12a3',
     iconBackgroundColor: '#44475A75',
   },
   contextMenu: {
@@ -121,7 +121,7 @@ const omniTheme: ITheme = {
     mutedColor: '#5A4B81',
     neutralButtonColor: '#E1E1E6',
     neutralButtonBackgroundColor: '#5A4B81',
-    dangerButtonColor: '#E1E1E6',
+    dangerButtonColor: '#191622',
     dangerButtonBackgroundColor: '#E96379',
   },
   button: {
@@ -134,13 +134,13 @@ const omniTheme: ITheme = {
     selectedBackgroundColor: '#78D1E159',
     activeBackgroundColor: '#41414D7f',
     borderColor: '#41414D7f',
-    shadowColor: '#00000033',
+    shadowColor: '#0c0a1233',
     blank: {
       hoverBackgroundColor: '#44475A75',
       selectedBackgroundColor: '#252131',
       activeBackgroundColor: '#252131',
       borderColor: '#41414D7f',
-      shadowColor: '#00000033',
+      shadowColor: '#0c0a1233',
     },
   },
   field: {
@@ -177,7 +177,7 @@ const omniTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#41414D7f',
-    shadowColor: '#00000052',
+    shadowColor: '#0c0a12a3',
     subtleBackgroundColor: '#44475A75',
     hoverBackgroundColor: '#252131',
     mutedColor: '#5A4B81',

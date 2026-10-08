@@ -24,9 +24,9 @@ const graphiteTheme: ITheme = {
     selectedBackgroundColor: '#303744',
     panelBackgroundColor: '#202329',
     neutralButtonColor: '#edecee',
-    neutralButtonBackgroundColor: '#6d6d6d',
-    dangerButtonColor: '#edecee',
-    dangerButtonBackgroundColor: '#ff6767',
+    neutralButtonBackgroundColor: '#555d69',
+    dangerButtonColor: '#17191d',
+    dangerButtonBackgroundColor: '#e06f78',
   },
   mainTab: {
     bar: {
@@ -39,7 +39,7 @@ const graphiteTheme: ITheme = {
     borderColor: '#101217',
     hoverBackgroundColor: '#252932',
     draggingBackgroundColor: '#252932',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#0b0d11a3',
     groupColors: [
       '#9ed7e6',
       '#ff6767',
@@ -64,7 +64,7 @@ const graphiteTheme: ITheme = {
       color: '#edecee',
       backgroundColor: '#E73C3C',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#0b0d11a3',
     iconBackgroundColor: '#44475a3d',
   },
   contextMenu: {
@@ -119,9 +119,9 @@ const graphiteTheme: ITheme = {
     panelBackgroundColor: '#252932',
     mutedColor: '#6d6d6d',
     neutralButtonColor: '#edecee',
-    neutralButtonBackgroundColor: '#6d6d6d',
-    dangerButtonColor: '#edecee',
-    dangerButtonBackgroundColor: '#ff6767',
+    neutralButtonBackgroundColor: '#555d69',
+    dangerButtonColor: '#17191d',
+    dangerButtonBackgroundColor: '#e06f78',
   },
   button: {
     hoverBackgroundColor: '#252932',
@@ -133,13 +133,13 @@ const graphiteTheme: ITheme = {
     selectedBackgroundColor: '#72a1ff59',
     activeBackgroundColor: '#353b647f',
     borderColor: '#3838387f',
-    shadowColor: '#00000033',
+    shadowColor: '#0b0d1133',
     blank: {
       hoverBackgroundColor: '#44475a3d',
       selectedBackgroundColor: '#252932',
       activeBackgroundColor: '#252932',
       borderColor: '#3838387f',
-      shadowColor: '#00000033',
+      shadowColor: '#0b0d1133',
     },
   },
   field: {
@@ -176,7 +176,7 @@ const graphiteTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#3838387f',
-    shadowColor: '#00000052',
+    shadowColor: '#0b0d11a3',
     subtleBackgroundColor: '#44475a3d',
     hoverBackgroundColor: '#252932',
     mutedColor: '#6d6d6d',

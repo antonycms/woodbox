@@ -24,8 +24,8 @@ const githubDarkTheme: ITheme = {
     selectedBackgroundColor: '#263341',
     panelBackgroundColor: '#161b22',
     neutralButtonColor: '#c9d1d9',
-    neutralButtonBackgroundColor: '#8b949e',
-    dangerButtonColor: '#c9d1d9',
+    neutralButtonBackgroundColor: '#484f58',
+    dangerButtonColor: '#0d1117',
     dangerButtonBackgroundColor: '#ff7b72',
   },
   mainTab: {
@@ -39,7 +39,7 @@ const githubDarkTheme: ITheme = {
     borderColor: '#30363d',
     hoverBackgroundColor: '#21262d',
     draggingBackgroundColor: '#21262d',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#010409a3',
     groupColors: [
       '#58a6ff',
       '#ff7b72',
@@ -64,7 +64,7 @@ const githubDarkTheme: ITheme = {
       color: '#c9d1d9',
       backgroundColor: '#da3633',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#010409a3',
     iconBackgroundColor: '#30363d3d',
   },
   contextMenu: {
@@ -119,8 +119,8 @@ const githubDarkTheme: ITheme = {
     panelBackgroundColor: '#21262d',
     mutedColor: '#8b949e',
     neutralButtonColor: '#c9d1d9',
-    neutralButtonBackgroundColor: '#8b949e',
-    dangerButtonColor: '#c9d1d9',
+    neutralButtonBackgroundColor: '#484f58',
+    dangerButtonColor: '#0d1117',
     dangerButtonBackgroundColor: '#ff7b72',
   },
   button: {
@@ -133,13 +133,13 @@ const githubDarkTheme: ITheme = {
     selectedBackgroundColor: '#58a6ff59',
     activeBackgroundColor: '#6e40c97f',
     borderColor: '#30363d7f',
-    shadowColor: '#00000033',
+    shadowColor: '#01040933',
     blank: {
       hoverBackgroundColor: '#30363d3d',
       selectedBackgroundColor: '#21262d',
       activeBackgroundColor: '#21262d',
       borderColor: '#30363d7f',
-      shadowColor: '#00000033',
+      shadowColor: '#01040933',
     },
   },
   field: {
@@ -176,7 +176,7 @@ const githubDarkTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#30363d7f',
-    shadowColor: '#00000052',
+    shadowColor: '#010409a3',
     subtleBackgroundColor: '#30363d3d',
     hoverBackgroundColor: '#21262d',
     mutedColor: '#8b949e',

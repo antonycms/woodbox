@@ -24,8 +24,8 @@ const catppuccinMochaTheme: ITheme = {
     selectedBackgroundColor: '#3b3d52',
     panelBackgroundColor: '#181825',
     neutralButtonColor: '#cdd6f4',
-    neutralButtonBackgroundColor: '#7f849c',
-    dangerButtonColor: '#cdd6f4',
+    neutralButtonBackgroundColor: '#585b70',
+    dangerButtonColor: '#1e1e2e',
     dangerButtonBackgroundColor: '#f38ba8',
   },
   mainTab: {
@@ -39,7 +39,7 @@ const catppuccinMochaTheme: ITheme = {
     borderColor: '#11111b',
     hoverBackgroundColor: '#313244',
     draggingBackgroundColor: '#313244',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#11111ba3',
     groupColors: [
       '#89b4fa',
       '#f38ba8',
@@ -64,7 +64,7 @@ const catppuccinMochaTheme: ITheme = {
       color: '#cdd6f4',
       backgroundColor: '#d65d7a',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#11111ba3',
     iconBackgroundColor: '#45475a3d',
   },
   contextMenu: {
@@ -119,8 +119,8 @@ const catppuccinMochaTheme: ITheme = {
     panelBackgroundColor: '#313244',
     mutedColor: '#7f849c',
     neutralButtonColor: '#cdd6f4',
-    neutralButtonBackgroundColor: '#7f849c',
-    dangerButtonColor: '#cdd6f4',
+    neutralButtonBackgroundColor: '#585b70',
+    dangerButtonColor: '#1e1e2e',
     dangerButtonBackgroundColor: '#f38ba8',
   },
   button: {
@@ -133,13 +133,13 @@ const catppuccinMochaTheme: ITheme = {
     selectedBackgroundColor: '#89b4fa59',
     activeBackgroundColor: '#6c4f937f',
     borderColor: '#45475a7f',
-    shadowColor: '#00000033',
+    shadowColor: '#11111b33',
     blank: {
       hoverBackgroundColor: '#45475a3d',
       selectedBackgroundColor: '#313244',
       activeBackgroundColor: '#313244',
       borderColor: '#45475a7f',
-      shadowColor: '#00000033',
+      shadowColor: '#11111b33',
     },
   },
   field: {
@@ -176,7 +176,7 @@ const catppuccinMochaTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#45475a7f',
-    shadowColor: '#00000052',
+    shadowColor: '#11111ba3',
     subtleBackgroundColor: '#45475a3d',
     hoverBackgroundColor: '#313244',
     mutedColor: '#7f849c',

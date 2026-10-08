@@ -24,8 +24,8 @@ const oneDarkProTheme: ITheme = {
     selectedBackgroundColor: '#343b47',
     panelBackgroundColor: '#21252b',
     neutralButtonColor: '#abb2bf',
-    neutralButtonBackgroundColor: '#5c6370',
-    dangerButtonColor: '#abb2bf',
+    neutralButtonBackgroundColor: '#3e4451',
+    dangerButtonColor: '#181a1f',
     dangerButtonBackgroundColor: '#e06c75',
   },
   mainTab: {
@@ -39,7 +39,7 @@ const oneDarkProTheme: ITheme = {
     borderColor: '#181a1f',
     hoverBackgroundColor: '#2c313a',
     draggingBackgroundColor: '#2c313a',
-    editorShadowColor: '#00000052',
+    editorShadowColor: '#111317a3',
     groupColors: [
       '#61afef',
       '#e06c75',
@@ -64,7 +64,7 @@ const oneDarkProTheme: ITheme = {
       color: '#abb2bf',
       backgroundColor: '#be5046',
     },
-    shadowColor: '#00000052',
+    shadowColor: '#111317a3',
     iconBackgroundColor: '#3e44513d',
   },
   contextMenu: {
@@ -110,7 +110,7 @@ const oneDarkProTheme: ITheme = {
     fieldLabelColor: '#abb2bf',
     saveButtonColor: '#282c34',
     saveButtonBackgroundColor: '#98c379',
-    cancelButtonColor: '#282c34',
+    cancelButtonColor: '#181a1f',
     cancelButtonBackgroundColor: '#e06c75',
     testButtonColor: '#282c34',
     testButtonBackgroundColor: '#d19a66',
@@ -119,8 +119,8 @@ const oneDarkProTheme: ITheme = {
     panelBackgroundColor: '#2c313a',
     mutedColor: '#5c6370',
     neutralButtonColor: '#abb2bf',
-    neutralButtonBackgroundColor: '#5c6370',
-    dangerButtonColor: '#abb2bf',
+    neutralButtonBackgroundColor: '#3e4451',
+    dangerButtonColor: '#181a1f',
     dangerButtonBackgroundColor: '#e06c75',
   },
   button: {
@@ -133,13 +133,13 @@ const oneDarkProTheme: ITheme = {
     selectedBackgroundColor: '#61afef59',
     activeBackgroundColor: '#4b3b5a7f',
     borderColor: '#3e44517f',
-    shadowColor: '#00000033',
+    shadowColor: '#11131733',
     blank: {
       hoverBackgroundColor: '#3e44513d',
       selectedBackgroundColor: '#2c313a',
       activeBackgroundColor: '#2c313a',
       borderColor: '#3e44517f',
-      shadowColor: '#00000033',
+      shadowColor: '#11131733',
     },
   },
   field: {
@@ -176,7 +176,7 @@ const oneDarkProTheme: ITheme = {
   centralSearch: {
     overlayColor: '#0000007a',
     borderColor: '#3e44517f',
-    shadowColor: '#00000052',
+    shadowColor: '#111317a3',
     subtleBackgroundColor: '#3e44513d',
     hoverBackgroundColor: '#2c313a',
     mutedColor: '#5c6370',
