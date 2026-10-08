@@ -15,15 +15,20 @@
 .containerItemInfo {
   display: flex;
   align-items: center;
-  padding: 4px;
+  min-height: 24px;
+  padding: 3px 6px 3px 0;
   padding-left: 0;
   background-color: transparent;
-  border-radius: 4px;
+  border-radius: 7px;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .containerItemInfo:focus,
 .containerItemInfo.revealed {
   background-color: var(--tree-item-focus-background-color);
+  /* box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 12%, transparent); */
   outline: transparent;
 }
 
@@ -34,9 +39,34 @@
   white-space: nowrap;
 }
 
-.containerItemLabelInfo {
+.containerItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: 6px;
+}
+
+.connectionStatus {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--tree-item-connection-status-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tree-item-connection-status-color) 60%, transparent);
+}
+
+.containerItemLabelInfo,
+.containerItemChildCount {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, currentColor 11%, transparent);
   font-size: 11px;
-  opacity: 0.5;
+  line-height: 14px;
+  opacity: 0.68;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.containerItemChildCount {
+  min-width: 16px;
+  text-align: center;
 }

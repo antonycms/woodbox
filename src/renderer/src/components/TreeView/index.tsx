@@ -35,6 +35,7 @@ const TreeView = <Data,>(props: ITreeViewProps<Data>) => {
   const defaultColor = activeTheme.sideBar.color;
   const focusBackgroundColor =
     activeTheme.sideBar.selectedBackgroundColor;
+  const connectionStatusColor = activeTheme.sideBar.menuBar.ascentColor;
 
   const itemsById = React.useMemo(() => {
     const map = new Map<string, IItemTreeView<Data>>();
@@ -212,6 +213,7 @@ const TreeView = <Data,>(props: ITreeViewProps<Data>) => {
             color={item.color || defaultColor}
             iconColor={item.iconColor || item.color || defaultColor}
             focusBackgroundColor={focusBackgroundColor}
+            connectionStatusColor={connectionStatusColor}
             openedItemsIdSet={openedItemsIdSet}
             revealedItemId={revealedItemId}
             onSwitch={handleSwitchItem}
@@ -239,6 +241,8 @@ export interface IItemTreeView<Data = unknown> extends IItemTreeViewData<Data> {
   iconColor?: string;
   renderIcon?(): React.ReactElement;
   loading?: boolean;
+  isConnected?: boolean;
+  showChildCount?: boolean;
 }
 
 export interface ITreeViewRef {

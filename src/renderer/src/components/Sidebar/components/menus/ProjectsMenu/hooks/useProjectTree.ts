@@ -66,6 +66,7 @@ export const useProjectTree = (
         label: project.description,
         type: 'project' as const,
         icon: 'grid',
+        showChildCount: true,
         data: { id_project: project.id },
         childs: project.connections.map((connection) => {
           const connectionInfo = connectionsInfo.get(connection.id);
@@ -164,6 +165,7 @@ export const useProjectTree = (
                       id: `tables_${connection.id}:${schema}`,
                       label: t('tabs.tables'),
                       icon: 'multi',
+                      showChildCount: true,
                       childs: tablesSchema,
                       type: 'tables' as const,
                       data: { schema_name: schema, ...dataConnection },
@@ -172,6 +174,7 @@ export const useProjectTree = (
                       id: `views_${connection.id}:${schema}`,
                       label: t('tabs.views'),
                       icon: 'multi',
+                      showChildCount: true,
                       childs: viewsSchema,
                       type: 'views' as const,
                       data: { schema_name: schema, ...dataConnection },
@@ -180,6 +183,7 @@ export const useProjectTree = (
                       id: `mat_views_${connection.id}:${schema}`,
                       label: t('tabs.materializedViews'),
                       icon: 'multi',
+                      showChildCount: true,
                       childs: materializedViewsSchema,
                       type: 'materializedViews' as const,
                       data: { schema_name: schema, ...dataConnection },
@@ -189,6 +193,7 @@ export const useProjectTree = (
                       label: t('tabs.functions'),
                       childs: functionsSchema,
                       icon: 'functions',
+                      showChildCount: true,
                     },
                   ].filter(Boolean) as ProjectTreeItem[],
                 };
@@ -216,6 +221,7 @@ export const useProjectTree = (
                   ? connection.reactNativeBridge?.appName || connection.reactNativeBridge?.appId
                   : `${connection.host}:${connection.port}`,
             loading: loadingConnectionsIdSet.has(connection.id),
+            isConnected: !!connectionInfo,
             icon: 'database' as const,
             type: 'connection' as const,
             data: { id_connection: connection.id, description_connection: connection.description },
@@ -226,6 +232,7 @@ export const useProjectTree = (
                 label: t('sidebar.schemas'),
                 childs: schemasThreeView,
                 icon: 'schema',
+                showChildCount: true,
                 data: dataConnection,
               },
               !dialect.supportsSchemas && {
@@ -233,6 +240,7 @@ export const useProjectTree = (
                 type: 'tables',
                 label: t('tabs.tables'),
                 childs: tablesThreeView,
+                showChildCount: true,
                 data: dataConnection,
               },
               !dialect.supportsSchemas &&
@@ -241,6 +249,7 @@ export const useProjectTree = (
                   type: 'views',
                   label: t('tabs.views'),
                   childs: viewsThreeView,
+                  showChildCount: true,
                   data: dataConnection,
                 },
               !dialect.supportsSchemas &&
@@ -249,6 +258,7 @@ export const useProjectTree = (
                   type: 'materializedViews',
                   label: t('tabs.materializedViews'),
                   childs: materializedViewsThreeView,
+                  showChildCount: true,
                   data: dataConnection,
                 },
               {
@@ -257,6 +267,7 @@ export const useProjectTree = (
                 label: t('tabs.scripts'),
                 childs: scriptsThreeView,
                 icon: 'fileSql',
+                showChildCount: true,
                 data: dataConnection,
               },
             ].filter(Boolean),

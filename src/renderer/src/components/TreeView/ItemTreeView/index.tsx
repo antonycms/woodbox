@@ -12,6 +12,8 @@ const ItemTreeView = <Data,>(props: IItemTreeViewProps<Data>) => {
   const focusBackgroundColor = props.focusBackgroundColor;
 
   const isOpen = !!openedItemsIdSet?.has(props.id);
+  const childCount = props.showChildCount ? childs?.filter(Boolean).length || 0 : 0;
+  const showConnectionStatus = props.type === 'connection' && props.isConnected && props.labelInfo;
 
   return (
     <div
@@ -28,6 +30,8 @@ const ItemTreeView = <Data,>(props: IItemTreeViewProps<Data>) => {
         style={
           {
             '--tree-item-focus-background-color': focusBackgroundColor,
+            '--tree-item-connection-status-color': props.connectionStatusColor,
+            color,
           } as React.CSSProperties
         }
       >
@@ -57,12 +61,21 @@ const ItemTreeView = <Data,>(props: IItemTreeViewProps<Data>) => {
           {props.label}
         </span>
 
-        {props.labelInfo && (
-          <span
-            className={classes(styles.containerItemLabelInfo, styles.ignorePointerEvents)}
-            style={{ color }}
-          >
-            {props.labelInfo}
+        {(props.labelInfo || childCount > 0) && (
+          <span className={classes(styles.containerItemMeta, styles.ignorePointerEvents)}>
+            {showConnectionStatus && <span className={styles.connectionStatus} />}
+
+            {props.labelInfo && (
+              <span className={styles.containerItemLabelInfo} style={{ color }}>
+                {props.labelInfo}
+              </span>
+            )}
+
+            {childCount > 0 && (
+              <span className={styles.containerItemChildCount} style={{ color }}>
+                {childCount}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -78,6 +91,7 @@ const ItemTreeView = <Data,>(props: IItemTreeViewProps<Data>) => {
               color={color}
               iconColor={iconColor}
               focusBackgroundColor={focusBackgroundColor}
+              connectionStatusColor={props.connectionStatusColor}
               onSwitch={props.onSwitch}
               openedItemsIdSet={openedItemsIdSet}
               revealedItemId={props.revealedItemId}
@@ -96,6 +110,7 @@ export interface IItemTreeViewProps<Data = unknown> extends IItemTreeView<Data> 
   isFirst?: boolean;
   color?: string;
   focusBackgroundColor?: string;
+  connectionStatusColor?: string;
   openedItemsIdSet?: Set<string>;
   revealedItemId?: string;
   onSwitch?(item: IItemTreeView<Data>): void;
