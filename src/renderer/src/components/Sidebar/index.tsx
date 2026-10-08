@@ -4,6 +4,7 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
 import { IconDatabase, IconSettings, IconSnippet } from '@renderer/styles/icons';
 import { useI18nStore } from '@renderer/stores/I18n';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { useCssPropertiesWithActiveTheme } from '@renderer/hooks/useCssPropertiesWithActiveTheme';
 import { SettingsModal } from '@renderer/components/SettingsModal';
 import ProjectsMenu from './components/menus/ProjectsMenu';
@@ -17,6 +18,11 @@ type Menu = 'projects' | 'snippets';
 
 export const Sidebar = React.memo(() => {
   const t = useI18nStore((state) => state.t);
+  const projectIconColor = useThemeStore((state) => state.activeTheme.sideBar.menuBar.ascentColor);
+  const snippetIconColor = useThemeStore(
+    (state) =>
+      state.activeTheme.mainTab.groupColors?.[4] || state.activeTheme.sideBar.menuBar.ascentColor,
+  );
   const [selectedMenu, setSelectedMenu] = React.useState<Menu | null>('projects');
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [width, _setWidth] = useStorage('sidebar_width', 300);
@@ -50,8 +56,18 @@ export const Sidebar = React.memo(() => {
         value={selectedMenu}
         onChange={(v: Menu) => setSelectedMenu(v === selectedMenu ? null : v)}
         items={[
-          { id: 'projects', title: t('sidebar.projects'), icon: () => <IconDatabase /> },
-          { id: 'snippets', title: t('sidebar.snippets'), icon: () => <IconSnippet /> },
+          {
+            id: 'projects',
+            title: t('sidebar.projects'),
+            color: projectIconColor,
+            icon: () => <IconDatabase />,
+          },
+          {
+            id: 'snippets',
+            title: t('sidebar.snippets'),
+            color: snippetIconColor,
+            icon: () => <IconSnippet />,
+          },
         ]}
         footerItems={[{ id: 'settings', title: t('settings.title'), icon: () => <IconSettings /> }]}
         onFooterItemClick={() => setShowSettingsModal(true)}

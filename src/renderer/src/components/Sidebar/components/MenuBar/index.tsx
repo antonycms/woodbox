@@ -26,6 +26,11 @@ export const MenuBar = ({
         <button
           key={item.id}
           title={item.title}
+          style={
+            {
+              '--activeColorMenuBar': item.color || ascentColorMenuBar,
+            } as React.CSSProperties
+          }
           onClick={() => onChange?.(item.id)}
           className={classes(styles.categoryBarButton, item.id === value && styles.active)}
         >
@@ -39,6 +44,11 @@ export const MenuBar = ({
             <button
               key={item.id}
               title={item.title}
+              style={
+                {
+                  '--activeColorMenuBar': item.color || ascentColorMenuBar,
+                } as React.CSSProperties
+              }
               onClick={() => onFooterItemClick?.(item.id)}
               className={classes(styles.categoryBarButton, item.id === value && styles.active)}
             >
@@ -54,6 +64,7 @@ export const MenuBar = ({
 export interface IItemBar {
   id: string;
   title?: string;
+  color?: string;
   icon(): React.ReactElement;
 }
 

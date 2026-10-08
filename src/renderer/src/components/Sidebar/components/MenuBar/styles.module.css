@@ -1,33 +1,41 @@
 .categoryBarButton {
-  width: 100%;
-  padding: 10px 10px;
+  display: flex;
+  width: calc(100% - 12px);
+  margin: 4px 6px;
+  padding: 8px;
   position: relative;
   cursor: pointer;
   color: var(--colorMenuBar);
   background-color: transparent;
   border: 0;
+  border-radius: 8px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
 
 .categoryBarButton svg {
   color: var(--colorMenuBar);
 }
 
-.categoryBarButton:hover:not(.active) svg {
-  opacity: 0.8;
+.categoryBarButton:hover:not(.active) {
+  background-color: color-mix(in srgb, var(--colorMenuBar) 8%, transparent);
 }
 
-.categoryBarButton.active::before {
-  content: "";
-  position: absolute;
-  height: 100%;
-  width: 2px;
-  background-color: var(--ascentColorMenuBar);
-  top: 0;
-  left: 0;
+.categoryBarButton:hover:not(.active) svg {
+  opacity: 0.86;
+}
+
+.categoryBarButton.active {
+  background-color: color-mix(
+    in srgb,
+    var(--activeColorMenuBar) 12%,
+    transparent
+  );
 }
 
 .categoryBarButton.active svg {
-  color: var(--ascentColorMenuBar);
+  color: var(--activeColorMenuBar);
 }
 
 .categoryBar {
