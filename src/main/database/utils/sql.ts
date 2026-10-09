@@ -1,3 +1,5 @@
+import type { Dialect } from '@shared/types/connections';
+
 export const sanitizeAutoPaginatedError = (
   error: unknown,
   executableSql: string,
@@ -51,6 +53,39 @@ const sanitizeAutoPaginatedPosition = (
   if (numericPosition <= originalSqlStart || numericPosition > originalSqlEnd) return undefined;
 
   return String(numericPosition - originalSqlStart);
+};
+
+const countPreviousBackslashes = (value: string, index: number) => {
+  let count = 0;
+
+  for (let charIndex = index - 1; value[charIndex] === '\\'; charIndex -= 1) {
+    count += 1;
+  }
+
+  return count;
+};
+
+const escapePostgresQuestionMarkBindings = (statement: string) => {
+  let sql = '';
+
+  for (let index = 0; index < statement.length; index += 1) {
+    const char = statement[index];
+
+    if (char !== '?') {
+      sql += char;
+      continue;
+    }
+
+    sql += countPreviousBackslashes(statement, index) % 2 === 1 ? '?' : '\\?';
+  }
+
+  return sql;
+};
+
+export const prepareUserSqlStatement = (dialect: Dialect, statement: string) => {
+  if (dialect !== 'postgres' || !statement.includes('?')) return statement;
+
+  return escapePostgresQuestionMarkBindings(statement);
 };
 
 export const normalizeSqlForKeywordSearch = (sql: string) => {

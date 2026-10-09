@@ -41,6 +41,7 @@ import {
   hasSqlStatementSeparator,
   isReadOnlySelectQuery,
   normalizeSqlForKeywordSearch,
+  prepareUserSqlStatement,
   sanitizeAutoPaginatedError,
 } from './utils/sql';
 
@@ -791,7 +792,12 @@ export const runSql = async (
 
     try {
       for (const statement of statements) {
-        results.push({ raw: await instance.raw(statement).connection(dbConnection), statement });
+        results.push({
+          raw: await instance
+            .raw(prepareUserSqlStatement(dialect, statement))
+            .connection(dbConnection),
+          statement,
+        });
       }
     } catch (error) {
       if (auto_paginated) throw sanitizeAutoPaginatedError(error, sql_final, sql_original);
