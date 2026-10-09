@@ -25,7 +25,7 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { generateIndexesDdl } from '@renderer/database/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { getRendererDialect } from '@renderer/database/dialects';
@@ -371,7 +371,8 @@ const Indexes = ({ tableStore,
         onAdd={handleAddPendingIndex}
       />
 
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterIndexes')}
         value={indexFilterText}
         onChange={setIndexFilterText}

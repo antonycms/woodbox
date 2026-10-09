@@ -26,7 +26,7 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { generateRestrictionsDdl } from '@renderer/database/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
@@ -357,7 +357,8 @@ const Restrictios = ({ tableStore,
         onAdd={handleAddPendingRestriction}
       />
 
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterConstraints')}
         value={restrictionFilterText}
         onChange={setRestrictionFilterText}

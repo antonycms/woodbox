@@ -13,7 +13,7 @@ import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { getReferenceRowKey, getReferenceSearchValues } from './utils';
 import { IReferenceRow } from './dtos';
 
@@ -102,7 +102,8 @@ const References = ({ tableStore, id_connection, schema, table, onOpenTable }: I
 
   return (
     <>
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterReferences')}
         value={referenceFilterText}
         onChange={setReferenceFilterText}

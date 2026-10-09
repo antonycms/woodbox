@@ -24,7 +24,7 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { generateReferencesDdl } from '@renderer/database/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { getRendererDialect } from '@renderer/database/dialects';
@@ -409,7 +409,8 @@ const ForeingKeys = ({ tableStore,
         onAdd={handleAddPendingReference}
       />
 
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterKeys')}
         value={referenceFilterText}
         onChange={setReferenceFilterText}

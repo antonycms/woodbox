@@ -5,12 +5,13 @@ import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { HistoryIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
 
-interface IColumnFilterInputProps {
+interface IFilterInputProps {
   value: string;
-  columnNames: string[];
+  suggestions?: string[];
   autoFocus?: boolean;
   placeholder?: string;
   disabled?: boolean;
+  filterBar?: IFilterInputFilterBarProps;
   inputClassName?: string;
   inputStyle?: React.CSSProperties;
   dropdownBackgroundColor?: string;
@@ -22,6 +23,14 @@ interface IColumnFilterInputProps {
   onChange(value: string): void;
   onHistorySelect?(value: string): void;
   onKeyDown?(event: React.KeyboardEvent<HTMLInputElement>): void;
+}
+
+interface IFilterInputFilterBarProps {
+  backgroundColor?: string;
+  borderColor?: string;
+  color?: string;
+  fieldBackgroundColor?: string;
+  inputOpacity?: number;
 }
 
 interface ITokenInfo {
@@ -54,12 +63,13 @@ const getTokenInfo = (value: string, cursorPosition: number): ITokenInfo => {
   };
 };
 
-export default function ColumnFilterInput({
+export default function FilterInput({
   value,
-  columnNames,
+  suggestions = [],
   autoFocus,
   placeholder,
   disabled,
+  filterBar,
   inputClassName,
   inputStyle,
   dropdownBackgroundColor,
@@ -71,7 +81,7 @@ export default function ColumnFilterInput({
   onChange,
   onHistorySelect,
   onKeyDown,
-}: IColumnFilterInputProps) {
+}: IFilterInputProps) {
   const t = useI18nStore((state) => state.t);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -85,30 +95,39 @@ export default function ColumnFilterInput({
   const historyEmptyLabelText = historyEmptyLabel ?? t('filterHistory.empty');
   const hasHistoryButton = !!historyItems;
   const hasHistoryItems = !!historyItems?.length;
+  const resolvedInputStyle = {
+    color: filterBar?.color,
+    opacity: filterBar?.inputOpacity,
+    ...inputStyle,
+  };
+  const resolvedDropdownBackgroundColor =
+    dropdownBackgroundColor ?? filterBar?.fieldBackgroundColor;
+  const resolvedDropdownBorderColor = dropdownBorderColor ?? filterBar?.borderColor;
+  const resolvedDropdownColor = dropdownColor ?? filterBar?.color;
 
   const tokenInfo = React.useMemo(
     () => getTokenInfo(value, cursorPosition),
     [cursorPosition, value],
   );
 
-  const suggestions = React.useMemo(() => {
-    const uniqueColumnNames = Array.from(new Set(columnNames)).filter(Boolean);
+  const filteredSuggestions = React.useMemo(() => {
+    const uniqueSuggestions = Array.from(new Set(suggestions)).filter(Boolean);
     const normalizedText = tokenInfo.text.toLowerCase();
 
     if (!showAll && !normalizedText) return [];
 
-    return uniqueColumnNames
-      .filter((columnName) => columnName.toLowerCase().includes(normalizedText))
-      .sort((columnA, columnB) => {
-        const aStartsWithText = columnA.toLowerCase().startsWith(normalizedText);
-        const bStartsWithText = columnB.toLowerCase().startsWith(normalizedText);
+    return uniqueSuggestions
+      .filter((suggestion) => suggestion.toLowerCase().includes(normalizedText))
+      .sort((suggestionA, suggestionB) => {
+        const aStartsWithText = suggestionA.toLowerCase().startsWith(normalizedText);
+        const bStartsWithText = suggestionB.toLowerCase().startsWith(normalizedText);
 
-        if (aStartsWithText === bStartsWithText) return columnA.localeCompare(columnB);
+        if (aStartsWithText === bStartsWithText) return suggestionA.localeCompare(suggestionB);
 
         return aStartsWithText ? -1 : 1;
       })
       .slice(0, MAX_SUGGESTIONS);
-  }, [columnNames, showAll, tokenInfo.text]);
+  }, [showAll, suggestions, tokenInfo.text]);
 
   const closeSuggestions = React.useCallback(() => {
     setIsOpen(false);
@@ -154,11 +173,11 @@ export default function ColumnFilterInput({
   );
 
   const insertSuggestion = React.useCallback(
-    (columnName: string) => {
-      const nextValue = `${value.slice(0, tokenInfo.start)}${columnName}${value.slice(
+    (suggestion: string) => {
+      const nextValue = `${value.slice(0, tokenInfo.start)}${suggestion}${value.slice(
         tokenInfo.end,
       )}`;
-      const nextCursorPosition = tokenInfo.start + columnName.length;
+      const nextCursorPosition = tokenInfo.start + suggestion.length;
 
       onChange(nextValue);
       setCursorPosition(nextCursorPosition);
@@ -188,7 +207,7 @@ export default function ColumnFilterInput({
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
-      const hasSuggestions = suggestions.length > 0;
+      const hasSuggestions = filteredSuggestions.length > 0;
 
       if (isPrimaryShortcutPressed(event) && event.code === 'Space') {
         event.preventDefault();
@@ -215,7 +234,7 @@ export default function ColumnFilterInput({
       if (event.key === 'ArrowDown' && hasSuggestions) {
         event.preventDefault();
         setIsOpen(true);
-        setActiveIndex((current) => Math.min(current + 1, suggestions.length - 1));
+        setActiveIndex((current) => Math.min(current + 1, filteredSuggestions.length - 1));
         return;
       }
 
@@ -227,13 +246,13 @@ export default function ColumnFilterInput({
 
       if (isOpen && hasSuggestions && event.key === 'Tab') {
         event.preventDefault();
-        insertSuggestion(suggestions[Math.max(activeIndex, 0)]);
+        insertSuggestion(filteredSuggestions[Math.max(activeIndex, 0)]);
         return;
       }
 
       if (isOpen && hasSuggestions && activeIndex >= 0 && event.key === 'Enter') {
         event.preventDefault();
-        insertSuggestion(suggestions[activeIndex]);
+        insertSuggestion(filteredSuggestions[activeIndex]);
         return;
       }
 
@@ -246,19 +265,19 @@ export default function ColumnFilterInput({
       isOpen,
       isHistoryOpen,
       onKeyDown,
-      suggestions,
+      filteredSuggestions,
       updateCursorPosition,
     ],
   );
 
   React.useEffect(() => {
-    if (!isOpen || !suggestions.length) {
+    if (!isOpen || !filteredSuggestions.length) {
       setActiveIndex(-1);
       return;
     }
 
-    setActiveIndex((current) => Math.min(Math.max(current, 0), suggestions.length - 1));
-  }, [isOpen, suggestions]);
+    setActiveIndex((current) => Math.min(Math.max(current, 0), filteredSuggestions.length - 1));
+  }, [filteredSuggestions, isOpen]);
 
   React.useEffect(() => {
     if (!isOpen || activeIndex < 0) return;
@@ -282,12 +301,12 @@ export default function ColumnFilterInput({
     };
   }, [isHistoryOpen]);
 
-  return (
+  const input = (
     <div ref={containerRef} className={styles.container}>
       <input
         ref={inputRef}
         autoFocus={autoFocus}
-        className={classes(styles.input, inputClassName)}
+        className={classes(styles.input, filterBar && styles.filterBarInput, inputClassName)}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
@@ -304,7 +323,7 @@ export default function ColumnFilterInput({
           closeSuggestions();
           setIsHistoryOpen(false);
         }}
-        style={inputStyle}
+        style={resolvedInputStyle}
         spellCheck={false}
       />
 
@@ -318,8 +337,8 @@ export default function ColumnFilterInput({
           onClick={toggleHistory}
           style={
             {
-              color: dropdownColor ?? inputStyle?.color,
-              '--column-filter-hover-background-color': dropdownBorderColor,
+              color: resolvedDropdownColor ?? resolvedInputStyle.color,
+              '--filter-input-hover-background-color': resolvedDropdownBorderColor,
             } as React.CSSProperties
           }
         >
@@ -327,34 +346,34 @@ export default function ColumnFilterInput({
         </button>
       )}
 
-      {!!(isOpen && suggestions.length) && (
+      {!!(isOpen && filteredSuggestions.length) && (
         <div
           className={styles.dropdown}
           style={
             {
-              backgroundColor: dropdownBackgroundColor,
-              borderColor: dropdownBorderColor,
-              color: dropdownColor,
-              '--column-filter-shadow-color': dropdownBorderColor,
-              '--column-filter-hover-background-color': dropdownBorderColor,
+              backgroundColor: resolvedDropdownBackgroundColor,
+              borderColor: resolvedDropdownBorderColor,
+              color: resolvedDropdownColor,
+              '--filter-input-shadow-color': resolvedDropdownBorderColor,
+              '--filter-input-hover-background-color': resolvedDropdownBorderColor,
             } as React.CSSProperties
           }
         >
-          {suggestions.map((columnName, index) => (
+          {filteredSuggestions.map((suggestion, index) => (
             <button
-              key={columnName}
+              key={suggestion}
               ref={(element) => {
                 optionRefs.current[index] = element;
               }}
               type="button"
               className={classes(styles.option, index === activeIndex && styles.optionActive)}
-              title={columnName}
+              title={suggestion}
               onMouseDown={(event) => {
                 event.preventDefault();
-                insertSuggestion(columnName);
+                insertSuggestion(suggestion);
               }}
             >
-              {columnName}
+              {suggestion}
             </button>
           ))}
         </div>
@@ -365,11 +384,11 @@ export default function ColumnFilterInput({
           className={styles.dropdown}
           style={
             {
-              backgroundColor: dropdownBackgroundColor,
-              borderColor: dropdownBorderColor,
-              color: dropdownColor,
-              '--column-filter-shadow-color': dropdownBorderColor,
-              '--column-filter-hover-background-color': dropdownBorderColor,
+              backgroundColor: resolvedDropdownBackgroundColor,
+              borderColor: resolvedDropdownBorderColor,
+              color: resolvedDropdownColor,
+              '--filter-input-shadow-color': resolvedDropdownBorderColor,
+              '--filter-input-hover-background-color': resolvedDropdownBorderColor,
             } as React.CSSProperties
           }
         >
@@ -391,6 +410,20 @@ export default function ColumnFilterInput({
           )}
         </div>
       )}
+    </div>
+  );
+
+  if (!filterBar) return input;
+
+  return (
+    <div
+      className={styles.filterBar}
+      style={{
+        backgroundColor: filterBar.backgroundColor,
+        borderColor: filterBar.borderColor,
+      }}
+    >
+      {input}
     </div>
   );
 }

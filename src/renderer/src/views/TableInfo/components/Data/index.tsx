@@ -46,7 +46,7 @@ import {
 } from '@renderer/database/ddl';
 import ModalDataError from './components/ModalDataError';
 import { getRendererDialect } from '@renderer/database/dialects';
-import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import FilterInput from '@renderer/components/FilterInput';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
@@ -795,23 +795,20 @@ const Data = ({
         } as React.CSSProperties
       }
     >
-      <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
-        <ColumnFilterInput
-          inputClassName={styles.filterInput}
-          placeholder={t('placeholder.filterResults')}
-          value={whereInput}
-          columnNames={columnNames}
-          onChange={handleWhereInputChange}
-          historyItems={filterHistory}
-          onHistorySelect={applyFilter}
-          onKeyDown={handleFilterKeyDown}
-          inputStyle={{ color: theme.bar.color, opacity: filterLocked ? 0.6 : 1 }}
-          dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
-          dropdownBorderColor={theme.bar.borderColor}
-          dropdownColor={theme.bar.color}
-          disabled={filterLocked}
-        />
-      </div>
+      <FilterInput
+        filterBar={{
+          ...theme.bar,
+          inputOpacity: filterLocked ? 0.6 : 1,
+        }}
+        placeholder={t('placeholder.filterResults')}
+        value={whereInput}
+        suggestions={columnNames}
+        onChange={handleWhereInputChange}
+        historyItems={filterHistory}
+        onHistorySelect={applyFilter}
+        onKeyDown={handleFilterKeyDown}
+        disabled={filterLocked}
+      />
 
       <div className={styles.content}>
         <div className={styles.tableWrapper}>

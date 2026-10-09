@@ -1,7 +1,7 @@
 import React from 'react';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Button } from '@renderer/components/Button';
-import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import FilterInput from '@renderer/components/FilterInput';
 import { type IColumn, type ISortDirection, type ITableSort } from '@renderer/components/Table/dtos';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -97,19 +97,12 @@ const ProcessList = ({ id_connection }: IProcessListProps) => {
         } as React.CSSProperties
       }
     >
-      <div className={styles.filterBar} style={{ backgroundColor: theme.bar.backgroundColor }}>
-        <ColumnFilterInput
-          inputClassName={styles.filterInput}
-          value={filter}
-          columnNames={[]}
-          placeholder={t('processList.filterPlaceholder')}
-          onChange={setFilter}
-          inputStyle={{ color: theme.bar.color }}
-          dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
-          dropdownBorderColor={theme.bar.borderColor}
-          dropdownColor={theme.bar.color}
-        />
-      </div>
+      <FilterInput
+        filterBar={theme.bar}
+        value={filter}
+        placeholder={t('processList.filterPlaceholder')}
+        onChange={setFilter}
+      />
 
       <div className={styles.content}>
         <div className={styles.tableContainer}>

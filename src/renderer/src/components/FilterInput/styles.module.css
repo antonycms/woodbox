@@ -1,6 +1,15 @@
+.filterBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid;
+  flex-shrink: 0;
+}
+
 .container {
   position: relative;
   display: flex;
+  align-items: center;
   flex: 1;
   min-width: 0;
   gap: 2px;
@@ -9,9 +18,27 @@
 .input {
   flex: 1;
   min-width: 0;
+  padding: 4px 10px;
+  margin: 2px;
+  border-radius: 2px;
+}
+
+.filterBarInput {
+  width: 100%;
+  border: 0;
+  background-color: transparent;
+  padding: 6px 18px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+}
+
+.filterBarInput::placeholder {
+  opacity: 0.5;
 }
 
 .historyButton {
+  margin-right: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,7 +56,7 @@
 
 .historyButton:hover,
 .historyButtonActive {
-  background: var(--column-filter-hover-background-color);
+  background: var(--filter-input-hover-background-color);
   opacity: 1;
 }
 
@@ -53,7 +80,7 @@
   border-radius: 6px;
   background: var(--color-dark);
   color: var(--color-white);
-  box-shadow: 0 8px 24px var(--column-filter-shadow-color);
+  box-shadow: 0 8px 24px var(--filter-input-shadow-color);
 }
 
 .option {
@@ -77,7 +104,7 @@
 
 .option:hover,
 .optionActive {
-  background: var(--column-filter-hover-background-color);
+  background: var(--filter-input-hover-background-color);
 }
 
 .emptyHistory {

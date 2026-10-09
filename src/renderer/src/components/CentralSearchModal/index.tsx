@@ -12,7 +12,7 @@ import { QueryEditor } from '@renderer/views/QueryEditor';
 import TableInfo from '@renderer/views/TableInfo';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import IconItemTreeView from '@renderer/components/TreeView/IconItemTreeView';
-import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import FilterInput from '@renderer/components/FilterInput';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -715,11 +715,11 @@ export const CentralSearchModal = React.memo(() => {
     <div className={styles.overlay} onMouseDown={closeModal} style={style}>
       <div className={styles.container} onMouseDown={(event) => event.stopPropagation()}>
         <div className={styles.searchHeader}>
-          <ColumnFilterInput
+          <FilterInput
             autoFocus
             inputClassName={styles.searchInput}
             value={searchText}
-            columnNames={activeTableColumnNames}
+            suggestions={activeTableColumnNames}
             placeholder={t('placeholder.searchAll')}
             onChange={handleSearchChange}
             dropdownBackgroundColor={fieldBackgroundColor}

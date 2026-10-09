@@ -10,7 +10,7 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
-import ColumnFilterInput from '@renderer/components/ColumnFilterInput';
+import FilterInput from '@renderer/components/FilterInput';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import styles from './styles.module.css';
 
@@ -260,27 +260,18 @@ const ReferenceSelection = ({
   return (
     <div
       className={styles.container}
-      style={{ "--reference-border-color": theme.bar.borderColor } as React.CSSProperties}
+      style={{ '--reference-border-color': theme.bar.borderColor } as React.CSSProperties}
     >
-      <div
-        className={styles.filterBar}
-        style={{ backgroundColor: theme.bar.backgroundColor }}
-      >
-        <ColumnFilterInput
-          inputClassName={styles.filterInput}
-          placeholder={t('placeholder.filterSelection')}
-          value={whereInput}
-          columnNames={columnNames}
-          onChange={setWhereInput}
-          historyItems={filterHistory}
-          onHistorySelect={applyFilter}
-          onKeyDown={handleFilterKeyDown}
-          inputStyle={{ color: theme.bar.color }}
-          dropdownBackgroundColor={theme.bar.fieldBackgroundColor}
-          dropdownBorderColor={theme.bar.borderColor}
-          dropdownColor={theme.bar.color}
-        />
-      </div>
+      <FilterInput
+        filterBar={theme.bar}
+        placeholder={t('placeholder.filterSelection')}
+        value={whereInput}
+        suggestions={columnNames}
+        onChange={setWhereInput}
+        historyItems={filterHistory}
+        onHistorySelect={applyFilter}
+        onKeyDown={handleFilterKeyDown}
+      />
 
       <div className={styles.tableWrapper}>
         <Table

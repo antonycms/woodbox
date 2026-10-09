@@ -19,7 +19,7 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { generateTriggersDdl } from '@renderer/database/ddl';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
@@ -168,7 +168,8 @@ const Triggers = ({ tableStore, id_connection, schema, table }: ITableInfoViewPr
         onClose={() => setShowDdlModal(false)}
       />
 
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterTriggers')}
         value={triggerFilterText}
         onChange={setTriggerFilterText}

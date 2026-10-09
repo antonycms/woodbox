@@ -29,7 +29,7 @@ import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
-import FilterBar from '../../components/FilterBar';
+import FilterInput from '@renderer/components/FilterInput';
 import { generateAddColumnsDdl, getColumnType } from '@renderer/database/ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import { getRendererDialect } from '@renderer/database/dialects';
@@ -700,7 +700,8 @@ const Columns = ({ tableStore,
         onAdd={handleAddPendingColumn}
       />
 
-      <FilterBar
+      <FilterInput
+        filterBar={theme.bar}
         placeholder={t('placeholder.filterColumns')}
         value={columnFilterText}
         onChange={setColumnFilterText}
