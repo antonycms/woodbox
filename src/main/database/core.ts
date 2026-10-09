@@ -37,6 +37,12 @@ import { openSshTunnel, type SshTunnel } from './ssh';
 import { verifySshHost } from './sshHostVerification';
 import { mergeSshCredentials } from '../storage/modules/ssh_credentials';
 import { serializeOrderBy } from './utils/orderBy';
+import {
+  getReactNativeBridgeConnectionSource,
+  getReactNativeBridgeGatewayOptions,
+  getReactNativeBridgeTestSource,
+  isReactNativeBridgeDialect,
+} from './utils/reactNativeBridge';
 import { getExportSql } from './utils/exportSql';
 import {
   hasSqlStatementSeparator,
@@ -65,14 +71,6 @@ const serverOutputByConnection = new Map<string, IServerOutputMessage[]>();
 const MAX_SERVER_OUTPUT_MESSAGES = 1000;
 
 type IExportPreviewParams = Pick<IExportDataParams, 'source'>;
-
-const isReactNativeBridgeDialect = (dialect: Dialect) => dialect === 'react-native-sqlite';
-const getReactNativeBridgeConnectionSource = (connectionId: string) => `connection:${connectionId}`;
-const getReactNativeBridgeTestSource = (connectionId?: string) =>
-  `test:${connectionId || Date.now().toString(36)}`;
-const getReactNativeBridgeGatewayOptions = (config: IConnectionConfig) => ({
-  port: config.reactNativeBridge?.port,
-});
 
 const addServerOutput = (connectionId: string, notice: Pick<IServerOutputMessage, 'severity' | 'message' | 'detail' | 'hint' | 'where'>) => {
   if (!connectionId) return;
