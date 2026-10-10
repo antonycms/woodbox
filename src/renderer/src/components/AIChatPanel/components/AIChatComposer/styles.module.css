@@ -1,7 +1,9 @@
 .composer {
   flex: none;
   min-width: 0;
-  padding: 10px 16px 14px;
+  padding: 8px;
+  border-top: 2px solid var(--borderColor);
+  background-color: var(--backgroundColor);
 }
 
 .composerForm {
@@ -23,22 +25,23 @@
   gap: 8px;
   width: 100%;
   min-height: 96px;
-  padding: 13px 11px 8px;
-  border: 1px solid color-mix(in srgb, var(--borderColor) 40%, transparent);
-  border-radius: 16px;
+  padding: 10px 10px 7px;
+  border: 1px solid var(--borderColor);
+  border-radius: 8px;
   box-sizing: border-box;
-  background-color: color-mix(in srgb, var(--cardBackgroundColor) 90%, var(--backgroundColor));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color) 6%, transparent),
-    0 16px 36px color-mix(in srgb, var(--backgroundColor) 28%, transparent);
+  background-color: var(--cardBackgroundColor);
   transition:
     border-color 140ms ease,
     background-color 140ms ease;
 }
 
 .composerInputWrap:focus-within .composerField {
-  border-color: color-mix(in srgb, var(--ascentColor) 42%, var(--borderColor));
-  background-color: color-mix(in srgb, var(--cardBackgroundColor) 94%, var(--backgroundColor));
+  border-color: var(--borderColor);
+  background-color: color-mix(
+    in srgb,
+    var(--cardBackgroundColor) 92%,
+    var(--backgroundColor)
+  );
 }
 
 .composerTextareaWrap {
@@ -88,17 +91,17 @@
 }
 
 .composer textarea::placeholder {
-  color: color-mix(in srgb, var(--ascentColor) 42%, var(--mutedColor));
+  color: color-mix(in srgb, var(--color) 46%, transparent);
 }
 
 .tableMentionChip {
   display: inline-block;
   max-width: 100%;
-  border-radius: 6px;
-  color: var(--ascentColor);
+  border-radius: 4px;
+  color: var(--color);
   cursor: pointer;
   pointer-events: auto;
-  background-color: color-mix(in srgb, var(--ascentColor) 12%, var(--cardBackgroundColor));
+  background-color: color-mix(in srgb, var(--borderColor) 52%, transparent);
 }
 
 .contextChips {
@@ -112,15 +115,15 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  border: 1px solid color-mix(in srgb, var(--ascentColor) 34%, transparent);
-  border-radius: 8px;
-  color: var(--ascentColor);
-  background-color: color-mix(in srgb, var(--ascentColor) 13%, var(--cardBackgroundColor));
+  border: 1px solid var(--borderColor);
+  border-radius: 5px;
+  color: var(--color);
+  background-color: color-mix(in srgb, var(--backgroundColor) 62%, transparent);
 }
 
 .contextChip:hover {
-  border-color: color-mix(in srgb, var(--ascentColor) 62%, transparent);
-  background-color: color-mix(in srgb, var(--ascentColor) 18%, var(--cardBackgroundColor));
+  border-color: color-mix(in srgb, var(--ascentColor) 42%, var(--borderColor));
+  background-color: color-mix(in srgb, var(--borderColor) 42%, transparent);
 }
 
 .contextChipMain,
@@ -167,11 +170,12 @@
   left: 0;
   z-index: 22;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--ascentColor) 38%, var(--borderColor));
-  border-radius: 12px;
+  border: 1px solid var(--borderColor);
+  border-radius: 8px;
   color: var(--color);
-  background-color: color-mix(in srgb, var(--cardBackgroundColor) 97%, var(--backgroundColor));
-  box-shadow: 0 18px 44px color-mix(in srgb, var(--backgroundColor) 60%, black);
+  background-color: var(--cardBackgroundColor);
+  box-shadow: 0 14px 36px
+    color-mix(in srgb, var(--backgroundColor) 58%, transparent);
 }
 
 .contextPreviewBubble header {
@@ -180,12 +184,13 @@
   justify-content: space-between;
   gap: 10px;
   padding: 9px 11px;
-  border-bottom: 1px solid color-mix(in srgb, var(--borderColor) 48%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--borderColor) 48%, transparent);
   user-select: none;
 }
 
 .contextPreviewBubble header strong {
-  color: var(--ascentColor);
+  color: var(--color);
   font-size: 12px;
 }
 
@@ -201,7 +206,11 @@
   padding: 11px;
   overflow: auto;
   color: color-mix(in srgb, var(--color) 90%, transparent);
-  font: 12px/1.45 "JetBrains Mono", "Fira Code", Consolas, monospace;
+  font:
+    12px/1.45 "JetBrains Mono",
+    "Fira Code",
+    Consolas,
+    monospace;
   white-space: pre-wrap;
 }
 
@@ -231,9 +240,11 @@
 .connectionBadgeButton,
 .modelBadgeButton {
   max-width: 126px;
-  padding: 0;
+  height: 24px;
+  padding: 0 6px;
   border: 0;
-  color: color-mix(in srgb, var(--color) 72%, transparent);
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--color) 68%, transparent);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -241,6 +252,12 @@
   white-space: nowrap;
   user-select: none;
   background: transparent;
+}
+
+.connectionBadgeButton:hover:not(:disabled),
+.modelBadgeButton:hover:not(:disabled) {
+  color: var(--color);
+  background-color: color-mix(in srgb, var(--borderColor) 46%, transparent);
 }
 
 .connectionBadgeButton {
@@ -263,11 +280,12 @@
   max-height: 300px;
   overflow: auto;
   padding: 10px 0;
-  border: 1px solid color-mix(in srgb, var(--borderColor) 42%, transparent);
-  border-radius: 10px;
+  border: 1px solid var(--borderColor);
+  border-radius: 6px;
   color: var(--color);
-  background-color: color-mix(in srgb, var(--cardBackgroundColor) 96%, var(--backgroundColor));
-  box-shadow: 0 18px 44px color-mix(in srgb, var(--backgroundColor) 52%, transparent);
+  background-color: var(--cardBackgroundColor);
+  box-shadow: 0 12px 30px
+    color-mix(in srgb, var(--backgroundColor) 55%, transparent);
 }
 
 .modelDropdown {
@@ -283,17 +301,16 @@
   width: calc(100% - 20px);
   margin: 0 10px 8px;
   padding: 7px 8px;
-  border: 1px solid color-mix(in srgb, var(--borderColor) 48%, transparent);
-  border-radius: 8px;
+  border: 1px solid var(--borderColor);
+  border-radius: 4px;
   box-sizing: border-box;
   color: var(--color);
-  outline: none !important;
   font-size: 12px;
-  background-color: color-mix(in srgb, var(--backgroundColor) 72%, transparent);
+  background-color: var(--backgroundColor);
 }
 
 .connectionFilterInput:focus {
-  border-color: color-mix(in srgb, var(--ascentColor) 52%, var(--borderColor));
+  border-color: var(--borderColor);
 }
 
 .connectionFilterInput::placeholder {
@@ -322,9 +339,10 @@
   overflow: auto;
   max-height: 238px;
   border: 1px solid var(--borderColor);
-  border-radius: 12px;
-  background-color: color-mix(in srgb, var(--cardBackgroundColor) 96%, var(--backgroundColor));
-  box-shadow: 0 14px 34px color-mix(in srgb, var(--backgroundColor) 55%, transparent);
+  border-radius: 6px;
+  background-color: var(--cardBackgroundColor);
+  box-shadow: 0 12px 30px
+    color-mix(in srgb, var(--backgroundColor) 55%, transparent);
 }
 
 .modelGroup + .modelGroup {
@@ -402,17 +420,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: 0;
-  border-radius: 50%;
+  border: 1px solid
+    color-mix(in srgb, var(--ascentColor) 45%, var(--borderColor));
+  border-radius: 5px;
   cursor: pointer;
-  color: var(--sendColor);
-  background-color: var(--sendBackgroundColor);
+  color: var(--ascentColor);
+  background-color: color-mix(
+    in srgb,
+    var(--ascentColor) 12%,
+    var(--backgroundColor)
+  );
   transition:
     transform 160ms ease,
-    opacity 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
     background-color 160ms ease;
 }
 
@@ -423,22 +447,40 @@
 }
 
 .stopButton {
-  color: var(--sendColor);
-  background-color: var(--sendBackgroundColor);
+  border-color: color-mix(
+    in srgb,
+    var(--queryRejectedColor) 42%,
+    var(--borderColor)
+  );
+  color: var(--queryRejectedColor);
+  background-color: color-mix(
+    in srgb,
+    var(--queryRejectedColor) 11%,
+    var(--backgroundColor)
+  );
 }
 
 .sendButton[disabled] {
-  color: var(--sendDisabledColor);
+  border-color: var(--borderColor);
+  color: color-mix(in srgb, var(--color) 42%, transparent);
   cursor: not-allowed;
-  background-color: var(--sendDisabledBackgroundColor);
+  background-color: transparent;
 }
 
 .sendButton:hover:not([disabled]) {
-  opacity: 0.9;
+  background-color: color-mix(
+    in srgb,
+    var(--ascentColor) 18%,
+    var(--backgroundColor)
+  );
 }
 
 .stopButton:hover {
-  opacity: 0.88;
+  background-color: color-mix(
+    in srgb,
+    var(--queryRejectedColor) 17%,
+    var(--backgroundColor)
+  );
 }
 
 .sendButton:active:not([disabled]) {
