@@ -3,6 +3,7 @@ import defaultTheme from '@renderer/styles/theme/default';
 import type { ITheme } from '@renderer/styles/theme/theme';
 import { builtinThemes } from '@renderer/styles/theme/builtin';
 import { readStorageValue, writeStorageValue } from '@renderer/utils/storage';
+import { useI18nStore } from '@renderer/stores/I18n';
 
 import type { IThemeStore } from './types';
 
@@ -110,7 +111,7 @@ export const useThemeStore = create<IThemeStore>()((set, get) => {
     },
     changeTheme: (name) => {
       const activeTheme = get().availableThemes.find((theme) => theme.name === name);
-      if (!activeTheme) throw new Error('Tema inválido.');
+      if (!activeTheme) throw new Error(useI18nStore.getState().t('theme.invalid'));
       activeThemeName = name;
       set({ activeTheme });
       persistThemes();

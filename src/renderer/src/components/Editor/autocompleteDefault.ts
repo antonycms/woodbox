@@ -1,6 +1,7 @@
 /* eslint-disable prefer-const */
 import { getCurrentQuerySqlFromContent } from '@renderer/utils/sql';
 import { getSnippetBodyText, getSnippetPrefixes } from '@renderer/utils/snippets';
+import { useI18nStore } from '@renderer/stores/I18n';
 import { editor, languages } from './monaco';
 import { language as sqlLanguage } from 'monaco-editor/languages/definitions/sql/sql';
 
@@ -18,19 +19,6 @@ const makeItem =
     sortText: String(priority ?? 9),
   });
 
-const operatorsItems = operators.map(
-  makeItem('Operator SQL', languages.CompletionItemKind.Operator),
-);
-const builtinFunctionsItems = builtinFunctions.map(
-  makeItem('Function SQL', languages.CompletionItemKind.Function),
-);
-
-const keywordsItems = keywords
-  .filter((word) => !operators.includes(word) && !builtinFunctions.includes(word))
-  .map(makeItem('Reserved Word SQL', languages.CompletionItemKind.Variable, 2));
-
-const defaultSugestions = [...operatorsItems, ...builtinFunctionsItems, ...keywordsItems];
-
 export interface IDefineSQlAutocompleteParams {
   schemas?: { name: string }[];
   tablesAvailable?: { name: string; schema?: string }[];
@@ -45,6 +33,21 @@ const autocompleteParamsByModelUri = new Map<string, IDefineSQlAutocompleteParam
 let autocompleteProviderDisposable:
   | ReturnType<typeof languages.registerCompletionItemProvider>
   | undefined;
+
+const getAutocompleteLabels = () => {
+  const t = useI18nStore.getState().t;
+
+  return {
+    alias: t('autocomplete.alias'),
+    column: t('autocomplete.column'),
+    function: t('autocomplete.function'),
+    functionSql: t('autocomplete.functionSql'),
+    operatorSql: t('autocomplete.operatorSql'),
+    reservedWordSql: t('autocomplete.reservedWordSql'),
+    schema: t('autocomplete.schema'),
+    table: t('autocomplete.table'),
+  };
+};
 
 const tokenizeSqlAutocompleteContent = (content: string) => {
   const words: string[] = [];
@@ -104,11 +107,22 @@ const ensureSqlAutocompleteProvider = () => {
         tablesAvailable = [],
         tablesUsed = [],
       } = params;
+      const labels = getAutocompleteLabels();
+      const operatorsItems = operators.map(
+        makeItem(labels.operatorSql, languages.CompletionItemKind.Operator),
+      );
+      const builtinFunctionsItems = builtinFunctions.map(
+        makeItem(labels.functionSql, languages.CompletionItemKind.Function),
+      );
+      const keywordsItems = keywords
+        .filter((word) => !operators.includes(word) && !builtinFunctions.includes(word))
+        .map(makeItem(labels.reservedWordSql, languages.CompletionItemKind.Variable, 2));
+      const defaultSuggestions = [...operatorsItems, ...builtinFunctionsItems, ...keywordsItems];
       const aliases = tablesUsed.filter((tableInfo) => tableInfo.alias);
       const functionsWords = functions.map(({ name }) =>
-        makeItem('Função', languages.CompletionItemKind.Function, 3)(name),
+        makeItem(labels.function, languages.CompletionItemKind.Function, 3)(name),
       );
-      const defaultAvailableWords = [...functionsWords, ...defaultSugestions];
+      const defaultAvailableWords = [...functionsWords, ...defaultSuggestions];
       let availableWords: IItem[] = defaultAvailableWords;
 
       const value = model.getValueInRange({
@@ -176,38 +190,40 @@ const ensureSqlAutocompleteProvider = () => {
       if (isAlias) {
         const columnsWords = columns
           .filter(({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema)
-          .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable, 0)(name));
+          .map(({ name }) =>
+            makeItem(labels.column, languages.CompletionItemKind.Variable, 0)(name),
+          );
 
         availableWords = columnsWords;
       } //
       else if (isSchema) {
         const tablesWords = tablesAvailable
           .filter(({ schema }) => currentWord?.split('.')[0] === schema)
-          .map(({ name }) => makeItem('Tabela', languages.CompletionItemKind.Variable)(name));
+          .map(({ name }) => makeItem(labels.table, languages.CompletionItemKind.Variable)(name));
 
         const schemaFunctionsWords = functions
           .filter(({ schema }) => currentWord?.split('.')[0] === schema)
-          .map(({ name }) => makeItem('Função', languages.CompletionItemKind.Function, 3)(name));
+          .map(({ name }) => makeItem(labels.function, languages.CompletionItemKind.Function, 3)(name));
 
         availableWords = [...schemaFunctionsWords, ...tablesWords];
       } //
       else if (isSelectColumns) {
         const columnsWords = columns.map(({ name }) =>
-          makeItem('Column', languages.CompletionItemKind.Variable, 0)(name),
+          makeItem(labels.column, languages.CompletionItemKind.Variable, 0)(name),
         );
         availableWords = [...columnsWords, ...defaultAvailableWords];
       } //
       else if (isFromOrJoin) {
         if (schemas?.length) {
           const schemasWords = schemas.map(({ name }) =>
-            makeItem('Esquema', languages.CompletionItemKind.Variable)(name),
+            makeItem(labels.schema, languages.CompletionItemKind.Variable)(name),
           );
 
           availableWords = schemasWords;
         } //
         else {
           const tablesWords = tablesAvailable.map(({ name }) =>
-            makeItem('Tabela', languages.CompletionItemKind.Variable)(name),
+            makeItem(labels.table, languages.CompletionItemKind.Variable)(name),
           );
 
           availableWords = tablesWords;
@@ -215,7 +231,7 @@ const ensureSqlAutocompleteProvider = () => {
       } //
       else if (isUpdateSetColumns || isInsertColumns) {
         availableWords = columns.map(({ name }) =>
-          makeItem('Column', languages.CompletionItemKind.Variable)(name),
+          makeItem(labels.column, languages.CompletionItemKind.Variable)(name),
         );
       } //
       else if (isFilterOperators) {
@@ -224,17 +240,19 @@ const ensureSqlAutocompleteProvider = () => {
             .filter(
               ({ table, schema }) => table === tableAlias.name && schema === tableAlias.schema,
             )
-            .map(({ name }) => makeItem('Column', languages.CompletionItemKind.Variable, 1)(name));
+            .map(({ name }) =>
+              makeItem(labels.column, languages.CompletionItemKind.Variable, 1)(name),
+            );
 
           availableWords = [...columnsWords];
         } //
         else {
           const aliasAvailable = aliases.map((alias) =>
-            makeItem('Alias', languages.CompletionItemKind.Variable, 1)(alias.alias),
+            makeItem(labels.alias, languages.CompletionItemKind.Variable, 1)(alias.alias),
           );
 
           const columnsWords = columns.map(({ name }) =>
-            makeItem('Column', languages.CompletionItemKind.Variable, 0)(name),
+            makeItem(labels.column, languages.CompletionItemKind.Variable, 0)(name),
           );
 
           availableWords = [...columnsWords, ...aliasAvailable, ...defaultAvailableWords];

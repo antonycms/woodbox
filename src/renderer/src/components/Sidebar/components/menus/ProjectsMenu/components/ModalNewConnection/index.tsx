@@ -20,11 +20,6 @@ import { ConnectionModeNetworkFields } from './components/ConnectionModeNetworkF
 import { ReactNativeBridgeFields } from './components/ReactNativeBridgeFields';
 import type { IDataNewConnection } from './types';
 
-const connectionEnvironmentOptions: { label: string; value: ConnectionEnvironment }[] = [
-  { label: 'Desenvolvimento', value: 'development' },
-  { label: 'Produção', value: 'production' },
-];
-
 const getConnectionData = (data: IDataNewConnection, idProject?: string): IConnectionCreate => {
   const dialect = getRendererDialect(data.dialect);
   const isReactNativeBridge = dialect.connectionMode === 'react-native-bridge';
@@ -71,6 +66,15 @@ export const ModalNewConnection = React.memo(
     const formRef = React.useRef<HTMLFormElement>(null);
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
 
+    const connectionEnvironmentOptions = React.useMemo<
+      { label: string; value: ConnectionEnvironment }[]
+    >(
+      () => [
+        { label: t('field.development'), value: 'development' },
+        { label: t('field.production'), value: 'production' },
+      ],
+      [t],
+    );
     const defaultDialect = getRendererDialect(connectionTypes[0]);
     const dialectOptions = getRendererDialectOptions(connectionTypes);
 

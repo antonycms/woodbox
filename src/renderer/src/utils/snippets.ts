@@ -1,5 +1,6 @@
 import type { ISnippet } from '@shared/types/workspace';
 import type { Dialect } from '@shared/types/connections';
+import { useI18nStore } from '@renderer/stores/I18n';
 
 export type SnippetInput = Omit<ISnippet, 'id' | 'created_at' | 'updated_at'>;
 
@@ -187,8 +188,10 @@ const stripJsonTrailingCommas = (content: string) => {
 };
 
 const validateSnippetPayload = (name: string, payload: VsCodeSnippetPayload): SnippetInput => {
+  const t = useI18nStore.getState().t;
+
   if (!payload || typeof payload !== 'object') {
-    throw new Error(`Snippet "${name}" inválido.`);
+    throw new Error(t('snippet.invalid', { name }));
   }
 
   const prefix = payload.prefix;
@@ -197,11 +200,11 @@ const validateSnippetPayload = (name: string, payload: VsCodeSnippetPayload): Sn
   const description = payload.description;
 
   if (typeof prefix !== 'string' && !isStringArray(prefix)) {
-    throw new Error(`Snippet "${name}" sem prefix válido.`);
+    throw new Error(t('snippet.invalidPrefix', { name }));
   }
 
   if (typeof body !== 'string' && !isStringArray(body)) {
-    throw new Error(`Snippet "${name}" sem body válido.`);
+    throw new Error(t('snippet.invalidBody', { name }));
   }
 
   return {
@@ -214,13 +217,14 @@ const validateSnippetPayload = (name: string, payload: VsCodeSnippetPayload): Sn
 };
 
 export const parseSnippetsFileContent = (content: string): SnippetInput[] => {
+  const t = useI18nStore.getState().t;
   const parsed = JSON.parse(stripJsonTrailingCommas(stripJsonComments(content))) as Record<
     string,
     VsCodeSnippetPayload
   >;
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Arquivo de snippets inválido.');
+    throw new Error(t('snippet.invalidFile'));
   }
 
   return Object.entries(parsed).map(([name, payload]) => validateSnippetPayload(name, payload));

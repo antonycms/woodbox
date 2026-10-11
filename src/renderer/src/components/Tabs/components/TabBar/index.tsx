@@ -46,6 +46,7 @@ const TabsBar = (props: ITabsBarProps) => {
     onDraggingTabId,
   } = props;
   const { mainTab: theme } = useThemeStore((state) => state.activeTheme);
+  const t = useI18nStore((state) => state.t);
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const handledGroupEditorRequestRef = React.useRef<IGroupEditorRequest>(null);
@@ -401,7 +402,7 @@ const TabsBar = (props: ITabsBarProps) => {
               tabId={item.tab.idTab}
               groupId={item.tab.groupId}
               groupColor={item.group?.color}
-              title={item.tab.title || 'Sem título'}
+              title={item.tab.title || t('tab.untitled')}
               subtitle={item.tab.subtitle}
               ascentColor={item.group?.color || ascentColor}
               color={color}
