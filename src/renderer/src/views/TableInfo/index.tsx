@@ -32,6 +32,7 @@ type OpenTableWithFilterParams = {
 };
 
 const TableInfo = (props: ITableInfoViewProps) => {
+  const t = useI18nStore((state) => state.t);
   const { tableInfo: theme } = useThemeStore((state) => state.activeTheme);
   const {
     pendingColumns,
@@ -43,6 +44,8 @@ const TableInfo = (props: ITableInfoViewProps) => {
     pendingDroppedRestrictions,
     pendingReferences,
     pendingDroppedReferences,
+    setTableContext,
+    setTableAppliedHandler,
   } = useTableInfoStore(
     props.tableStore,
     useShallow((state) => ({
@@ -55,9 +58,10 @@ const TableInfo = (props: ITableInfoViewProps) => {
       pendingDroppedRestrictions: state.pendingDroppedRestrictions,
       pendingReferences: state.pendingReferences,
       pendingDroppedReferences: state.pendingDroppedReferences,
+      setTableContext: state.setTableContext,
+      setTableAppliedHandler: state.setTableAppliedHandler,
     })),
   );
-  const t = useI18nStore((state) => state.t);
   const { addTab, getTab, setActiveTabId, updateTab } = useAppTabStore(
     useShallow((state) => ({
       addTab: state.addTab,
@@ -66,11 +70,19 @@ const TableInfo = (props: ITableInfoViewProps) => {
       updateTab: state.updateTab,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
+  const { connections, connectionsInfo, loadConnectionInfo } = useWorkspaceStore(
+    useShallow((state) => ({
+      connections: state.connections,
+      connectionsInfo: state.connectionsInfo,
+      loadConnectionInfo: state.loadConnectionInfo,
+    })),
+  );
   const [id] = React.useState(generateHash());
   const [mode, setMode] = React.useState(props.mode || 'view');
   const [table, setTable] = React.useState(props.table);
   const [hasPendingRowsChanges, setHasPendingRowsChanges] = React.useState(false);
+  const [hasPendingTablePropertiesChanges, setHasPendingTablePropertiesChanges] =
+    React.useState(false);
   const [pendingOpenTableWithFilter, setPendingOpenTableWithFilter] =
     React.useState<OpenTableWithFilterParams>();
   const [activeTableInfoTabId, setActiveTableInfoTabId] = React.useState(
@@ -78,12 +90,32 @@ const TableInfo = (props: ITableInfoViewProps) => {
   );
   const propertiesRefreshRef = React.useRef<(() => void | Promise<void>) | undefined>(undefined);
   const dataRefreshRef = React.useRef<(() => void | Promise<void>) | undefined>(undefined);
-  const isCreateMode = mode === 'create';
 
-  const tabsProps = React.useMemo(() => ({ ...props, mode, table }), [mode, props, table]);
+  const isCreateMode = mode === 'create';
+  const connectionInfo = connectionsInfo.get(props.id_connection);
+
+  const dialect = React.useMemo(() => {
+    return getRendererDialect(
+      connections.find((connection) => connection.id === props.id_connection)?.dialect,
+    );
+  }, [connections, props.id_connection]);
+
+  const currentTable = React.useMemo(() => {
+    return connectionInfo?.tables.find(
+      (item) => item.table_name === table && (item.table_schema || '') === (props.schema || ''),
+    );
+  }, [connectionInfo, props.schema, table]);
+
+  const objectType = currentTable?.object_type || 'table';
+  const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
+  const supportsIndexes = currentTable?.supports_indexes ?? !isReadOnlyObject;
+  const supportsTriggers = currentTable?.supports_triggers ?? !isReadOnlyObject;
+  const supportsTableComments =
+    currentTable?.supports_table_comments ?? connectionInfo?.supports_table_comments ?? false;
+
   const hasPendingTableInfoChanges = React.useMemo(
-    () =>
-      [
+    () => {
+      return [
         pendingColumns,
         pendingDroppedColumns,
         pendingChangedColumns,
@@ -93,7 +125,8 @@ const TableInfo = (props: ITableInfoViewProps) => {
         pendingDroppedRestrictions,
         pendingReferences,
         pendingDroppedReferences,
-      ].some((items) => items.length > 0),
+      ].some((items) => items.length > 0);
+    },
     [
       pendingColumns,
       pendingDroppedColumns,
@@ -106,13 +139,9 @@ const TableInfo = (props: ITableInfoViewProps) => {
       pendingDroppedReferences,
     ],
   );
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === props.id_connection)?.dialect,
-      ),
-    [connections, props.id_connection],
-  );
+
+  const hasPendingPropertiesChanges =
+    hasPendingTableInfoChanges || hasPendingTablePropertiesChanges;
 
   const handleCreateApplied = React.useCallback(
     (createdTable: string) => {
@@ -150,33 +179,60 @@ const TableInfo = (props: ITableInfoViewProps) => {
     [addTab, props.draftTabId, props.id_connection, props.schema],
   );
 
-  const handleOpenTableSimple = React.useCallback(
-    (idConnection: string, schema: string, table: string) => {
-      const tabId = `${idConnection}_${schema}_${table}`;
-      if (getTab(tabId)) {
-        setActiveTabId(tabId);
-      } else {
-        addTab({
-          id: tabId,
-          title: `${schema ? `${schema}.` : ''}${table}`,
-          data: {
-            type: 'table-info',
-            id_connection: idConnection,
-            schema,
-            table,
-          },
-          component: () => (
-            <TableInfoWithStore
-              id_connection={idConnection}
-              schema={schema}
-              table={table}
-              appTabId={tabId}
-            />
-          ),
-        });
+  const handleTableApplied = React.useCallback(
+    (appliedTable: string) => {
+      setHasPendingTablePropertiesChanges(false);
+
+      if (!appliedTable || appliedTable === table) return;
+
+      const oldTabId = props.appTabId || `${props.id_connection}_${props.schema}_${table}`;
+      const newTabId = `${props.id_connection}_${props.schema}_${appliedTable}`;
+      const title = `${props.schema ? `${props.schema}.` : ''}${appliedTable}`;
+      const currentTab = getTab(oldTabId);
+
+      if (!currentTab) {
+        setTable(appliedTable);
+        return;
       }
+
+      addTab({
+        replaceId: oldTabId,
+        id: newTabId,
+        groupId: currentTab.groupId,
+        title,
+        data: {
+          type: 'table-info',
+          id_connection: props.id_connection,
+          schema: props.schema,
+          table: appliedTable,
+          initialWhere: props.initialWhere,
+          filterLocked: props.filterLocked,
+          initialTab: activeTableInfoTabId,
+        },
+        component: () => (
+          <TableInfoWithStore
+            id_connection={props.id_connection}
+            schema={props.schema}
+            table={appliedTable}
+            appTabId={newTabId}
+            initialWhere={props.initialWhere}
+            filterLocked={props.filterLocked}
+            initialTab={activeTableInfoTabId}
+          />
+        ),
+      });
     },
-    [addTab, getTab, setActiveTabId],
+    [
+      addTab,
+      activeTableInfoTabId,
+      getTab,
+      props.appTabId,
+      props.filterLocked,
+      props.id_connection,
+      props.initialWhere,
+      props.schema,
+      table,
+    ],
   );
 
   const applyTableDataTabWithFilter = React.useCallback(
@@ -220,21 +276,6 @@ const TableInfo = (props: ITableInfoViewProps) => {
     [addTab, getTab, setActiveTabId],
   );
 
-  const handleOpenTable = React.useCallback(
-    (
-      idConnection: string,
-      schema: string,
-      table: string,
-      filterColumn: string,
-      filterValue: string,
-    ) => {
-      const escapedValue = filterValue.replace(/'/g, "''");
-      const initialWhere = `${dialect.quoteIdent(filterColumn)} = '${escapedValue}'`;
-      applyTableDataTabWithFilter({ idConnection, schema, table, initialWhere });
-    },
-    [applyTableDataTabWithFilter, dialect],
-  );
-
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key !== 'F5') return;
@@ -254,12 +295,47 @@ const TableInfo = (props: ITableInfoViewProps) => {
   );
 
   React.useEffect(() => {
+    setTableAppliedHandler(isCreateMode ? handleCreateApplied : handleTableApplied);
+  }, [handleCreateApplied, handleTableApplied, isCreateMode, setTableAppliedHandler]);
+
+  React.useEffect(() => {
+    setTableContext({
+      idConnection: props.id_connection,
+      schema: props.schema || '',
+      table,
+      mode,
+      objectType,
+      supportsIndexes,
+      supportsTriggers,
+      supportsTableComments,
+      dialect,
+    });
+  }, [
+    dialect,
+    mode,
+    objectType,
+    props.id_connection,
+    props.schema,
+    setTableContext,
+    supportsIndexes,
+    supportsTableComments,
+    supportsTriggers,
+    table,
+  ]);
+
+  React.useEffect(() => {
+    if (connectionsInfo.has(props.id_connection)) return;
+
+    void loadConnectionInfo(props.id_connection).catch(() => undefined);
+  }, [connectionsInfo, loadConnectionInfo, props.id_connection]);
+
+  React.useEffect(() => {
     if (!props.appTabId) return;
 
     updateTab(props.appTabId, {
-      unsaved: mode === 'create' || hasPendingRowsChanges || hasPendingTableInfoChanges,
+      unsaved: mode === 'create' || hasPendingRowsChanges || hasPendingPropertiesChanges,
     });
-  }, [hasPendingRowsChanges, hasPendingTableInfoChanges, mode, props.appTabId, updateTab]);
+  }, [hasPendingRowsChanges, hasPendingPropertiesChanges, mode, props.appTabId, updateTab]);
 
   React.useEffect(() => {
     const currentTabId = props.appTabId || `${props.id_connection}_${props.schema}_${table}`;
@@ -310,9 +386,8 @@ const TableInfo = (props: ITableInfoViewProps) => {
       <TabWindow>
         <TabContent activeTabId={activeTableInfoTabId} idTab="tabProperties">
           <Properties
-            {...tabsProps}
-            onOpenTable={handleOpenTableSimple}
-            onCreateApplied={handleCreateApplied}
+            tableStore={props.tableStore}
+            onPendingTablePropertiesChange={setHasPendingTablePropertiesChanges}
             onRegisterRefresh={(refresh) => {
               propertiesRefreshRef.current = refresh;
             }}
@@ -322,8 +397,9 @@ const TableInfo = (props: ITableInfoViewProps) => {
         {!isCreateMode && (
           <TabContent activeTabId={activeTableInfoTabId} idTab="tabData">
             <Data
-              {...tabsProps}
-              onOpenTable={handleOpenTable}
+              tableStore={props.tableStore}
+              initialWhere={props.initialWhere}
+              filterLocked={props.filterLocked}
               onPendingRowsChangesChange={setHasPendingRowsChanges}
               onRegisterRefresh={(refresh) => {
                 dataRefreshRef.current = refresh;
@@ -347,7 +423,19 @@ const TableInfo = (props: ITableInfoViewProps) => {
 };
 
 const TableInfoWithStore = (props: ITableInfoProps) => {
-  const [tableStore] = React.useState(createTableInfoStore);
+  const [tableStore] = React.useState(() => {
+    const store = createTableInfoStore();
+
+    store.getState().setTableContext({
+      idConnection: props.id_connection,
+      schema: props.schema || '',
+      table: props.table,
+      mode: props.mode || 'view',
+    });
+
+    return store;
+  });
+
   return (
     <>
       <TableInfo {...props} tableStore={tableStore} />

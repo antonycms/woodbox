@@ -8,12 +8,10 @@ import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@shared/types/database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import type {
   IPendingIndexCreate,
 } from '@renderer/database/ddl/types';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
@@ -28,7 +26,6 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
 import { generateIndexesDdl } from '@renderer/database/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { IIndexInfoSerialized } from './dtos';
 import {
   getIndexColumnsText,
@@ -37,27 +34,16 @@ import {
   getIndexSizeText,
 } from './utils';
 
-const Indexes = ({ tableStore,
-  id_connection,
-  schema,
-  table,
-  mode,
-  tableComment,
-  onCreateApplied,
-}: ITableInfoViewProps) => {
+interface IIndexesProps {
+  tableStore: TableInfoStoreApi;
+}
+
+const Indexes = ({ tableStore }: IIndexesProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
-  const connections = useWorkspaceStore((state) => state.connections);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
   const {
     columns,
     pendingColumns,
@@ -74,6 +60,7 @@ const Indexes = ({ tableStore,
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -92,8 +79,11 @@ const Indexes = ({ tableStore,
       openPendingChangesSqlModal: state.openPendingChangesSqlModal,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+  const { idConnection: id_connection, schema, table, mode, dialect } = tableContext;
+
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
   const [indexFilterText, setIndexFilterText] = React.useState('');
@@ -232,20 +222,14 @@ const Indexes = ({ tableStore,
     openPendingChangesSqlModal(
       id_connection,
       { schema, table },
-      {
-        mode,
-        tableComment,
-        onApplied: onCreateApplied,
-      },
+      { mode },
     );
   }, [
     id_connection,
     mode,
-    onCreateApplied,
     openPendingChangesSqlModal,
     schema,
     table,
-    tableComment,
   ]);
 
   const handleAddPendingIndex = React.useCallback(
@@ -462,4 +446,4 @@ const Indexes = ({ tableStore,
   );
 };
 
-export default Indexes;
+export default React.memo(Indexes);

@@ -5,38 +5,33 @@ import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import Editor from '@renderer/components/Editor';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { getRendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
-const Definition = ({ tableStore, id_connection, schema, table }: ITableInfoViewProps) => {
+interface IDefinitionProps {
+  tableStore: TableInfoStoreApi;
+}
+
+const Definition = ({ tableStore }: IDefinitionProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
-  const { definition, loadTableDefinition, lastFetchDate, loading } = useTableInfoStore(
+  const { definition, loadTableDefinition, lastFetchDate, loading, tableContext } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
       definition: state.definition,
       loadTableDefinition: state.loadTableDefinition,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
+  const { idConnection: id_connection, schema, table, dialect } = tableContext;
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   React.useEffect(() => {
@@ -71,4 +66,4 @@ const Definition = ({ tableStore, id_connection, schema, table }: ITableInfoView
   );
 };
 
-export default Definition;
+export default React.memo(Definition);

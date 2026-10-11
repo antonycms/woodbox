@@ -28,7 +28,6 @@ interface ValuePreviewProps {
   selectedCellValue: unknown;
   selectedReference?: IColumnReferenceInfo;
   onClose: () => void;
-  onOpenTable?: React.ComponentProps<typeof ReferencePreview>['onOpenTable'];
   onDataError: (error: unknown) => void;
   onApplyValue: (value: unknown) => void;
 }
@@ -41,7 +40,6 @@ export const ValuePreview = ({
   selectedCellValue,
   selectedReference,
   onClose,
-  onOpenTable,
   onDataError,
   onApplyValue,
 }: ValuePreviewProps) => {
@@ -149,7 +147,7 @@ export const ValuePreview = ({
                 idConnection={id_connection}
                 initialReference={selectedReference}
                 initialValue={selectedCellValue}
-                onOpenTable={onOpenTable}
+                enableOpenTableNavigation
               />
             </TabContent>
           )}

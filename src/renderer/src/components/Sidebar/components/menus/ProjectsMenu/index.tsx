@@ -376,9 +376,6 @@ const ProjectsMenu = () => {
       const { id_connection, table_schema: schema, table_name: table } = item.data;
       const tabId = `${id_connection}_${schema}_${table}`;
       const title = `${schema ? `${schema}.` : ''}${table}`;
-      const objectType = item.data.object_type || 'table';
-      const supportsIndexes = item.data.supports_indexes;
-      const supportsTriggers = item.data.supports_triggers;
 
       const tab = getTab(tabId);
 
@@ -393,9 +390,6 @@ const ProjectsMenu = () => {
             id_connection,
             schema,
             table,
-            objectType,
-            supportsIndexes,
-            supportsTriggers,
           },
           component: () => (
             <TableInfo
@@ -403,9 +397,6 @@ const ProjectsMenu = () => {
               schema={schema}
               table={table}
               appTabId={tabId}
-              objectType={objectType}
-              supportsIndexes={supportsIndexes}
-              supportsTriggers={supportsTriggers}
             />
           ),
         });

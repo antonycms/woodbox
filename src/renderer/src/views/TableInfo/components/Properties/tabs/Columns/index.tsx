@@ -10,14 +10,13 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import type { IColumnInfo } from '@shared/types/database';
 import { generateHash } from '@shared/utils/string';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
 import type {
   IPendingColumnChange,
   IPendingColumnCreate,
   IPendingIndexCreate,
   IPendingReferenceCreate,
 } from '@renderer/database/ddl/types';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
@@ -32,7 +31,6 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
 import { generateAddColumnsDdl, getColumnType } from '@renderer/database/ddl';
 import ModalNewColumn from './components/ModalNewColumn';
-import { getRendererDialect } from '@renderer/database/dialects';
 import {
   getColumnSearchValues,
   getColumnSelectionKey,
@@ -45,31 +43,15 @@ import {
   serializeColumnBooleanLabels,
 } from './utils';
 
-const Columns = ({ tableStore,
-  id_connection,
-  schema,
-  table,
-  mode,
-  tableComment,
-  onCreateApplied,
-  objectType = 'table',
-}: ITableInfoViewProps) => {
+interface IColumnsProps {
+  tableStore: TableInfoStoreApi;
+}
+
+const Columns = ({ tableStore }: IColumnsProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
-  const { connections, connectionsInfo } = useWorkspaceStore(
-    useShallow((state) => ({
-      connections: state.connections,
-      connectionsInfo: state.connectionsInfo,
-    })),
-  );
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
+  const connectionsInfo = useWorkspaceStore((state) => state.connectionsInfo);
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
   const {
@@ -102,6 +84,7 @@ const Columns = ({ tableStore,
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -134,8 +117,11 @@ const Columns = ({ tableStore,
       openPendingChangesSqlModal: state.openPendingChangesSqlModal,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+  const { idConnection: id_connection, schema, table, mode, objectType, dialect } = tableContext;
+
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedColumns, setSelectedColumns] = React.useState<IColumnInfo[]>([]);
   const [columnFilterText, setColumnFilterText] = React.useState('');
@@ -553,20 +539,14 @@ const Columns = ({ tableStore,
     openPendingChangesSqlModal(
       id_connection,
       { schema, table },
-      {
-        mode,
-        tableComment,
-        onApplied: onCreateApplied,
-      },
+      { mode },
     );
   }, [
     id_connection,
     mode,
-    onCreateApplied,
     openPendingChangesSqlModal,
     schema,
     table,
-    tableComment,
   ]);
 
   const handleUndoSelectedDroppedColumns = React.useCallback(() => {
@@ -795,4 +775,4 @@ const Columns = ({ tableStore,
   );
 };
 
-export default Columns;
+export default React.memo(Columns);

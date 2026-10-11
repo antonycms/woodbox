@@ -9,7 +9,9 @@ import type {
   IPendingReferenceCreate,
   IPendingReferenceDrop,
 } from '@renderer/database/ddl/types';
+import type { RendererDialect } from '@renderer/database/dialects';
 import type {
+  DatabaseObjectType,
   IColumnInfo,
   IColumnReferenceInfo,
   IColumnRestrictionsInfo,
@@ -40,6 +42,13 @@ export interface ITableInfoStore extends ITableInfo {
   showPendingDdlModal: boolean;
   applyingPendingDdl: boolean;
   pendingConnectionId?: string;
+  tableContext: ITableContextState;
+  tableProperties: ITablePropertiesState;
+  tableAppliedHandler?: (table: string) => void;
+  setTableContext(context: Partial<ITableContextState>): void;
+  setTableAppliedHandler(handler?: (table: string) => void): void;
+  setTableProperties(properties: Partial<ITablePropertiesState>): void;
+  markTablePropertiesApplied(tableName: string): void;
   closePendingDdlModal(): void;
   applyPendingChangesSql(sql: string): Promise<void>;
 
@@ -104,8 +113,27 @@ export interface ILoadTableInfoFilters {
 
 export interface IOpenPendingChangesSqlModalOptions {
   mode?: 'view' | 'create';
-  tableComment?: string;
   onApplied?: (table: string) => void;
+}
+
+export interface ITablePropertiesState {
+  tableName: string;
+  originalTableName: string;
+  comment: string;
+  originalComment: string;
+  supportsTableComments: boolean;
+}
+
+export interface ITableContextState {
+  idConnection: string;
+  schema: string;
+  table: string;
+  mode: 'view' | 'create';
+  objectType: DatabaseObjectType;
+  supportsIndexes: boolean;
+  supportsTriggers: boolean;
+  supportsTableComments: boolean;
+  dialect: RendererDialect;
 }
 
 export type LoadTableInfo = (idConnection: string, filters: ILoadTableInfoFilters) => Promise<void>;

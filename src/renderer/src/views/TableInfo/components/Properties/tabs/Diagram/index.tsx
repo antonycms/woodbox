@@ -20,8 +20,7 @@ import { Bar } from '@renderer/components/Bar';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -123,13 +122,12 @@ const FlowController = ({ nodeCount, active }: { nodeCount: number; active: bool
   return null;
 };
 
-const Diagram = ({
-  tableStore,
-  id_connection,
-  schema,
-  table,
-  active,
-}: ITableInfoViewProps & { active: boolean }) => {
+interface IDiagramProps {
+  tableStore: TableInfoStoreApi;
+  active: boolean;
+}
+
+const Diagram = ({ tableStore, active }: IDiagramProps) => {
   const {
     tableInfo: { tab: tableInfoTab, properties: theme },
   } = useThemeStore((state) => state.activeTheme);
@@ -142,6 +140,7 @@ const Diagram = ({
     loadTableUsedAsReference,
     lastFetchDate,
     loading,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -151,8 +150,11 @@ const Diagram = ({
       loadTableUsedAsReference: state.loadTableUsedAsReference,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+
+  const { idConnection: id_connection, schema, table } = tableContext;
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -427,4 +429,4 @@ const Diagram = ({
   );
 };
 
-export default Diagram;
+export default React.memo(Diagram);

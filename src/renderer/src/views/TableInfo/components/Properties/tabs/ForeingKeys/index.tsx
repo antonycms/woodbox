@@ -11,8 +11,7 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import type {
   IPendingReferenceCreate,
 } from '@renderer/database/ddl/types';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
@@ -27,41 +26,22 @@ import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
 import { generateReferencesDdl } from '@renderer/database/ddl';
 import ModalNewReference from './components/ModalNewReference';
-import { getRendererDialect } from '@renderer/database/dialects';
+import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import { IReferenceSerialized } from './dtos';
 import { getReferenceSearchValues, getReferenceSelectionKey } from './utils';
 
-interface IForeingKeysProps extends ITableInfoViewProps {
-  onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+interface IForeingKeysProps {
+  tableStore: TableInfoStoreApi;
 }
 
-const ForeingKeys = ({ tableStore,
-  id_connection,
-  schema,
-  table,
-  mode,
-  tableComment,
-  onCreateApplied,
-  onOpenTable,
-}: IForeingKeysProps) => {
+const ForeingKeys = ({ tableStore }: IForeingKeysProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
-  const { connections, connectionsInfo } = useWorkspaceStore(
-    useShallow((state) => ({
-      connections: state.connections,
-      connectionsInfo: state.connectionsInfo,
-    })),
-  );
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
+  const connectionsInfo = useWorkspaceStore((state) => state.connectionsInfo);
   const showToast = useToastStore((state) => state.showToast);
+  const { openTable } = useOpenTableTab();
   const {
     columns,
     pendingColumns,
@@ -78,6 +58,7 @@ const ForeingKeys = ({ tableStore,
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -96,8 +77,11 @@ const ForeingKeys = ({ tableStore,
       openPendingChangesSqlModal: state.openPendingChangesSqlModal,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+  const { idConnection: id_connection, schema, table, mode, dialect } = tableContext;
+
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedReferences, setSelectedReferences] = React.useState<IReferenceSerialized[]>([]);
   const [referenceFilterText, setReferenceFilterText] = React.useState('');
@@ -241,20 +225,14 @@ const ForeingKeys = ({ tableStore,
     openPendingChangesSqlModal(
       id_connection,
       { schema, table },
-      {
-        mode,
-        tableComment,
-        onApplied: onCreateApplied,
-      },
+      { mode },
     );
   }, [
     id_connection,
     mode,
-    onCreateApplied,
     openPendingChangesSqlModal,
     schema,
     table,
-    tableComment,
   ]);
 
   const handleAddPendingReference = React.useCallback(
@@ -357,10 +335,10 @@ const ForeingKeys = ({ tableStore,
   );
 
   const handleCellLinkClick = React.useCallback((attribute: string, value: string) => {
-    if (attribute !== 'table_reference' || !onOpenTable) return;
+    if (attribute !== 'table_reference') return;
     const row = allReferences.find((r) => r.table_reference === value);
-    if (row) onOpenTable(id_connection, row.reference_table_schema, row.reference_table_name);
-  }, [allReferences, id_connection, onOpenTable]);
+    if (row) openTable(id_connection, row.reference_table_schema, row.reference_table_name);
+  }, [allReferences, id_connection, openTable]);
 
   const handleKeyDown = usePropertiesKeyboardShortcuts({
     onRemove: handleRemoveSelectedReferences,
@@ -501,4 +479,4 @@ const ForeingKeys = ({ tableStore,
   );
 };
 
-export default ForeingKeys;
+export default React.memo(ForeingKeys);

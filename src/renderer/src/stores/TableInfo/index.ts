@@ -31,7 +31,9 @@ import type {
 import {
   type ILoadTableInfoFilters,
   type IOpenPendingChangesSqlModalOptions,
+  type ITableContextState,
   type ITableInfo,
+  type ITablePropertiesState,
   type ITableInfoStore,
   type LoadTableInfo,
 } from './types';
@@ -54,6 +56,8 @@ const normalizeColumnCompareValue = (value: unknown) => {
 
   return value;
 };
+
+const normalizeOptionalString = (value?: string) => value?.trim() || '';
 
 const hasColumnChanges = (originalColumn: IColumnInfo, changedColumn: IColumnInfo) =>
   COLUMN_COMPARE_ATTRIBUTES.some(
@@ -362,6 +366,41 @@ export const createTableInfoStore = () =>
       }));
     };
 
+    const setTableContext = (context: Partial<ITableContextState>) => {
+      set(({ tableContext }) => ({
+        tableContext: {
+          ...tableContext,
+          ...context,
+        },
+      }));
+    };
+
+    const setTableAppliedHandler = (handler?: (table: string) => void) => {
+      set({ tableAppliedHandler: handler });
+    };
+
+    const setTableProperties = (properties: Partial<ITablePropertiesState>) => {
+      set(({ tableProperties }) => ({
+        tableProperties: {
+          ...tableProperties,
+          ...properties,
+        },
+      }));
+    };
+
+    const markTablePropertiesApplied = (tableName: string) => {
+      set(({ tableProperties }) => ({
+        tableProperties: {
+          ...tableProperties,
+          tableName,
+          originalTableName: tableName,
+          originalComment: tableProperties.supportsTableComments
+            ? normalizeOptionalString(tableProperties.comment)
+            : '',
+        },
+      }));
+    };
+
     const clearPendingChanges = () => {
       set({
         pendingColumns: [],
@@ -481,8 +520,28 @@ export const createTableInfoStore = () =>
       } = get();
       const showToast = useToastStore.getState().showToast;
       const t = useI18nStore.getState().t;
+      const tableProperties = get().tableProperties;
+      const hasTableProperties =
+        !!tableProperties.originalTableName || tableProperties.tableName !== '';
+      const tableName = normalizeOptionalString(
+        hasTableProperties ? tableProperties.tableName : filters.table,
+      );
+      const originalTableName = tableProperties.originalTableName || filters.table;
+      const tableRenamed = tableName !== originalTableName;
+      const tableComment = tableProperties.supportsTableComments
+        ? tableProperties.comment
+        : undefined;
+      const tableCommentChanged =
+        tableProperties.supportsTableComments &&
+        normalizeOptionalString(tableProperties.comment) !== tableProperties.originalComment;
+
+      if (options?.mode !== 'create' && tableRenamed && !tableName) {
+        showToast({ type: 'warn', title: t('toast.tableNameRequired') });
+        return;
+      }
+
       if (options?.mode === 'create') {
-        if (!filters.table?.trim()) {
+        if (!tableName?.trim()) {
           showToast({ type: 'warn', title: t('toast.tableNameRequired') });
           return;
         }
@@ -497,12 +556,12 @@ export const createTableInfoStore = () =>
 
       const sql =
         options?.mode === 'create'
-          ? generateCreateTableDdl(dialect, filters.schema, filters.table, {
+          ? generateCreateTableDdl(dialect, filters.schema, tableName, {
               columns: pendingColumns,
               indexes: pendingIndexes,
               restrictions: pendingRestrictions,
               references: pendingReferences,
-              tableComment: options.tableComment,
+              tableComment,
             })
           : generatePendingTableChangesDdl(dialect, filters.schema, filters.table, {
               columns: pendingColumns,
@@ -517,6 +576,9 @@ export const createTableInfoStore = () =>
               existingRestrictions: restrictions,
               existingReferences: references,
               existingColumns: columns,
+              newTableName: tableRenamed ? tableName : undefined,
+              tableComment,
+              tableCommentChanged,
             });
 
       if (!sql.trim()) return;
@@ -543,16 +605,19 @@ export const createTableInfoStore = () =>
         set({ showPendingDdlModal: false });
         showToast({ type: 'success', title: t('toast.applyChangesSuccess') });
 
-        if (applyInfo.options?.mode === 'create') {
-          applyInfo.options.onApplied?.(applyInfo.filters.table);
-        }
+        const nextTable =
+          normalizeOptionalString(get().tableProperties.tableName) || applyInfo.filters.table;
+        const nextFilters = { ...applyInfo.filters, table: nextTable };
 
+        markTablePropertiesApplied(nextTable);
+        const onApplied = applyInfo.options?.onApplied || get().tableAppliedHandler;
+        onApplied?.(nextTable);
         await Promise.all([
           loadConnectionInfo(applyInfo.idConnection),
-          loadTableColumns(applyInfo.idConnection, applyInfo.filters),
-          loadTableRestrictions(applyInfo.idConnection, applyInfo.filters),
-          loadTableReferences(applyInfo.idConnection, applyInfo.filters),
-          loadTableIndexes(applyInfo.idConnection, applyInfo.filters),
+          loadTableColumns(applyInfo.idConnection, nextFilters),
+          loadTableRestrictions(applyInfo.idConnection, nextFilters),
+          loadTableReferences(applyInfo.idConnection, nextFilters),
+          loadTableIndexes(applyInfo.idConnection, nextFilters),
         ]);
       } catch (error) {
         showToast({
@@ -605,6 +670,29 @@ export const createTableInfoStore = () =>
       pendingDdlSql: '',
       showPendingDdlModal: false,
       applyingPendingDdl: false,
+      tableContext: {
+        idConnection: '',
+        schema: '',
+        table: '',
+        mode: 'view',
+        objectType: 'table',
+        supportsIndexes: true,
+        supportsTriggers: true,
+        supportsTableComments: false,
+        dialect: getRendererDialect(),
+      },
+      tableAppliedHandler: undefined,
+      tableProperties: {
+        tableName: '',
+        originalTableName: '',
+        comment: '',
+        originalComment: '',
+        supportsTableComments: false,
+      },
+      setTableContext,
+      setTableAppliedHandler,
+      setTableProperties,
+      markTablePropertiesApplied,
       loadTableColumns,
       loadColumnTypes,
       addPendingColumn,

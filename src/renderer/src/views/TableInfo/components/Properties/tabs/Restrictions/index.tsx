@@ -9,19 +9,16 @@ import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import type { IColumnRestrictionsInfo } from '@shared/types/database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import type {
   IPendingRestrictionCreate,
 } from '@renderer/database/ddl/types';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
@@ -31,27 +28,16 @@ import { generateRestrictionsDdl } from '@renderer/database/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
 
-const Restrictios = ({ tableStore,
-  id_connection,
-  schema,
-  table,
-  mode,
-  tableComment,
-  onCreateApplied,
-}: ITableInfoViewProps) => {
+interface IRestrictiosProps {
+  tableStore: TableInfoStoreApi;
+}
+
+const Restrictios = ({ tableStore }: IRestrictiosProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
   const showToast = useToastStore((state) => state.showToast);
-  const connections = useWorkspaceStore((state) => state.connections);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
   const {
     columns,
     pendingColumns,
@@ -68,6 +54,7 @@ const Restrictios = ({ tableStore,
     openPendingChangesSqlModal,
     lastFetchDate,
     loading,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -86,8 +73,11 @@ const Restrictios = ({ tableStore,
       openPendingChangesSqlModal: state.openPendingChangesSqlModal,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+  const { idConnection: id_connection, schema, table, mode, dialect } = tableContext;
+
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedRestrictions, setSelectedRestrictions] = React.useState<IColumnRestrictionsInfo[]>(
     [],
@@ -207,20 +197,14 @@ const Restrictios = ({ tableStore,
     openPendingChangesSqlModal(
       id_connection,
       { schema, table },
-      {
-        mode,
-        tableComment,
-        onApplied: onCreateApplied,
-      },
+      { mode },
     );
   }, [
     id_connection,
     mode,
-    onCreateApplied,
     openPendingChangesSqlModal,
     schema,
     table,
-    tableComment,
   ]);
 
   const handleAddPendingRestriction = React.useCallback(
@@ -448,4 +432,4 @@ const Restrictios = ({ tableStore,
   );
 };
 
-export default Restrictios;
+export default React.memo(Restrictios);

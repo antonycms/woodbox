@@ -1,5 +1,3 @@
-import type { DatabaseObjectType } from '@shared/types/database';
-
 export interface IAIChatModelGroup {
   providerId: string;
   providerName: string;
@@ -33,9 +31,6 @@ export interface IAIChatReferenceOption {
   schema?: string;
   table?: string;
   functionName?: string;
-  objectType?: DatabaseObjectType;
-  supportsIndexes?: boolean;
-  supportsTriggers?: boolean;
 }
 
 export interface IAIChatDraftContext {

@@ -176,9 +176,6 @@ export const AIChatPanel = React.memo(() => {
         type: 'table' as const,
         schema: table.table_schema,
         table: table.table_name,
-        objectType: table.object_type,
-        supportsIndexes: table.supports_indexes,
-        supportsTriggers: table.supports_triggers,
       };
     });
 
@@ -250,9 +247,6 @@ export const AIChatPanel = React.memo(() => {
           id_connection: option.idConnection,
           schema: option.schema,
           table: option.table,
-          objectType: option.objectType,
-          supportsIndexes: option.supportsIndexes,
-          supportsTriggers: option.supportsTriggers,
         },
         component: () => (
           <TableInfo
@@ -260,9 +254,6 @@ export const AIChatPanel = React.memo(() => {
             schema={option.schema}
             table={option.table}
             appTabId={tabId}
-            objectType={option.objectType}
-            supportsIndexes={option.supportsIndexes}
-            supportsTriggers={option.supportsTriggers}
           />
         ),
       });

@@ -3,7 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useAppTabStore } from '@renderer/stores/AppTab';
-import type { IFunctionDb, DatabaseObjectType } from '@shared/types/database';
+import type { IFunctionDb } from '@shared/types/database';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useDatabaseStore } from '@renderer/stores/Database';
@@ -101,9 +101,6 @@ export const CentralSearchModal = React.memo(() => {
       schema: string | undefined,
       table: string,
       initialWhere?: string,
-      objectType: DatabaseObjectType = 'table',
-      supportsIndexes?: boolean,
-      supportsTriggers?: boolean,
     ) => {
       const tabId = constants.getTableTabId(idConnection, schema, table);
       const tab = getTab(tabId);
@@ -133,9 +130,6 @@ export const CentralSearchModal = React.memo(() => {
             table,
             initialWhere,
             initialTab: 'tabData',
-            objectType,
-            supportsIndexes,
-            supportsTriggers,
           },
           component: () => (
             <TableInfo
@@ -145,9 +139,6 @@ export const CentralSearchModal = React.memo(() => {
               appTabId={tabId}
               initialWhere={initialWhere}
               initialTab="tabData"
-              objectType={objectType}
-              supportsIndexes={supportsIndexes}
-              supportsTriggers={supportsTriggers}
             />
           ),
         });
@@ -165,9 +156,6 @@ export const CentralSearchModal = React.memo(() => {
           id_connection: idConnection,
           schema,
           table,
-          objectType,
-          supportsIndexes,
-          supportsTriggers,
         },
         component: () => (
           <TableInfo
@@ -175,9 +163,6 @@ export const CentralSearchModal = React.memo(() => {
             schema={schema}
             table={table}
             appTabId={tabId}
-            objectType={objectType}
-            supportsIndexes={supportsIndexes}
-            supportsTriggers={supportsTriggers}
           />
         ),
       });
@@ -421,15 +406,7 @@ export const CentralSearchModal = React.memo(() => {
               table: table.table_name,
             },
             onOpen: (initialWhere) =>
-              openTableTab(
-                idConnection,
-                table.table_schema,
-                table.table_name,
-                initialWhere,
-                table.object_type,
-                table.supports_indexes,
-                table.supports_triggers,
-              ),
+              openTableTab(idConnection, table.table_schema, table.table_name, initialWhere),
           }),
         );
       }

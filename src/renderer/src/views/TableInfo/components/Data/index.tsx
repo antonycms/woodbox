@@ -23,15 +23,13 @@ import {
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import styles from './styles.module.css';
 import { useDatabaseStore } from '@renderer/stores/Database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { Button } from '@renderer/components/Button';
 import { Text } from '@renderer/components/Text';
 import { Bar } from '@renderer/components/Bar';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
-import { ITableInfoViewProps } from '../../dtos';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -45,37 +43,26 @@ import {
   generateUpdateDdl,
 } from '@renderer/database/ddl';
 import ModalDataError from './components/ModalDataError';
-import { getRendererDialect } from '@renderer/database/dialects';
 import FilterInput from '@renderer/components/FilterInput';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
+import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 
-interface IDataProps extends ITableInfoViewProps {
-  onOpenTable?: (
-    idConnection: string,
-    schema: string,
-    table: string,
-    filterColumn: string,
-    filterValue: string,
-  ) => void;
+interface IDataProps {
+  tableStore: TableInfoStoreApi;
+  initialWhere?: string;
+  filterLocked?: boolean;
   onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
   onPendingRowsChangesChange?: (hasPendingChanges: boolean) => void;
 }
 
-
 const Data = ({
   tableStore,
-  id_connection,
-  schema,
-  table,
-  appTabId,
   initialWhere,
   filterLocked,
-  onOpenTable,
   onRegisterRefresh,
   onPendingRowsChangesChange,
-  objectType = 'table',
 }: IDataProps) => {
   const {
     tableInfo: { data: theme },
@@ -89,6 +76,7 @@ const Data = ({
     loadTableReferences,
     loadTableRestrictions,
     loading: loadingTableInfo,
+    tableContext,
   } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
@@ -99,6 +87,7 @@ const Data = ({
       loadTableReferences: state.loadTableReferences,
       loadTableRestrictions: state.loadTableRestrictions,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
 
@@ -109,11 +98,13 @@ const Data = ({
       runSql: state.runSql,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
+  const { openTableWithFilter } = useOpenTableTab();
   const { t, language } = useI18nStore(
     useShallow((state) => ({ t: state.t, language: state.language })),
   );
   const showToast = useToastStore((state) => state.showToast);
+  const { idConnection: id_connection, schema, table, objectType, dialect } = tableContext;
+
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [items, setItems] = React.useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -136,14 +127,6 @@ const Data = ({
   const lastPageSearch = React.useRef(page);
   const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
-
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
@@ -279,7 +262,7 @@ const Data = ({
     (attribute: string, value: unknown) => {
       const ref = fkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
-      onOpenTable?.(
+      openTableWithFilter(
         id_connection,
         ref.reference_table_schema,
         ref.reference_table_name,
@@ -287,7 +270,7 @@ const Data = ({
         String(value),
       );
     },
-    [fkMap, id_connection, onOpenTable],
+    [fkMap, id_connection, openTableWithFilter],
   );
 
   const handleFkPreviewClick = React.useCallback(
@@ -756,10 +739,8 @@ const Data = ({
   }, [onRegisterRefresh, handleRefresh]);
 
   React.useEffect(() => {
-    if (!appTabId) return;
-
     onPendingRowsChangesChange?.(hasPendingRowsChanges);
-  }, [appTabId, hasPendingRowsChanges, onPendingRowsChangesChange]);
+  }, [hasPendingRowsChanges, onPendingRowsChangesChange]);
 
   React.useEffect(() => {
     if (columns.length === 0) {
@@ -841,7 +822,6 @@ const Data = ({
           selectedCellValue={selectedCellValue}
           selectedReference={selectedReference}
           onClose={closeValuePreview}
-          onOpenTable={onOpenTable}
           onDataError={handleDataError}
           onApplyValue={handleApplySelectedCellValue}
         />

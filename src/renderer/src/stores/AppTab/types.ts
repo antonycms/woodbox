@@ -1,5 +1,3 @@
-import type { DatabaseObjectType } from '@shared/types/database';
-
 export interface IAppTabStore {
   pendingRemoveTabs?: IPendingRemoveTabs;
   restoreSession(session: {
@@ -55,9 +53,6 @@ export type IAppTabData =
       initialWhere?: string;
       filterLocked?: boolean;
       initialTab?: string;
-      objectType?: DatabaseObjectType;
-      supportsIndexes?: boolean;
-      supportsTriggers?: boolean;
     }
   | { type: 'function-info'; id_connection: string; schema: string; function_name: string }
   | { type: 'process-list'; id_connection: string };

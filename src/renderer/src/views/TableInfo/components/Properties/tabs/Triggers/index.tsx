@@ -7,9 +7,7 @@ import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
 import type { ITriggerInfo } from '@shared/types/database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -21,31 +19,28 @@ import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNaviga
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
 import { generateTriggersDdl } from '@renderer/database/ddl';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
 
-const Triggers = ({ tableStore, id_connection, schema, table }: ITableInfoViewProps) => {
+interface ITriggersProps {
+  tableStore: TableInfoStoreApi;
+}
+
+const Triggers = ({ tableStore }: ITriggersProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
-  const { triggers, loadTableTriggers, lastFetchDate, loading } = useTableInfoStore(
+  const { triggers, loadTableTriggers, lastFetchDate, loading, tableContext } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
       triggers: state.triggers,
       loadTableTriggers: state.loadTableTriggers,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
+  const { idConnection: id_connection, schema, table, dialect } = tableContext;
   const handleFunctionCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedTriggers, setSelectedTriggers] = React.useState<ITriggerInfo[]>([]);
@@ -213,4 +208,4 @@ const Triggers = ({ tableStore, id_connection, schema, table }: ITableInfoViewPr
   );
 };
 
-export default Triggers;
+export default React.memo(Triggers);

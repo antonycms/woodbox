@@ -5,11 +5,11 @@ import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import { Bar } from '@renderer/components/Bar';
-import { ITableInfoViewProps } from '@renderer/views/TableInfo/dtos';
-import { useTableInfoStore } from '@renderer/stores/TableInfo';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
+import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
@@ -17,24 +17,28 @@ import FilterInput from '@renderer/components/FilterInput';
 import { getReferenceRowKey, getReferenceSearchValues } from './utils';
 import { IReferenceRow } from './dtos';
 
-interface IReferencesProps extends ITableInfoViewProps {
-  onOpenTable?: (idConnection: string, schema: string, table: string) => void;
+interface IReferencesProps {
+  tableStore: TableInfoStoreApi;
 }
 
-const References = ({ tableStore, id_connection, schema, table, onOpenTable }: IReferencesProps) => {
+const References = ({ tableStore }: IReferencesProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
-  const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading } = useTableInfoStore(
+  const { openTable } = useOpenTableTab();
+  const { usedAsReference, loadTableUsedAsReference, lastFetchDate, loading, tableContext } = useTableInfoStore(
     tableStore,
     useShallow((state) => ({
       usedAsReference: state.usedAsReference,
       loadTableUsedAsReference: state.loadTableUsedAsReference,
       lastFetchDate: state.lastFetchDate,
       loading: state.loading,
+      tableContext: state.tableContext,
     })),
   );
+  const { idConnection: id_connection, schema, table } = tableContext;
+
   const [referenceFilterText, setReferenceFilterText] = React.useState('');
   const [sort, setSort] = React.useState<ITableSort[]>([]);
 
@@ -64,10 +68,10 @@ const References = ({ tableStore, id_connection, schema, table, onOpenTable }: I
   );
 
   const handleCellLinkClick = React.useCallback((attribute: string, value: string) => {
-    if (attribute !== 'source_table' || !onOpenTable) return;
+    if (attribute !== 'source_table') return;
     const row = rowsSerialized.find((r) => r.source_table === value);
-    if (row) onOpenTable(id_connection, row.table_schema, row.table_name);
-  }, [id_connection, onOpenTable, rowsSerialized]);
+    if (row) openTable(id_connection, row.table_schema, row.table_name);
+  }, [id_connection, openTable, rowsSerialized]);
 
   const tableColumns = React.useMemo<IColumn<IReferenceRow>[]>(
     () => [
@@ -145,4 +149,4 @@ const References = ({ tableStore, id_connection, schema, table, onOpenTable }: I
   );
 };
 
-export default References;
+export default React.memo(References);

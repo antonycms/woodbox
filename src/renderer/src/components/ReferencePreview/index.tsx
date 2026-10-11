@@ -19,6 +19,7 @@ import { useThemeStore } from '@renderer/stores/Theme';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IColumn } from '@renderer/components/Table/dtos';
+import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import styles from './styles.module.css';
 
 import IconMdiArrowLeft from '~icons/mdi/arrow-left';
@@ -33,6 +34,7 @@ interface IReferencePreviewProps {
   initialReference?: IColumnReferenceInfo;
   initialValue: unknown;
   onClose?: () => void;
+  enableOpenTableNavigation?: boolean;
   onOpenTable?: (
     idConnection: string,
     schema: string,
@@ -75,6 +77,7 @@ const ReferencePreview = ({
   initialReference,
   initialValue,
   onClose,
+  enableOpenTableNavigation,
   onOpenTable,
 }: IReferencePreviewProps) => {
   const {
@@ -82,6 +85,7 @@ const ReferencePreview = ({
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
   const connections = useWorkspaceStore((state) => state.connections);
+  const { openTableWithFilter } = useOpenTableTab();
   const { getTableColumns, getTableData, getTableReferences } = useDatabaseStore(
     useShallow((state) => ({
       getTableColumns: state.getTableColumns,
@@ -126,6 +130,7 @@ const ReferencePreview = ({
   );
   const canGoBack = historyIndex > 0;
   const canGoForward = historyIndex < history.length - 1;
+  const canOpenTable = !!onOpenTable || !!enableOpenTableNavigation;
 
   const currentRows = React.useMemo(() => (currentRow ? [currentRow] : []), [currentRow]);
 
@@ -277,7 +282,16 @@ const ReferencePreview = ({
 
       if (!reference || value === null || value === undefined) return;
 
-      onOpenTable?.(
+      if (!canOpenTable) {
+        setHistory((prevState) => [...prevState.slice(0, historyIndex + 1), { reference, value }]);
+        setHistoryIndex((prevState) => prevState + 1);
+        setViewMode('table');
+        return;
+      }
+
+      const openReferencedTable = onOpenTable || openTableWithFilter;
+
+      openReferencedTable(
         idConnection,
         reference.reference_table_schema,
         reference.reference_table_name,
@@ -285,7 +299,7 @@ const ReferencePreview = ({
         String(value),
       );
     },
-    [currentFkMap, idConnection, onOpenTable],
+    [canOpenTable, currentFkMap, historyIndex, idConnection, onOpenTable, openTableWithFilter],
   );
 
   React.useEffect(() => {
@@ -399,9 +413,9 @@ const ReferencePreview = ({
             rows={currentRows}
             initialAnalysisMode
             rowKeyExtractor={() => currentReferenceKey}
-            onCellLinkClick={onOpenTable ? handleOpenReferencedTable : handleOpenNestedReference}
+            onCellLinkClick={canOpenTable ? handleOpenReferencedTable : handleOpenNestedReference}
             onCellLinkPreviewClick={handleOpenNestedReference}
-            cellLinkClickMode={onOpenTable ? 'ctrl' : 'single'}
+            cellLinkClickMode={canOpenTable ? 'ctrl' : 'single'}
             onContextMenu={handleContextMenu}
           />
         )}
