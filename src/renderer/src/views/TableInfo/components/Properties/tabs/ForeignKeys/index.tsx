@@ -30,11 +30,11 @@ import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import { IReferenceSerialized } from './dtos';
 import { getReferenceSearchValues, getReferenceSelectionKey } from './utils';
 
-interface IForeingKeysProps {
+interface IForeignKeysProps {
   tableStore: TableInfoStoreApi;
 }
 
-const ForeingKeys = ({ tableStore }: IForeingKeysProps) => {
+const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
@@ -479,4 +479,4 @@ const ForeingKeys = ({ tableStore }: IForeingKeysProps) => {
   );
 };
 
-export default React.memo(ForeingKeys);
+export default React.memo(ForeignKeys);

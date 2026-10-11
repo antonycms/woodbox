@@ -10,8 +10,8 @@ import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/Tabl
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import Columns from './tabs/Columns';
-import ForeingKeys from './tabs/ForeingKeys';
-import Restrictios from './tabs/Restrictions';
+import ForeignKeys from './tabs/ForeignKeys';
+import Restrictions from './tabs/Restrictions';
 import References from './tabs/References';
 import Definition from './tabs/Definition';
 import Triggers from './tabs/Triggers';
@@ -284,13 +284,13 @@ const Properties = (props: IPropertiesProps) => {
 
           {!isReadOnlyObject && (
             <TabContent activeTabId={activeTabId} idTab="2">
-              <Restrictios tableStore={props.tableStore} />
+              <Restrictions tableStore={props.tableStore} />
             </TabContent>
           )}
 
           {!isReadOnlyObject && (
             <TabContent activeTabId={activeTabId} idTab="3">
-              <ForeingKeys tableStore={props.tableStore} />
+              <ForeignKeys tableStore={props.tableStore} />
             </TabContent>
           )}
 

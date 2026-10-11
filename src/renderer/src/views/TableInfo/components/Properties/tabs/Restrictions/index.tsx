@@ -28,11 +28,11 @@ import { generateRestrictionsDdl } from '@renderer/database/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
 
-interface IRestrictiosProps {
+interface IRestrictionsProps {
   tableStore: TableInfoStoreApi;
 }
 
-const Restrictios = ({ tableStore }: IRestrictiosProps) => {
+const Restrictions = ({ tableStore }: IRestrictionsProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
@@ -432,4 +432,4 @@ const Restrictios = ({ tableStore }: IRestrictiosProps) => {
   );
 };
 
-export default React.memo(Restrictios);
+export default React.memo(Restrictions);
