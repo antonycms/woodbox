@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgb(0 0 0 / 42%);
+  background: color-mix(in srgb, var(--reference-border-color) 42%, transparent);
 }
 
 .previewDialog {
@@ -35,5 +35,5 @@
   min-height: min(300px, 100%);
   overflow: hidden;
   border: 2px solid var(--reference-border-color);
-  box-shadow: 0 18px 60px rgb(0 0 0 / 50%);
+  box-shadow: 0 18px 60px color-mix(in srgb, var(--reference-border-color) 50%, transparent);
 }

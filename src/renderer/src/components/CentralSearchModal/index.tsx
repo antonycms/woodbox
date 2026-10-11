@@ -54,6 +54,7 @@ export const CentralSearchModal = React.memo(() => {
   const getTableColumns = useDatabaseStore((state) => state.getTableColumns);
   const showToast = useToastStore((state) => state.showToast);
   const {
+    button,
     centralSearch,
     modal: { backgroundColor, color, fieldBackgroundColor, fieldColor },
   } = useThemeStore((state) => state.activeTheme);
@@ -672,8 +673,10 @@ export const CentralSearchModal = React.memo(() => {
       subtleBackgroundColor: centralSearch.subtleBackgroundColor,
       hoverBackgroundColor: centralSearch.hoverBackgroundColor,
       mutedColor: centralSearch.mutedColor,
+      connectedColor: button.activeColor,
     });
   }, [
+    button.activeColor,
     centralSearch.subtleBackgroundColor,
     centralSearch.hoverBackgroundColor,
     centralSearch.mutedColor,

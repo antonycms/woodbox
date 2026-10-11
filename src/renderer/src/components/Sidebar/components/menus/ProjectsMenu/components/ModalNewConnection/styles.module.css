@@ -5,9 +5,9 @@
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
-  border: 1px solid var(--warningBorderColor, rgba(255, 193, 7, 0.35));
+  border: 1px solid var(--warningBorderColor, color-mix(in srgb, currentColor 35%, transparent));
   border-radius: 6px;
-  background: var(--warningBackgroundColor, rgba(255, 193, 7, 0.08));
+  background: var(--warningBackgroundColor, color-mix(in srgb, currentColor 8%, transparent));
   font-size: 13px;
   line-height: 1.35;
   user-select: none;

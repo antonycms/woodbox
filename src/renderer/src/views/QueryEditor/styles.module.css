@@ -32,7 +32,7 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: color-mix(in srgb, currentColor 8%, transparent);
   padding: 10px;
   border-radius: 8px;
   margin: 14px 0px;

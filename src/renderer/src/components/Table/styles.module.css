@@ -340,7 +340,7 @@ input.analysis_value {
   border: 1px solid color-mix(in srgb, var(--colorHeader) 18%, transparent);
   border-radius: 6px;
   background-color: color-mix(in srgb, var(--backgroundColorHeader) 92%, black);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--colorHeader) 28%, transparent);
   color: var(--colorHeader);
   transform-origin: top right;
   animation: table_search_show 120ms cubic-bezier(0.16, 1, 0.3, 1) both;

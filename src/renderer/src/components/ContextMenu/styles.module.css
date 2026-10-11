@@ -5,7 +5,7 @@
   border: 1px solid var(--borderColor);
   width: max-content;
   padding: 4px;
-  box-shadow: 0 8px 24px color-mix(in srgb, #000 42%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--borderColor) 42%, transparent);
   animation: blowUp 0.05s forwards;
 }
 
@@ -50,7 +50,7 @@
   background-color: var(--backgroundColor);
   border: 1px solid var(--borderColor);
   border-radius: 2px;
-  box-shadow: 0 8px 24px color-mix(in srgb, #000 42%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--borderColor) 42%, transparent);
 }
 
 .openLeft .submenu {
