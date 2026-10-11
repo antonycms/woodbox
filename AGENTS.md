@@ -117,6 +117,10 @@ src/
 
 ### Estado, eventos e feedback
 
+- Evite prop drilling para dados derivados ou compartilhados por vários filhos. Quando vários componentes de um mesmo fluxo precisarem das mesmas informações, centralize no store ou hook de domínio já existente.
+- Não recalcule dados globais derivados em múltiplos componentes, como dialeto, permissões, suportes e contexto ativo. Calcule uma vez no ponto dono do fluxo e exponha por store, hook ou props mínimas.
+- Componentes filhos devem receber apenas dados realmente locais à composição. Dados de domínio devem vir do store ou hook do domínio.
+- Ao refatorar props para store ou hook, preserve o ciclo de vida atual: reset ao trocar entidade, sincronização após apply, reloads e callbacks de atualização.
 - Acesse dados e operações pelas stores Zustand em `@renderer/stores/...`: `useWorkspaceStore`, `useSnippetsStore`, `useAIStore`, `useDatabaseStore`, `useDialogsStore`, `useUpdatesStore` e `useReactNativeBridgeStore`.
 - Use seletores por propriedade ou `useShallow` para selecionar várias propriedades. Não assine a store inteira. Agrupamentos de projetos/conexões usam o seletor memoizado de `stores/Workspace/selectors.ts`.
 - Workspace reúne projetos, conexões e scripts; IA reúne provedores e conversas. Preserve as ações coordenadas e atualizações imutáveis de listas/Maps. Não recrie um Store geral.
@@ -164,6 +168,8 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 ## Banco de dados
 
 - No renderer, geração de DDL e seus tipos ficam em `database/ddl`; essa camada não deve importar stores ou views.
+- Suporte a recursos específicos de banco deve vir dos metadados/adapters quando possível, não de checagens espalhadas na UI.
+- A UI deve consumir flags de suporte já normalizadas, ocultando ou desabilitando recursos indisponíveis.
 
 - Use Knex e os adaptadores existentes em `src/main/database/dialects`.
 - Ao adicionar suporte a dialeto ou query de metadados, atualize o adapter e os arquivos de `queries` correspondentes.
