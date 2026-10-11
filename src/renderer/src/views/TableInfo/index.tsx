@@ -11,10 +11,9 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { getRendererDialect } from '@renderer/database/dialects';
 import ModalConfirmDiscardChanges from '@renderer/components/ModalConfirmDiscardChanges';
 import {
-  emitConfirmOpenTableWithFilter,
-  TABLE_INFO_CONFIRM_OPEN_WITH_FILTER_EVENT,
-  type TableInfoOpenWithFilterRequest,
-} from './events';
+  requestOpenTableWithFilter,
+  useTableInfoOpenWithFilterRequestStore,
+} from './openWithFilterRequest';
 
 import Data from './components/Data';
 import Properties from './components/Properties';
@@ -77,14 +76,18 @@ const TableInfo = (props: ITableInfoViewProps) => {
       loadConnectionInfo: state.loadConnectionInfo,
     })),
   );
+  const requestedOpenTableWithFilter = useTableInfoOpenWithFilterRequestStore(
+    (state) => state.pendingRequest,
+  );
+  const clearOpenWithFilterRequest = useTableInfoOpenWithFilterRequestStore(
+    (state) => state.clearOpenWithFilterRequest,
+  );
   const [id] = React.useState(generateHash());
   const [mode, setMode] = React.useState(props.mode || 'view');
   const [table, setTable] = React.useState(props.table);
   const [hasPendingRowsChanges, setHasPendingRowsChanges] = React.useState(false);
   const [hasPendingTablePropertiesChanges, setHasPendingTablePropertiesChanges] =
     React.useState(false);
-  const [pendingOpenTableWithFilter, setPendingOpenTableWithFilter] =
-    React.useState<OpenTableWithFilterParams>();
   const [activeTableInfoTabId, setActiveTableInfoTabId] = React.useState(
     props.initialTab || 'tabProperties',
   );
@@ -93,6 +96,7 @@ const TableInfo = (props: ITableInfoViewProps) => {
 
   const isCreateMode = mode === 'create';
   const connectionInfo = connectionsInfo.get(props.id_connection);
+  const currentTabId = props.appTabId || `${props.id_connection}_${props.schema}_${table}`;
 
   const dialect = React.useMemo(() => {
     return getRendererDialect(
@@ -142,6 +146,12 @@ const TableInfo = (props: ITableInfoViewProps) => {
 
   const hasPendingPropertiesChanges =
     hasPendingTableInfoChanges || hasPendingTablePropertiesChanges;
+
+  const pendingOpenTableWithFilter = React.useMemo(() => {
+    if (requestedOpenTableWithFilter?.tabId !== currentTabId) return undefined;
+
+    return requestedOpenTableWithFilter;
+  }, [currentTabId, requestedOpenTableWithFilter]);
 
   const handleCreateApplied = React.useCallback(
     (createdTable: string) => {
@@ -243,7 +253,7 @@ const TableInfo = (props: ITableInfoViewProps) => {
 
       if (existingTab?.unsaved && !force) {
         setActiveTabId(tabId);
-        emitConfirmOpenTableWithFilter({ ...params, tabId });
+        requestOpenTableWithFilter({ ...params, tabId });
         return;
       }
 
@@ -271,9 +281,9 @@ const TableInfo = (props: ITableInfoViewProps) => {
           />
         ),
       });
-      setPendingOpenTableWithFilter(undefined);
+      clearOpenWithFilterRequest();
     },
-    [addTab, getTab, setActiveTabId],
+    [addTab, clearOpenWithFilterRequest, getTab, setActiveTabId],
   );
 
   const handleKeyDown = React.useCallback(
@@ -338,24 +348,10 @@ const TableInfo = (props: ITableInfoViewProps) => {
   }, [hasPendingRowsChanges, hasPendingPropertiesChanges, mode, props.appTabId, updateTab]);
 
   React.useEffect(() => {
-    const currentTabId = props.appTabId || `${props.id_connection}_${props.schema}_${table}`;
-    const handleConfirmOpenWithFilter = (event: Event) => {
-      const { detail } = event as CustomEvent<TableInfoOpenWithFilterRequest>;
+    if (!pendingOpenTableWithFilter) return;
 
-      if (detail.tabId !== currentTabId) return;
-
-      setPendingOpenTableWithFilter(detail);
-      setActiveTableInfoTabId('tabData');
-    };
-
-    window.addEventListener(TABLE_INFO_CONFIRM_OPEN_WITH_FILTER_EVENT, handleConfirmOpenWithFilter);
-
-    return () =>
-      window.removeEventListener(
-        TABLE_INFO_CONFIRM_OPEN_WITH_FILTER_EVENT,
-        handleConfirmOpenWithFilter,
-      );
-  }, [props.appTabId, props.id_connection, props.schema, table]);
+    setActiveTableInfoTabId('tabData');
+  }, [pendingOpenTableWithFilter]);
 
   return (
     <div className={styles.container} onKeyDown={handleKeyDown}>
@@ -411,7 +407,7 @@ const TableInfo = (props: ITableInfoViewProps) => {
 
       <ModalConfirmDiscardChanges
         show={!!pendingOpenTableWithFilter}
-        onCancel={() => setPendingOpenTableWithFilter(undefined)}
+        onCancel={clearOpenWithFilterRequest}
         onConfirm={() => {
           if (pendingOpenTableWithFilter) {
             applyTableDataTabWithFilter(pendingOpenTableWithFilter, true);

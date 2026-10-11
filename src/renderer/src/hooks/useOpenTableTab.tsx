@@ -4,7 +4,7 @@ import { useAppTabStore } from '@renderer/stores/AppTab';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { getRendererDialect } from '@renderer/database/dialects';
 import TableInfo from '@renderer/views/TableInfo';
-import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
+import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
 
 interface IOpenTableOptions {
   initialWhere?: string;
@@ -29,7 +29,7 @@ export const useOpenTableTab = () => {
 
       if (options?.initialWhere && existingTab?.unsaved) {
         setActiveTabId(tabId);
-        emitConfirmOpenTableWithFilter({
+        requestOpenTableWithFilter({
           tabId,
           idConnection,
           schema,

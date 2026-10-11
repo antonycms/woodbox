@@ -16,7 +16,7 @@ import FilterInput from '@renderer/components/FilterInput';
 import { VirtualizeList } from '@renderer/components/VirtualizeList';
 import { classes, toCssProperties } from '@renderer/styles/theme';
 import { useThemeStore } from '@renderer/stores/Theme';
-import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
+import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { getErrorMessage } from '@shared/utils/error';
 import type { ICentralSearchItem, ICentralSearchItemType, ICentralSearchRow } from './dtos';
@@ -109,7 +109,7 @@ export const CentralSearchModal = React.memo(() => {
       if (initialWhere) {
         if (tab?.unsaved) {
           setActiveTabId(tabId);
-          emitConfirmOpenTableWithFilter({
+          requestOpenTableWithFilter({
             tabId,
             idConnection,
             schema,

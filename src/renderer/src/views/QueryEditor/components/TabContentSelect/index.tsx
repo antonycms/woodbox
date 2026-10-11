@@ -49,7 +49,7 @@ import {
 } from '@renderer/database/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
-import { emitConfirmOpenTableWithFilter } from '@renderer/views/TableInfo/events';
+import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
 import { prepareQueryVariables } from '../../utils/queryVariables';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { ModalExportData } from '@renderer/components/ModalExportData';
@@ -701,7 +701,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
       if (existingTab?.unsaved) {
         setActiveTabId(tabId);
-        emitConfirmOpenTableWithFilter({ ...params, tabId });
+        requestOpenTableWithFilter({ ...params, tabId });
         return;
       }
 
