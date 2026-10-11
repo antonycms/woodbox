@@ -444,8 +444,9 @@ export const getConnectionInfo = async (connectionId: string) => {
     ? adapter.getRows<{ schema_name: string }>(schemasRaw).map((row) => row?.schema_name)
     : undefined;
   const functions = functionsRaw ? adapter.getRows<IFunctionDb>(functionsRaw) : [];
+  const supportsTableComments = ['postgres', 'mysql'].includes(connection.dialect);
 
-  return { tables, schemas, functions };
+  return { tables, schemas, functions, supports_table_comments: supportsTableComments };
 };
 
 export const getTableColumns = async (connectionId: string, { table, schema }: ITableWithSchema) => {

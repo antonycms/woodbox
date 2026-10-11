@@ -6,6 +6,7 @@ import type {
   RendererDialect,
   RendererDialectDdl,
 } from './types';
+import { defaultDml } from './dml';
 import { getIndexColumnsDdl } from './utils';
 
 const mysqlIntegerTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
@@ -169,8 +170,15 @@ const mysqlDdl: RendererDialectDdl = {
     return '';
   },
 
-  getTableCommentDdl() {
-    return '';
+  getTableCommentDdl(tableName, comment, helpers) {
+    return `ALTER TABLE ${tableName} COMMENT = ${helpers.quoteLiteral(comment || '')};`;
+  },
+
+  getRenameTableDdl(schema, table, newTable, helpers) {
+    return `RENAME TABLE ${helpers.getTableName(schema, table)} TO ${helpers.getTableName(
+      schema,
+      newTable,
+    )};`;
   },
 
   getCreateTableDdl(tableName, columns, restrictions, helpers) {
@@ -364,6 +372,7 @@ const mysql: RendererDialect = {
     'timestamp',
     'json',
   ],
+  dml: defaultDml,
   ddl: mysqlDdl,
 };
 

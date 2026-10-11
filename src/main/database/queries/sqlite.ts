@@ -12,8 +12,10 @@ const getTables = () => /* sql */ `
     m.name AS table_name,
     NULL AS table_schema,
     CASE WHEN m.type = 'view' THEN 'view' ELSE 'table' END AS object_type,
+    NULL AS comment,
     (m.type = 'table') AS supports_indexes,
     true AS supports_triggers,
+    false AS supports_table_comments,
     COALESCE(SUM(s.pgsize), 0) AS total_size
   FROM sqlite_schema m
   LEFT JOIN dbstat s ON s.name = m.name

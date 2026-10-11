@@ -54,6 +54,45 @@ export interface RendererDialectDdlHelpers {
   normalizeOptionalString(value?: string): string | undefined;
 }
 
+export interface DmlUpdateRow {
+  originalRow: Record<string, unknown>;
+  changes: Record<string, unknown>;
+}
+
+export interface RendererDialectDmlHelpers {
+  quoteIdent(value: string): string;
+  quoteLiteral(value: string): string;
+  getTableName(schema: string | undefined, table: string): string;
+  serializeValue(value: unknown): string;
+  serializeWhereValue(column: string, value: unknown): string;
+}
+
+export interface RendererDialectDml {
+  getInsertDml(
+    schema: string | undefined,
+    table: string,
+    rows: Record<string, unknown>[],
+    columnOrder: string[] | undefined,
+    helpers: RendererDialectDmlHelpers,
+  ): string;
+
+  getUpdateDml(
+    schema: string | undefined,
+    table: string,
+    rows: DmlUpdateRow[],
+    whereColumns: string[],
+    helpers: RendererDialectDmlHelpers,
+  ): string;
+
+  getDeleteDml(
+    schema: string | undefined,
+    table: string,
+    rows: Record<string, unknown>[],
+    whereColumns: string[],
+    helpers: RendererDialectDmlHelpers,
+  ): string;
+}
+
 export interface RendererDialectDdl {
   getColumnTypeDdl?(column: DdlColumnInfo, helpers: RendererDialectDdlHelpers): string;
 
@@ -76,6 +115,13 @@ export interface RendererDialectDdl {
   getTableCommentDdl(
     tableName: string,
     comment: string | undefined,
+    helpers: RendererDialectDdlHelpers,
+  ): string;
+
+  getRenameTableDdl(
+    schema: string | undefined,
+    table: string,
+    newTable: string,
     helpers: RendererDialectDdlHelpers,
   ): string;
 
@@ -190,5 +236,6 @@ export interface RendererDialect {
   getQualifiedName(schema: string | undefined, name: string): string;
   commonColumnTypes: string[];
   indexMethods?: string[];
+  dml: RendererDialectDml;
   ddl: RendererDialectDdl;
 }

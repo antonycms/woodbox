@@ -5,9 +5,11 @@ export type DatabaseObjectType = 'table' | 'view' | 'materialized_view';
 export interface ITable {
   table_name: string;
   table_schema?: string;
+  comment?: string;
   object_type?: DatabaseObjectType;
   supports_indexes?: boolean;
   supports_triggers?: boolean;
+  supports_table_comments?: boolean;
   total_size?: number;
 }
 
@@ -21,6 +23,7 @@ export interface IConnectionInfo {
   tables: ITable[];
   functions: IFunctionDb[];
   schemas?: string[];
+  supports_table_comments?: boolean;
 }
 
 export interface IColumnInfo {

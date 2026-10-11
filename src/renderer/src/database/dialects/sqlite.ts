@@ -1,5 +1,6 @@
 import { quoteSqlIdentifier as quoteIdent } from '@shared/utils/sql';
 import type { RendererDialect, RendererDialectDdl } from './types';
+import { defaultDml } from './dml';
 import { getIndexColumnsDdl } from './utils';
 
 
@@ -30,6 +31,12 @@ const sqliteDdl: RendererDialectDdl = {
 
   getTableCommentDdl() {
     return '';
+  },
+
+  getRenameTableDdl(schema, table, newTable, helpers) {
+    return `ALTER TABLE ${helpers.getTableName(schema, table)}\n  RENAME TO ${helpers.quoteIdent(
+      newTable,
+    )};`;
   },
 
   getCreateTableDdl(tableName, columns, restrictions, helpers) {
@@ -146,6 +153,7 @@ const sqlite: RendererDialect = {
   getQualifiedName: (_schema, name) => quoteIdent(name),
   indexMethods: [],
   commonColumnTypes: ['text', 'integer', 'real', 'numeric', 'blob'],
+  dml: defaultDml,
   ddl: sqliteDdl,
 };
 

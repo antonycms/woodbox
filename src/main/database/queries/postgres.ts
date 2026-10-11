@@ -30,8 +30,10 @@ const getTables = () => /* sql */ `
       WHEN 'm' THEN 'materialized_view'
       ELSE 'table'
     END AS object_type,
+    obj_description(c.oid, 'pg_class') AS comment,
     (c.relkind IN ('r', 'p', 'm')) AS supports_indexes,
     (c.relkind IN ('r', 'p', 'v')) AS supports_triggers,
+    (c.relkind IN ('r', 'p')) AS supports_table_comments,
     pg_total_relation_size(c.oid) AS total_size
   FROM pg_catalog.pg_class c
   JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace

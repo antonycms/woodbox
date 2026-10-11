@@ -1,5 +1,6 @@
 import { quoteSqlIdentifier as quoteIdent } from '@shared/utils/sql';
 import type { RendererDialect, RendererDialectDdl } from './types';
+import { defaultDml } from './dml';
 import { getIndexColumnsDdl } from './utils';
 
 
@@ -54,9 +55,16 @@ const postgresDdl: RendererDialectDdl = {
 
   getTableCommentDdl(tableName, comment, helpers) {
     const commentSql = helpers.normalizeOptionalString(comment);
-    if (!commentSql) return '';
 
-    return `COMMENT ON TABLE ${tableName} IS ${helpers.quoteLiteral(commentSql)};`;
+    return `COMMENT ON TABLE ${tableName} IS ${
+      commentSql ? helpers.quoteLiteral(commentSql) : 'NULL'
+    };`;
+  },
+
+  getRenameTableDdl(schema, table, newTable, helpers) {
+    return `ALTER TABLE ${helpers.getTableName(schema, table)}\n  RENAME TO ${helpers.quoteIdent(
+      newTable,
+    )};`;
   },
 
   getCreateTableDdl(tableName, columns, _restrictions, helpers) {
@@ -251,6 +259,7 @@ const postgres: RendererDialect = {
     'json',
     'jsonb',
   ],
+  dml: defaultDml,
   ddl: postgresDdl,
 };
 

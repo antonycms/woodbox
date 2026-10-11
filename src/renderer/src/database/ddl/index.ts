@@ -1,5 +1,9 @@
 import type { RendererDialect } from '@renderer/database/dialects';
-import type { RendererDialectDdlHelpers } from '@renderer/database/dialects/types';
+import type {
+  DmlUpdateRow,
+  RendererDialectDdlHelpers,
+  RendererDialectDmlHelpers,
+} from '@renderer/database/dialects/types';
 import type {
   IColumnInfo,
   IColumnReferenceInfo,
@@ -21,7 +25,7 @@ import type {
 
 export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
-const serializeInsertValue = (value: unknown) => {
+const serializeDmlValue = (value: unknown) => {
   if (value === null || value === undefined) return 'NULL';
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
@@ -30,19 +34,6 @@ const serializeInsertValue = (value: unknown) => {
 
   return quoteLiteral(String(value));
 };
-
-const getInsertColumns = (row: Record<string, unknown>, columnOrder?: string[]) => {
-  const rowColumns = Object.keys(row);
-
-  if (!columnOrder?.length) return rowColumns;
-
-  const orderedColumns = columnOrder.filter((column) => rowColumns.includes(column));
-  const extraColumns = rowColumns.filter((column) => !orderedColumns.includes(column));
-
-  return [...orderedColumns, ...extraColumns];
-};
-
-const getInsertGroupKey = (columns: string[]) => columns.join('\0');
 
 const getTableName = (dialect: RendererDialect, schema: string | undefined, table: string) => {
   return dialect.getQualifiedName(schema, table);
@@ -84,6 +75,22 @@ const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => {
   return helpers;
 };
 
+const getDmlHelpers = (dialect: RendererDialect): RendererDialectDmlHelpers => {
+  const helpers: RendererDialectDmlHelpers = {
+    quoteIdent: dialect.quoteIdent,
+    quoteLiteral,
+    getTableName: (schema, table) => getTableName(dialect, schema, table),
+    serializeValue: serializeDmlValue,
+    serializeWhereValue: (column, value) => {
+      if (value === null || value === undefined) return `${dialect.quoteIdent(column)} IS NULL`;
+
+      return `${dialect.quoteIdent(column)} = ${helpers.serializeValue(value)}`;
+    },
+  };
+
+  return helpers;
+};
+
 export const generateInsertDdl = (
   dialect: RendererDialect,
   schema: string | undefined,
@@ -91,81 +98,17 @@ export const generateInsertDdl = (
   rows: Record<string, unknown>[],
   columnOrder?: string[],
 ) => {
-  if (!rows.length) return '';
-
-  const quoteIdent = dialect.quoteIdent;
-  const tableName = getTableName(dialect, schema, table);
-  const groups = new Map<string, { columns: string[]; rows: Record<string, unknown>[] }>();
-
-  rows.forEach((row) => {
-    const columns = getInsertColumns(row, columnOrder);
-    if (!columns.length) return;
-
-    const key = getInsertGroupKey(columns);
-    const group = groups.get(key);
-
-    if (group) {
-      group.rows.push(row);
-      return;
-    }
-
-    groups.set(key, { columns, rows: [row] });
-  });
-
-  return [...groups.values()]
-    .map(({ columns, rows: groupRows }) => {
-      const columnsSql = columns.map(quoteIdent).join(', ');
-      const valuesSql = groupRows
-        .map(
-          (row) => `  (${columns.map((column) => serializeInsertValue(row[column])).join(', ')})`,
-        )
-        .join(',\n');
-
-      return `INSERT INTO ${tableName} (${columnsSql})\nVALUES\n${valuesSql};`;
-    })
-    .join('\n\n');
-};
-
-const serializeUpdateValue = serializeInsertValue;
-
-const serializeWhereValue = (dialect: RendererDialect, column: string, value: unknown) => {
-  const quoteIdent = dialect.quoteIdent;
-
-  if (value === null || value === undefined) return `${quoteIdent(column)} IS NULL`;
-
-  return `${quoteIdent(column)} = ${serializeUpdateValue(value)}`;
+  return dialect.dml.getInsertDml(schema, table, rows, columnOrder, getDmlHelpers(dialect));
 };
 
 export const generateUpdateDdl = (
   dialect: RendererDialect,
   schema: string | undefined,
   table: string,
-  rows: Array<{
-    originalRow: Record<string, unknown>;
-    changes: Record<string, unknown>;
-  }>,
+  rows: DmlUpdateRow[],
   whereColumns: string[],
 ) => {
-  const quoteIdent = dialect.quoteIdent;
-  const tableName = getTableName(dialect, schema, table);
-
-  return rows
-    .map(({ originalRow, changes }) => {
-      const setSql = Object.entries(changes)
-        .map(([column, value]) => `  ${quoteIdent(column)} = ${serializeUpdateValue(value)}`)
-        .join(',\n');
-
-      const whereSql = whereColumns
-        .map((column) => serializeWhereValue(dialect, column, originalRow[column]))
-        .join('\n  AND ');
-
-      if (!setSql || !whereSql) return null;
-
-      return `UPDATE ${tableName}\nSET\n${setSql}\nWHERE ${whereSql};`;
-    })
-    .filter((sql): sql is string => !!sql)
-    .join('\n\n')
-    .trim();
+  return dialect.dml.getUpdateDml(schema, table, rows, whereColumns, getDmlHelpers(dialect));
 };
 
 export const generateDeleteDdl = (
@@ -175,20 +118,7 @@ export const generateDeleteDdl = (
   rows: Record<string, unknown>[],
   whereColumns: string[],
 ) => {
-  const tableName = getTableName(dialect, schema, table);
-
-  return rows
-    .map((row) => {
-      const whereSql = whereColumns
-        .map((column) => serializeWhereValue(dialect, column, row[column]))
-        .join('\n  AND ');
-
-      if (!whereSql) return null;
-
-      return `DELETE FROM ${tableName}\nWHERE ${whereSql};`;
-    })
-    .filter((sql): sql is string => !!sql)
-    .join('\n\n');
+  return dialect.dml.getDeleteDml(schema, table, rows, whereColumns, getDmlHelpers(dialect));
 };
 
 const groupByConstraintName = (references: IColumnReferenceInfo[] = []) => {
@@ -547,6 +477,19 @@ const getChangeColumnDdl = (
   return dialect.ddl.getChangeColumnDdl(tableName, column, getDdlHelpers(dialect));
 };
 
+const generateRenameTableDdl = (
+  dialect: RendererDialect,
+  schema: string | undefined,
+  table: string,
+  newTable: string | undefined,
+) => {
+  const tableName = normalizeOptionalString(newTable);
+
+  if (!tableName || tableName === table) return '';
+
+  return dialect.ddl.getRenameTableDdl(schema, table, tableName, getDdlHelpers(dialect));
+};
+
 export const generateCreateTableDdl = (
   dialect: RendererDialect,
   schema: string | undefined,
@@ -567,7 +510,9 @@ export const generateCreateTableDdl = (
   const tableName = getTableName(dialect, schema, table);
 
   const createTable = dialect.ddl.getCreateTableDdl(tableName, columns, restrictions, helpers);
-  const tableComment = dialect.ddl.getTableCommentDdl(tableName, changes.tableComment, helpers);
+  const tableComment = normalizeOptionalString(changes.tableComment)
+    ? dialect.ddl.getTableCommentDdl(tableName, changes.tableComment, helpers)
+    : '';
   const columnComments = columns
     .map((column) =>
       dialect.ddl.getColumnCommentDdl(tableName, column.column_name, column.description, helpers),
@@ -603,6 +548,9 @@ export const generatePendingTableChangesDdl = (
     existingRestrictions?: IColumnRestrictionsInfo[];
     existingReferences?: IColumnReferenceInfo[];
     existingColumns?: IColumnInfo[];
+    newTableName?: string;
+    tableComment?: string;
+    tableCommentChanged?: boolean;
   },
 ) => {
   const columns = changes.columns || [];
@@ -614,6 +562,9 @@ export const generatePendingTableChangesDdl = (
   const droppedRestrictions = changes.droppedRestrictions || [];
   const references = changes.references || [];
   const droppedReferences = changes.droppedReferences || [];
+  const newTableName = normalizeOptionalString(changes.newTableName);
+  const tableRenamed = !!newTableName && newTableName !== table;
+  const tablePropertiesChanged = tableRenamed || changes.tableCommentChanged;
 
   if (
     !columns.length &&
@@ -624,13 +575,15 @@ export const generatePendingTableChangesDdl = (
     !restrictions.length &&
     !droppedRestrictions.length &&
     !references.length &&
-    !droppedReferences.length
+    !droppedReferences.length &&
+    !tablePropertiesChanged
   ) {
     return '';
   }
 
   const helpers = getDdlHelpers(dialect);
   const tableName = getTableName(dialect, schema, table);
+  const finalTableName = getTableName(dialect, schema, newTableName || table);
   const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
   const changedColumnsByOriginalName = new Map(
     changedColumns.map((column) => [column.__originalColumn.column_name, column]),
@@ -678,6 +631,10 @@ export const generatePendingTableChangesDdl = (
     ...postCreateRestrictionChangeColumnStatements,
     ...getCreateIndexesDdl(dialect, schema, table, indexes, availableColumns),
     ...getCreateReferencesDdl(dialect, tableName, references),
+    generateRenameTableDdl(dialect, schema, table, newTableName),
+    changes.tableCommentChanged
+      ? dialect.ddl.getTableCommentDdl(finalTableName, changes.tableComment, helpers)
+      : '',
   ]
     .filter(Boolean)
     .join('\n\n');
