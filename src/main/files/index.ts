@@ -69,9 +69,9 @@ const selectSshKey = async () => {
   return result.canceled ? null : result.filePaths[0];
 };
 
-addListener('@dialog:select_sqlite_file', selectSqliteFile);
-addListener('@dialog:select_dbeaver_export_file', selectDbeaverExportFile);
-addListener('@dialog:select_project_import_file', selectProjectImportFile);
-addListener('@dialog:select_project_export_file', selectProjectExportFile);
-addListener('@dialog:select_ssl_file', selectSslFile);
-addListener('@dialog:select_ssh_key', selectSshKey);
+addListener('@post:select_sqlite_file', selectSqliteFile);
+addListener('@post:select_dbeaver_export_file', selectDbeaverExportFile);
+addListener('@post:select_project_import_file', selectProjectImportFile);
+addListener('@post:select_project_export_file', selectProjectExportFile);
+addListener('@post:select_ssl_file', selectSslFile);
+addListener('@post:select_ssh_key', selectSshKey);

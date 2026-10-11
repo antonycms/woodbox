@@ -3,16 +3,16 @@ import addListener from '../utils/addListener';
 
 // project
 addListener('@get:projects', store.getProjects);
-addListener('@add:projects', store.addProject);
-addListener('@remove:projects', store.removeProject);
-addListener('@edit:projects', store.editProject);
+addListener('@post:projects', store.addProject);
+addListener('@delete:project', store.removeProject);
+addListener('@post:update_project', store.editProject);
 
 // connections saved
 addListener('@get:config_connections_saved', () => store.getConnectionsSaved());
 addListener('@get:config_connection_saved', (id) => store.getConnectionsSaved(id));
-addListener('@add:config_connections_saved', store.addConnectionSaved);
-addListener('@remove:config_connections_saved', store.removeConnectionSaved);
-addListener('@edit:config_connections_saved', (id, data) =>
+addListener('@post:config_connections_saved', store.addConnectionSaved);
+addListener('@delete:config_connection_saved', store.removeConnectionSaved);
+addListener('@post:update_config_connection_saved', (id, data) =>
   store.editConnectionSaved(id, { ...data, id }),
 );
 addListener(
@@ -25,27 +25,27 @@ addListener('@post:export_projects', store.exportProjects);
 // scripts
 addListener('@get:scripts_meta', store.getScriptsMeta);
 addListener('@get:script_content', store.getScriptContent);
-addListener('@add:scripts', (data) => store.addScript({ ...data, content: data.content ?? '' }));
-addListener('@remove:scripts', store.removeScript);
-addListener('@patch:scripts', store.patchScript);
+addListener('@post:scripts', (data) => store.addScript({ ...data, content: data.content ?? '' }));
+addListener('@delete:script', store.removeScript);
+addListener('@post:update_script', store.patchScript);
 
 // snippets
 addListener('@get:snippets', store.getSnippets);
-addListener('@add:snippets', store.addSnippet);
-addListener('@remove:snippets', store.removeSnippet);
-addListener('@edit:snippets', store.editSnippet);
+addListener('@post:snippets', store.addSnippet);
+addListener('@delete:snippet', store.removeSnippet);
+addListener('@post:update_snippet', store.editSnippet);
 
 // ai providers
 addListener('@get:ai_providers', store.getAIProviders);
-addListener('@add:ai_providers', store.addAIProvider);
-addListener('@remove:ai_providers', store.removeAIProvider);
-addListener('@edit:ai_providers', store.editAIProvider);
+addListener('@post:ai_providers', store.addAIProvider);
+addListener('@delete:ai_provider', store.removeAIProvider);
+addListener('@post:update_ai_provider', store.editAIProvider);
 
 // ai chats
 addListener('@get:ai_chats', store.getAIChats);
-addListener('@add:ai_chats', store.addAIChat);
-addListener('@remove:ai_chats', store.removeAIChat);
-addListener('@edit:ai_chats', store.editAIChat);
+addListener('@post:ai_chats', store.addAIChat);
+addListener('@delete:ai_chat', store.removeAIChat);
+addListener('@post:update_ai_chat', store.editAIChat);
 addListener('@post:append_ai_chat_messages', store.appendAIChatMessages);
 
 // preferences
