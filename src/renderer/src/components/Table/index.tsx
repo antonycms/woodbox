@@ -1,7 +1,6 @@
 import { useI18nStore } from '@renderer/stores/I18n';
 import React from 'react';
 import useResize from '@renderer/hooks/useResize';
-import useDebounce from '@renderer/hooks/useDebounce';
 import { calculateTextHtmlWidth } from '@renderer/utils/methods';
 import { MultiplesBarLoading } from '@renderer/components/Loaders';
 import styles from './styles.module.css';
@@ -17,11 +16,7 @@ import type {
   TableCellEditValue,
   TableSerializedRow,
   TableCellPosition,
-  TableDragSelectionState,
-  TableScrollState,
   TableSearchOccurrence,
-  TableSearchOverlayPosition,
-  TableSearchState,
 } from './dtos';
 import { useTableLayout } from './hooks/useTableLayout';
 import { useTableColumnResize } from './hooks/useTableColumnResize';
@@ -32,6 +27,9 @@ import { useTableClipboardPaste } from './hooks/useTableClipboardPaste';
 import { useTableColumnSizing } from './hooks/useTableColumnSizing';
 import { useTableKeyboardEvents } from './hooks/useTableKeyboardEvents';
 import { useTableSearchEffects } from './hooks/useTableSearchEffects';
+import { useTableScrollController } from './hooks/useTableScrollController';
+import { useTableSearchController } from './hooks/useTableSearchController';
+import { useTableSelectionController } from './hooks/useTableSelectionController';
 import {
   cellKey,
   findSearchIndex,
@@ -128,41 +126,29 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
   const [analysisRows, setAnalysisRows] = React.useState<TableSerializedRow<Row>[]>([]);
   const [analysisColumnsSize, setAnalysisColumnsSize] = React.useState<number[]>([]);
   const [analysisMinColumnsSize, setAnalysisMinColumnsSize] = React.useState<number[]>([]);
-  const [analysisSelectedCells, setAnalysisSelectedCells] = React.useState<Set<string>>(new Set());
-  const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
-  const [searchClosing, setSearchClosing] = React.useState(false);
-  const [searchState, setSearchState] = React.useState<TableSearchState>({
-    open: false,
-    replaceOpen: false,
-    query: '',
-    replace: '',
-    matchCase: false,
-    wholeWord: false,
-    activeIndex: 0,
-  });
-  const [searchOverlayPosition, setSearchOverlayPosition] =
-    React.useState<TableSearchOverlayPosition>({
-      top: 8,
-      right: 8,
-    });
-  const lastSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
-  const lastAnalysisSelectedCellRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(
-    null,
-  );
-  const dragSelectionRef = React.useRef<TableDragSelectionState | null>(null);
-  const ignoreNextClickRef = React.useRef(false);
-  const searchCloseTimeoutRef = React.useRef<number | undefined>(undefined);
-  const analysisArrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
-  const arrowCursorRef = React.useRef<{ rowIndex: number; colIndex: number } | null>(null);
-  const [scroll, setScroll] = React.useState<TableScrollState>({ left: 0, top: 0 });
-  const setScrollDebounced = useDebounce<React.Dispatch<React.SetStateAction<TableScrollState>>>(
-    setScroll,
-    20,
-  );
-  const defaultScrollRef = React.useRef<TableScrollState>({ left: 0, top: 0 });
   const { height: heightBodyContainer, width: widthBodyContainer } = useResize({
     HTMLElement: refScrollContainer.current,
     ignoreZeroValue: true,
+  });
+  const {
+    searchClosing,
+    setSearchClosing,
+    searchState,
+    setSearchState,
+    searchOverlayPosition,
+    setSearchOverlayPosition,
+    searchCloseTimeoutRef,
+  } = useTableSearchController();
+  const {
+    scroll,
+    setScroll,
+    defaultScrollRef,
+    captureDefaultScroll,
+    restoreDefaultScroll,
+    onScroll,
+  } = useTableScrollController({
+    scrollContainerRef: refScrollContainer,
+    onScrollEnd,
   });
   const { columnsSize, minColumnsSize, setColumnsSize } = useTableColumnSizing({ columns });
 
@@ -209,12 +195,23 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
   const serializedRowsRef = React.useRef(serializedRows);
   serializedRowsRef.current = serializedRows;
 
-  const selectedCellsRef = React.useRef(selectedCells);
-  selectedCellsRef.current = selectedCells;
-  const analysisSelectedCellsRef = React.useRef(analysisSelectedCells);
-  analysisSelectedCellsRef.current = analysisSelectedCells;
-  const analysisRowsRef = React.useRef(analysisRows);
-  analysisRowsRef.current = analysisRows;
+  const {
+    analysisSelectedCells,
+    setAnalysisSelectedCells,
+    selectedCells,
+    setSelectedCells,
+    selectedRows,
+    selectedRowsRef,
+    selectedCellsRef,
+    analysisSelectedCellsRef,
+    analysisRowsRef,
+    lastSelectedCellRef,
+    lastAnalysisSelectedCellRef,
+    dragSelectionRef,
+    ignoreNextClickRef,
+    analysisArrowCursorRef,
+    arrowCursorRef,
+  } = useTableSelectionController({ serializedRows, analysisRows });
   const analysisColumnsSizeRef = React.useRef(analysisColumnsSize);
   const analysisModeEnterRef = React.useRef(analysisMode);
   analysisModeEnterRef.current = analysisMode;
@@ -226,7 +223,6 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     rowNumberColumnWidth,
     columnsDetails,
     rowsDetails,
-    tableDetails,
     cssVars,
   } = useTableLayout({
     theme,
@@ -274,19 +270,6 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     setColumnsSize,
     setAnalysisColumnsSize,
   });
-
-  const selectedRows = React.useMemo(() => {
-    const map = new Map<React.Key, TableSerializedRow<Row>>();
-    selectedCells.forEach((key) => {
-      const rowIndex = parseInt(key.split(':')[0], 10);
-      const row = serializedRows[rowIndex];
-      if (row) map.set(row.__key_row, row);
-    });
-    return map;
-  }, [selectedCells, serializedRows]);
-
-  const selectedRowsRef = React.useRef(selectedRows);
-  selectedRowsRef.current = selectedRows;
 
   const columnsSignature = React.useMemo(
     () => columns.map((column) => String(column.attribute)).join('\0'),
@@ -368,61 +351,6 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     return new Set(searchOccurrences.map((occurrence) => occurrence.key));
   }, [searchOccurrences, searchState.open]);
   const initialAnalysisModeAppliedRef = React.useRef(false);
-
-  const checkScrollEnd = React.useCallback(() => {
-    const element = refScrollContainer.current;
-    if (!element || !onScrollEnd) return;
-
-    const hasVerticalScroll = element.scrollHeight > element.clientHeight;
-    if (!hasVerticalScroll) return;
-
-    const threshold = 8;
-    const isEndVerticalScroll =
-      Math.ceil(element.clientHeight + element.scrollTop) >= element.scrollHeight - threshold;
-
-    if (isEndVerticalScroll) {
-      onScrollEnd();
-    }
-  }, [onScrollEnd]);
-
-  const captureDefaultScroll = React.useCallback(() => {
-    const element = refScrollContainer.current;
-    const nextScroll = element
-      ? { left: element.scrollLeft, top: element.scrollTop }
-      : defaultScrollRef.current;
-
-    defaultScrollRef.current = nextScroll;
-    setScroll(nextScroll);
-
-    return nextScroll;
-  }, [setScroll]);
-
-  const restoreDefaultScroll = React.useCallback(() => {
-    const element = refScrollContainer.current;
-    if (!element) return;
-
-    const nextScroll = defaultScrollRef.current;
-    element.scrollLeft = nextScroll.left;
-    element.scrollTop = nextScroll.top;
-    setScroll(nextScroll);
-  }, [setScroll]);
-
-  const onScroll = React.useCallback(
-    (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
-      const nextScroll = {
-        left: event.currentTarget.scrollLeft,
-        top: event.currentTarget.scrollTop,
-      };
-
-      defaultScrollRef.current = nextScroll;
-      setScrollDebounced(nextScroll);
-
-      if (nextScroll.top !== scroll.top) {
-        checkScrollEnd();
-      }
-    },
-    [checkScrollEnd, scroll.top, setScrollDebounced],
-  );
 
   const getSortState = React.useCallback(
     (column: IColumn<Row>) => {

@@ -112,7 +112,6 @@ export const useTableLayout = ({
     rowNumberColumnWidth,
     columnsDetails,
     rowsDetails,
-    tableDetails,
     cssVars,
   };
 };
