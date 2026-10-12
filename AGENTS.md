@@ -153,6 +153,7 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 6. `useEffect` e `useLayoutEffect`.
 
 `useMemo`, `useCallback` e efeitos devem ficar agrupados logo antes do `return`, sem ficarem espalhados entre handlers.
+- Exceção: quando um hook personalizado recebe um callback como parâmetro e precisa dele estável para montar handlers internos, é aceitável declarar esse `useCallback` imediatamente antes do hook consumidor. Prefira essa exceção a introduzir wrappers indiretos sem ganho real de legibilidade ou comportamento.
 
 ## Main process (`src/main`)
 
