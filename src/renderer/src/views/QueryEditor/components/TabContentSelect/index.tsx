@@ -2,39 +2,19 @@ import { useRowChanges } from '@renderer/hooks/useRowChanges';
 import { useShallow } from 'zustand/react/shallow';
 import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
-import { Bar } from '@renderer/components/Bar';
 import { Button } from '@renderer/components/Button';
-import {
-  ContextMenu,
-  type IContextMenuOption,
-  type IContextMenuPosition,
-} from '@renderer/components/ContextMenu';
+import { ContextMenu } from '@renderer/components/ContextMenu';
 import ReferencePreview from '@renderer/components/ReferencePreview';
 import ResizableContainer from '@renderer/components/ResizableContainer';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
 import ReferenceValuePreview from '@renderer/components/ReferenceValuePreview';
-import { RefreshButton } from '@renderer/components/RefreshButton';
-import { Spacer } from '@renderer/components/Spacer';
 import Table, { ITableContextMenuData, ITableSelectedCellData } from '@renderer/components/Table';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
-import type { ITab } from '@renderer/components/Tabs/components/TabBar';
-import { Text } from '@renderer/components/Text';
 import { useAppTabStore } from '@renderer/stores/AppTab';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
-import {
-  AddIcon,
-  CancelIcon,
-  CountIcon,
-  ExportIcon,
-  PanelFile,
-  RecordIcon,
-  SaveIcon,
-} from '@renderer/styles/icons';
-import { toDateTime } from '@renderer/utils/date';
-import { copyToClipboard } from '@renderer/utils/methods';
 import { generateHash } from '@shared/utils/string';
-import type { IColumnReferenceInfo, IColumnRestrictionsInfo } from '@shared/types/database';
+import type { IColumnReferenceInfo } from '@shared/types/database';
 import TableInfoWithContext from '@renderer/views/TableInfo';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
 import { useDatabaseStore } from '@renderer/stores/Database';
@@ -42,11 +22,6 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useToastStore } from '@renderer/stores/Toast';
 import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
-import {
-  generateDeleteDdl,
-  generateInsertDdl,
-  generateUpdateDdl,
-} from '@renderer/database/ddl';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import { getRendererDialect } from '@renderer/database/dialects';
 import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
@@ -54,6 +29,11 @@ import { prepareQueryVariables } from '../../utils/queryVariables';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import styles from './styles.module.css';
+import { ResultContextMenu } from './components/ResultContextMenu';
+import { ResultToolbar } from './components/ResultToolbar';
+import { useQueryResultEditing } from './hooks/useQueryResultEditing';
+import { useQueryResultPreview } from './hooks/useQueryResultPreview';
+import { useResultCaptureExport } from './hooks/useResultCaptureExport';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -70,8 +50,6 @@ interface ITabContentSelectProps {
   onClearCapture(): void;
   cancelingQuery?: boolean;
 }
-
-type PreviewTab = 'value' | 'reference' | 'selection';
 
 type OpenTableWithFilterParams = {
   idConnection: string;
@@ -106,27 +84,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       setActiveTabId: state.setActiveTabId,
     })),
   );
-  const { getTableRestrictions, getQueryRowsCount, runSql } = useDatabaseStore(
-    useShallow((state) => ({
-      getTableRestrictions: state.getTableRestrictions,
-      getQueryRowsCount: state.getQueryRowsCount,
-      runSql: state.runSql,
-    })),
-  );
+  const getQueryRowsCount = useDatabaseStore((state) => state.getQueryRowsCount);
   const connections = useWorkspaceStore((state) => state.connections);
   const showToast = useToastStore((state) => state.showToast);
 
-  const [saving, setSaving] = React.useState(false);
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
-  const [captureMenuPosition, setCaptureMenuPosition] = React.useState<IContextMenuPosition>();
-  const [showValuePreview, setShowValuePreview] = React.useState(false);
-  const [previewWidth, setPreviewWidth] = React.useState(420);
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`select_preview_${generateHash()}`);
-  const [activePreviewTab, setActivePreviewTab] = React.useState<PreviewTab>('value');
-  const [restrictionsCache, setRestrictionsCache] = React.useState(
-    new Map<string, IColumnRestrictionsInfo[]>(),
-  );
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
@@ -161,13 +125,58 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     discardNewRowsOnCancel: true,
   });
 
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
+  const dialect = getRendererDialect(
+    connections.find((connection) => connection.id === id_connection)?.dialect,
   );
+
+  const {
+    captureButtonColor,
+    captureMenuPosition,
+    captureMenuOptions,
+    openCaptureMenu,
+    closeCaptureMenu,
+  } = useResultCaptureExport({
+    data,
+    activeColor: activeTheme.queryEditor.capture.activeColor,
+    modifiedColor: activeTheme.queryEditor.capture.modifiedColor,
+    defaultColor: activeTheme.queryEditor.bar.color,
+    onToggleCapture,
+    onClearCapture,
+  });
+
+  const {
+    showValuePreview,
+    previewWidth,
+    activePreviewTab,
+    selectedCellValue,
+    tabFkMap,
+    selectedReference,
+    canSelectReferenceValue,
+    previewTabs,
+    closeValuePreview,
+    toggleValuePreview,
+    handlePreviewResize,
+    handleActivePreviewTab,
+    openReferencePreview,
+  } = useQueryResultPreview({
+    data,
+    references,
+    selectedCell,
+    editedFieldsRows,
+    newRows,
+  });
+
+  const { saving, handleSave } = useQueryResultEditing({
+    idConnection: id_connection,
+    data,
+    dialect,
+    editableTable,
+    editedFieldsRows,
+    droppedRows,
+    newRows,
+    resetRows,
+    onRefresh,
+  });
 
   const executionTimeMs = React.useMemo(() => {
     if (data.loading && data.date_run) {
@@ -178,156 +187,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
     return data.execution_time_ms;
   }, [data.loading, data.date_run, data.execution_time_ms, now]);
-
-  const formatExecutionTime = (timeMs?: number) => {
-    if (typeof timeMs !== 'number' || Number.isNaN(timeMs)) return '-';
-
-    return timeMs < 1000 ? `${timeMs}ms` : `${(timeMs / 1000).toFixed(2)}s`;
-  };
-
-  const hasCapturedRows = !!data.capture?.rows.length;
-
-  const captureButtonColor = data.capture?.active
-    ? activeTheme.queryEditor.capture.activeColor
-    : hasCapturedRows
-      ? activeTheme.queryEditor.capture.modifiedColor
-      : activeTheme.queryEditor.bar.color;
-
-  const stringifyCaptureValue = (value: unknown) =>
-    JSON.stringify(value, (_, item) => (typeof item === 'bigint' ? String(item) : item));
-
-  const downloadCaptureFile = React.useCallback(
-    (content: string, extension: string, type: string) => {
-      const startedAt = data.capture?.started_at || new Date().toISOString();
-      const fileDate = startedAt.replace(/[:.]/g, '-');
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-
-      link.href = url;
-      link.download = `woodbox-captura-query-${fileDate}.${extension}`;
-      link.click();
-      URL.revokeObjectURL(url);
-    },
-    [data.capture?.started_at],
-  );
-
-  const formatCaptureCsvCell = (value: unknown) => {
-    if (value === null || value === undefined) return '""';
-
-    const text =
-      typeof value === 'object' || typeof value === 'bigint'
-        ? stringifyCaptureValue(value)
-        : String(value);
-
-    return `"${text.replace(/"/g, '""')}"`;
-  };
-
-  const buildCaptureCsv = (capturedRows: NonNullable<IQueryResult['capture']>['rows']) => {
-    const columns = [
-      ...capturedRows.reduce((acc, capturedRow) => {
-        if (!capturedRow.row || typeof capturedRow.row !== 'object') return acc;
-
-        Object.keys(capturedRow.row).forEach((column) => acc.add(column));
-
-        return acc;
-      }, new Set<string>()),
-    ];
-    const header = ['captured_at', ...columns].map(formatCaptureCsvCell).join(',');
-    const rows = capturedRows.map((capturedRow) => {
-      const row = capturedRow.row && typeof capturedRow.row === 'object' ? capturedRow.row : {};
-
-      return [capturedRow.captured_at, ...columns.map((column) => row[column])]
-        .map(formatCaptureCsvCell)
-        .join(',');
-    });
-
-    return [header, ...rows].join('\n');
-  };
-
-  const handleExportCaptureJsonl = React.useCallback(() => {
-    const capturedRows = data.capture?.rows || [];
-
-    if (!capturedRows.length) {
-      showToast({
-        type: 'warn',
-        title: t('toast.noCapturedRows'),
-        description: t('toast.noCapturedRowsHelp'),
-      });
-      return;
-    }
-
-    const jsonl = capturedRows.map((row) => stringifyCaptureValue(row)).join('\n');
-    downloadCaptureFile(jsonl, 'jsonl', 'application/x-ndjson;charset=utf-8');
-
-    showToast({
-      type: 'success',
-      title: t('toast.captureExported'),
-      description: t('capture.exportedRowsJsonl', {
-        count: capturedRows.length.toLocaleString(language),
-      }),
-    });
-  }, [data.capture?.rows, downloadCaptureFile, language, showToast, t]);
-
-  const handleExportCaptureCsv = React.useCallback(() => {
-    const capturedRows = data.capture?.rows || [];
-
-    if (!capturedRows.length) {
-      showToast({
-        type: 'warn',
-        title: t('toast.noCapturedRows'),
-        description: t('toast.noCapturedRowsHelp'),
-      });
-      return;
-    }
-
-    const csv = buildCaptureCsv(capturedRows);
-    downloadCaptureFile(`\ufeff${csv}`, 'csv', 'text/csv;charset=utf-8');
-
-    showToast({
-      type: 'success',
-      title: t('toast.captureExported'),
-      description: t('capture.exportedRowsCsv', {
-        count: capturedRows.length.toLocaleString(language),
-      }),
-    });
-  }, [data.capture?.rows, downloadCaptureFile, language, showToast, t]);
-
-  const openCaptureMenu = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    setCaptureMenuPosition({ x: event.clientX, y: event.clientY });
-  }, []);
-
-  const captureMenuOptions = React.useMemo<IContextMenuOption[]>(
-    () =>
-      [
-        {
-          text: data.capture?.active ? t('capture.stop') : t('capture.start'),
-          onClick: onToggleCapture,
-        },
-        hasCapturedRows && {
-          text: t('capture.exportJsonl'),
-          onClick: handleExportCaptureJsonl,
-        },
-        hasCapturedRows && {
-          text: t('capture.exportCsv'),
-          onClick: handleExportCaptureCsv,
-        },
-        hasCapturedRows && {
-          text: t('capture.discard'),
-          onClick: onClearCapture,
-        },
-      ].filter(Boolean) as IContextMenuOption[],
-    [
-      data.capture?.active,
-      handleExportCaptureCsv,
-      handleExportCaptureJsonl,
-      hasCapturedRows,
-      onClearCapture,
-      onToggleCapture,
-      t,
-    ],
-  );
 
   const handleLoadRowsCount = React.useCallback(async () => {
     if (loadingRowsCount || data.loading) return;
@@ -360,72 +219,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     t,
   ]);
 
-  const closeValuePreview = React.useCallback(() => {
-    setShowValuePreview(false);
-    setActivePreviewTab('value');
-  }, []);
-
-  const selectedCellValue = React.useMemo(() => {
-    if (!selectedCell) return undefined;
-
-    const row = selectedCell.row;
-    const attribute = String(selectedCell.column.attribute);
-    const editedRow = editedFieldsRows.get(row.__key_row);
-    const newRow = newRows.get(row.__key_row);
-
-    if (newRow && attribute in newRow) return newRow[attribute];
-    if (editedRow && attribute in editedRow) return editedRow[attribute];
-
-    return row[attribute];
-  }, [editedFieldsRows, newRows, selectedCell]);
-
-  const tabFkMap = React.useMemo(() => {
-    const map = new Map<string, IColumnReferenceInfo>();
-
-    data?.tables_info?.forEach?.(({ name, schema }) => {
-      const key = `${schema ? schema + '.' : ''}${name}`;
-
-      references.get(key)?.forEach((ref) => map.set(ref.column_name, ref));
-    });
-
-    return map;
-  }, [data?.tables_info, references]);
-
-  const selectedReference = selectedCell
-    ? tabFkMap.get(String(selectedCell.column.attribute))
-    : undefined;
-
-  const canSelectReferenceValue = !!selectedReference && selectedCell?.column.editable === true;
-
-  const previewTabs = React.useMemo(
-    () =>
-      [
-        { idTab: 'value', title: t('tabs.value') },
-        selectedReference && { idTab: 'reference', title: t('reference.singular') },
-        canSelectReferenceValue && { idTab: 'selection', title: t('tabs.selection') },
-      ].filter(Boolean) as ITab[],
-    [canSelectReferenceValue, selectedReference, t],
-  );
-
-  const toggleValuePreview = React.useCallback(() => {
-    if (showValuePreview) {
-      closeValuePreview();
-      return;
-    }
-
-    setShowValuePreview(true);
-  }, [closeValuePreview, showValuePreview]);
-
-  const handlePreviewResize = React.useCallback((size: { width?: number }) => {
-    if (size.width) setPreviewWidth(size.width);
-  }, []);
-
-  const handleActivePreviewTab = React.useCallback((tab?: ITab) => {
-    setActivePreviewTab(tab?.idTab as PreviewTab);
-  }, []);
-
   const closeDdlModal = React.useCallback(() => {
     setShowDdlModal(false);
+  }, []);
+
+  const openDdlModal = React.useCallback(() => {
+    setShowDdlModal(true);
   }, []);
 
   const openExportModal = React.useCallback(() => {
@@ -435,10 +234,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const closeExportModal = React.useCallback(() => {
     setShowExportModal(false);
-  }, []);
-
-  const closeCaptureMenu = React.useCallback(() => {
-    setCaptureMenuPosition(undefined);
   }, []);
 
   const handleReferenceSelectionError = React.useCallback(
@@ -482,155 +277,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     },
     [handleApplySelectedCellValue, selectedCell],
   );
-
-  const getPrimaryKeyColumns = React.useCallback(async () => {
-    if (!editableTable?.name) return [];
-
-    const key = `${editableTable.schema}.${editableTable.name}`;
-
-    let _restrictions = restrictionsCache.get(key);
-
-    if (!_restrictions) {
-      _restrictions = await getTableRestrictions(id_connection, {
-        schema: editableTable.schema,
-        table: editableTable.name,
-      });
-
-      setRestrictionsCache((prevState) => {
-        const nextState = new Map(prevState);
-        nextState.set(key, _restrictions || []);
-        return nextState;
-      });
-    }
-
-    const pk = _restrictions.find((restriction) => restriction.constraint_type === 'primary_key');
-
-    return pk?.column_names || [];
-  }, [id_connection, editableTable, getTableRestrictions, restrictionsCache]);
-
-  const handleSave = React.useCallback(async () => {
-    const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
-    const rowsToDelete = [...droppedRows.values()];
-
-    if ((!rowsToInsert.length && !editedFieldsRows.size && !rowsToDelete.length) || saving) {
-      return;
-    }
-
-    if (!editableTable?.name) {
-      showToast({
-        type: 'error',
-        title: t('toast.saveNotPossible'),
-        description: t('toast.querySingleTableRequired'),
-      });
-
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      let deleteSql = '';
-      let updateSql = '';
-
-      if (editedFieldsRows.size || rowsToDelete.length) {
-        const primaryKeyColumns = await getPrimaryKeyColumns();
-
-        if (!primaryKeyColumns.length) {
-          const fullName = [editableTable.schema, editableTable.name].filter(Boolean).join('.');
-
-          showToast({
-            type: 'error',
-            title: t('toast.saveNotPossible'),
-            description: t('query.tableNoPrimaryKey', { table: fullName }),
-          });
-
-          return;
-        }
-
-        const missingPk = primaryKeyColumns.find((pkColumn) => !data.columns?.includes(pkColumn));
-
-        if (missingPk) {
-          showToast({
-            type: 'error',
-            title: t('toast.saveNotPossible'),
-            description: t('query.rowMissingPk', { pk: missingPk }),
-          });
-
-          return;
-        }
-
-        if (rowsToDelete.length) {
-          deleteSql = generateDeleteDdl(
-            dialect,
-            editableTable.schema,
-            editableTable.name,
-            rowsToDelete,
-            primaryKeyColumns,
-          );
-        }
-
-        if (editedFieldsRows.size) {
-          const rowsToUpdate = [...editedFieldsRows.entries()]
-            .map(([index, changes]) => ({
-              originalRow: data.rows[Number(index)],
-              changes,
-              rowKey: index,
-            }))
-            .filter((row) => !droppedRows.has(row.rowKey));
-
-          updateSql = generateUpdateDdl(
-            dialect,
-            editableTable.schema,
-            editableTable.name,
-            rowsToUpdate,
-            primaryKeyColumns,
-          );
-        }
-      }
-
-      const insertSql = generateInsertDdl(
-        dialect,
-        editableTable.schema,
-        editableTable.name,
-        rowsToInsert,
-        data.columns,
-      );
-      const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
-
-      if (!sql) return;
-
-      await runSql(id_connection, sql);
-
-      resetRows();
-      showToast({ type: 'success', title: t('toast.dataSaved') });
-      onRefresh();
-    } catch (error: unknown) {
-      showToast({
-        type: 'error',
-        title: t('toast.dataSaveError'),
-        description: getErrorMessage(error, t('common.unknownError')),
-        delay: 8000,
-      });
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    data.rows,
-    data.columns,
-    droppedRows,
-    editedFieldsRows,
-    editableTable,
-    getPrimaryKeyColumns,
-    id_connection,
-    newRows,
-    onRefresh,
-    runSql,
-    resetRows,
-    dialect,
-    saving,
-    showToast,
-    t,
-  ]);
 
   const handleSetSelectedCellsNull = React.useCallback(() => {
     const cells = contextMenuTable?.data?.getSelectedCells() || [];
@@ -773,10 +419,9 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       const ref = tabFkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
 
-      setShowValuePreview(true);
-      setActivePreviewTab('reference');
+      openReferencePreview();
     },
-    [tabFkMap],
+    [openReferencePreview, tabFkMap],
   );
 
   const resultColumnsInfo = React.useMemo(
@@ -808,94 +453,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     }),
     [data.orderBy, data.query, data.variableValues],
   );
-
-  const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
-    return [
-      {
-        text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
-      },
-      {
-        text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
-      },
-      {
-        text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
-      },
-      {
-        text: t('modal.exportData'),
-        onClick: openExportModal,
-      },
-      {
-        text: t('context.setSelectedCellsNull'),
-        onClick: handleSetSelectedCellsNull,
-        show: () => !!contextMenuTable?.data?.getSelectedCells().some(({ column }) => column.editable),
-      },
-      {
-        text: t('context.deleteSelectedItems'),
-        onClick: handleRemoveSelectedRows,
-        show: () => !!editableTable,
-      },
-      {
-        text: t('context.insertDdlRow'),
-        onClick: () => {
-          if (!singleResultTable) return;
-
-          setDdlSql(
-            generateInsertDdl(
-              dialect,
-              singleResultTable.schema,
-              singleResultTable.name,
-              contextMenuTable?.data?.getRows() || [],
-              data.columns,
-            ),
-          );
-          setShowDdlModal(true);
-        },
-        show: () => !!singleResultTable,
-      },
-      {
-        text: t('context.insertDdlSelectedCells'),
-        onClick: () => {
-          if (!singleResultTable) return;
-
-          setDdlSql(
-            generateInsertDdl(
-              dialect,
-              singleResultTable.schema,
-              singleResultTable.name,
-              contextMenuTable?.data?.getSelectedCellRows() || [],
-              data.columns,
-            ),
-          );
-          setShowDdlModal(true);
-        },
-        show: () => !!singleResultTable,
-      },
-    ];
-  }, [
-    contextMenuTable,
-    data.columns,
-    dialect,
-    editableTable,
-    handleRemoveSelectedRows,
-    handleSetSelectedCellsNull,
-    openExportModal,
-    singleResultTable,
-    t,
-  ]);
-
-  React.useEffect(() => {
-    if (!selectedReference && activePreviewTab !== 'value') {
-      setActivePreviewTab('value');
-      return;
-    }
-
-    if (activePreviewTab === 'selection' && !canSelectReferenceValue) {
-      setActivePreviewTab(selectedReference ? 'reference' : 'value');
-    }
-  }, [activePreviewTab, canSelectReferenceValue, selectedReference]);
 
   React.useEffect(() => {
     resetRows();
@@ -1024,150 +581,28 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         )}
       </div>
 
-      <Bar
-        backgroundColor={activeTheme.queryEditor.bar.backgroundColor}
-        borderColor={activeTheme.queryEditor.bar.borderColor}
-      >
-        {!readOnly && (
-          <Button
-            text
-            smallIcon
-            title={t('common.save')}
-            color={activeTheme.queryEditor.bar.color}
-            onClick={handleSave}
-            loading={saving}
-          >
-            <SaveIcon size={16} />
-          </Button>
-        )}
-
-        {!!editableTable && (
-          <Button
-            text
-            smallIcon
-            title={t('common.addRow')}
-            onClick={handleAddRow}
-            disabled={data.loading}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <AddIcon size={14} />
-          </Button>
-        )}
-
-        <Button
-          text
-          smallIcon
-          title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}
-          onClick={toggleValuePreview}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          <PanelFile size={16} />
-        </Button>
-
-        {!readOnly && (
-          <RefreshButton
-            menuPlacement="top"
-            color={activeTheme.queryEditor.bar.color}
-            disabled={data.loading}
-            onRefresh={onRefresh}
-          />
-        )}
-
-        <Button
-          text
-          smallIcon
-          title={t('modal.exportData')}
-          onClick={openExportModal}
-          disabled={data.loading}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          <ExportIcon size={16} />
-        </Button>
-
-        <Button
-          text
-          smallIcon
-          title={t('tooltip.captureOptions')}
-          onClick={openCaptureMenu}
-          disabled={data.loading}
-          color={captureButtonColor}
-        >
-          <RecordIcon size={16} />
-        </Button>
-
-        <Button
-          text
-          smallIcon
-          title={t('common.countTotalRows')}
-          className={styles.countButton}
-          onClick={handleLoadRowsCount}
-          loading={loadingRowsCount}
-          disabled={data.loading}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          <CountIcon size={16} />
-          {rowsCount !== undefined && (
-            <span className={styles.countValue}>{rowsCount.toLocaleString(language)}</span>
-          )}
-        </Button>
-
-        {!!data.loading && (
-          <Button
-            text
-            smallIcon
-            title={t('common.cancelQuery')}
-            onClick={onCancelQuery}
-            loading={cancelingQuery}
-            color={activeTheme.queryEditor.bar.color}
-          >
-            <CancelIcon size={16} />
-          </Button>
-        )}
-
-        <Spacer />
-
-        {(data.capture?.active || !!data.capture?.rows.length) && (
-          <Text
-            title={data.capture.active ? t('capture.activeTitle') : t('capture.stoppedTitle')}
-            userSelect={false}
-            color={
-              data.capture.active ? activeTheme.queryEditor.capture.activeColor : activeTheme.queryEditor.bar.color
-            }
-          >
-            {t('capture.status', {
-              count: data.capture.rows.length.toLocaleString(language),
-            })}
-          </Text>
-        )}
-
-        <Text
-          title={
-            data.loading ? t('tooltip.currentQueryExecutionTime') : t('tooltip.queryExecutionTime')
-          }
-          userSelect={false}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          {data.loading
-            ? t('query.runningFor', { time: formatExecutionTime(executionTimeMs) })
-            : formatExecutionTime(executionTimeMs)}
-        </Text>
-
-        <Text
-          title={t('common.totalRowsDisplayed')}
-          userSelect={false}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          {t('query.displayedRows', { count: (data.rows || []).length })}
-        </Text>
-
-        <Text
-          title={t('common.lastUpdatedAt')}
-          userSelect={false}
-          color={activeTheme.queryEditor.bar.color}
-        >
-          {t('common.updatedAt', { date: toDateTime(data.date_run) })}
-        </Text>
-      </Bar>
+      <ResultToolbar
+        data={data}
+        readOnly={readOnly}
+        editable={!!editableTable}
+        saving={saving}
+        cancelingQuery={cancelingQuery}
+        loadingRowsCount={loadingRowsCount}
+        rowsCount={rowsCount}
+        showValuePreview={showValuePreview}
+        executionTimeMs={executionTimeMs}
+        captureButtonColor={captureButtonColor}
+        barTheme={activeTheme.queryEditor.bar}
+        captureTheme={activeTheme.queryEditor.capture}
+        onSave={handleSave}
+        onAddRow={handleAddRow}
+        onToggleValuePreview={toggleValuePreview}
+        onRefresh={onRefresh}
+        onOpenExportModal={openExportModal}
+        onOpenCaptureMenu={openCaptureMenu}
+        onLoadRowsCount={handleLoadRowsCount}
+        onCancelQuery={onCancelQuery}
+      />
 
       <ModalGenerateDDL
         show={showDdlModal}
@@ -1184,10 +619,18 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         onClose={closeExportModal}
       />
 
-      <ContextMenu
-        position={contextMenuTable?.position}
+      <ResultContextMenu
+        contextMenuTable={contextMenuTable}
+        data={data}
+        dialect={dialect}
+        editable={!!editableTable}
+        singleResultTable={singleResultTable}
         onClose={closeContextMenuTable}
-        options={contextMenuOptions}
+        onOpenExportModal={openExportModal}
+        onSetSelectedCellsNull={handleSetSelectedCellsNull}
+        onRemoveSelectedRows={handleRemoveSelectedRows}
+        onSetDdlSql={setDdlSql}
+        onShowDdlModal={openDdlModal}
       />
 
       <ContextMenu
