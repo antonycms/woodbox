@@ -39,8 +39,6 @@ const Properties = (props: IPropertiesProps) => {
       loadConnectionInfo: state.loadConnectionInfo,
     })),
   );
-  const [id] = React.useState(generateHash());
-  const [activeTabId, setActiveTabId] = React.useState<string>('1');
   const {
     loadTableColumns,
     loadTableReferences,
@@ -79,11 +77,13 @@ const Properties = (props: IPropertiesProps) => {
   const isCreateMode = mode === 'create';
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
+  const [id] = React.useState(() => generateHash());
+  const [activeTabId, setActiveTabId] = React.useState<string>('1');
+  const tableFormRef = React.useRef({ table, comment: '' });
   const { state, register, setState } = useForm({
     table: table || '',
     comment: '',
   });
-  const tableFormRef = React.useRef({ table, comment: '' });
 
   const connectionInfo = connectionsInfo.get(id_connection);
   const currentTable = React.useMemo(() => {
@@ -133,6 +133,39 @@ const Properties = (props: IPropertiesProps) => {
     schema,
     table,
   ]);
+
+  const tabs = React.useMemo(() => {
+    const allowedTabs = [{ idTab: '1', title: t('tabs.columns') }];
+
+    if (supportsIndexes) {
+      allowedTabs.push({ idTab: '8', title: t('tabs.indexes') });
+    }
+
+    if (!isReadOnlyObject) {
+      allowedTabs.push(
+        { idTab: '2', title: t('tabs.constraints') },
+        { idTab: '3', title: t('tabs.foreignKeys') },
+      );
+    }
+
+    if (!isCreateMode) {
+      if (!isReadOnlyObject) {
+        allowedTabs.push({ idTab: '4', title: t('tabs.references') });
+      }
+
+      if (supportsTriggers) {
+        allowedTabs.push({ idTab: '6', title: t('tabs.triggers') });
+      }
+
+      if (!isReadOnlyObject) {
+        allowedTabs.push({ idTab: '7', title: t('tabs.diagram') });
+      }
+
+      allowedTabs.push({ idTab: '5', title: t('tabs.definition') });
+    }
+
+    return allowedTabs;
+  }, [isCreateMode, isReadOnlyObject, supportsIndexes, supportsTriggers, t]);
 
   React.useEffect(() => {
     props.onRegisterRefresh?.(handleRefreshActiveTab);
@@ -190,39 +223,6 @@ const Properties = (props: IPropertiesProps) => {
       };
     });
   }, [isCreateMode, originalComment, setState, table]);
-
-  const tabs = React.useMemo(() => {
-    const allowedTabs = [{ idTab: '1', title: t('tabs.columns') }];
-
-    if (supportsIndexes) {
-      allowedTabs.push({ idTab: '8', title: t('tabs.indexes') });
-    }
-
-    if (!isReadOnlyObject) {
-      allowedTabs.push(
-        { idTab: '2', title: t('tabs.constraints') },
-        { idTab: '3', title: t('tabs.foreignKeys') },
-      );
-    }
-
-    if (!isCreateMode) {
-      if (!isReadOnlyObject) {
-        allowedTabs.push({ idTab: '4', title: t('tabs.references') });
-      }
-
-      if (supportsTriggers) {
-        allowedTabs.push({ idTab: '6', title: t('tabs.triggers') });
-      }
-
-      if (!isReadOnlyObject) {
-        allowedTabs.push({ idTab: '7', title: t('tabs.diagram') });
-      }
-
-      allowedTabs.push({ idTab: '5', title: t('tabs.definition') });
-    }
-
-    return allowedTabs;
-  }, [isCreateMode, isReadOnlyObject, supportsIndexes, supportsTriggers, t]);
 
   return (
     <div className={styles.propertiesContainer}>

@@ -82,7 +82,7 @@ const TableInfo = (props: ITableInfoViewProps) => {
   const clearOpenWithFilterRequest = useTableInfoOpenWithFilterRequestStore(
     (state) => state.clearOpenWithFilterRequest,
   );
-  const [id] = React.useState(generateHash());
+  const [id] = React.useState(() => generateHash());
   const [mode, setMode] = React.useState(props.mode || 'view');
   const [table, setTable] = React.useState(props.table);
   const [hasPendingRowsChanges, setHasPendingRowsChanges] = React.useState(false);

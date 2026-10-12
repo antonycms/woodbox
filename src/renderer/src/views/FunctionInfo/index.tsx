@@ -54,8 +54,8 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const refEditor = React.useRef<IEditorRef>(null);
 
-  const [topTabId] = React.useState(generateHash());
-  const [sideTabId] = React.useState(generateHash());
+  const [topTabId] = React.useState(() => generateHash());
+  const [sideTabId] = React.useState(() => generateHash());
 
   const [definition, setDefinition] = React.useState('');
   const [savedDefinition, setSavedDefinition] = React.useState('');
