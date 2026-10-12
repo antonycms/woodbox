@@ -8,46 +8,25 @@ import Table, {
   type ITableContextMenuData,
   type ITableSelectedCellData,
 } from '@renderer/components/Table';
-import { Spacer } from '@renderer/components/Spacer';
-import { copyToClipboard } from '@renderer/utils/methods';
-import { ContextMenu, type IContextMenuOption } from '@renderer/components/ContextMenu';
-import {
-  AddIcon,
-  CountIcon,
-  DuplicateIcon,
-  ExportIcon,
-  PanelFile,
-  RemoveIcon,
-  SaveIcon,
-} from '@renderer/styles/icons';
-import { RefreshButton } from '@renderer/components/RefreshButton';
 import styles from './styles.module.css';
-import { useDatabaseStore } from '@renderer/stores/Database';
 import { useI18nStore } from '@renderer/stores/I18n';
-import { Button } from '@renderer/components/Button';
-import { Text } from '@renderer/components/Text';
-import { Bar } from '@renderer/components/Bar';
-import { Modal } from '@renderer/components/Modal';
-import { Row } from '@renderer/components/Grid';
 import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
-import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import type { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useThemeStore } from '@renderer/stores/Theme';
-import { useToastStore } from '@renderer/stores/Toast';
-import { getNextSort } from '@renderer/utils/tableSort';
-import { generateHash } from '@shared/utils/string';
 import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
-import {
-  generateDeleteDdl,
-  generateInsertDdl,
-  generateUpdateDdl,
-} from '@renderer/database/ddl';
 import ModalDataError from './components/ModalDataError';
 import FilterInput from '@renderer/components/FilterInput';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
+import { DataContextMenu } from './components/DataContextMenu';
+import { DataToolbar } from './components/DataToolbar';
+import { NoPrimaryKeyModal } from './components/NoPrimaryKeyModal';
+import { useTableDataLoading } from './hooks/useTableDataLoading';
+import { useTableDataPersistence } from './hooks/useTableDataPersistence';
+import type { IContextMenuTable } from './types';
 
 interface IDataProps {
   tableStore: TableInfoStoreApi;
@@ -91,40 +70,20 @@ const Data = ({
     })),
   );
 
-  const { getTableData, getTableRowsCount, runSql } = useDatabaseStore(
-    useShallow((state) => ({
-      getTableData: state.getTableData,
-      getTableRowsCount: state.getTableRowsCount,
-      runSql: state.runSql,
-    })),
-  );
   const { openTableWithFilter } = useOpenTableTab();
-  const { t, language } = useI18nStore(
-    useShallow((state) => ({ t: state.t, language: state.language })),
-  );
-  const showToast = useToastStore((state) => state.showToast);
+  const t = useI18nStore((state) => state.t);
   const { idConnection: id_connection, schema, table, objectType, dialect } = tableContext;
 
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
-  const [items, setItems] = React.useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
-  const [rowsCount, setRowsCount] = React.useState<number>();
   const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
-  const [page, setPage] = React.useState(0);
-  const [sort, setSort] = React.useState<ITableSort[]>([]);
-  const [lastFetchDate, setLastFetchDate] = React.useState(new Date());
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
   const [applyingChanges, setApplyingChanges] = React.useState(false);
-  const [whereInput, setWhereInput] = React.useState(initialWhere || '');
-  const [appliedWhere, setAppliedWhere] = React.useState(initialWhere || '');
   const [ddlSql, setDdlSql] = React.useState('');
   const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [valuePreview, setValuePreview] = React.useState<ValuePreviewRequest>();
   const showValuePreview = !!valuePreview;
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
-  const lastPageSearch = React.useRef(page);
   const [filterHistory, addFilterHistory] = useFilterHistory([id_connection, schema, table]);
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
@@ -135,33 +94,28 @@ const Data = ({
     [t],
   );
 
-  const handleLoadRowsCount = React.useCallback(async () => {
-    if (loadingRowsCount) return;
-
-    setLoadingRowsCount(true);
-
-    try {
-      const total = await getTableRowsCount(id_connection, {
-        schema,
-        table,
-        where: appliedWhere || undefined,
-      });
-
-      setRowsCount(total);
-    } catch (error: unknown) {
-      handleDataError(error);
-    } finally {
-      setLoadingRowsCount(false);
-    }
-  }, [
-    id_connection,
+  const {
+    items,
+    loading,
+    loadingRowsCount,
+    rowsCount,
+    sort,
+    lastFetchDate,
+    whereInput,
+    appliedWhere,
+    setWhereInput,
+    handleLoadRowsCount,
+    loadData,
+    refreshData,
+    sortData,
+    applyFilterData,
+  } = useTableDataLoading({
+    idConnection: id_connection,
     schema,
     table,
-    appliedWhere,
-    loadingRowsCount,
-    getTableRowsCount,
-    handleDataError,
-  ]);
+    initialWhere,
+    onDataError: handleDataError,
+  });
 
   const closeContextMenuTable = React.useCallback(() => {
     setContextMenuTable(undefined);
@@ -185,6 +139,24 @@ const Data = ({
     resetRows,
   } = useRowChanges({ items, columns, restrictions, onCloseMenu: closeContextMenuTable });
 
+  const { handleSaveItems, handleApplyWithoutPrimaryKey } = useTableDataPersistence({
+    idConnection: id_connection,
+    schema,
+    table,
+    dialect,
+    columns,
+    items,
+    editedFieldsRows,
+    droppedRows,
+    newRows,
+    primaryKeyColumns,
+    applyingChanges,
+    setApplyingChanges,
+    setShowNoPkModal,
+    refreshData,
+    resetRows,
+  });
+
   const selectedCellValue = React.useMemo(() => {
     if (!selectedCell) return undefined;
 
@@ -198,15 +170,6 @@ const Data = ({
 
     return row[attribute];
   }, [editedFieldsRows, newRows, selectedCell]);
-
-  const serializeRows = React.useCallback(
-    (rows: Record<string, unknown>[]) =>
-      rows.map((row) => ({
-        ...row,
-        __table_hash_item: `row_${generateHash()}`,
-      })),
-    [],
-  );
 
   const fkMap = React.useMemo(
     () => new Map(references.map((r) => [r.column_name, r])),
@@ -239,6 +202,10 @@ const Data = ({
 
   const closeDdlModal = React.useCallback(() => {
     setShowDdlModal(false);
+  }, []);
+
+  const openDdlModal = React.useCallback(() => {
+    setShowDdlModal(true);
   }, []);
 
   const openExportModal = React.useCallback(() => {
@@ -357,167 +324,9 @@ const Data = ({
     return typeof row.__table_hash_item === 'string' ? row.__table_hash_item : index;
   }, []);
 
-  const loadData = React.useCallback(async () => {
-    const newPage = page + 1;
-
-    if (loading || newPage === lastPageSearch.current) return;
-
-    setLoading(true);
-
-    try {
-      const { data } = await getTableData(id_connection, {
-        schema,
-        table,
-        page: newPage,
-        where: appliedWhere || undefined,
-        orderBy: sort,
-      });
-
-      setLastFetchDate(new Date());
-
-      lastPageSearch.current = newPage;
-
-      if (!data.length) return;
-
-      setPage(newPage);
-      setItems((prevState) => [...prevState, ...serializeRows(data)]);
-    } catch (error: unknown) {
-      handleDataError(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    id_connection,
-    loading,
-    schema,
-    table,
-    page,
-    appliedWhere,
-    sort,
-    serializeRows,
-    handleDataError,
-  ]);
-
   const handleRefresh = React.useCallback(async () => {
-    if (loading) return;
-
-    setLoading(true);
-    setRowsCount(undefined);
-
-    try {
-      const { data } = await getTableData(id_connection, {
-        schema,
-        table,
-        page: 1,
-        where: appliedWhere || undefined,
-        orderBy: sort,
-      });
-
-      lastPageSearch.current = 1;
-      setPage(1);
-      setLastFetchDate(new Date());
-      resetRows();
-      setItems(serializeRows(data));
-    } catch (error: unknown) {
-      handleDataError(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [id_connection, loading, schema, table, appliedWhere, sort, serializeRows, handleDataError, resetRows]);
-
-  const applyPendingRows = React.useCallback(
-    async (whereColumns: string[]) => {
-      const rowsToInsert = [...newRows.values()].filter((row) => Object.keys(row).length);
-      const hasEditedRows = !!editedFieldsRows.size;
-      const hasDroppedRows = !!droppedRows.size;
-
-      if ((!rowsToInsert.length && !hasEditedRows && !hasDroppedRows) || applyingChanges) return;
-
-      const rowsToUpdate = [...editedFieldsRows.entries()]
-        .map(([rowKey, changes]) => ({
-          originalRow:
-            items.find((item) => item.__table_hash_item === rowKey) || items[Number(rowKey)],
-          rowKey,
-          changes,
-        }))
-        .filter(
-          (row) =>
-            row.originalRow && Object.keys(row.changes).length && !droppedRows.has(row.rowKey),
-        );
-
-      const deleteSql = generateDeleteDdl(
-        dialect,
-        schema,
-        table,
-        [...droppedRows.values()],
-        whereColumns,
-      );
-      const insertSql = generateInsertDdl(
-        dialect,
-        schema,
-        table,
-        rowsToInsert,
-        columns.map((column) => column.column_name),
-      );
-      const updateSql = generateUpdateDdl(dialect, schema, table, rowsToUpdate, whereColumns);
-      const sql = [deleteSql, insertSql, updateSql].filter((item) => item.trim()).join('\n\n');
-
-      if (!sql.trim()) return;
-
-      setApplyingChanges(true);
-
-      try {
-        await runSql(id_connection, sql);
-        resetRows();
-        setShowNoPkModal(false);
-        showToast({ type: 'success', title: t('toast.dataSaved') });
-        await handleRefresh();
-      } catch (error: unknown) {
-        showToast({
-          type: 'error',
-          title: t('toast.dataSaveError'),
-          description: getErrorMessage(error, t('common.unknownError')),
-          delay: 8000,
-        });
-      } finally {
-        setApplyingChanges(false);
-      }
-    },
-    [
-      editedFieldsRows,
-      droppedRows,
-      newRows,
-      applyingChanges,
-      items,
-      schema,
-      table,
-      columns,
-      dialect,
-      runSql,
-      id_connection,
-      showToast,
-      handleRefresh,
-      resetRows,
-      t,
-    ],
-  );
-
-  const handleSaveItems = React.useCallback(() => {
-    const hasNewRows = [...newRows.values()].some((row) => Object.keys(row).length);
-
-    if (!hasNewRows && !editedFieldsRows.size && !droppedRows.size) return;
-
-    if ((editedFieldsRows.size || droppedRows.size) && !primaryKeyColumns.length) {
-      setShowNoPkModal(true);
-      return;
-    }
-
-    applyPendingRows(primaryKeyColumns);
-  }, [newRows, editedFieldsRows, droppedRows, primaryKeyColumns, applyPendingRows]);
-
-  const handleApplyWithoutPrimaryKey = React.useCallback(() => {
-    applyPendingRows(columns.map((column) => column.column_name));
-  }, [applyPendingRows, columns]);
+    await refreshData(resetRows);
+  }, [refreshData, resetRows]);
 
   const handleSetSelectedCellsNull = React.useCallback(() => {
     const cells = contextMenuTable?.data?.getSelectedCells() || [];
@@ -541,78 +350,19 @@ const Data = ({
 
   const handleSort = React.useCallback(
     async (column: IColumn, sortType?: ISortDirection | null) => {
-      if (loading || !column.sortable) return;
-
-      const nextSort = getNextSort(sort, column.attribute, sortType);
-      setLoading(true);
-
-      try {
-        const { data } = await getTableData(id_connection, {
-          schema,
-          table,
-          page: 1,
-          where: appliedWhere || undefined,
-          orderBy: nextSort,
-        });
-
-        setSort(nextSort);
-        resetRows();
-        setItems(serializeRows(data));
-        setPage(1);
-        lastPageSearch.current = 1;
-        setLastFetchDate(new Date());
-      } catch (error: unknown) {
-        handleDataError(error);
-      } finally {
-        setLoading(false);
-      }
+      await sortData(column, sortType, resetRows);
     },
-    [id_connection, schema, table, appliedWhere, sort, loading, serializeRows, handleDataError, resetRows],
+    [sortData, resetRows],
   );
 
   const applyFilter = React.useCallback(
     async (nextWhereInput: string) => {
-      if (loading) return;
-
-      const newWhere = nextWhereInput || undefined;
-      setLoading(true);
-      setWhereInput(nextWhereInput);
-
-      try {
-        const { data } = await getTableData(id_connection, {
-          schema,
-          table,
-          page: 1,
-          where: newWhere,
-          orderBy: sort,
-        });
-
-        setAppliedWhere(nextWhereInput);
+      await applyFilterData(nextWhereInput, () => {
         addFilterHistory(nextWhereInput);
-        setRowsCount(undefined);
         resetRows();
-        setItems(serializeRows(data));
-        setPage(1);
-        lastPageSearch.current = 1;
-        setLastFetchDate(new Date());
-      } catch (error: unknown) {
-        handleDataError(error);
-      } finally {
-        setLoading(false);
-      }
+      });
     },
-    [
-      addFilterHistory,
-      resetRows,
-      getTableData,
-      handleDataError,
-      id_connection,
-      loading,
-      schema,
-      serializeRows,
-      sort,
-      table,
-    ],
+    [addFilterHistory, applyFilterData, resetRows],
   );
 
   const handleFilterKeyDown = React.useCallback(
@@ -657,77 +407,6 @@ const Data = ({
       handleUndoSelectedDroppedRows,
     ],
   );
-
-  const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
-    return [
-      {
-        text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
-      },
-      {
-        text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
-      },
-      {
-        text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
-      },
-      {
-        text: t('modal.exportData'),
-        onClick: openExportModal,
-      },
-      {
-        text: t('context.setSelectedCellsNull'),
-        onClick: handleSetSelectedCellsNull,
-        show: () => !!contextMenuTable?.data?.getSelectedCells().some(({ column }) => column.editable),
-      },
-      !isReadOnlyObject && {
-        text: t('context.deleteSelectedItems'),
-        onClick: handleRemoveSelectedRows,
-      },
-      !isReadOnlyObject && {
-        text: t('context.insertDdlRow'),
-        onClick: () => {
-          setDdlSql(
-            generateInsertDdl(
-              dialect,
-              schema,
-              table,
-              contextMenuTable?.data?.getRows() || [],
-              columnNames,
-            ),
-          );
-          setShowDdlModal(true);
-        },
-      },
-      !isReadOnlyObject && {
-        text: t('context.insertDdlSelectedCells'),
-        onClick: () => {
-          setDdlSql(
-            generateInsertDdl(
-              dialect,
-              schema,
-              table,
-              contextMenuTable?.data?.getSelectedCellRows() || [],
-              columnNames,
-            ),
-          );
-          setShowDdlModal(true);
-        },
-      },
-    ].filter(Boolean) as IContextMenuOption[];
-  }, [
-    columnNames,
-    contextMenuTable,
-    dialect,
-    handleRemoveSelectedRows,
-    handleSetSelectedCellsNull,
-    isReadOnlyObject,
-    openExportModal,
-    schema,
-    table,
-    t,
-  ]);
 
   React.useEffect(() => {
     // Monta uma vez: a aba de dados é recriada quando a tabela/conexão muda.
@@ -827,95 +506,25 @@ const Data = ({
         />
       </div>
 
-      <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>
-        {!isReadOnlyObject && (
-          <>
-            <Button
-              title={t('common.save')}
-              text
-              smallIcon
-              color={theme.bar.color}
-              onClick={handleSaveItems}
-              loading={applyingChanges}
-            >
-              <SaveIcon size={16} />
-            </Button>
-
-            <Button
-              title={t('common.add')}
-              text
-              smallIcon
-              color={theme.bar.color}
-              onClick={handleAddItem}
-            >
-              <AddIcon size={14} />
-            </Button>
-
-            <Button
-              title={t('common.duplicateSelectedItems')}
-              text
-              smallIcon
-              color={theme.bar.color}
-              onClick={handleDuplicateSelectedRows}
-            >
-              <DuplicateIcon size={20} />
-            </Button>
-
-            <Button
-              title={t('common.removeSelectedItems')}
-              text
-              smallIcon
-              color={theme.bar.color}
-              onClick={handleRemoveSelectedRows}
-            >
-              <RemoveIcon size={16} />
-            </Button>
-          </>
-        )}
-
-        <Button
-          title={showValuePreview ? t('tooltip.closeValuePreview') : t('tooltip.openPreview')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={toggleValuePreview}
-        >
-          <PanelFile size={16} />
-        </Button>
-
-        <RefreshButton menuPlacement="top" color={theme.bar.color} onRefresh={handleRefresh} />
-
-        <Button
-          title={t('modal.exportData')}
-          text
-          smallIcon
-          color={theme.bar.color}
-          onClick={openExportModal}
-        >
-          <ExportIcon size={16} />
-        </Button>
-
-        <Button
-          title={t('common.countTotalRows')}
-          text
-          smallIcon
-          className={styles.countButton}
-          color={theme.bar.color}
-          loading={loadingRowsCount}
-          onClick={handleLoadRowsCount}
-        >
-          <CountIcon size={16} />
-          {rowsCount !== undefined && (
-            <span className={styles.countValue}>{rowsCount.toLocaleString(language)}</span>
-          )}
-        </Button>
-
-        <Spacer />
-
-        <Text userSelect={false} color={theme.bar.color} title={t('common.lastUpdatedAt')}>
-          {t('common.updatedAt', { date: lastFetchDateSerialized })}
-        </Text>
-      </Bar>
+      <DataToolbar
+        backgroundColor={theme.bar.backgroundColor}
+        borderColor={theme.bar.borderColor}
+        color={theme.bar.color}
+        isReadOnlyObject={isReadOnlyObject}
+        applyingChanges={applyingChanges}
+        loadingRowsCount={loadingRowsCount}
+        rowsCount={rowsCount}
+        showValuePreview={showValuePreview}
+        lastFetchDateSerialized={lastFetchDateSerialized}
+        onSaveItems={handleSaveItems}
+        onAddItem={handleAddItem}
+        onDuplicateSelectedRows={handleDuplicateSelectedRows}
+        onRemoveSelectedRows={handleRemoveSelectedRows}
+        onToggleValuePreview={toggleValuePreview}
+        onRefresh={handleRefresh}
+        onOpenExportModal={openExportModal}
+        onLoadRowsCount={handleLoadRowsCount}
+      />
 
       <ModalGenerateDDL
         show={showDdlModal}
@@ -934,66 +543,35 @@ const Data = ({
 
       <ModalDataError message={dataErrorMessage} onClose={closeDataErrorModal} />
 
-      <Modal
-        title={t('message.noPrimaryKeyWarningTitle')}
-        width="560px"
+      <NoPrimaryKeyModal
         show={showNoPkModal}
-        closeOutside={!applyingChanges}
-        onClose={applyingChanges ? undefined : closeNoPkModal}
-      >
-        <Text color={colors.color || theme.bar.color}>{t('message.noPrimaryKeyWarning')}</Text>
+        applyingChanges={applyingChanges}
+        color={colors.color || theme.bar.color}
+        cancelButtonColor={colors.cancelButtonColor}
+        cancelButtonBackgroundColor={colors.cancelButtonBackgroundColor}
+        saveButtonColor={colors.saveButtonColor}
+        saveButtonBackgroundColor={colors.saveButtonBackgroundColor}
+        onClose={closeNoPkModal}
+        onApplyWithoutPrimaryKey={handleApplyWithoutPrimaryKey}
+      />
 
-        <div style={{ height: 16 }} />
-
-        <Text color={colors.color || theme.bar.color}>{t('message.useAllColumnsQuestion')}</Text>
-
-        <div style={{ height: 16 }} />
-
-        <Row>
-          <Spacer />
-
-          <Button
-            text
-            color={colors.cancelButtonColor}
-            backgroundColor={colors.cancelButtonBackgroundColor}
-            onClick={closeNoPkModal}
-            disabled={applyingChanges}
-            xs={6}
-            sm={4}
-            md={3}
-          >
-            {t('settings.customization.cancel')}
-          </Button>
-
-          <Button
-            color={colors.saveButtonColor}
-            backgroundColor={colors.saveButtonBackgroundColor}
-            onClick={handleApplyWithoutPrimaryKey}
-            loading={applyingChanges}
-            xs={6}
-            sm={5}
-            md={4}
-          >
-            {t('common.useAllColumns')}
-          </Button>
-        </Row>
-      </Modal>
-
-      <ContextMenu
-        position={contextMenuTable?.position}
+      <DataContextMenu
+        contextMenuTable={contextMenuTable}
+        columnNames={columnNames}
+        dialect={dialect}
+        schema={schema}
+        table={table}
+        isReadOnlyObject={isReadOnlyObject}
         onClose={closeContextMenuTable}
-        options={contextMenuOptions}
+        onOpenExportModal={openExportModal}
+        onSetSelectedCellsNull={handleSetSelectedCellsNull}
+        onRemoveSelectedRows={handleRemoveSelectedRows}
+        onSetDdlSql={setDdlSql}
+        onShowDdlModal={openDdlModal}
       />
     </div>
   );
 };
 
 export default Data;
-
-export interface IContextMenuTable {
-  data: ITableContextMenuData | null;
-  position: {
-    x: number;
-    y: number;
-  };
-}
+export type { IContextMenuTable } from './types';
