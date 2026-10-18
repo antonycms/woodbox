@@ -23,6 +23,7 @@ export const Button = React.memo((props: IButtonProps) => {
     disabled,
     onContextMenu,
     icon: Icon,
+    iconPosition = 'after',
     type = 'button',
     ...gridProps
   } = props;
@@ -62,9 +63,16 @@ export const Button = React.memo((props: IButtonProps) => {
       >
         {!loading && (
           <>
+            {!!Icon && iconPosition === 'before' && (
+              <>
+                <Icon />
+                {!!children && <div className={styles.separatorButton} />}
+              </>
+            )}
+
             {children}
 
-            {!!Icon && (
+            {!!Icon && iconPosition === 'after' && (
               <>
                 {!!children && <div className={styles.separatorButton} />}
                 <Icon />
@@ -85,6 +93,7 @@ export interface IButtonProps extends IGridSystem {
   children?: React.ReactNode;
   type?: 'button' | 'submit' | 'reset';
   icon?: () => React.ReactElement;
+  iconPosition?: 'before' | 'after';
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   onDoubleClick?: React.MouseEventHandler<HTMLButtonElement>;
   title?: string;
