@@ -6,6 +6,7 @@ import IconMdiBookOpenOutline from '~icons/mdi/book-open-outline';
 import IconMdiCloseCircleOutline from '~icons/mdi/close-circle-outline';
 import IconMdiDotsHorizontal from '~icons/mdi/dots-horizontal';
 import IconMdiArrowLeft from '~icons/mdi/arrow-left';
+import IconMdiArrowRight from '~icons/mdi/arrow-right';
 import IconMdiSquareEditOutline from '~icons/mdi/square-edit-outline';
 import IconMdiRefresh from '~icons/mdi/refresh';
 import IconTablerHash from '~icons/tabler/hash';
@@ -49,6 +50,7 @@ function makeIconWithSize(
 
 export const AddIcon = makeIconWithSize(IconFaSolidPlus);
 export const BackIcon = makeIconWithSize(IconMdiArrowLeft);
+export const ForwardIcon = makeIconWithSize(IconMdiArrowRight);
 export const CancelIcon = makeIconWithSize(IconMdiCloseCircleOutline);
 export const CountIcon = makeIconWithSize(IconTablerHash);
 export const CopyIcon = makeIconWithSize(IconMdiContentCopy);

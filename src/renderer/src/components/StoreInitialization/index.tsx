@@ -6,7 +6,11 @@ import { useToastStore } from '@renderer/stores/Toast';
 import { initializeStores } from '@renderer/stores/initialize';
 import { getErrorMessage } from '@shared/utils/error';
 
-export const StoreInitialization = () => {
+interface Props {
+  onInitialized?: () => void;
+}
+
+export const StoreInitialization = ({ onInitialized }: Props) => {
   const activeTheme = useThemeStore((state) => state.activeTheme);
 
   const showToast = useToastStore((state) => state.showToast);
@@ -17,17 +21,22 @@ export const StoreInitialization = () => {
 
   React.useEffect(() => {
     let active = true;
-    initializeStores().catch((error) => {
-      if (active) {
-        showToast({
-          type: 'error',
-          title: useI18nStore.getState().t('toast.initializeStoresError'),
-          description: getErrorMessage(error),
-        });
-      }
-    });
+    initializeStores()
+      .then(() => {
+        if (active) onInitialized?.();
+      })
+      .catch((error) => {
+        if (active) {
+          const t = useI18nStore.getState().t;
+          showToast({
+            type: 'error',
+            title: t('toast.initializeStoresError'),
+            description: getErrorMessage(error, t('common.unknownError')),
+          });
+        }
+      });
     return () => { active = false; };
-  }, [showToast]);
+  }, [showToast, onInitialized]);
 
   return null;
 };

@@ -8,7 +8,7 @@ export interface IWorkspaceStore {
   refresh(): Promise<void>;
   
   projects: IProject[];
-  addProject(data: IProjectCreate): Promise<void>;
+  addProject(data: IProjectCreate): Promise<IProject>;
   editProject(id: string, data: IProjectCreate): Promise<void>;
   removeProject: WoodboxApi['projects']['remove'];
   exportProjects: WoodboxApi['projects']['export'];

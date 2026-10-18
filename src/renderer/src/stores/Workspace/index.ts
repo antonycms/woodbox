@@ -64,6 +64,7 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
     const project = { ...data, id: generateHash() };
     await window.api.projects.add(project);
     set((state) => ({ projects: [...state.projects, project] }));
+    return project;
   },
 
   editProject: async (id, data) => {

@@ -12,17 +12,23 @@ import { UpdateAvailableModal } from '@renderer/components/UpdateAvailableModal'
 
 import { ToastHost } from '@renderer/components/ToastHost';
 import { AppTabLifecycle } from '@renderer/components/AppTabLifecycle';
+import { OnboardingModal } from '@renderer/components/OnboardingModal';
 
 const App = () => {
+  const [storesReady, setStoresReady] = React.useState(false);
+
+  const handleStoresInitialized = React.useCallback(() => setStoresReady(true), []);
+
   return (
     <ContainerApp>
-      <StoreInitialization />
+      <StoreInitialization onInitialized={handleStoresInitialized} />
       <AppTabLifecycle />
       <Sidebar />
       <MainContent />
       <AIChatPanel />
       <CentralSearchModal />
       <UpdateAvailableModal />
+      {storesReady && <OnboardingModal />}
       <ToastHost />
     </ContainerApp>
   );
