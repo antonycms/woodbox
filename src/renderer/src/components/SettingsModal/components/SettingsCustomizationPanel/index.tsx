@@ -9,7 +9,8 @@ import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
 import { useI18nStore } from '@renderer/stores/I18n';
-import { type TranslateFn, type TranslateTextFn } from '@renderer/stores/I18n/types';
+import { type TranslateFn } from '@renderer/stores/I18n/types';
+import { currentCustomThemeName, defaultThemeName, getThemeLabel } from '@renderer/utils/theme';
 import { type TranslationKey } from '@renderer/stores/I18n/translations';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
@@ -18,9 +19,6 @@ import type { ITheme } from '@renderer/styles/theme';
 import { builtinThemeNames } from '@renderer/styles/theme/builtin';
 import { CancelIcon, ExportIcon, ImportIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
-
-const currentCustomThemeName = 'Personalizado atual';
-const defaultThemeName = 'default-theme';
 
 interface IAdvancedThemeField {
   path: string;
@@ -158,27 +156,6 @@ const themeAttributeLabelKeys: Record<string, TranslationKey> = {
   warnColor: 'settings.customization.attribute.warnColor',
   dangerColor: 'settings.customization.attribute.dangerColor',
   modifiedColor: 'settings.customization.attribute.modifiedColor',
-};
-
-const themeLabels = {
-  'woodbox-graphite': 'Grafite',
-  'woodbox-amber': 'Âmbar',
-  dracula: 'Dracula',
-  'one-dark-pro': 'One Dark Pro',
-  'github-dark': 'GitHub Dark',
-  'catppuccin-mocha': 'Catppuccin Mocha',
-  omni: 'Omni',
-  'woodbox-aura-light': 'Aura Light',
-  'one-light-pro': 'One Light Pro',
-  'github-light': 'GitHub Light',
-  'catppuccin-latte': 'Catppuccin Latte',
-};
-
-const getThemeLabel = (theme: ITheme, t: TranslateFn, tText: TranslateTextFn) => {
-  if (theme.name === currentCustomThemeName) return t('settings.customization.currentCustomTheme');
-  if (theme.name === defaultThemeName) return t('settings.customization.defaultThemeLabel');
-
-  return tText(themeLabels[theme.name]) || theme.name;
 };
 
 const isTheme = (value: unknown): value is ITheme => {
