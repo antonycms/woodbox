@@ -11,7 +11,7 @@ import { Button } from '@renderer/components/Button';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import { FileSqlIcon, OptionsIcon } from '@renderer/styles/icons';
+import { AddIcon, FileSqlIcon, OptionsIcon } from '@renderer/styles/icons';
 import {
   ContextMenu,
   IContextMenuOption,
@@ -821,9 +821,21 @@ const ProjectsMenu = () => {
         onContextMenu={onContextMenuProjectsContainer}
       >
         {!treeViewItems.length && (
-          <Text small color={colors.color} userSelect={false}>
-            {t('project.empty')}
-          </Text>
+          <Row>
+            <Text xs={12} small color={colors.color} userSelect={false}>
+              {t('project.empty')}
+            </Text>
+            <Button
+              xs={12}
+              color={colors.neutralButtonColor || colors.color}
+              backgroundColor={colors.neutralButtonBackgroundColor || colors.fieldBackgroundColor}
+              icon={() => <AddIcon size={14} aria-hidden="true" />}
+              iconPosition="before"
+              onClick={openNewProject}
+            >
+              {t('project.add')}
+            </Button>
+          </Row>
         )}
 
         {!!treeViewItems.length && (

@@ -15,7 +15,7 @@ import type { ISnippet } from '@shared/types/workspace';
 import { useSnippetsStore } from '@renderer/stores/Snippets';
 import { useToastStore } from '@renderer/stores/Toast';
 import { useThemeStore } from '@renderer/stores/Theme';
-import { OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
+import { AddIcon, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
 import {
   downloadSnippetsFile,
   getSnippetPrefixes,
@@ -274,9 +274,21 @@ const SnippetsMenu = () => {
 
       <div className={styles.list}>
         {!filteredSnippets.length && (
-          <Text userSelect={false} small color={colors.color}>
-            {t('snippet.empty')}
-          </Text>
+          <Row>
+            <Text xs={12} userSelect={false} small color={colors.color}>
+              {t('snippet.empty')}
+            </Text>
+            <Button
+              xs={12}
+              color={colors.neutralButtonColor || colors.color}
+              backgroundColor={colors.neutralButtonBackgroundColor || colors.fieldBackgroundColor}
+              icon={() => <AddIcon size={14} aria-hidden="true" />}
+              iconPosition="before"
+              onClick={openNewSnippet}
+            >
+              {t('snippet.add')}
+            </Button>
+          </Row>
         )}
 
         {filteredSnippets.map((snippet) => {
