@@ -1,4 +1,5 @@
 export const en = {
+  'toast.connectionSaveError': 'Could not save the connection',
   'project.new': 'New Project',
   'query.resultTitle': 'Query result:',
   'refresh.cancelAuto': 'Cancel auto-refresh ({{interval}})',

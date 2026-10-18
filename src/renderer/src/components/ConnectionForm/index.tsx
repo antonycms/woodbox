@@ -64,7 +64,9 @@ export const ConnectionForm = React.memo(
     const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loadingTestConnection, setLoadingTestConnection] = React.useState(false);
+    const [saving, setSaving] = React.useState(false);
     const formRef = React.useRef<HTMLFormElement>(null);
+    const busyRef = React.useRef(false);
 
     const defaultDialect = getRendererDialect(connectionTypes[0]);
     const dialectOptions = getRendererDialectOptions(connectionTypes);
@@ -151,20 +153,36 @@ export const ConnectionForm = React.memo(
 
         const connection = getConnectionData(data, idProject);
 
-        if (idConnection) {
-          await editConnection(idConnection, connection);
-        } else {
-          await addConnection(connection);
-        }
+        if (busyRef.current) return;
+        busyRef.current = true;
+        setSaving(true);
 
-        onSaved?.();
-        close();
+        try {
+          if (idConnection) {
+            await editConnection(idConnection, connection);
+          } else {
+            await addConnection(connection);
+          }
+
+          onSaved?.();
+          close();
+        } catch (error: unknown) {
+          showToast({
+            type: 'error',
+            title: t('toast.connectionSaveError'),
+            description: getErrorMessage(error, t('common.unknownError')),
+          });
+        } finally {
+          busyRef.current = false;
+          setSaving(false);
+        }
       }),
       [idProject, idConnection, showToast, t, addConnection, editConnection, onSaved, close],
     );
 
     const checkConnection = useCallback(async () => {
-      const checkDataForm = formRef.current.reportValidity();
+      if (busyRef.current) return;
+      const checkDataForm = formRef.current?.reportValidity();
 
       if (!checkDataForm) return;
 
@@ -172,6 +190,7 @@ export const ConnectionForm = React.memo(
       const connection = getConnectionData(formValue, idProject);
 
       try {
+        busyRef.current = true;
         setLoadingTestConnection(true);
 
         await testConnection(connection);
@@ -184,9 +203,10 @@ export const ConnectionForm = React.memo(
           description: getErrorMessage(error, t('common.unknownError')),
         });
       } finally {
+        busyRef.current = false;
         setLoadingTestConnection(false);
       }
-    }, []);
+    }, [getValue, idProject, testConnection, showToast, t]);
 
     React.useEffect(() => {
       if (!idConnection) return;
@@ -297,7 +317,7 @@ export const ConnectionForm = React.memo(
         <Divider size={4} />
 
         {renderActions ? (
-          renderActions({ testConnection: checkConnection, testing: loadingTestConnection })
+          renderActions({ testConnection: checkConnection, testing: loadingTestConnection, saving })
         ) : (
           <Row>
             <Button
@@ -306,6 +326,7 @@ export const ConnectionForm = React.memo(
               md={3}
               onClick={checkConnection}
               loading={loadingTestConnection}
+              disabled={saving}
               color={colors.testButtonColor}
               backgroundColor={colors.testButtonBackgroundColor}
             >
@@ -319,6 +340,7 @@ export const ConnectionForm = React.memo(
               sm={4}
               md={3}
               onClick={close}
+              disabled={saving || loadingTestConnection}
               color={colors.cancelButtonColor}
               backgroundColor={colors.cancelButtonBackgroundColor}
             >
@@ -330,6 +352,8 @@ export const ConnectionForm = React.memo(
               sm={4}
               md={3}
               type="submit"
+              loading={saving}
+              disabled={loadingTestConnection}
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
             >
@@ -352,5 +376,6 @@ export interface IConnectionFormProps {
   renderActions?: (actions: {
     testConnection: () => Promise<void>;
     testing: boolean;
+    saving: boolean;
   }) => React.ReactNode;
 }
