@@ -36,6 +36,15 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.menu.customization.label': 'Personalização',
   'settings.menu.customization.description': 'Temas e cores',
 
+  'settings.menu.about.label': 'Sobre',
+  'settings.menu.about.description': 'Projeto e versão',
+  'settings.about.description': 'Woodbox é um aplicativo desktop de código aberto para gerenciar bancos de dados. Organize conexões, explore tabelas e execute consultas SQL em um só lugar.',
+  'settings.about.version': 'Versão {{version}}',
+  'settings.about.license': 'Licença GPL-3.0-or-later',
+  'settings.about.repository': 'Deixe sua estrela no GitHub',
+  'settings.about.releases': 'Novidades e versões',
+  'settings.about.issues': 'Relatar um problema ou sugerir melhoria',
+
   'settings.general.title': 'Geral',
   'settings.language.activeLanguage': 'Idioma',
   'settings.language.description':

@@ -34,6 +34,15 @@ export const en = {
   'settings.menu.customization.label': 'Customization',
   'settings.menu.customization.description': 'Themes and colors',
 
+  'settings.menu.about.label': 'About',
+  'settings.menu.about.description': 'Project and version',
+  'settings.about.description': 'Woodbox is an open-source desktop application for managing databases. Organize connections, explore tables, and run SQL queries in one place.',
+  'settings.about.version': 'Version {{version}}',
+  'settings.about.license': 'License: GPL-3.0-or-later',
+  'settings.about.repository': 'Star us on GitHub',
+  'settings.about.releases': 'Release notes and versions',
+  'settings.about.issues': 'Report an issue or suggest an improvement',
+
   'settings.general.title': 'General',
   'settings.language.activeLanguage': 'Language',
   'settings.language.description':

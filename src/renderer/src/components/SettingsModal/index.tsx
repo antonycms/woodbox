@@ -5,10 +5,11 @@ import { type TranslationKey } from '@renderer/stores/I18n/translations';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { classes } from '@renderer/styles/theme';
 import { SettingsCustomizationPanel } from './components/SettingsCustomizationPanel';
+import { SettingsAboutPanel } from './components/SettingsAboutPanel';
 import { SettingsGeneralPanel } from './components/SettingsGeneralPanel';
 import styles from './styles.module.css';
 
-type SettingsMenu = 'general' | 'customization';
+type SettingsMenu = 'general' | 'customization' | 'about';
 
 const appVersion = typeof __APP_VERSION__ === 'undefined' ? '0.0.0' : __APP_VERSION__;
 
@@ -23,6 +24,11 @@ const menuItems: { id: SettingsMenu; labelKey: TranslationKey; descriptionKey: T
       id: 'customization',
       labelKey: 'settings.menu.customization.label',
       descriptionKey: 'settings.menu.customization.description',
+    },
+    {
+      id: 'about',
+      labelKey: 'settings.menu.about.label',
+      descriptionKey: 'settings.menu.about.description',
     },
   ];
 
@@ -43,8 +49,8 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
   return (
     <Modal
       title={t('settings.title')}
-      width="920px"
-      height="78vh"
+      width="860px"
+      height="540px"
       show={show}
       closeOutside
       onClose={onClose}
@@ -76,6 +82,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
         <section className={styles.content}>
           {activeMenu === 'general' && <SettingsGeneralPanel />}
           {activeMenu === 'customization' && <SettingsCustomizationPanel />}
+          {activeMenu === 'about' && <SettingsAboutPanel />}
         </section>
       </div>
     </Modal>
