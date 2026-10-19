@@ -46,6 +46,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.language.option.ptBR': 'Português Brasil',
 
   'settings.customization.title': 'Personalização',
+  'settings.customization.customizeColors': 'Personalizar cores',
+  'settings.customization.unsavedChanges': 'Cores personalizadas aplicadas. Salve como tema para reutilizar ou descarte as alterações.',
   'settings.customization.activeTheme': 'Tema ativo',
   'settings.customization.currentCustomTheme': 'Personalizado atual',
   'settings.customization.defaultThemeLabel': 'Aura (padrão)',

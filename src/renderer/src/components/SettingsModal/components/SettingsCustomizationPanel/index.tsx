@@ -1,7 +1,6 @@
 import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
-import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
 import { Input } from '@renderer/components/Input';
@@ -10,7 +9,7 @@ import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { type TranslateFn } from '@renderer/stores/I18n/types';
-import { currentCustomThemeName, defaultThemeName, getThemeLabel } from '@renderer/utils/theme';
+import { currentCustomThemeName, defaultThemeName } from '@renderer/utils/theme';
 import { type TranslationKey } from '@renderer/stores/I18n/translations';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
@@ -18,6 +17,7 @@ import useDebounce from '@renderer/hooks/useDebounce';
 import type { ITheme } from '@renderer/styles/theme';
 import { builtinThemeNames } from '@renderer/styles/theme/builtin';
 import { CancelIcon, ExportIcon, ImportIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
+import { ThemePreviews } from './components/ThemePreviews';
 import styles from './styles.module.css';
 
 interface IAdvancedThemeField {
@@ -280,17 +280,16 @@ const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
 };
 
 export const SettingsCustomizationPanel = React.memo(() => {
-  const { activeTheme, availableThemes, addTheme, removeTheme, changeTheme } = useThemeStore(
+  const { activeTheme, addTheme, removeTheme, changeTheme } = useThemeStore(
     useShallow((state) => ({
       activeTheme: state.activeTheme,
-      availableThemes: state.availableThemes,
       addTheme: state.addTheme,
       removeTheme: state.removeTheme,
       changeTheme: state.changeTheme,
     })),
   );
   const showToast = useToastStore((state) => state.showToast);
-  const { t, tText } = useI18nStore(useShallow((state) => ({ t: state.t, tText: state.tText })));
+  const t = useI18nStore((state) => state.t);
   const inputFileRef = React.useRef<HTMLInputElement>(null);
   const saveNameInputRef = React.useRef<HTMLInputElement>(null);
   const baseThemeNameRef = React.useRef(
@@ -307,13 +306,6 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const advancedGroups = React.useMemo(() => {
     return getAdvancedThemeFields(activeTheme, t);
   }, [activeTheme, t]);
-  const panelStyle = React.useMemo(
-    () =>
-      ({
-        '--settings-option-hover-background-color': settings.optionHoverBackgroundColor,
-      }) as React.CSSProperties,
-    [settings.optionHoverBackgroundColor],
-  );
 
   const isCurrentCustomTheme = activeTheme.name === currentCustomThemeName;
   const canRemoveThemeName = React.useCallback((themeName: string) => {
@@ -506,7 +498,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
   }, [showSaveNameInput]);
 
   return (
-    <div className={styles.panel} style={panelStyle}>
+    <div className={styles.panel}>
       <div className={styles.scrollContent}>
         <Text bold color={colors.color} userSelect={false}>
           {t('settings.customization.title')}
@@ -514,100 +506,78 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={8} />
 
-        <Row>
-          <Autocomplete
-            required
-            clearable={false}
-            data={availableThemes}
-            label={t('settings.customization.activeTheme')}
-            value={activeTheme.name}
-            extractLabel={(theme) => getThemeLabel(theme, t, tText)}
-            extractValue={(theme) => theme.name}
-            color={colors.fieldColor}
-            backgroundColor={colors.fieldBackgroundColor}
-            xs={12}
-            onChange={(event) => handleChangeTheme(String(event.value))}
-            renderOptionActions={(theme) =>
-              canRemoveThemeName(theme.name) && (
-                <button
-                  type="button"
-                  title={t('settings.customization.removeThemeTitle')}
-                  className={styles.optionRemoveButton}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    requestRemoveTheme(theme.name);
-                  }}
-                  style={{ color: colors.cancelButtonBackgroundColor }}
-                >
-                  <RemoveIcon size={13} />
-                </button>
-              )
-            }
-          />
-        </Row>
-
-        <Divider size={12} />
-
-        <Text small color={settings.mutedColor} userSelect={false}>
-          {t('settings.customization.currentCustomHelp', {
-            themeName: t('settings.customization.currentCustomTheme'),
-          })}
+        <Text small color={colors.color} userSelect={false}>
+          {t('settings.customization.activeTheme')}
         </Text>
 
-        <Divider size={10} />
+        <ThemePreviews onSelect={handleChangeTheme} />
+
+        <Divider size={16} />
+
+        {isCurrentCustomTheme && (
+          <Text small color={settings.mutedColor} userSelect={false}>
+            {t('settings.customization.unsavedChanges')}
+          </Text>
+        )}
 
         <div
-          className={styles.advancedGroups}
           style={
-            {
-              '--theme-border-color': settings.themeBorderColor,
-              '--theme-panel-background-color': settings.themePanelBackgroundColor,
-              '--theme-hover-background-color': settings.themeHoverBackgroundColor,
-              '--theme-muted-color': settings.mutedColor,
-            } as React.CSSProperties
+              {
+                '--theme-border-color': settings.themeBorderColor,
+                '--theme-panel-background-color': settings.themePanelBackgroundColor,
+                '--theme-hover-background-color': settings.themeHoverBackgroundColor,
+                '--theme-muted-color': settings.mutedColor,
+              } as React.CSSProperties
           }
         >
-          {advancedGroups.map((group) => (
-            <details key={group.name} className={styles.advancedGroup}>
-              <summary className={styles.advancedGroupHeader}>
-                <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
-                  {group.label}
-                </span>
-              </summary>
+          <Text small color={settings.mutedColor} userSelect={false}>
+            {t('settings.customization.currentCustomHelp', {
+              themeName: t('settings.customization.currentCustomTheme'),
+            })}
+          </Text>
+          <div className={styles.advancedGroups}>
+            {advancedGroups.map((group) => (
+              <details key={group.name} className={styles.advancedGroup}>
+                <summary className={styles.advancedGroupHeader}>
+                  <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
+                    {group.label}
+                  </span>
+                </summary>
 
-              <div className={styles.advancedGrid}>
-                {group.fields.map((field) => {
-                  const isNativeColor = isNativeColorValue(field.value);
+                <div className={styles.advancedGrid}>
+                  {group.fields.map((field) => {
+                    const isNativeColor = isNativeColorValue(field.value);
 
-                  return (
-                    <div key={field.path} className={styles.colorField}>
-                      <Input
-                        key={`${inputsVersion}:${field.path}`}
-                        label={field.label}
-                        type={isNativeColor ? 'color' : 'text'}
-                        defaultValue={
-                          isNativeColor ? getNativeColorValue(field.value) : field.value
-                        }
-                        onChange={(event) =>
-                          handleChangeAdvancedColor(
-                            field.path,
-                            isNativeColor
-                              ? getColorInputValue(event.target.value, field.value)
-                              : event.target.value,
-                          )
-                        }
-                        color={colors.fieldColor}
-                        backgroundColor={colors.fieldBackgroundColor}
-                        placeholderColor={settings.mutedColor}
-                        xs={12}
-                      />
-                      <span style={{ color: settings.mutedColor }}>{field.path}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </details>
-          ))}
+                    return (
+                      <div key={field.path} className={styles.colorField}>
+                        <Input
+                          key={`${inputsVersion}:${field.path}`}
+                          label={field.label}
+                          type={isNativeColor ? 'color' : 'text'}
+                          defaultValue={
+                            isNativeColor ? getNativeColorValue(field.value) : field.value
+                          }
+                          onChange={(event) =>
+                            handleChangeAdvancedColor(
+                              field.path,
+                              isNativeColor
+                                ? getColorInputValue(event.target.value, field.value)
+                                : event.target.value,
+                            )
+                          }
+                          color={colors.fieldColor}
+                          backgroundColor={colors.fieldBackgroundColor}
+                          placeholderColor={settings.mutedColor}
+                          xs={12}
+                        />
+                        <span style={{ color: settings.mutedColor }}>{field.path}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -623,7 +593,10 @@ export const SettingsCustomizationPanel = React.memo(() => {
             onChange={(event) => setThemeName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') handleSaveAsTheme();
-              if (event.key === 'Escape') setShowSaveNameInput(false);
+              if (event.key === 'Escape') {
+                event.stopPropagation();
+                setShowSaveNameInput(false);
+              }
             }}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
@@ -665,14 +638,16 @@ export const SettingsCustomizationPanel = React.memo(() => {
           />
         )}
 
-        <Button
-          smallIcon
-          text
-          title={t('settings.customization.exportThemeTitle')}
-          icon={() => <ExportIcon size={15} />}
-          onClick={handleExportTheme}
-          color={colors.testButtonBackgroundColor}
-        />
+        {(isCurrentCustomTheme || canRemoveActiveTheme) && (
+          <Button
+            smallIcon
+            text
+            title={t('settings.customization.exportThemeTitle')}
+            icon={() => <ExportIcon size={15} />}
+            onClick={handleExportTheme}
+            color={colors.testButtonBackgroundColor}
+          />
+        )}
 
         <Button
           smallIcon

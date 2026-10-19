@@ -44,6 +44,8 @@ export const en = {
   'settings.language.option.ptBR': 'Brazilian Portuguese',
 
   'settings.customization.title': 'Customization',
+  'settings.customization.customizeColors': 'Customize colors',
+  'settings.customization.unsavedChanges': 'Custom colors applied. Save as a theme to reuse them or discard the changes.',
   'settings.customization.activeTheme': 'Active theme',
   'settings.customization.currentCustomTheme': 'Current custom',
   'settings.customization.defaultThemeLabel': 'Aura (default)',
