@@ -95,7 +95,7 @@ export const useTableDataPersistence = ({
       setApplyingChanges(true);
 
       try {
-        await runSql(idConnection, sql);
+        await runSql(idConnection, sql, { rowChangesTransaction: { schema, table } });
         resetRows();
         setShowNoPkModal(false);
         showToast({ type: 'success', title: t('toast.dataSaved') });

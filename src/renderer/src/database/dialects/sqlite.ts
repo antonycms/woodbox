@@ -150,7 +150,8 @@ const sqlite: RendererDialect = {
   supportsFunctions: false,
   supportsAutoIncrement: false,
   quoteIdent,
-  getQualifiedName: (_schema, name) => quoteIdent(name),
+  getQualifiedName: (schema, name) =>
+    schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
   indexMethods: [],
   commonColumnTypes: ['text', 'integer', 'real', 'numeric', 'blob'],
   dml: defaultDml,

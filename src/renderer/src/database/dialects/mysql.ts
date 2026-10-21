@@ -357,7 +357,8 @@ const mysql: RendererDialect = {
   supportsAutoIncrement: true,
   canUseAutoIncrement,
   quoteIdent,
-  getQualifiedName: (_schema, name) => quoteIdent(name),
+  getQualifiedName: (schema, name) =>
+    schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
   indexMethods: ['BTREE', 'HASH'],
   commonColumnTypes: [
     'varchar',
