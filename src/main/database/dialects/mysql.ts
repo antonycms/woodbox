@@ -132,6 +132,8 @@ const mysql: DatabaseDialectAdapter = {
   id: 'mysql',
   client: 'mysql2',
   queries,
+  // Fail closed for case-variant self-joins on any lower_case_table_names mode.
+  queryIdentifierRules: { caseInsensitive: true },
   quoteIdentifier,
   getConnectionConfig: (config) => ({
     host: config.host,
@@ -140,10 +142,27 @@ const mysql: DatabaseDialectAdapter = {
     password: config.password,
     database: config.database,
     dateStrings: true,
+    flags: ['FOUND_ROWS'],
   }),
   getRows,
   splitStatements,
   getExplainSql: (sql) => `EXPLAIN ANALYZE ${sql};`,
+  executeQueryUpdate: async (transaction, sql, bindings) => {
+    const results: ResultSetHeader[] = await transaction.raw(sql, bindings);
+    return results[0]?.affectedRows ?? NaN;
+  },
+  validateQueryUpdateTable: async (transaction, { schema, table }) => {
+    const info = await transaction('information_schema.TABLES as t')
+      .join('information_schema.ENGINES as e', 'e.ENGINE', 't.ENGINE')
+      .select('e.TRANSACTIONS as transactions')
+      .where('t.TABLE_NAME', table)
+      .where('t.TABLE_TYPE', 'BASE TABLE')
+      .whereRaw('t.TABLE_SCHEMA = COALESCE(?, DATABASE())', [schema ?? null])
+      .first();
+    if (info?.transactions !== 'YES') {
+      throw new Error(`A tabela "${table}" não suporta o salvamento transacional dessas alterações.`);
+    }
+  },
   serializeRunSqlResult: (raw, context) => {
     const rows = getRows(raw);
     const fields: FieldPacket[] | undefined = Array.isArray(raw) ? raw[1] : undefined;
@@ -162,7 +181,11 @@ const mysql: DatabaseDialectAdapter = {
         columns_info: fields?.map?.((field) => ({
           name: field.name,
           type: getMysqlTypeName(field),
+          source: field.orgTable && field.orgName
+            ? { schema: field.schema || field.db, table: field.orgTable, column: field.orgName }
+            : undefined,
         })),
+        column_sources_resolved: true,
       } satisfies SerializedRunSqlResult,
     ];
   },

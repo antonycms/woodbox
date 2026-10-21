@@ -28,6 +28,8 @@ import type {
   IServerOutputMessage,
   IImportTableDataParams,
   IImportTableDataResult,
+  QueryRowUpdate,
+  IResolveQueryResultColumnsParams,
 } from '@shared/types/database';
 import type { Dialect, IConnectionConfig, IConnectionTest } from '@shared/types/connections';
 import type { IConnection, ITableWithSchema } from './types';
@@ -44,11 +46,14 @@ import {
   isReactNativeBridgeDialect,
 } from './utils/reactNativeBridge';
 import { getExportSql } from './utils/exportSql';
+import { restrictQueryColumnSources } from './utils/querySources';
+import { applyQueryUpdates } from './queryUpdates';
+import { executeStatements } from './executeStatements';
+import { resolveQueryResultColumns as resolveQueryResultColumnsCore } from './queryResultColumns';
 import {
   hasSqlStatementSeparator,
   isReadOnlySelectQuery,
   normalizeSqlForKeywordSearch,
-  prepareUserSqlStatement,
   sanitizeAutoPaginatedError,
 } from './utils/sql';
 
@@ -743,17 +748,11 @@ export const runSql = async (
     const t0 = Date.now();
     const statements =
       !isSelectQuery && adapter.splitStatements ? adapter.splitStatements(sql_final) : [sql_final];
-    const results: { raw: unknown; statement: string }[] = [];
+    let results: { raw: unknown; statement: string }[];
 
     try {
-      for (const statement of statements) {
-        results.push({
-          raw: await instance
-            .raw(prepareUserSqlStatement(dialect, statement))
-            .connection(dbConnection),
-          statement,
-        });
-      }
+      results = await executeStatements(instance, dbConnection, adapter, dialect, statements,
+        options?.rowChangesTransaction);
     } catch (error) {
       if (auto_paginated) throw sanitizeAutoPaginatedError(error, sql_final, sql_original);
       throw error;
@@ -761,26 +760,37 @@ export const runSql = async (
 
     const execution_time_ms = Date.now() - t0;
 
-    const serializedResults = results.flatMap(({ raw, statement }) =>
+    let serializedResults = results.flatMap(({ raw, statement }) =>
       adapter.serializeRunSqlResult(raw, { auto_paginated, execution_time_ms, statement }),
     );
 
-    if (!adapter.resolveRunSqlColumnsInfo) return serializedResults;
-
-    try {
-      return await adapter.resolveRunSqlColumnsInfo({
-        instance,
-        dbConnection,
-        sql: sql_original,
-        results: serializedResults,
-      });
-    } catch {
-      return serializedResults;
+    if (adapter.resolveRunSqlColumnsInfo) {
+      try {
+        serializedResults = await adapter.resolveRunSqlColumnsInfo({
+          instance,
+          dbConnection,
+          sql: sql_original,
+          results: serializedResults,
+        });
+      } catch {
+        // Metadata failures must never enable editing through inferred origins.
+      }
     }
+    return serializedResults.map((result) => restrictQueryColumnSources(sql_original, result, adapter.queryIdentifierRules));
   } finally {
     if (options?.queryExecutionId) activeRunSqlQueries.delete(options.queryExecutionId);
     await instance.client.releaseConnection(dbConnection);
   }
+};
+
+export const updateQueryRows = async (connectionId: string, updates: QueryRowUpdate[]) => {
+  const { instance, dialect } = await getConnection(connectionId);
+  await applyQueryUpdates(instance, getDialectAdapter(dialect), updates);
+};
+
+export const resolveQueryResultColumns = async (connectionId: string, params: IResolveQueryResultColumnsParams) => {
+  const { instance, dialect } = await getConnection(connectionId);
+  return resolveQueryResultColumnsCore(instance, getDialectAdapter(dialect), params);
 };
 
 export const runExplainSql = async (

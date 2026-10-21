@@ -23,7 +23,7 @@ const getTables = () => /* sql */ `
   ORDER BY table_name;
 `;
 
-const getTableColumns = ({ table }: ITableWithSchema) => /* sql */ `
+const getTableColumns = ({ table, schema }: ITableWithSchema) => /* sql */ `
   SELECT
     COLUMN_NAME AS column_name,
     DATA_TYPE AS data_type,
@@ -38,7 +38,7 @@ const getTableColumns = ({ table }: ITableWithSchema) => /* sql */ `
     NULLIF(COLUMN_COMMENT, '') AS description,
     CASE WHEN IS_NULLABLE = 'YES' THEN true ELSE false END AS is_nullable
   FROM information_schema.columns
-  WHERE table_schema = DATABASE()
+  WHERE table_schema = ${schema ? quoteLiteral(schema) : 'DATABASE()'}
   AND table_name = ${quoteLiteral(table)}
   ORDER BY ordinal_position;
 `;
@@ -96,7 +96,7 @@ const getTableUsedAsReference = ({ table }: ITableWithSchema) => /* sql */ `
   ORDER BY kcu.table_name, kcu.constraint_name, kcu.ordinal_position;
 `;
 
-const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
+const getTableRestrictions = ({ table, schema }: ITableWithSchema) => /* sql */ `
   SELECT
     tc.CONSTRAINT_NAME AS constraint_name,
     CASE
@@ -122,7 +122,7 @@ const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
     ON kcu.constraint_schema = tc.constraint_schema
     AND kcu.constraint_name = tc.constraint_name
     AND kcu.table_name = tc.table_name
-  WHERE tc.table_schema = DATABASE()
+  WHERE tc.table_schema = ${schema ? quoteLiteral(schema) : 'DATABASE()'}
   AND tc.table_name = ${quoteLiteral(table)}
   AND tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE')
   GROUP BY tc.constraint_name, tc.constraint_type

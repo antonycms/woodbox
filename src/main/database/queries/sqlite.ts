@@ -3,6 +3,7 @@ import type { IGetTableDataParams, ITableWithSchema } from '../types';
 
 const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;
 const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
+const getPragmaSchema = (schema?: string) => schema ? `, ${quoteLiteral(schema)}` : '';
 const sqlQuoteIdent = (sqlExpression: string) =>
   `'"' || replace(${sqlExpression}, '"', '""') || '"'`;
 const getTableName = ({ table }: ITableWithSchema) => quoteIdent(table);
@@ -25,7 +26,7 @@ const getTables = () => /* sql */ `
   ORDER BY m.name;
 `;
 
-const getTableColumns = ({ table }: ITableWithSchema) => /* sql */ `
+const getTableColumns = ({ table, schema }: ITableWithSchema) => /* sql */ `
   SELECT
     name AS column_name,
     lower(type) AS data_type,
@@ -39,7 +40,7 @@ const getTableColumns = ({ table }: ITableWithSchema) => /* sql */ `
     CASE WHEN pk > 0 AND lower(type) = 'integer' THEN true ELSE false END AS is_auto_increment,
     NULL AS description,
     CASE WHEN "notnull" = 0 AND pk = 0 THEN true ELSE false END AS is_nullable
-  FROM pragma_table_info(${quoteLiteral(table)})
+  FROM pragma_table_info(${quoteLiteral(table)}${getPragmaSchema(schema)})
   ORDER BY cid;
 `;
 
@@ -85,7 +86,7 @@ const getTableUsedAsReference = ({ table }: ITableWithSchema) => /* sql */ `
   ORDER BY m.name, fk.id, fk.seq;
 `;
 
-const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
+const getTableRestrictions = ({ table, schema }: ITableWithSchema) => /* sql */ `
   SELECT
     'pk_' || ${quoteLiteral(table)} AS constraint_name,
     'primary_key' AS constraint_type,
@@ -97,7 +98,7 @@ const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
     NULL AS comment
   FROM (
     SELECT name AS column_name
-    FROM pragma_table_info(${quoteLiteral(table)})
+    FROM pragma_table_info(${quoteLiteral(table)}${getPragmaSchema(schema)})
     WHERE pk > 0
     ORDER BY pk
   )
@@ -112,8 +113,8 @@ const getTableRestrictions = ({ table }: ITableWithSchema) => /* sql */ `
     NULL AS expression,
     group_concat(ii.name, ',') AS column_names,
     NULL AS comment
-  FROM pragma_index_list(${quoteLiteral(table)}) il
-  JOIN pragma_index_info(il.name) ii
+  FROM pragma_index_list(${quoteLiteral(table)}${getPragmaSchema(schema)}) il
+  JOIN pragma_index_info(il.name${getPragmaSchema(schema)}) ii
   WHERE il."unique" = 1
   AND il.origin <> 'pk'
   GROUP BY il.name

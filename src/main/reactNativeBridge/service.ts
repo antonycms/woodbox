@@ -1,5 +1,5 @@
 import type { IReactNativeBridgeConnectionConfig } from '@shared/types/reactNativeBridge';
-import { findReactNativeBridgeSession } from './sessions';
+import { findReactNativeBridgeSession, getReactNativeBridgeSession } from './sessions';
 import { requestReactNativeBridge } from './rpc';
 import type { ExecuteSqlParams, SqliteExecutionResult } from './protocol';
 
@@ -26,14 +26,26 @@ const findSessionWithRetry = async (config: IReactNativeBridgeConnectionConfig) 
   });
 };
 
-export const executeReactNativeBridgeSql = async (
-  config: IReactNativeBridgeConnectionConfig,
-  params: ExecuteSqlParams,
-) => {
+export const resolveReactNativeBridgeSqlSession = async (config: IReactNativeBridgeConnectionConfig) => {
   const session = await findSessionWithRetry(config);
 
   if (!session) {
     throw new Error('O app React Native não está conectado à bridge. Verifique se o app está aberto em modo dev.');
+  }
+
+  return session;
+};
+
+export const executeReactNativeBridgeSql = async (
+  config: IReactNativeBridgeConnectionConfig,
+  params: ExecuteSqlParams,
+  sessionId?: string,
+) => {
+  const session = sessionId
+    ? getReactNativeBridgeSession(sessionId)
+    : await resolveReactNativeBridgeSqlSession(config);
+  if (!session || !session.adapters.some((adapter) => adapter.id === config.adapterId)) {
+    throw new Error('A sessão da transação React Native foi encerrada.');
   }
 
   return requestReactNativeBridge(

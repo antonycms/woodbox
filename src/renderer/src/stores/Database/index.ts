@@ -18,6 +18,8 @@ export const useDatabaseStore = create<WoodboxApi['database']>()(() => ({
   getTableTriggers: (...args) => window.api.database.getTableTriggers(...args),
   getFunctionDefinition: (...args) => window.api.database.getFunctionDefinition(...args),
   runSql: (...args) => window.api.database.runSql(...args),
+  updateQueryRows: (...args) => window.api.database.updateQueryRows(...args),
+  resolveQueryResultColumns: (...args) => window.api.database.resolveQueryResultColumns(...args),
   runExplainSql: (...args) => window.api.database.runExplainSql(...args),
   exportData: (...args) => window.api.database.exportData(...args),
   importTableData: (...args) => window.api.database.importTableData(...args),

@@ -95,6 +95,8 @@ export interface WoodboxApi {
     getTableTriggers: (connectionId: string, filters: TableFilters) => Promise<Database.ITriggerInfo[]>;
     getFunctionDefinition: (connectionId: string, filters: { schema: string; functionName: string; functionIdentityArguments?: string }) => Promise<{ definition: string }[]>;
     runSql: (connectionId: string, sql: string, options?: Database.IOptionsRunSql) => Promise<Database.IRunSqlResult[]>;
+    updateQueryRows: (connectionId: string, updates: Database.QueryRowUpdate[]) => Promise<void>;
+    resolveQueryResultColumns: (connectionId: string, params: Database.IResolveQueryResultColumnsParams) => Promise<Database.SerializedRunSqlColumn[]>;
     runExplainSql: (connectionId: string, sql: string, options?: Pick<Database.IOptionsRunSql, 'queryExecutionId'>) => Promise<Database.IRunSqlResult[]>;
     exportData: (connectionId: string, params: Database.IExportDataParams) => Promise<Database.IExportDataResult>;
     importTableData: (connectionId: string, params: Database.IImportTableDataParams) => Promise<Database.IImportTableDataResult>;

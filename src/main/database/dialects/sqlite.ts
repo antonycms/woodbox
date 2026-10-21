@@ -190,6 +190,7 @@ const sqlite: DatabaseDialectAdapter = {
   id: 'sqlite',
   client: 'sqlite3',
   queries,
+  queryIdentifierRules: { caseInsensitive: true },
   quoteIdentifier,
   getConnectionConfig: ({ database }) => ({
     filename: database,
@@ -201,6 +202,10 @@ const sqlite: DatabaseDialectAdapter = {
   getRows,
   splitStatements,
   getExplainSql: (sql) => `EXPLAIN QUERY PLAN ${sql};`,
+  executeQueryUpdate: async (transaction, sql, bindings) => {
+    const rows: DatabaseRow[] = await transaction.raw(`${sql} RETURNING 1`, bindings);
+    return rows.length;
+  },
   serializeRunSqlResult: (raw, context) => {
     const rows = getRows(raw);
     const type = isSelectStatement(context.statement) ? 'SELECT' : 'OK';
@@ -225,7 +230,7 @@ const sqlite: DatabaseDialectAdapter = {
     try {
       const tablesColumns = await Promise.all(
         tables.map(async (table) => {
-          const raw = await instance.raw(queries.getTableColumns({ table: table.name })).connection(
+          const raw = await instance.raw(queries.getTableColumns({ table: table.name, schema: table.schema })).connection(
             dbConnection,
           );
 

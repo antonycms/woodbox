@@ -14,6 +14,7 @@ export const tableData = tableFilters.extend({
 export const runSqlOptions = z.object({
   limit: z.number().optional(), page: z.number().optional(), orderBy: orderBy.optional(),
   queryExecutionId: z.string().optional(),
+  rowChangesTransaction: tableFilters.extend({ table: z.string().min(1) }).optional(),
 });
 const exportSource = z.discriminatedUnion('type', [
   tableFilters.extend({ type: z.literal('table'), where: z.string().optional(), orderBy: orderBy.optional() }),
@@ -26,6 +27,20 @@ export const exportData = exportPreview.extend({
 });
 export const importTableData = tableFilters.extend({
   rows: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.date(), z.null()]))),
+});
+
+export const queryRowUpdates = z.array(tableFilters.extend({
+  table: z.string().min(1),
+  primaryKey: z.record(z.string().min(1), z.union([z.string(), z.number().finite(), z.boolean()])),
+  changes: z.record(z.string().min(1), z.json()),
+}));
+
+export const queryResultColumns = z.object({
+  sql: z.string(),
+  columns: z.array(z.object({
+    name: z.string(), type: z.string().optional(), source_ref: z.string().max(64).optional(),
+    source: z.object({ schema: z.string().optional(), table: z.string().min(1), column: z.string().min(1) }).optional(),
+  })),
 });
 
 export const compare = z.object({

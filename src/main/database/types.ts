@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
-import type { DatabaseRow, IOrderBy, SerializedRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, IOrderBy, SerializedRunSqlColumn, SerializedRunSqlResult } from '@shared/types/database';
 import type { Dialect, IConnectionConfig } from '@shared/types/connections';
+import type { QueryIdentifierRules } from './utils/querySources';
 
 export interface IConnection {
   id: string;
@@ -52,6 +53,7 @@ export interface DatabaseDialectAdapter {
   id: Dialect;
   client: Knex.Config['client'];
   queries: DatabaseDialectQueries;
+  queryIdentifierRules?: QueryIdentifierRules;
   getConnectionConfig(config: IConnectionConfig): object;
   getKnexConfig?(config: IConnectionConfig): Partial<Knex.Config>;
   getRows<Row = DatabaseRow>(raw: unknown): Row[];
@@ -60,8 +62,16 @@ export interface DatabaseDialectAdapter {
   resolveRunSqlColumnsInfo?(
     context: ResolveRunSqlColumnsInfoContext,
   ): Promise<SerializedRunSqlResult[]>;
+  resolveQueryColumnSources?(instance: Knex, columns: SerializedRunSqlColumn[]): Promise<SerializedRunSqlColumn[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
+  // Count target rows even when the assigned values are unchanged.
+  executeQueryUpdate(
+    transaction: Knex.Transaction,
+    sql: string,
+    bindings: (string | number | boolean | null)[],
+  ): Promise<number>;
+  validateQueryUpdateTable?(transaction: Knex.Transaction, table: ITableWithSchema): Promise<void>;
   cancelQuery?(params: { instance: Knex; dbConnection: object }): Promise<boolean>;
 }
 

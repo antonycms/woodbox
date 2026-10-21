@@ -4,7 +4,7 @@ import { connection, exportProjects, importConnections, projectExportFormat, pro
 import { project, script, snippet } from './schemas/workspace';
 import { provider, chat, chatPatch, appendMessages, chatRequest } from './schemas/ai';
 import {
-  tableFilters, tableData, runSqlOptions, exportPreview, exportData, importTableData, compare,
+  tableFilters, tableData, runSqlOptions, exportPreview, exportData, importTableData, queryRowUpdates, queryResultColumns, compare,
 } from './schemas/database';
 
 const id = z.string().min(1);
@@ -70,6 +70,8 @@ const schemas = {
   '@get:table_triggers': z.tuple([id, tableFilters]),
   '@get:function_definition': z.tuple([id, z.object({ schema: z.string(), functionName: z.string(), functionIdentityArguments: z.string().optional() })]),
   '@post:run_sql': z.tuple([id, z.string(), runSqlOptions.optional()]),
+  '@post:update_query_rows': z.tuple([id, queryRowUpdates]),
+  '@get:query_result_columns': z.tuple([id, queryResultColumns]),
   '@post:run_explain_sql': z.tuple([id, z.string(), runSqlOptions.pick({ queryExecutionId: true }).optional()]),
   '@post:export_data': z.tuple([id, exportData]),
   '@post:import_table_data': z.tuple([id, importTableData]),

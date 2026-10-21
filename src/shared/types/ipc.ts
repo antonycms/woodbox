@@ -61,6 +61,8 @@ export interface IpcRequests {
   '@get:table_triggers': WoodboxApi['database']['getTableTriggers'];
   '@get:function_definition': WoodboxApi['database']['getFunctionDefinition'];
   '@post:run_sql': WoodboxApi['database']['runSql'];
+  '@post:update_query_rows': WoodboxApi['database']['updateQueryRows'];
+  '@get:query_result_columns': WoodboxApi['database']['resolveQueryResultColumns'];
   '@post:run_explain_sql': WoodboxApi['database']['runExplainSql'];
   '@post:export_data': WoodboxApi['database']['exportData'];
   '@post:import_table_data': WoodboxApi['database']['importTableData'];

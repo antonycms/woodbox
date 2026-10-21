@@ -84,6 +84,8 @@ export const api: WoodboxApi = {
     getTableTriggers: request('@get:table_triggers'),
     getFunctionDefinition: request('@get:function_definition'),
     runSql: request('@post:run_sql'),
+    updateQueryRows: request('@post:update_query_rows'),
+    resolveQueryResultColumns: request('@get:query_result_columns'),
     runExplainSql: request('@post:run_explain_sql'),
     exportData: request('@post:export_data'),
     importTableData: request('@post:import_table_data'),

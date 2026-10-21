@@ -18,6 +18,8 @@ import {
   getTableTriggers,
   getFunctionDefinition,
   runSql,
+  updateQueryRows,
+  resolveQueryResultColumns,
   runExplainSql,
   exportData,
   importTableData,
@@ -48,6 +50,8 @@ addListener('@get:table_indexes', getTableIndexes);
 addListener('@get:table_triggers', getTableTriggers);
 addListener('@get:function_definition', getFunctionDefinition);
 addListener('@post:run_sql', runSql);
+addListener('@post:update_query_rows', updateQueryRows);
+addListener('@get:query_result_columns', resolveQueryResultColumns);
 addListener('@post:run_explain_sql', runExplainSql);
 addListener('@post:export_data', exportData);
 addListener('@post:import_table_data', importTableData);

@@ -120,11 +120,33 @@ export interface IOptionsRunSql {
   page?: number;
   orderBy?: IOrderBy[];
   queryExecutionId?: string;
+  rowChangesTransaction?: { schema?: string; table: string };
+}
+
+export interface QueryColumnSource {
+  schema?: string;
+  table: string;
+  column: string;
+}
+
+export interface QueryRowUpdate {
+  schema?: string;
+  table: string;
+  primaryKey: Record<string, string | number | boolean>;
+  changes: DatabaseRow;
 }
 
 export interface SerializedRunSqlColumn {
   name: string;
   type?: string;
+  source?: QueryColumnSource;
+  // Opaque origin supplied by the driver; resolved to names only when saving.
+  source_ref?: string;
+}
+
+export interface IResolveQueryResultColumnsParams {
+  sql: string;
+  columns: SerializedRunSqlColumn[];
 }
 
 export interface IRunSqlResult {
@@ -135,6 +157,10 @@ export interface IRunSqlResult {
   rows?: DatabaseRow[];
   columns?: string[];
   columns_info?: SerializedRunSqlColumn[];
+  // Native origins are authoritative, but may still be opaque source_ref values.
+  column_sources_resolved?: boolean;
+  supports_row_management?: boolean;
+  row_management_table?: Pick<QueryColumnSource, 'schema' | 'table'>;
 }
 
 export interface SerializedRunSqlResult extends IRunSqlResult {
