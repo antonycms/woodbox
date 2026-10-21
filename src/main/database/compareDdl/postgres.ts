@@ -1,13 +1,18 @@
-import type { CompareDdlBuilder } from './types';
+import type { CompareColumnInfo, CompareDdlBuilder } from './types';
 import { makeColumnDefinition, makeColumnType, pushSemicolon, qualifiedName } from './utils';
+
+const normalizeColumnPrecision = (column: CompareColumnInfo): CompareColumnInfo =>
+  ['numeric', 'decimal'].includes((column.udt_name || column.data_type || '').trim().toLowerCase())
+    ? column
+    : { ...column, numeric_precision: undefined, numeric_scale: undefined };
 
 export const createPostgresCompareDdlBuilder = (
   quoteIdentifier: (value: string) => string,
 ): CompareDdlBuilder => ({
   quoteIdentifier,
   qualifiedName: (schema, name) => qualifiedName(quoteIdentifier, schema, name),
-  makeColumnType,
-  makeColumnDefinition: (column) => makeColumnDefinition(quoteIdentifier, column),
+  makeColumnType: (column) => makeColumnType(normalizeColumnPrecision(column)),
+  makeColumnDefinition: (column) => makeColumnDefinition(quoteIdentifier, normalizeColumnPrecision(column)),
   dropObject: (type, schema, name, cascade) => {
     const sqlType = type === 'materialized_view' ? 'MATERIALIZED VIEW' : type.toUpperCase();
     return `DROP ${sqlType} IF EXISTS ${qualifiedName(quoteIdentifier, schema, name)}${
@@ -15,7 +20,7 @@ export const createPostgresCompareDdlBuilder = (
     };`;
   },
   addColumn: (tableName, column) =>
-    `ALTER TABLE ${tableName}\n  ADD COLUMN ${makeColumnDefinition(quoteIdentifier, column)};`,
+    `ALTER TABLE ${tableName}\n  ADD COLUMN ${makeColumnDefinition(quoteIdentifier, normalizeColumnPrecision(column))};`,
   dropColumn: (tableName, columnName) =>
     `ALTER TABLE ${tableName}\n  DROP COLUMN ${quoteIdentifier(columnName)};`,
   alterColumn: (tableName, columnName, sourceColumn, _targetColumn, changes) => {
@@ -24,7 +29,7 @@ export const createPostgresCompareDdlBuilder = (
 
     if (changes.typeChanged) {
       ddl.push(
-        `ALTER TABLE ${tableName}\n  ALTER COLUMN ${column} TYPE ${makeColumnType(sourceColumn)};`,
+        `ALTER TABLE ${tableName}\n  ALTER COLUMN ${column} TYPE ${makeColumnType(normalizeColumnPrecision(sourceColumn))};`,
       );
     }
 
