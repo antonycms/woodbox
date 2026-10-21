@@ -94,7 +94,7 @@ export const ResultToolbar = ({
           smallIcon
           title={t('common.addRow')}
           onClick={onAddRow}
-          disabled={data.loading}
+          disabled={data.loading || saving}
           color={barTheme.color}
         >
           <AddIcon size={14} />
@@ -112,7 +112,7 @@ export const ResultToolbar = ({
       </Button>
 
       {!readOnly && (
-        <RefreshButton menuPlacement="top" color={barTheme.color} disabled={data.loading} onRefresh={onRefresh} />
+        <RefreshButton menuPlacement="top" color={barTheme.color} disabled={data.loading || saving} onRefresh={onRefresh} />
       )}
 
       <Button

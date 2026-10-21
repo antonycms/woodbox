@@ -11,6 +11,8 @@ interface UseQueryResultPreviewParams {
   data: IQueryResult;
   references: Map<string, IColumnReferenceInfo[]>;
   selectedCell?: ITableSelectedCellData;
+  selectedCellEditable: boolean;
+  connectionDatabase?: string;
   editedFieldsRows: Map<React.Key, Record<string, unknown>>;
   newRows: Map<React.Key, Record<string, unknown>>;
 }
@@ -19,6 +21,8 @@ export const useQueryResultPreview = ({
   data,
   references,
   selectedCell,
+  selectedCellEditable,
+  connectionDatabase,
   editedFieldsRows,
   newRows,
 }: UseQueryResultPreviewParams) => {
@@ -62,7 +66,30 @@ export const useQueryResultPreview = ({
     ? tabFkMap.get(String(selectedCell.column.attribute))
     : undefined;
 
-  const canSelectReferenceValue = !!selectedReference && selectedCell?.column.editable === true;
+  const selectionReference = React.useMemo(() => {
+    if (!selectedCell) return;
+    const attribute = String(selectedCell.column.attribute);
+    if (data.columns?.filter((name) => name === attribute).length !== 1) return;
+    const column = data.columns_info?.find((column) => column.name === attribute);
+    const table = data.supports_row_management ? data.row_management_table : undefined;
+    const source = column?.source || (table && { ...table, column: attribute });
+    if (!source) return;
+
+    // Legacy name matching remains visual only. Assisted edits require a
+    // unique reference for the real origin (or a validated direct SELECT).
+    const key = [source.schema, source.table].filter(Boolean).join('.');
+    const cached = references.get(key) ||
+      (source.schema === connectionDatabase ? references.get(source.table) : undefined) || [];
+    const matches = cached.filter((reference) =>
+      reference.table_name === source.table && reference.column_name === source.column &&
+      (reference.table_schema
+        ? reference.table_schema === source.schema
+        : !source.schema || source.schema === connectionDatabase));
+    if (matches.length === 1) return matches[0];
+  }, [connectionDatabase, data.columns, data.columns_info, data.row_management_table,
+    data.supports_row_management, references, selectedCell]);
+
+  const canSelectReferenceValue = !!selectionReference && selectedCellEditable;
 
   const previewTabs = React.useMemo(
     () =>
@@ -97,7 +124,7 @@ export const useQueryResultPreview = ({
   }, []);
 
   React.useEffect(() => {
-    if (!selectedReference && activePreviewTab !== 'value') {
+    if (!selectedReference && activePreviewTab === 'reference') {
       setActivePreviewTab('value');
       return;
     }
@@ -114,6 +141,7 @@ export const useQueryResultPreview = ({
     selectedCellValue,
     tabFkMap,
     selectedReference,
+    selectionReference,
     canSelectReferenceValue,
     previewTabs,
     closeValuePreview,

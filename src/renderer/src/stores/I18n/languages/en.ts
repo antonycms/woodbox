@@ -722,6 +722,9 @@ export const en = {
   'query.displayedRows': 'Displayed rows: {{count}}',
   'query.runningFor': 'Running for {{time}}',
   'query.tableNoPrimaryKey': 'The table "{{table}}" has no primary key.',
+  'query.columnReadOnly': 'This edit cannot be saved. The query must have an unambiguous origin, distinct column aliases, and the complete primary key in SELECT.',
+  'query.conflictingUpdates': 'The same record received different values in result rows. Resolve conflicting changes before saving.',
+  'query.joinUpdateOnly': 'Results with multiple tables or aliases only support updating existing records.',
   'query.rowMissingPk':
     'The changed row does not have PK "{{pk}}" information in the query result.',
   'import.importedRows': '{{count}} row(s) imported.',

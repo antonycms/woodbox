@@ -726,6 +726,9 @@ export const ptBR: Record<TranslationKey, string> = {
   'query.displayedRows': 'Linhas exibidas: {{count}}',
   'query.runningFor': 'Executando há {{time}}',
   'query.tableNoPrimaryKey': 'A tabela "{{table}}" não possui primary key.',
+  'query.columnReadOnly': 'Não é possível salvar esta edição. A consulta precisa ter origem inequívoca, colunas com aliases distintos e a PK completa no SELECT.',
+  'query.conflictingUpdates': 'O mesmo registro recebeu valores diferentes em linhas do resultado. Resolva as alterações conflitantes antes de salvar.',
+  'query.joinUpdateOnly': 'Resultados com múltiplas tabelas ou aliases permitem apenas atualizar registros existentes.',
   'query.rowMissingPk':
     'A linha alterada não possui informação da PK "{{pk}}" no resultado da query.',
   'import.importedRows': '{{count}} linha(s) importada(s).',

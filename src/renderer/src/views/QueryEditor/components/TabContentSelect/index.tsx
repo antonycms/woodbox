@@ -34,6 +34,7 @@ import { ResultToolbar } from './components/ResultToolbar';
 import { useQueryResultEditing } from './hooks/useQueryResultEditing';
 import { useQueryResultPreview } from './hooks/useQueryResultPreview';
 import { useResultCaptureExport } from './hooks/useResultCaptureExport';
+import { useQueryResultSources } from './hooks/useQueryResultSources';
 
 import IconMdiClose from '~icons/mdi/close';
 
@@ -98,8 +99,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
   const [rowsCount, setRowsCount] = React.useState<number>();
 
+  const { editableTable, canEditCell } = useQueryResultSources(data, readOnly);
   const singleResultTable = data.tables_info?.length === 1 ? data.tables_info[0] : undefined;
-  const editableTable = readOnly ? undefined : singleResultTable;
 
   const closeContextMenuTable = React.useCallback(() => {
     setContextMenuTable(undefined);
@@ -125,9 +126,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     discardNewRowsOnCancel: true,
   });
 
-  const dialect = getRendererDialect(
-    connections.find((connection) => connection.id === id_connection)?.dialect,
-  );
+  const connection = connections.find((connection) => connection.id === id_connection);
+  const dialect = getRendererDialect(connection?.dialect);
 
   const {
     captureButtonColor,
@@ -144,6 +144,20 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     onClearCapture,
   });
 
+  const { saving, handleSave } = useQueryResultEditing({
+    idConnection: id_connection,
+    data,
+    dialect,
+    editableTable,
+    editedFieldsRows,
+    droppedRows,
+    newRows,
+    resetRows,
+    onRefresh,
+  });
+  const selectedCellEditable = !!selectedCell && !saving &&
+    canEditCell(selectedCell.row, String(selectedCell.column.attribute));
+
   const {
     showValuePreview,
     previewWidth,
@@ -151,6 +165,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     selectedCellValue,
     tabFkMap,
     selectedReference,
+    selectionReference,
     canSelectReferenceValue,
     previewTabs,
     closeValuePreview,
@@ -162,20 +177,10 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     data,
     references,
     selectedCell,
+    selectedCellEditable,
+    connectionDatabase: connection?.database,
     editedFieldsRows,
     newRows,
-  });
-
-  const { saving, handleSave } = useQueryResultEditing({
-    idConnection: id_connection,
-    data,
-    dialect,
-    editableTable,
-    editedFieldsRows,
-    droppedRows,
-    newRows,
-    resetRows,
-    onRefresh,
   });
 
   const executionTimeMs = React.useMemo(() => {
@@ -250,7 +255,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
 
   const handleApplySelectedCellValue = React.useCallback(
     (value: unknown) => {
-      if (!selectedCell?.column.editable) return;
+      if (!selectedCellEditable) return;
 
       const row = selectedCell.row;
       const attribute = String(selectedCell.column.attribute);
@@ -266,23 +271,29 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         prevState ? { ...prevState, value: normalizedValue } : prevState,
       );
     },
-    [handleEditNewRow, handleEditRow, selectedCell],
+    [handleEditNewRow, handleEditRow, selectedCell, selectedCellEditable],
   );
 
   const handleApplySelectedPreviewValue = React.useCallback(
     (value: string) => {
-      if (!selectedCell?.column.editable) return;
+      if (!selectedCellEditable) return;
 
       handleApplySelectedCellValue(value);
     },
-    [handleApplySelectedCellValue, selectedCell],
+    [handleApplySelectedCellValue, selectedCellEditable],
   );
 
+  const handleSelectReferenceValue = React.useCallback((value: unknown) => {
+    if (!canSelectReferenceValue) return;
+    handleApplySelectedCellValue(value);
+  }, [canSelectReferenceValue, handleApplySelectedCellValue]);
+
   const handleSetSelectedCellsNull = React.useCallback(() => {
+    if (saving) return;
     const cells = contextMenuTable?.data?.getSelectedCells() || [];
 
     cells.forEach(({ row, column, rowIndex }) => {
-      if (!column.editable) return;
+      if (!canEditCell(row, String(column.attribute))) return;
 
       const rowData = row;
       const attribute = String(column.attribute);
@@ -296,7 +307,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     });
 
     setContextMenuTable(undefined);
-  }, [contextMenuTable, handleEditNewRow, handleEditRow]);
+  }, [canEditCell, contextMenuTable, handleEditNewRow, handleEditRow, saving]);
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -306,6 +317,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         return;
       }
 
+      if (saving) return;
       const target = event.target as HTMLElement;
       const isEditableTarget = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName);
 
@@ -329,6 +341,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       handleRemoveSelectedRows,
       handleSave,
       handleUndoSelectedDroppedRows,
+      saving,
     ],
   );
 
@@ -440,10 +453,17 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       label: column,
       info: resultColumnsInfo.get(column),
       sortable: !readOnly,
-      editable: !!editableTable,
+      editable: !readOnly && !data.loading && !saving && !column.startsWith('__'),
       isLink: tabFkMap.has(column),
     }));
-  }, [data.columns, editableTable, readOnly, resultColumnsInfo, tabFkMap]);
+  }, [
+    data.columns,
+    readOnly,
+    resultColumnsInfo,
+    tabFkMap,
+    data.loading,
+    saving,
+  ]);
 
   const exportSource = React.useMemo(
     () => ({
@@ -457,7 +477,8 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   React.useEffect(() => {
     resetRows();
     setSelectedRows([]);
-  }, [data.rows, data.columns, data.query, resetRows, setSelectedRows]);
+    setSelectedCell(undefined);
+  }, [id_connection, data.rows, data.columns, data.query, resetRows, setSelectedRows]);
 
   React.useEffect(() => {
     setRowsCount(undefined);
@@ -486,13 +507,13 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       <div className={styles.content}>
         <div className={styles.tableWrapper}>
           <Table
-            loading={!!data.loading}
+            loading={!!data.loading || saving}
             rows={data.rows}
             editedRows={editedFieldsRows}
             removedRows={removedRowKeys}
             sort={readOnly ? undefined : data.orderBy}
-            onSort={readOnly ? undefined : onSort}
-            onScrollEnd={readOnly ? undefined : onScrollEnd}
+            onSort={readOnly || saving ? undefined : onSort}
+            onScrollEnd={readOnly || saving ? undefined : onScrollEnd}
             onContextMenu={onContextMenuTable}
             onSelectRow={setSelectedRows}
             onSelectCellData={setSelectedCell}
@@ -546,7 +567,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                     key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
                     column={selectedCell?.column}
                     dialect={dialect.editorDialect}
-                    readonly={!selectedCell?.column.editable}
+                    readonly={!selectedCellEditable}
                     value={selectedCellValue}
                     onChange={handleApplySelectedPreviewValue}
                   />
@@ -567,11 +588,12 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                 {canSelectReferenceValue && (
                   <TabContent activeTabId={activePreviewTab} idTab="selection">
                     <ReferenceSelection
+                      key={JSON.stringify([id_connection, selectionReference])}
                       active={activePreviewTab === 'selection'}
                       idConnection={id_connection}
-                      reference={selectedReference}
+                      reference={selectionReference}
                       onDataError={handleReferenceSelectionError}
-                      onSelectValue={handleApplySelectedCellValue}
+                      onSelectValue={handleSelectReferenceValue}
                     />
                   </TabContent>
                 )}
@@ -623,7 +645,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         contextMenuTable={contextMenuTable}
         data={data}
         dialect={dialect}
-        editable={!!editableTable}
+        editable={!!editableTable && !saving}
         singleResultTable={singleResultTable}
         onClose={closeContextMenuTable}
         onOpenExportModal={openExportModal}

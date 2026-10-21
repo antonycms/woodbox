@@ -80,7 +80,7 @@ export const useQueryExecution = ({
       refEditor.current.setMarkers([]);
 
       const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+        { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
       ] = await runSql(id_connection, preparedQuery, { queryExecutionId });
 
       if (wasQueryCanceled(queryExecutionId)) {
@@ -96,6 +96,9 @@ export const useQueryExecution = ({
         variableValues,
         columns,
         columns_info,
+        column_sources_resolved,
+        supports_row_management,
+        row_management_table,
         rows,
         type,
         affected_rows,
@@ -241,7 +244,7 @@ export const useQueryExecution = ({
 
     try {
       const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+        { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
       ] = await runSql(id_connection, preparedQuery, {
         orderBy: tab.orderBy,
         queryExecutionId,
@@ -256,6 +259,9 @@ export const useQueryExecution = ({
         page: 1,
         columns,
         columns_info,
+        column_sources_resolved,
+        supports_row_management,
+        row_management_table,
         rows,
         type,
         query: tab.query,
@@ -306,7 +312,7 @@ export const useQueryExecution = ({
 
     try {
       const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+        { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
       ] = await runSql(id_connection, preparedQuery, {
         page: newPage,
         orderBy: lastTabResult.orderBy,
@@ -327,6 +333,9 @@ export const useQueryExecution = ({
         page: newPage,
         columns,
         columns_info,
+        column_sources_resolved,
+        supports_row_management,
+        row_management_table,
         rows: [...lastTabResult.rows, ...rows],
         type,
         query,
@@ -382,7 +391,7 @@ export const useQueryExecution = ({
 
     try {
       const [
-        { type, rows, columns, columns_info, affected_rows, auto_paginated, execution_time_ms },
+        { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
       ] = await runSql(id_connection, preparedQuery, {
         page: 1,
         orderBy,
@@ -398,6 +407,9 @@ export const useQueryExecution = ({
         page: 1,
         columns,
         columns_info,
+        column_sources_resolved,
+        supports_row_management,
+        row_management_table,
         rows,
         type,
         query: tab.query,
