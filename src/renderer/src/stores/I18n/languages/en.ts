@@ -2,10 +2,6 @@ export const en = {
   'filter.invalidValue': 'This value cannot be used in this filter.',
   'filter.insufficientPrecision': 'This value has insufficient precision for this comparison.',
   'filter.unsupportedValue': 'This value type is not supported in this filter.',
-  'filter.unresolvedTarget': 'The filter column could not be resolved.',
-  'filter.unknownContext': 'A faithful comparison could not be determined for this column.',
-  'filter.unfaithfulPreview': 'An equivalent WHERE could not be generated for this value.',
-  'filter.contextChanged': 'The column context changed. Generate the filter again or edit the WHERE.',
   'filter.invalidFilter': 'The saved filter is invalid or uses an unsupported version.',
 
   'onboarding.welcome': 'Welcome to Woodbox',

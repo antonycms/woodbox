@@ -6,19 +6,13 @@ const optionalStringFromNullable = z.preprocess(
   z.string().optional(),
 );
 
-const filterColumnInfo = z.object({
-  column_name: z.string().min(1), data_type: z.string(), udt_name: z.string().optional(),
-  comparison_type: z.string().optional(), comparison_collation: optionalStringFromNullable,
-});
 export const prepareInitialWhere = z.object({
   table: z.string().min(1), schema: optionalStringFromNullable, column: z.string().min(1), value: z.unknown(),
-  legacyContext: z.string().min(1).optional(), includeColumns: z.boolean().optional(),
-  columnInfo: filterColumnInfo.optional(),
+  includeColumns: z.boolean().optional(),
 }).strict().refine((value) => Object.hasOwn(value, 'value'));
 export const readInitialWhere = z.object({
   table: z.string().min(1), schema: optionalStringFromNullable, column: z.string().min(1), value: z.unknown(),
-  legacyContext: z.string().min(1).optional(), includeColumns: z.boolean().optional(),
-  columnInfo: filterColumnInfo.optional(),
+  includeColumns: z.boolean().optional(),
   page: z.number().int().min(1).optional(), limit: z.number().int().min(0).optional(),
   orderBy: z.array(z.object({ columnName: z.string(), sortType: z.enum(['ASC', 'DESC']) })).optional(),
 }).strict().refine((value) => Object.hasOwn(value, 'value'));

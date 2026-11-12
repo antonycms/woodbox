@@ -1,6 +1,6 @@
 import type { IConnectionConfig, IConnectionPublic } from '@shared/types/connections';
 import type Store from 'electron-store';
-import { decodeSecret, encodeSecret, isLocalEncryptedSecret } from '../secret';
+import { decodeSecret, encodeSecret } from '../secret';
 import { makeFnRemoveStoredItemFromArray } from '../utils';
 import { mergeSshCredentials } from './ssh_credentials';
 
@@ -74,25 +74,7 @@ export const toPublicConnection = (
   };
 };
 
-const migrateConnections = (store: Store<Record<string, unknown>>) => {
-  const connections = getConnections(store);
-  const hasLegacyCredential = connections.some(
-    (connection) =>
-      (!!connection.username && !isLocalEncryptedSecret(connection.username)) ||
-      (!!connection.password && !isLocalEncryptedSecret(connection.password)),
-  );
-
-  if (!hasLegacyCredential) return;
-
-  store.set(
-    STORE_KEY,
-    connections.map((connection) => encodeConnectionSecrets(store, connection)),
-  );
-};
-
 export const getModule = (store: Store<Record<string, unknown>>) => {
-  migrateConnections(store);
-
   const get = ((id?: string) => {
     const connections = getConnections(store);
 

@@ -84,12 +84,6 @@ const reactNativeSqlite: DatabaseDialectAdapter = {
     readRequestSessions.set(connection, session.id);
     return () => { readRequestSessions.delete(connection); };
   },
-  resolveRowChangeTable: async (instance, table) => {
-    const client = instance.client as ReactNativeBridgeSqliteClient;
-    const session = await resolveReactNativeBridgeSqlSession(client.connectionSettings.reactNativeBridge!);
-    const target = await sqlite.resolveRowChangeTable(instance, table);
-    return { ...target, identity: session.id };
-  },
 };
 
 export default reactNativeSqlite;

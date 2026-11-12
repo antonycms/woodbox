@@ -4,8 +4,7 @@ import type { II18nStore } from '@renderer/stores/I18n/types';
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export const isInitialWhereValue = (value: unknown): value is InitialWhereValue => record(value)
-  && typeof value.column === 'string' && !!value.column && Object.hasOwn(value, 'value')
-  && (value.legacyContext === undefined || typeof value.legacyContext === 'string' && !!value.legacyContext);
+  && typeof value.column === 'string' && !!value.column && Object.hasOwn(value, 'value');
 const hasOnlyKeys = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).every((key) => keys.includes(key));
 const invalidWhere = (): InitialWhereValue => ({ column: '', value: undefined });
 
@@ -25,16 +24,15 @@ const encodeValue = (value: unknown): Record<string, unknown> => {
   }
   return { kind: 'invalid' };
 };
-const decodeValue = (value: unknown, legacy = false): unknown => {
+const decodeValue = (value: unknown): unknown => {
   if (!record(value) || !hasOnlyKeys(value, value.kind === 'bytes' ? ['kind', 'encoding', 'value']
     : value.kind === 'null' || value.kind === 'invalid' ? ['kind'] : ['kind', 'value'])) throw Error('invalid value');
   if (value.kind === 'null') return null;
-  if (value.kind === 'invalid' && !legacy) return undefined;
+  if (value.kind === 'invalid') return undefined;
   if (value.kind === 'boolean' && typeof value.value === 'boolean') return value.value;
   if (typeof value.value !== 'string') throw Error('invalid value');
   if (value.kind === 'text') return value.value;
-  if (value.kind === 'number' && (!legacy || Number.isFinite(Number(value.value)))
-    && (value.value === '-0' || String(Number(value.value)) === value.value)) return Number(value.value);
+  if (value.kind === 'number' && (value.value === '-0' || String(Number(value.value)) === value.value)) return Number(value.value);
   if (value.kind === 'bigint' && /^-?(0|[1-9]\d*)$/.test(value.value) && value.value !== '-0') return BigInt(value.value);
   if (value.kind === 'instant' && Number.isFinite(+new Date(value.value)) && new Date(value.value).toISOString() === value.value) return new Date(value.value);
   if (value.kind === 'bytes' && value.encoding === 'base64') {
@@ -52,26 +50,15 @@ export const serializeInitialWhere = (where: InitialWhere | undefined): InitialW
 export const restoreInitialWhere = (data: unknown): InitialWhere | undefined => {
   if (!record(data)) return undefined;
   try {
-    if (Object.hasOwn(data, 'initialFilter')) {
-      if (data.initialWhere !== undefined || !record(data.initialFilter)) return invalidWhere();
-      const old = data.initialFilter;
-      if (old.type === 'sql' && typeof old.sql === 'string' && hasOnlyKeys(old, ['type', 'sql'])) return old.sql;
-      if (!hasOnlyKeys(old, old.type === 'equals' ? ['version', 'type', 'column', 'value', 'context'] : ['version', 'type', 'column', 'value'])
-        || old.version !== 1 || !['equals', 'equals-intent'].includes(String(old.type))
-        || typeof old.column !== 'string' || !old.column || !record(old.value)) return invalidWhere();
-      if (old.type === 'equals' && (typeof old.context !== 'string' || !old.context)) return invalidWhere();
-      if (old.type === 'equals-intent' && Object.hasOwn(old, 'context')) return invalidWhere();
-      return { column: old.column, value: decodeValue(old.value, true),
-        ...(old.type === 'equals' ? { legacyContext: old.context as string } : {}) };
-    }
+    if (Object.hasOwn(data, 'initialFilter')) return undefined;
+    if (record(data.initialWhere) && 'legacyContext' in data.initialWhere) return undefined;
     if (data.initialWhere === undefined) return undefined;
     if (typeof data.initialWhere === 'string') return data.initialWhere;
     if (!isInitialWhereValue(data.initialWhere)) return invalidWhere();
     const where = data.initialWhere;
     if ('valueEncoding' in where) {
       if (where.valueEncoding !== 'woodbox-v1') return invalidWhere();
-      return { column: where.column, value: decodeValue(where.value),
-        ...(where.legacyContext !== undefined ? { legacyContext: where.legacyContext } : {}) };
+      return { column: where.column, value: decodeValue(where.value) };
     }
     return where;
   } catch { return invalidWhere(); }
@@ -81,9 +68,7 @@ export const filterPreparationError = (reason: TableFilterUnavailableReason) =>
   Object.assign(new Error('Table filter unavailable'), { code: `TABLE_FILTER_${reason.replace(/-/g, '_').toUpperCase()}` });
 const errorKeys = {
   TABLE_FILTER_INVALID_VALUE: 'filter.invalidValue', TABLE_FILTER_INSUFFICIENT_PRECISION: 'filter.insufficientPrecision',
-  TABLE_FILTER_UNSUPPORTED_VALUE: 'filter.unsupportedValue', TABLE_FILTER_UNRESOLVED_TARGET: 'filter.unresolvedTarget',
-  TABLE_FILTER_UNKNOWN_CONTEXT: 'filter.unknownContext', TABLE_FILTER_UNFAITHFUL_PREVIEW: 'filter.unfaithfulPreview',
-  TABLE_FILTER_CONTEXT_CHANGED: 'filter.contextChanged', TABLE_FILTER_INVALID_FILTER: 'filter.invalidFilter',
+  TABLE_FILTER_UNSUPPORTED_VALUE: 'filter.unsupportedValue', TABLE_FILTER_INVALID_FILTER: 'filter.invalidFilter',
 } as const;
 export const getTableFilterErrorMessage = (error: unknown, t: II18nStore['t']) => {
   if (record(error) && typeof error.code === 'string' && Object.hasOwn(errorKeys, error.code)) {

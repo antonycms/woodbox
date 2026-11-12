@@ -1,10 +1,5 @@
 import type Store from 'electron-store';
-import {
-  decodeSecret,
-  encodeSecret,
-  isLegacySafeSecret,
-  isLocalEncryptedSecret,
-} from '../secret';
+import { decodeSecret, encodeSecret } from '../secret';
 import { generateHash } from '@shared/utils/string';
 import type { IAIProviderConfig, IAIProviderPublic, IAIProviderInput } from '@shared/types/ai';
 
@@ -71,32 +66,7 @@ const decodeProvider = (
       : decodeSecret(store, provider.apiKey) || undefined,
 });
 
-const migrateProviders = (store: Store<Record<string, unknown>>) => {
-  const providers = getProviders(store);
-  const hasLegacySecret = providers.some(
-    (provider) =>
-      !!provider.apiKey &&
-      !isLocalEncryptedSecret(provider.apiKey) &&
-      !isLegacySafeSecret(provider.apiKey),
-  );
-
-  if (!hasLegacySecret) return;
-
-  store.set(
-    STORE_KEY,
-    providers.map((provider) =>
-      provider.apiKey &&
-      !isLocalEncryptedSecret(provider.apiKey) &&
-      !isLegacySafeSecret(provider.apiKey)
-        ? { ...provider, apiKey: encodeSecret(store, decodeSecret(store, provider.apiKey)) }
-        : provider,
-    ),
-  );
-};
-
 export const getModule = (store: Store<Record<string, unknown>>) => {
-  migrateProviders(store);
-
   const get = () => getProviders(store).map(toPublicProvider);
 
   const getInternal = (id?: string) => {

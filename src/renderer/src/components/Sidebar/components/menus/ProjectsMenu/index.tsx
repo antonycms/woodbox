@@ -112,7 +112,6 @@ const ProjectsMenu = () => {
   const showModalNewScript = !!(isNewScript || scriptEditing);
 
   const {
-    connectionsGroupPerProject,
     connectionsInfo,
     scriptsByConnectionId,
     projectsSerialized,

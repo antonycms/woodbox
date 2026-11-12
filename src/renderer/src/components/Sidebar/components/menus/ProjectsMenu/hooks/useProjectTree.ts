@@ -300,7 +300,6 @@ export const useProjectTree = (
   }, [filterTextSerialized, projectsSerialized]);
 
   return {
-    connectionsGroupPerProject,
     connectionsInfo,
     scriptsByConnectionId,
     projectsSerialized,

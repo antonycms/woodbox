@@ -4,10 +4,6 @@ export const ptBR: Record<TranslationKey, string> = {
   'filter.invalidValue': 'O valor não pode ser usado neste filtro.',
   'filter.insufficientPrecision': 'O valor não tem precisão suficiente para esta comparação.',
   'filter.unsupportedValue': 'Este tipo de valor não é suportado neste filtro.',
-  'filter.unresolvedTarget': 'Não foi possível identificar a coluna do filtro.',
-  'filter.unknownContext': 'Não foi possível determinar uma comparação fiel para esta coluna.',
-  'filter.unfaithfulPreview': 'Não foi possível gerar um WHERE equivalente para este valor.',
-  'filter.contextChanged': 'O contexto da coluna mudou. Gere o filtro novamente ou edite o WHERE.',
   'filter.invalidFilter': 'O filtro salvo é inválido ou tem uma versão não suportada.',
 
   'onboarding.welcome': 'Boas-vindas ao Woodbox',

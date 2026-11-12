@@ -1,5 +1,4 @@
 import { serializeInitialWhere } from '@renderer/database/tableFilters';
-import type { ReadInitialWhereResult, TableFilterColumnInfo } from '@shared/types/database';
 import { getTableFilterErrorMessage } from '@renderer/database/tableFilters';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
@@ -54,10 +53,6 @@ interface IReferenceContextMenu {
   position: IContextMenuPosition;
 }
 
-interface PreviewColumn extends IColumn {
-  columnInfo: TableFilterColumnInfo;
-}
-
 const getTableName = (reference?: IColumnReferenceInfo) =>
   reference
     ? `${reference.reference_table_schema ? `${reference.reference_table_schema}.` : ''}${
@@ -99,7 +94,7 @@ const ReferencePreview = ({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, unknown>>());
-  const [columnsCache, setColumnsCache] = React.useState(new Map<string, PreviewColumn[]>());
+  const [columnsCache, setColumnsCache] = React.useState(new Map<string, IColumn[]>());
   const [referencesCache, setReferencesCache] = React.useState(
     new Map<string, IColumnReferenceInfo[]>(),
   );
@@ -109,7 +104,6 @@ const ReferencePreview = ({
   React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const currentItem = history[historyIndex];
   const currentReference = currentItem?.reference;
-  const currentValue = currentItem?.value;
   const currentTableKey = currentReference
     ? getTableKey(idConnection, currentReference.reference_table_schema, currentReference.reference_table_name)
     : '';
@@ -150,14 +144,10 @@ const ReferencePreview = ({
         table: currentReference.reference_table_name,
       };
       const needsColumns = !columnsCache.has(currentTableKey);
-      const loadRow = async (): Promise<ReadInitialWhereResult> => {
-        const columnInfo = columnsCache.get(currentTableKey)
-          ?.find((column) => column.attribute === currentReference.reference_column_name)?.columnInfo;
-        const input = { ...target, column: currentReference.reference_column_name, value: currentItem.value,
-          ...(columnInfo ? { columnInfo } : {}) };
-        return readInitialWhere(idConnection, { ...input, page: 1, limit: 1, includeColumns: needsColumns });
-      };
-      const rowRequest = loadRow();
+      const rowRequest = readInitialWhere(idConnection, {
+        ...target, column: currentReference.reference_column_name, value: currentItem.value,
+        page: 1, limit: 1, includeColumns: needsColumns,
+      });
       const referencesRequest = referencesCache.has(currentTableKey)
         ? Promise.resolve(undefined)
         : getTableReferences(idConnection, target);
@@ -176,10 +166,7 @@ const ReferencePreview = ({
           nextState.set(
             currentTableKey,
             columns.map(
-              (column): PreviewColumn => ({
-                columnInfo: { column_name: column.column_name, data_type: column.data_type,
-                  udt_name: column.udt_name, comparison_type: column.comparison_type,
-                  comparison_collation: column.comparison_collation },
+              (column): IColumn => ({
                 label: column.column_name,
                 info: column.data_type,
                 attribute: column.column_name,

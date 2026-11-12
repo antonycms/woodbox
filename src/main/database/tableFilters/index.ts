@@ -1,6 +1,6 @@
 import type { CanonicalTableFilterValue, PrepareInitialWhereRequest, PreparedInitialWhere, ReadInitialWhereRequest, ReadInitialWhereResult } from '@shared/types/database';
 import type { DatabaseDialectAdapter, IConnection } from '../types';
-import { compareFilterValue, filterIdentifier, getFilterOperand } from './comparison';
+import { filterIdentifier, getFilterOperand } from './comparison';
 import { captureFilterValue, unavailable } from './values';
 import { executeFilterQuery } from './query';
 import { serializeIpcError } from '../../ipc/errors';
@@ -24,18 +24,9 @@ const resolveInitialWhere = async (
 ): Promise<PreparedInitialWhere> => {
   if (!request.column || request.column.includes('\0')) return unavailable('invalid-filter');
   const value: CanonicalTableFilterValue = captureFilterValue(request.value);
-  const hasLegacyContext = request.legacyContext !== undefined;
-  const comparisonColumn = value.kind === 'null' || !hasLegacyContext ? undefined : request.column;
-  const columns = physical && (request.includeColumns || hasLegacyContext)
-    ? await adapter.getTableFilterColumns(connection.instance, physical, request, comparisonColumn) : [];
-  let operand = getFilterOperand(connection.dialect, value);
-  if (hasLegacyContext) {
-    const column = columns.find((item) => item.column_name === request.column);
-    if (!column) return unavailable('unresolved-target');
-    const comparison = compareFilterValue(connection.dialect, column, value);
-    if (request.legacyContext !== comparison.context) return unavailable('context-changed');
-    operand = comparison.operand;
-  }
+  const columns = physical && request.includeColumns
+    ? await adapter.getTableFilterColumns(connection.instance, physical, request) : [];
+  const operand = getFilterOperand(connection.dialect, value);
   const identifier = filterIdentifier(connection.dialect, request.column);
   const where = operand ? `${identifier} = ${operand.literal}` : `${identifier} IS NULL`;
   return {
@@ -50,7 +41,7 @@ const resolveInitialWhere = async (
 export const prepareInitialWhere = async (
   connection: IConnection, adapter: DatabaseDialectAdapter, request: PrepareInitialWhereRequest,
 ): Promise<PreparedInitialWhere> => {
-  if (!request.includeColumns && request.legacyContext === undefined) {
+  if (!request.includeColumns) {
     return resolveInitialWhere(connection, adapter, undefined, request);
   }
   return withTableFilterRequest(connection, adapter, (physical) => resolveInitialWhere(connection, adapter, physical, request));

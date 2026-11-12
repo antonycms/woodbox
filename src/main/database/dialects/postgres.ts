@@ -52,10 +52,10 @@ const postgres: DatabaseDialectAdapter = {
     const name = schema ? `${quoteIdentifier(schema)}.${quoteIdentifier(table)}` : quoteIdentifier(table);
     const row = await instance('pg_catalog.pg_class as c')
       .join('pg_catalog.pg_namespace as n', 'n.oid', 'c.relnamespace')
-      .select('c.oid as identity', 'n.nspname as schema', 'c.relname as table')
+      .select('n.nspname as schema', 'c.relname as table')
       .whereRaw('c.oid = to_regclass(?)', [name]).first();
     if (!row) throw new Error('A tabela não existe mais. Atualize os dados antes de salvar.');
-    return { schema: String(row.schema), table: String(row.table), identity: String(row.identity) };
+    return { schema: String(row.schema), table: String(row.table) };
   },
   getConnectionConfig: (config) => ({
     host: config.host,

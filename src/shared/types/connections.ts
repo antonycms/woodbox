@@ -30,7 +30,6 @@ export interface IConnectionPublic extends Omit<IConnectionConfig, 'password' | 
   ssh?: ISshConnectionPublic;
 }
 
-export type IConnectionCreate = Omit<IConnectionConfig, 'id'>;
 export type IConnectionTest = Omit<IConnectionConfig, 'id' | 'id_project'> & { id?: string; id_project?: string };
 
 // Inputs can carry the textual port captured by the connection form.

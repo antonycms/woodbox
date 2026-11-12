@@ -76,9 +76,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   } = props;
 
   const activeTheme = useThemeStore((state) => state.activeTheme);
-  const { t, language } = useI18nStore(
-    useShallow((state) => ({ t: state.t, language: state.language })),
-  );
+  const t = useI18nStore((state) => state.t);
   const { addTab, getTab, setActiveTabId } = useAppTabStore(
     useShallow((state) => ({
       addTab: state.addTab,

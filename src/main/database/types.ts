@@ -74,9 +74,9 @@ export interface DatabaseDialectAdapter {
   resolveQueryColumnSources?(instance: Knex, columns: SerializedRunSqlColumn[]): Promise<SerializedRunSqlColumn[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
-  getTableFilterColumns(instance: Knex, connection: object, target: ITableWithSchema, column?: string): Promise<FilterColumn[]>;
+  getTableFilterColumns(instance: Knex, connection: object, target: ITableWithSchema): Promise<FilterColumn[]>;
   beginTableFilterRequest?(connection: object): Promise<() => void>;
-  resolveRowChangeTable(instance: Knex, table: ITableWithSchema): Promise<RowChangeTableIdentity>;
+  resolveRowChangeTable(instance: Knex, table: ITableWithSchema): Promise<ITableWithSchema>;
   // Conservative statement budget, not a claim about runtime/server limits.
   rowChangesInsertBindingBudget: number;
   // Count target rows even when the assigned values are unchanged.
@@ -92,10 +92,6 @@ export interface DatabaseDialectAdapter {
 export interface ITableWithSchema {
   table: string;
   schema?: string;
-}
-
-export interface RowChangeTableIdentity extends ITableWithSchema {
-  identity?: string;
 }
 
 export interface IGetTableDataParams {

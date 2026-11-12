@@ -44,23 +44,13 @@ export type InitialWhere = string | InitialWhereValue;
 export interface InitialWhereValue {
   column: string;
   value: unknown;
-  // Used only when migrating contextual filters saved by older versions.
-  legacyContext?: string;
-}
-export interface TableFilterColumnInfo {
-  column_name: string;
-  data_type: string;
-  udt_name?: string;
-  comparison_type?: string;
-  comparison_collation?: string;
 }
 export type PrepareInitialWhereRequest = InitialWhereValue & {
   schema?: string; table: string; includeColumns?: boolean;
-  columnInfo?: TableFilterColumnInfo;
 };
 export interface PreparedInitialWhere {
   where: string;
-  columns?: (IColumnInfo & TableFilterColumnInfo)[];
+  columns?: IColumnInfo[];
 }
 export type ReadInitialWhereRequest = PrepareInitialWhereRequest & {
   page?: number; limit?: number; orderBy?: IOrderBy[];
@@ -199,10 +189,6 @@ export type TableFilterUnavailableReason =
   | 'invalid-value'
   | 'insufficient-precision'
   | 'unsupported-value'
-  | 'unresolved-target'
-  | 'unknown-context'
-  | 'unfaithful-preview'
-  | 'context-changed'
   | 'invalid-filter';
 
 type TableFilterTarget = { schema?: string; table: string };
