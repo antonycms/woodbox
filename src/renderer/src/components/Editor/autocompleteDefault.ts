@@ -14,6 +14,7 @@ const makeItem =
   (word: string): IItem => ({
     documentation,
     label: word,
+    filterText: word.toLowerCase(),
     insertText: word,
     kind,
     sortText: String(priority ?? 9),
@@ -138,12 +139,13 @@ const ensureSqlAutocompleteProvider = () => {
 
       const prevWord = words[words.length - 2];
       const currentWord = words[words.length - 1];
+      const isTypingCurrentWord = !/[\s]$/.test(value);
 
       const checkOperation = (op: string[]) => {
         const serializedCurrentWord = currentWord?.toLowerCase?.();
         const serializedPrevWord = prevWord?.toLowerCase?.();
 
-        return op.includes(serializedCurrentWord) || op.includes(serializedPrevWord);
+        return op.includes(isTypingCurrentWord ? serializedPrevWord : serializedCurrentWord);
       };
 
       const tableAlias = aliases.find(({ alias }) => alias && currentWord?.startsWith(`${alias}.`));
@@ -152,7 +154,6 @@ const ensureSqlAutocompleteProvider = () => {
         (table) => `${table.schema ? `${table.schema}.` : ''}${table.name}` === currentWord,
       );
 
-      const isTypingCurrentWord = !/[\s]$/.test(currentContent);
       const isSchema =
         schemas?.some?.(
           (schema) => currentWord?.startsWith(schema.name) && currentWord?.includes('.'),
@@ -321,6 +322,7 @@ interface ILanguage {
 interface IItem {
   documentation: string;
   label: string;
+  filterText: string;
   insertText: string;
   kind: languages.CompletionItemKind;
   sortText: string;
