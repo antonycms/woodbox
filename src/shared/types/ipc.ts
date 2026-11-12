@@ -47,11 +47,16 @@ export interface IpcRequests {
   '@post:react_native_bridge_start_gateway': WoodboxApi['reactNativeBridge']['start'];
   '@post:react_native_bridge_stop_gateway': WoodboxApi['reactNativeBridge']['stop'];
   '@get:dialects': WoodboxApi['database']['getDialects'];
+  '@post:read_initial_where': WoodboxApi['database']['readInitialWhere'];
+  '@post:prepare_initial_where': WoodboxApi['database']['prepareInitialWhere'];
   '@get:table_data': WoodboxApi['database']['getTableData'];
   '@get:table_rows_count': WoodboxApi['database']['getTableRowsCount'];
   '@get:query_rows_count': WoodboxApi['database']['getQueryRowsCount'];
   '@get:export_data_preview': WoodboxApi['database']['getExportPreview'];
   '@get:table_columns': WoodboxApi['database']['getTableColumns'];
+  '@get:column_grid_data': WoodboxApi['database']['getColumnGridData'];
+  '@post:prepare_insert_dml': WoodboxApi['database']['prepareInsertDml'];
+  '@post:prepare_structure_ddl': WoodboxApi['database']['prepareStructureDdl'];
   '@get:column_types': WoodboxApi['database']['getColumnTypes'];
   '@get:table_references': WoodboxApi['database']['getTableReferences'];
   '@get:table_used_as_reference': WoodboxApi['database']['getTableUsedAsReference'];
@@ -60,9 +65,9 @@ export interface IpcRequests {
   '@get:table_indexes': WoodboxApi['database']['getTableIndexes'];
   '@get:table_triggers': WoodboxApi['database']['getTableTriggers'];
   '@get:function_definition': WoodboxApi['database']['getFunctionDefinition'];
+  '@post:execute_object_command': WoodboxApi['database']['executeObjectCommand'];
   '@post:run_sql': WoodboxApi['database']['runSql'];
-  '@post:update_query_rows': WoodboxApi['database']['updateQueryRows'];
-  '@get:query_result_columns': WoodboxApi['database']['resolveQueryResultColumns'];
+  '@post:save_row_changes': WoodboxApi['database']['saveRowChanges'];
   '@post:run_explain_sql': WoodboxApi['database']['runExplainSql'];
   '@post:export_data': WoodboxApi['database']['exportData'];
   '@post:import_table_data': WoodboxApi['database']['importTableData'];

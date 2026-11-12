@@ -1,20 +1,18 @@
-import { quoteSqlIdentifier as quoteIdent } from '@shared/utils/sql';
-import type { RendererDialect, RendererDialectDdl } from './types';
-import { defaultDml } from './dml';
-import { getIndexColumnsDdl } from './utils';
+import type { StructureDialectDdl } from './types';
+import { getIndexColumnsDdl } from './syntax';
 
 
 const postgresNumericPrecisionTypes = new Set(['decimal', 'numeric']);
 
 const getDefaultSql = (
   value: string | undefined,
-  helpers: Parameters<RendererDialectDdl['getColumnDefinitionDdl']>[1],
+  helpers: Parameters<StructureDialectDdl['getColumnDefinitionDdl']>[1],
 ) => {
   const defaultValue = helpers.normalizeOptionalString(value);
   return defaultValue ? ` DEFAULT ${defaultValue}` : '';
 };
 
-const postgresDdl: RendererDialectDdl = {
+const postgresDdl: StructureDialectDdl = {
   getColumnTypeDdl(column, helpers) {
     const dataType = String(column.data_type || '').toLowerCase();
 
@@ -166,7 +164,7 @@ const postgresDdl: RendererDialectDdl = {
   },
 
   getChangeColumnDdl(tableName, column, helpers) {
-    const originalColumn = column.__originalColumn;
+    const originalColumn = column.original;
     const originalColumnName = originalColumn.column_name;
     const currentColumnName = column.column_name;
     const targetColumnName = currentColumnName || originalColumnName;
@@ -228,39 +226,4 @@ const postgresDdl: RendererDialectDdl = {
   },
 };
 
-const postgres: RendererDialect = {
-  id: 'postgres',
-  label: 'PostgreSQL',
-  editorDialect: 'postgres',
-  connectionMode: 'network',
-  defaultPort: 5432,
-  supportsSsl: true,
-  supportsSchemas: true,
-  supportsFunctions: true,
-  supportsAutoIncrement: false,
-  quoteIdent,
-  getQualifiedName: (schema, name) =>
-    schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
-  indexMethods: ['btree', 'hash', 'gist', 'gin', 'spgist', 'brin'],
-  commonColumnTypes: [
-    'varchar',
-    'text',
-    'integer',
-    'bigint',
-    'serial',
-    'bigserial',
-    'uuid',
-    'boolean',
-    'numeric',
-    'decimal',
-    'date',
-    'timestamp',
-    'timestamptz',
-    'json',
-    'jsonb',
-  ],
-  dml: defaultDml,
-  ddl: postgresDdl,
-};
-
-export default postgres;
+export default postgresDdl;

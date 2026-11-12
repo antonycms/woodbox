@@ -1,5 +1,5 @@
 import type { SerializedRunSqlResult } from '@shared/types/database';
-import { isQueryUpdateIdentifier } from '@shared/utils/queryUpdates';
+import { isQueryUpdateIdentifier } from './queryUpdates';
 
 type SqlToken = {
   value: string;

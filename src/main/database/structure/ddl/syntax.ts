@@ -1,8 +1,10 @@
-import type { DdlIndexInfo, RendererDialectDdlHelpers } from './types';
+import type { DdlIndexInfo, StructureDialectDdlHelpers } from './types';
+
+export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 
 export const getIndexColumnsDdl = (
   index: DdlIndexInfo,
-  helpers: RendererDialectDdlHelpers,
+  helpers: StructureDialectDdlHelpers,
   getColumnDdl: (columnName: string) => string = helpers.quoteIdent,
 ) => {
   return (index.column_names || [])

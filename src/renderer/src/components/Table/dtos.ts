@@ -24,6 +24,19 @@ export interface IColumn<ColumnType = Record<string, unknown>> {
 }
 
 export type TableCellEditValue = string | number | (string | number)[];
+
+export interface TableCellEdit {
+  rowKey: React.Key;
+  rowIndex: number;
+  isNewRow: boolean;
+  attribute: string;
+  value: TableCellEditValue;
+}
+
+export interface TableEditBatch {
+  source: 'edit' | 'paste' | 'replace-current' | 'replace-all';
+  edits: readonly TableCellEdit[];
+}
 export type TableScrollState = { left: number; top: number };
 export type TableCellPosition = { rowIndex: number; colIndex: number };
 export type TableSearchOverlayPosition = { top: number; right: number };

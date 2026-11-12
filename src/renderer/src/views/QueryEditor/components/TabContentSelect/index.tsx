@@ -1,3 +1,5 @@
+import type { InitialWhere } from '@shared/types/database';
+import { getTableFilterErrorMessage } from '@renderer/database/tableFilters';
 import { useRowChanges } from '@renderer/hooks/useRowChanges';
 import { useShallow } from 'zustand/react/shallow';
 import { getErrorMessage } from '@shared/utils/error';
@@ -19,11 +21,10 @@ import TableInfoWithContext from '@renderer/views/TableInfo';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { selectConnectionPresentations } from '@renderer/stores/Workspace/selectors';
 import { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useToastStore } from '@renderer/stores/Toast';
-import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
 import { IQueryResult } from '@renderer/views/QueryEditor/dtos';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
 import { prepareQueryVariables } from '../../utils/queryVariables';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
@@ -56,7 +57,7 @@ type OpenTableWithFilterParams = {
   idConnection: string;
   schema: string;
   table: string;
-  initialWhere: string;
+  initialWhere?: InitialWhere;
 };
 
 export const TabContentSelect = (props: ITabContentSelectProps) => {
@@ -87,13 +88,14 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   );
   const getQueryRowsCount = useDatabaseStore((state) => state.getQueryRowsCount);
   const connections = useWorkspaceStore((state) => state.connections);
+  const connectionDialect = useWorkspaceStore(
+    (state) => selectConnectionPresentations(state).get(id_connection)?.dialect,
+  );
   const showToast = useToastStore((state) => state.showToast);
 
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [selectedCell, setSelectedCell] = React.useState<ITableSelectedCellData>();
   const [previewTabBarId] = React.useState(`select_preview_${generateHash()}`);
-  const [ddlSql, setDdlSql] = React.useState('');
-  const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [now, setNow] = React.useState(Date.now());
   const [loadingRowsCount, setLoadingRowsCount] = React.useState(false);
@@ -127,7 +129,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   });
 
   const connection = connections.find((connection) => connection.id === id_connection);
-  const dialect = getRendererDialect(connection?.dialect);
+  const dialect = connectionDialect || 'postgres';
 
   const {
     captureButtonColor,
@@ -147,8 +149,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   const { saving, handleSave } = useQueryResultEditing({
     idConnection: id_connection,
     data,
-    dialect,
-    editableTable,
+    readOnly,
     editedFieldsRows,
     droppedRows,
     newRows,
@@ -223,14 +224,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
     showToast,
     t,
   ]);
-
-  const closeDdlModal = React.useCallback(() => {
-    setShowDdlModal(false);
-  }, []);
-
-  const openDdlModal = React.useCallback(() => {
-    setShowDdlModal(true);
-  }, []);
 
   const openExportModal = React.useCallback(() => {
     setShowExportModal(true);
@@ -395,36 +388,23 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
   );
 
   const handleOpenReferenceTable = React.useCallback(
-    (
-      idConnection: string,
-      schema: string,
-      table: string,
-      filterColumn: string,
-      filterValue: string,
-    ) => {
-      const escapedValue = filterValue.replace(/'/g, "''");
-      const initialWhere = `${dialect.quoteIdent(filterColumn)} = '${escapedValue}'`;
-
-      openTableDataTabWithFilter({ idConnection, schema, table, initialWhere });
+    (idConnection: string, schema: string, table: string, filterColumn: string, filterValue: unknown) => {
+      openTableDataTabWithFilter({ idConnection, schema, table, initialWhere: { column: filterColumn, value: structuredClone(filterValue) } });
     },
-    [dialect, openTableDataTabWithFilter],
+    [openTableDataTabWithFilter],
   );
 
   const onCellLinkClick = React.useCallback(
-    (attribute: string, value: unknown) => {
+    async (attribute: string, value: unknown) => {
       const ref = tabFkMap.get(attribute);
-
       if (!ref || value === null || value === undefined) return;
-
-      handleOpenReferenceTable(
-        id_connection,
-        ref.reference_table_schema,
-        ref.reference_table_name,
-        ref.reference_column_name,
-        String(value),
-      );
+      try {
+        await handleOpenReferenceTable(id_connection, ref.reference_table_schema, ref.reference_table_name, ref.reference_column_name, value);
+      } catch (error) {
+        showToast({ type: 'error', title: t('common.unknownError'), description: getTableFilterErrorMessage(error, t) });
+      }
     },
-    [handleOpenReferenceTable, id_connection, tabFkMap],
+    [handleOpenReferenceTable, id_connection, tabFkMap, showToast, t],
   );
 
   const handleFkPreviewClick = React.useCallback(
@@ -566,7 +546,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
                   <ReferenceValuePreview
                     key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
                     column={selectedCell?.column}
-                    dialect={dialect.editorDialect}
                     readonly={!selectedCellEditable}
                     value={selectedCellValue}
                     onChange={handleApplySelectedPreviewValue}
@@ -626,13 +605,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         onCancelQuery={onCancelQuery}
       />
 
-      <ModalGenerateDDL
-        show={showDdlModal}
-        sql={ddlSql}
-        dialect={dialect}
-        onClose={closeDdlModal}
-      />
-
       <ModalExportData
         show={showExportModal}
         idConnection={id_connection}
@@ -642,6 +614,7 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
       />
 
       <ResultContextMenu
+        idConnection={id_connection}
         contextMenuTable={contextMenuTable}
         data={data}
         dialect={dialect}
@@ -651,8 +624,6 @@ export const TabContentSelect = (props: ITabContentSelectProps) => {
         onOpenExportModal={openExportModal}
         onSetSelectedCellsNull={handleSetSelectedCellsNull}
         onRemoveSelectedRows={handleRemoveSelectedRows}
-        onSetDdlSql={setDdlSql}
-        onShowDdlModal={openDdlModal}
       />
 
       <ContextMenu

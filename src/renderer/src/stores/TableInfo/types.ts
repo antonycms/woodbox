@@ -9,7 +9,7 @@ import type {
   IPendingReferenceCreate,
   IPendingReferenceDrop,
 } from '@renderer/database/ddl/types';
-import type { RendererDialect } from '@renderer/database/dialects';
+import type { Dialect } from '@shared/types/connections';
 import type {
   DatabaseObjectType,
   IColumnInfo,
@@ -18,6 +18,23 @@ import type {
   IIndexInfo,
   ITriggerInfo,
 } from '@shared/types/database';
+
+export type ColumnGridEdit =
+  | {
+      attribute: 'column_name' | 'data_type' | 'column_default' | 'description';
+      value: string | number | (string | number)[] | null;
+    }
+  | {
+      attribute: 'is_nullable' | 'is_auto_increment';
+      value: boolean | null;
+    };
+
+export type ColumnGridDiagnostic =
+  | 'name-required' | 'duplicate-name' | 'type-required'
+  | 'invalid-nullable' | 'invalid-auto-increment' | 'auto-type';
+
+export type ColumnGridIdentity = { pendingId: string } | { originalName: string };
+export type ColumnGridInput = { identity: ColumnGridIdentity; edit: ColumnGridEdit };
 
 export interface ITableInfo {
   columns: IColumnInfo[];
@@ -38,6 +55,7 @@ export type ITableInfoLoading = {
 };
 
 export interface ITableInfoStore extends ITableInfo {
+  editColumnGrid(edits: ColumnGridInput[]): void;
   pendingDdlSql: string;
   showPendingDdlModal: boolean;
   applyingPendingDdl: boolean;
@@ -62,13 +80,12 @@ export interface ITableInfoStore extends ITableInfo {
   pendingReferences: IPendingReferenceCreate[];
   pendingDroppedReferences: IPendingReferenceDrop[];
   columnTypes: string[];
+  columnTypeEligibility: Record<string, boolean>;
 
   addPendingColumn(column: IPendingColumnCreate): void;
-  updatePendingColumn(pendingId: string, column: Partial<IColumnInfo>): void;
   removePendingColumn(pendingId: string): void;
   addPendingDroppedColumns(columns: IColumnInfo[]): void;
   removePendingDroppedColumns(columnNames: string[]): void;
-  addPendingChangedColumn(column: IColumnInfo, changes: Partial<IColumnInfo>): void;
   removePendingChangedColumns(columnNames: string[]): void;
 
   addPendingIndex(index: IPendingIndexCreate): void;
@@ -92,7 +109,7 @@ export interface ITableInfoStore extends ITableInfo {
     idConnection: string,
     filters: ILoadTableInfoFilters,
     options?: IOpenPendingChangesSqlModalOptions,
-  ): void;
+  ): Promise<void>;
 
   loadTableColumns: LoadTableInfo;
   loadTableReferences: LoadTableInfo;
@@ -133,7 +150,7 @@ export interface ITableContextState {
   supportsIndexes: boolean;
   supportsTriggers: boolean;
   supportsTableComments: boolean;
-  dialect: RendererDialect;
+  dialect: Dialect;
 }
 
-export type LoadTableInfo = (idConnection: string, filters: ILoadTableInfoFilters) => Promise<void>;
+export type LoadTableInfo = (idConnection: string, filters: ILoadTableInfoFilters, onlyIfMissing?: boolean) => Promise<void>;

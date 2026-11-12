@@ -1,7 +1,6 @@
 import React from 'react';
 import type { ITableSelectedCellData } from '@renderer/components/Table';
 import type { IColumnReferenceInfo } from '@shared/types/database';
-import type { Dialect } from '@shared/types/connections';
 import ReferencePreview from '@renderer/components/ReferencePreview';
 import ReferenceValuePreview from '@renderer/components/ReferenceValuePreview';
 import ReferenceSelection from '@renderer/components/ReferenceSelection';
@@ -23,7 +22,6 @@ export interface ValuePreviewRequest {
 interface ValuePreviewProps {
   preview?: ValuePreviewRequest;
   id_connection: string;
-  dialect: Dialect;
   selectedCell?: ITableSelectedCellData;
   selectedCellValue: unknown;
   selectedReference?: IColumnReferenceInfo;
@@ -35,7 +33,6 @@ interface ValuePreviewProps {
 export const ValuePreview = ({
   preview,
   id_connection,
-  dialect,
   selectedCell,
   selectedCellValue,
   selectedReference,
@@ -133,7 +130,6 @@ export const ValuePreview = ({
             <ReferenceValuePreview
               key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
               column={selectedCell?.column}
-              dialect={dialect}
               readonly={!selectedCell?.column.editable}
               value={selectedCellValue}
               onChange={handleApplySelectedPreviewValue}

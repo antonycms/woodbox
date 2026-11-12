@@ -1,5 +1,5 @@
+import { getTableFilterErrorMessage } from '@renderer/database/tableFilters';
 import { useShallow } from 'zustand/react/shallow';
-import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
@@ -158,7 +158,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
       showToast({
         type: 'error',
         title: t('toast.dataExportError'),
-        description: getErrorMessage(error) || t('common.unknownError'),
+        description: getTableFilterErrorMessage(error, t),
         delay: 8000,
       });
     } finally {
@@ -212,7 +212,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         showToast({
           type: 'error',
           title: t('toast.previewLoadError'),
-          description: getErrorMessage(error) || t('common.unknownError'),
+          description: getTableFilterErrorMessage(error, t),
           delay: 8000,
         });
       } finally {

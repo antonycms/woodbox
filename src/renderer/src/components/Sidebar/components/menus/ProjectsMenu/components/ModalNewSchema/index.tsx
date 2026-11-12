@@ -15,7 +15,7 @@ import { useForm } from '@renderer/hooks/useForm';
 
 export const ModalNewSchema = React.memo(
   ({ show, idConnection, onClose }: IModalNewSchemaProps) => {
-    const runSql = useDatabaseStore((state) => state.runSql);
+    const executeObjectCommand = useDatabaseStore((state) => state.executeObjectCommand);
     const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
     const t = useI18nStore((state) => state.t);
     const showToast = useToastStore((state) => state.showToast);
@@ -37,8 +37,8 @@ export const ModalNewSchema = React.memo(
       try {
         setLoading(true);
 
-        await runSql(idConnection, `CREATE SCHEMA ${quoteIdent(name)};`);
-        await loadConnectionInfo(idConnection);
+        await executeObjectCommand(idConnection, { type: 'create-schema', schema: name });
+        await loadConnectionInfo(idConnection, true);
 
         showToast({
           type: 'success',
@@ -119,5 +119,3 @@ export interface IModalNewSchemaProps {
 interface IDataNewSchema {
   name: string;
 }
-
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;

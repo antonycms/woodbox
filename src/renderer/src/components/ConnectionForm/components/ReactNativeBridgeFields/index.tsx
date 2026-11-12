@@ -1,3 +1,4 @@
+import type { IConnectionTestInput } from '@shared/types/connections';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { Autocomplete } from '@renderer/components/Autocomplete';
@@ -6,16 +7,16 @@ import { Input } from '@renderer/components/Input';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import type {
-  ReactNativeBridgeSessionInfo as IReactNativeBridgeSession,
-  ReactNativeBridgeStatus as IReactNativeBridgeStatus,
+  ReactNativeBridgeConnectionSession as IReactNativeBridgeSession,
+  ReactNativeBridgeConnectionStatus as IReactNativeBridgeStatus,
 } from '@shared/types/reactNativeBridge';
 import { useReactNativeBridgeStore } from '@renderer/stores/ReactNativeBridge';
 import { toCssProperties } from '@renderer/styles/theme';
-import type { IDataNewConnection, SetConnectionFormState } from '../../types';
+import type { SetConnectionFormState } from '../../types';
 import styles from '../../styles.module.css';
 
 interface IReactNativeBridgeFieldsProps {
-  state: IDataNewConnection;
+  state: IConnectionTestInput;
   setState: SetConnectionFormState;
   color?: string;
   backgroundColor?: string;
@@ -66,11 +67,10 @@ export const ReactNativeBridgeFields = React.memo(
       return sessions.find((session) => session.id === selectedSessionId);
     }, [selectedSessionId, sessions]);
 
-    const adapters = React.useMemo(() => {
-      return (selectedSession?.adapters || []).filter(
-        (adapter) => adapter.model === 'relational' && adapter.dialect === 'sqlite',
-      );
-    }, [selectedSession]);
+    const adapters = React.useMemo(
+      () => selectedSession?.adapters || [],
+      [selectedSession],
+    );
 
     const selectAdapter = React.useCallback(
       (session: IReactNativeBridgeSession, adapter: IReactNativeBridgeSession['adapters'][number]) => {
@@ -97,7 +97,7 @@ export const ReactNativeBridgeFields = React.memo(
     );
 
     const applyStatus = React.useCallback((status: IReactNativeBridgeStatus) => {
-      const nextSessions = status.sessions || [];
+      const nextSessions = status.connectionSessions;
 
       setSessions(nextSessions);
       setSelectedSessionId((current) => {
@@ -132,9 +132,7 @@ export const ReactNativeBridgeFields = React.memo(
       ({ value: sessionId }: { value: string | number }) => {
         const selectedId = String(sessionId);
         const session = sessions.find((item) => item.id === selectedId);
-        const adapter = session?.adapters.find(
-          (item) => item.model === 'relational' && item.dialect === 'sqlite',
-        );
+        const adapter = session?.adapters[0];
 
         setSelectedSessionId(selectedId);
 

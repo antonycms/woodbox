@@ -6,8 +6,6 @@ import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import type { ITableSelectedCellData } from '@renderer/components/Table';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { getRendererDialect } from '@renderer/database/dialects';
 import IconMdiClose from '~icons/mdi/close';
 import type { ProcessListRow } from '../../utils/rows';
 import styles from './styles.module.css';
@@ -22,11 +20,9 @@ interface ProcessValuePreviewProps {
 export const ProcessValuePreview = ({ show, id_connection, selectedCell, onClose }: ProcessValuePreviewProps) => {
   const t = useI18nStore((state) => state.t);
   const { processList: theme } = useThemeStore((state) => state.activeTheme);
-  const connectionDialect = useWorkspaceStore((state) => state.connections.find((connection) => connection.id === id_connection)?.dialect);
   const [previewWidth, setPreviewWidth] = React.useState(420);
   const [previewTabBarId] = React.useState(`process_list_preview_${id_connection}`);
   const [activePreviewTab, setActivePreviewTab] = React.useState('value');
-  const dialect = getRendererDialect(connectionDialect);
 
   const handlePreviewResize = React.useCallback((size: { width?: number }) => {
     if (size.width) setPreviewWidth(size.width);
@@ -76,7 +72,6 @@ export const ProcessValuePreview = ({ show, id_connection, selectedCell, onClose
               language={selectedCell?.column?.attribute == 'query' ? 'sql' : 'json'}
               key={`${selectedCell?.rowIndex ?? 'none'}:${selectedCell?.colIndex ?? 'none'}`}
               column={selectedCell?.column}
-              dialect={dialect.editorDialect}
               value={selectedCell?.value}
             />
           </TabContent>

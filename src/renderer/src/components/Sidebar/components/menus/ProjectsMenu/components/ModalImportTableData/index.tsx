@@ -411,7 +411,7 @@ export const ModalImportTableData = React.memo(
 
           const result = await importTableData(idConnection, { schema, table, rows });
 
-          await loadConnectionInfo(idConnection);
+          await loadConnectionInfo(idConnection, true);
 
           showToast({
             type: 'success',

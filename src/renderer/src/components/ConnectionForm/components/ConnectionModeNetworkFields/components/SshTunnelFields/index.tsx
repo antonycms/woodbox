@@ -1,3 +1,4 @@
+import type { IConnectionTestInput } from '@shared/types/connections';
 import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import { useDialogsStore } from '@renderer/stores/Dialogs';
@@ -9,7 +10,7 @@ import { Input } from '@renderer/components/Input';
 import { useI18nStore } from '@renderer/stores/I18n';
 import type { ISshConnectionConfig, ISshConnectionPublic } from '@shared/types/ssh';
 import { useToastStore } from '@renderer/stores/Toast';
-import type { IDataNewConnection, SetConnectionFormState } from '../../../../types';
+import type { SetConnectionFormState } from '../../../../types';
 import { ActivatableSection } from '@renderer/components/ActivatableSection';
 import styles from './styles.module.css';
 
@@ -22,7 +23,7 @@ const defaultSsh: ISshConnectionConfig = {
 };
 
 interface Props {
-  state: IDataNewConnection;
+  state: IConnectionTestInput;
   setState: SetConnectionFormState;
   savedSsh?: ISshConnectionPublic;
   color: string;

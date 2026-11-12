@@ -1,11 +1,12 @@
+import type { QueryRowUpdate } from '../types';
 import type {
   DatabaseRow,
   IColumnRestrictionsInfo,
   QueryColumnSource,
-  QueryRowUpdate,
   SerializedRunSqlColumn,
 } from '@shared/types/database';
-import { mergeQueryUpdates, queryTableKey } from '@shared/utils/queryUpdates';
+import type { RowChange } from '@shared/types/rowChanges';
+import { mergeQueryUpdates, queryTableKey } from '../utils/queryUpdates';
 
 export interface QueryEditTarget {
   source: QueryColumnSource;
@@ -18,26 +19,32 @@ export const getQueryEditTargets = (
 ): Map<string, QueryEditTarget> => {
   const targets = new Map<string, QueryEditTarget>();
   if (new Set(columns.map((column) => column.name)).size !== columns.length) return targets;
+  const byTable = new Map<string, Map<string, SerializedRunSqlColumn[]>>();
   for (const column of columns) {
-    if (!column.source || column.name.startsWith('__')) continue;
-    const source = column.source;
-    const key = queryTableKey(source);
-    const pk = restrictions
-      .get(key)
-      ?.find((restriction) => restriction.constraint_type === 'primary_key')?.column_names;
+    if (!column.source) continue;
+    const key = queryTableKey(column.source);
+    let byColumn = byTable.get(key);
+    if (!byColumn) byTable.set(key, byColumn = new Map());
+    const matches = byColumn.get(column.source.column);
+    if (matches) matches.push(column);
+    else byColumn.set(column.source.column, [column]);
+  }
+  const primaryKeys = new Map<string, QueryEditTarget['primaryKey']>();
+  for (const [key, byColumn] of byTable) {
+    const pk = restrictions.get(key)?.find((restriction) => restriction.constraint_type === 'primary_key')?.column_names;
     if (!pk?.length) continue;
     const primaryKey: QueryEditTarget['primaryKey'] = [];
     for (const name of pk) {
-      const matches = columns.filter(
-        (candidate) =>
-          candidate.source &&
-          queryTableKey(candidate.source) === key &&
-          candidate.source.column === name,
-      );
-      if (matches.length !== 1) break;
+      const matches = byColumn.get(name);
+      if (matches?.length !== 1) break;
       primaryKey.push({ column: name, resultColumn: matches[0].name });
     }
-    if (primaryKey.length === pk.length) targets.set(column.name, { source, primaryKey });
+    if (primaryKey.length === pk.length) primaryKeys.set(key, primaryKey);
+  }
+  for (const column of columns) {
+    if (!column.source || column.name.startsWith('__')) continue;
+    const primaryKey = primaryKeys.get(queryTableKey(column.source));
+    if (primaryKey) targets.set(column.name, { source: column.source, primaryKey });
   }
   return targets;
 };
@@ -62,13 +69,11 @@ export const getQueryRowPrimaryKey = (
 };
 
 export const buildQueryUpdates = (
-  rows: DatabaseRow[],
-  edits: Map<React.Key, DatabaseRow>,
+  edits: RowChange[],
   targets: Map<string, QueryEditTarget>,
 ): { updates: QueryRowUpdate[]; error?: 'unavailable' | 'conflict' } => {
   const updates: QueryRowUpdate[] = [];
-  for (const [rowIndex, changes] of edits) {
-    const row = rows[Number(rowIndex)];
+  for (const { original: row, changes } of edits) {
     for (const [name, value] of Object.entries(changes)) {
       const target = targets.get(name);
       const primaryKey = getQueryRowPrimaryKey(row, target);

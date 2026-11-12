@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { IResolveQueryResultColumnsParams } from '@shared/types/database';
+import type { RowChangesSource } from '@shared/types/rowChanges';
 import type { DatabaseDialectAdapter } from './types';
 import { getFlatSelectTables, restrictQueryColumnSources } from './utils/querySources';
 
@@ -7,7 +7,7 @@ import { getFlatSelectTables, restrictQueryColumnSources } from './utils/querySo
 export const resolveQueryResultColumns = async (
   instance: Knex,
   adapter: DatabaseDialectAdapter,
-  { sql, columns }: IResolveQueryResultColumnsParams,
+  { sql, columns }: Pick<Extract<RowChangesSource, { type: 'query' }>, 'sql' | 'columns'>,
 ) => {
   const canResolve =
     !!getFlatSelectTables(sql, adapter.queryIdentifierRules) &&

@@ -22,8 +22,8 @@ import TreeView, {
 } from '@renderer/components/TreeView';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
 import { generateHash } from '@shared/utils/string';
-import type { Dialect } from '@shared/types/connections';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { selectProcessListSupportByConnection } from '@renderer/stores/Workspace/selectors';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useToastStore } from '@renderer/stores/Toast';
 import { useAppTabStore } from '@renderer/stores/AppTab';
@@ -50,8 +50,6 @@ import { ModalImportProjects } from './components/ModalImportProjects';
 import { ModalExportProjects } from './components/ModalExportProjects';
 import styles from './styles.module.css';
 
-const PROCESS_LIST_DIALECTS = new Set<Dialect>(['postgres', 'mysql']);
-
 const ProjectsMenu = () => {
   const { sideBar: colors } = useThemeStore((state) => state.activeTheme);
 
@@ -64,6 +62,7 @@ const ProjectsMenu = () => {
     })),
   );
 
+  const processListSupportByConnection = useWorkspaceStore(selectProcessListSupportByConnection);
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
   const { tabs, addTab, removeTab, getTab, setActiveTabId } = useAppTabStore(
@@ -134,13 +133,9 @@ const ProjectsMenu = () => {
     (id?: string) => {
       if (!id) return false;
 
-      return connectionsGroupPerProject.some((project) =>
-        project.connections.some(
-          (connection) => connection.id === id && PROCESS_LIST_DIALECTS.has(connection.dialect),
-        ),
-      );
+      return processListSupportByConnection.get(id) === true;
     },
-    [connectionsGroupPerProject],
+    [processListSupportByConnection],
   );
 
   const refreshConnectionInfo = React.useCallback(async (id?: string, force?: boolean) => {

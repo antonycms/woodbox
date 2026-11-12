@@ -6,7 +6,8 @@ const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`
 const getPragmaSchema = (schema?: string) => schema ? `, ${quoteLiteral(schema)}` : '';
 const sqlQuoteIdent = (sqlExpression: string) =>
   `'"' || replace(${sqlExpression}, '"', '""') || '"'`;
-const getTableName = ({ table }: ITableWithSchema) => quoteIdent(table);
+const getTableName = ({ schema, table }: ITableWithSchema) =>
+  schema ? `${quoteIdent(schema)}.${quoteIdent(table)}` : quoteIdent(table);
 
 const getTables = () => /* sql */ `
   SELECT
@@ -42,11 +43,6 @@ const getTableColumns = ({ table, schema }: ITableWithSchema) => /* sql */ `
     CASE WHEN "notnull" = 0 AND pk = 0 THEN true ELSE false END AS is_nullable
   FROM pragma_table_info(${quoteLiteral(table)}${getPragmaSchema(schema)})
   ORDER BY cid;
-`;
-
-const getColumnTypes = () => /* sql */ `
-  SELECT 'text' AS name UNION SELECT 'integer' UNION SELECT 'real'
-  UNION SELECT 'numeric' UNION SELECT 'blob';
 `;
 
 const getTableReferences = ({ table }: ITableWithSchema) => /* sql */ `
@@ -121,9 +117,9 @@ const getTableRestrictions = ({ table, schema }: ITableWithSchema) => /* sql */ 
   ORDER BY constraint_name;
 `;
 
-const getTotalRowsCountInTable = ({ table, where }: ITableWithSchema & { where?: string }) => {
+const getTotalRowsCountInTable = ({ table, schema, where }: ITableWithSchema & { where?: string }) => {
   const whereQuery = where ? `WHERE ${where}` : '';
-  return /* sql */ `SELECT count(*) as total_rows FROM ${getTableName({ table })} ${whereQuery};`;
+  return /* sql */ `SELECT count(*) as total_rows FROM ${getTableName({ schema, table })} ${whereQuery};`;
 };
 
 const serializeOrderBy = (orderBy?: IOrderBy[]) => {
@@ -139,6 +135,7 @@ const serializeOrderBy = (orderBy?: IOrderBy[]) => {
 
 const selectWithOffset = ({
   table,
+  schema,
   where,
   orderBy,
   limit = 50,
@@ -151,6 +148,7 @@ const selectWithOffset = ({
   return /* sql */ `
     SELECT * FROM ${getTableName({
       table,
+      schema,
     })} ${whereQuery} ${orderByQuery} LIMIT ${limit} OFFSET ${offset};
   `;
 };
@@ -222,7 +220,6 @@ const getTableTriggers = ({ table }: ITableWithSchema) => /* sql */ `
 export default {
   getTables,
   getTableColumns,
-  getColumnTypes,
   getTableReferences,
   getTableUsedAsReference,
   getTotalRowsCountInTable,

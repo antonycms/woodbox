@@ -1,10 +1,11 @@
 import { z } from 'zod';
+import { normalizeConnectionInput } from '../database/connectionInput';
 import type { IpcArgs, IpcChannel } from '@shared/types/ipc';
 import { connection, exportProjects, importConnections, projectExportFormat, projectImportFormat } from './schemas/connections';
 import { project, script, snippet } from './schemas/workspace';
 import { provider, chat, chatPatch, appendMessages, chatRequest } from './schemas/ai';
 import {
-  tableFilters, tableData, runSqlOptions, exportPreview, exportData, importTableData, queryRowUpdates, queryResultColumns, compare,
+  prepareInsertDml, prepareStructureDdl, tableFilters, tableReadFilters, prepareInitialWhere, readInitialWhere, tableData, objectCommand, runSqlOptions, exportPreview, exportData, importTableData, rowChangesIntent, compare,
 } from './schemas/database';
 
 const id = z.string().min(1);
@@ -12,10 +13,10 @@ const id = z.string().min(1);
 const schemas = {
   '@get:config_connections_saved': z.tuple([]),
   '@get:config_connection_saved': z.tuple([id]),
-  '@post:config_connections_saved': z.tuple([connection.extend({ id })]),
-  '@post:update_config_connection_saved': z.tuple([id, connection]),
+  '@post:config_connections_saved': z.tuple([z.preprocess(normalizeConnectionInput, connection.extend({ id }))]),
+  '@post:update_config_connection_saved': z.tuple([id, z.preprocess(normalizeConnectionInput, connection)]),
   '@delete:config_connection_saved': z.tuple([id]),
-  '@get:test_connection': z.tuple([connection.extend({ id: id.optional(), id_project: z.string().optional() })]),
+  '@get:test_connection': z.tuple([z.preprocess(normalizeConnectionInput, connection.extend({ id: id.optional(), id_project: z.string().optional() }))]),
   '@get:close_connection': z.tuple([id]),
   '@get:connection_info': z.tuple([id]),
   '@post:preview_import_connections_from_source': z.tuple([importConnections]),
@@ -56,11 +57,16 @@ const schemas = {
   '@post:react_native_bridge_start_gateway': z.tuple([z.string().optional(), z.object({ host: z.string().optional(), port: z.number().optional() }).optional()]),
   '@post:react_native_bridge_stop_gateway': z.tuple([z.string().optional()]),
   '@get:dialects': z.tuple([]),
+  '@post:read_initial_where': z.tuple([id, readInitialWhere]),
+  '@post:prepare_initial_where': z.tuple([id, prepareInitialWhere]),
   '@get:table_data': z.tuple([id, tableData]),
-  '@get:table_rows_count': z.tuple([id, tableFilters.extend({ where: z.string().optional() })]),
+  '@get:table_rows_count': z.tuple([id, tableReadFilters]),
   '@get:query_rows_count': z.tuple([id, z.string()]),
   '@get:export_data_preview': z.tuple([id, exportPreview]),
   '@get:table_columns': z.tuple([id, tableFilters]),
+  '@get:column_grid_data': z.tuple([id, tableFilters]),
+  '@post:prepare_insert_dml': z.tuple([prepareInsertDml]),
+  '@post:prepare_structure_ddl': z.tuple([prepareStructureDdl]),
   '@get:column_types': z.tuple([id]),
   '@get:table_references': z.tuple([id, tableFilters]),
   '@get:table_used_as_reference': z.tuple([id, tableFilters]),
@@ -69,9 +75,9 @@ const schemas = {
   '@get:table_indexes': z.tuple([id, tableFilters]),
   '@get:table_triggers': z.tuple([id, tableFilters]),
   '@get:function_definition': z.tuple([id, z.object({ schema: z.string(), functionName: z.string(), functionIdentityArguments: z.string().optional() })]),
+  '@post:execute_object_command': z.tuple([id, objectCommand]),
   '@post:run_sql': z.tuple([id, z.string(), runSqlOptions.optional()]),
-  '@post:update_query_rows': z.tuple([id, queryRowUpdates]),
-  '@get:query_result_columns': z.tuple([id, queryResultColumns]),
+  '@post:save_row_changes': z.tuple([id, rowChangesIntent]),
   '@post:run_explain_sql': z.tuple([id, z.string(), runSqlOptions.pick({ queryExecutionId: true }).optional()]),
   '@post:export_data': z.tuple([id, exportData]),
   '@post:import_table_data': z.tuple([id, importTableData]),
@@ -91,9 +97,11 @@ const schemas = {
   '@post:quit_and_install_update': z.tuple([]),
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };
 
-export const parseIpcArgs = <C extends IpcChannel>(channel: C, args: unknown[]): IpcArgs<C> => {
+export type ParsedIpcArgs<C extends IpcChannel> = z.output<(typeof schemas)[C]>;
+
+export const parseIpcArgs = <C extends IpcChannel>(channel: C, args: unknown[]): ParsedIpcArgs<C> => {
   const parsed = schemas[channel].safeParse(args);
   if (!parsed.success) throw new Error('Parâmetros inválidos para esta operação.');
   // The mapped schema contract above checks each tuple; indexing loses that generic correlation.
-  return parsed.data as IpcArgs<C>;
+  return parsed.data as ParsedIpcArgs<C>;
 };

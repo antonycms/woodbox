@@ -8,13 +8,11 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { copyToClipboard } from '@renderer/utils/methods';
 import { useToastStore } from '@renderer/stores/Toast';
-import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const ModalGenerateDDL = ({
   show,
   sql,
-  dialect = getRendererDialect(),
   onClose,
 }: IModalGenerateDDLProps) => {
   const t = useI18nStore((state) => state.t);
@@ -37,7 +35,7 @@ const ModalGenerateDDL = ({
       onClose={onClose}
     >
       <div className={styles.editorContainer}>
-        <Editor readonly hidePreview dialect={dialect.editorDialect} language="sql" value={sql} />
+        <Editor readonly hidePreview language="sql" value={sql} />
       </div>
 
       <Row>
@@ -64,6 +62,5 @@ export default ModalGenerateDDL;
 interface IModalGenerateDDLProps {
   show?: boolean;
   sql: string;
-  dialect?: RendererDialect;
   onClose?(): void;
 }

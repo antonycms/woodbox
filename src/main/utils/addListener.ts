@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron';
-import type { IpcArgs, IpcChannel, IpcData, IpcResponse } from '@shared/types/ipc';
+import type { IpcChannel, IpcData, IpcResponse } from '@shared/types/ipc';
 import { assertTrustedSender } from '../ipc/security';
-import { parseIpcArgs } from '../ipc/validation';
+import { parseIpcArgs, type ParsedIpcArgs } from '../ipc/validation';
 import { serializeIpcError } from '../ipc/errors';
 
 export default function addListener<C extends IpcChannel>(
   channel: C,
-  callbackFunction: (...params: IpcArgs<C>) => IpcData<C> | Promise<IpcData<C>>,
+  callbackFunction: (...params: ParsedIpcArgs<C>) => IpcData<C> | Promise<IpcData<C>>,
 ) {
   ipcMain.handle(channel, async (event, ...params): Promise<IpcResponse<IpcData<C>>> => {
     try {

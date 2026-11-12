@@ -5,12 +5,12 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Spacer } from '@renderer/components/Spacer';
-import type { IColumnInfo, IColumnRestrictionsInfo, ITable } from '@shared/types/database';
+import type { IColumnRestrictionsInfo, ITable } from '@shared/types/database';
 import { generateHash } from '@shared/utils/string';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useI18nStore } from '@renderer/stores/I18n';
-import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
+import { useThemeStore } from '@renderer/stores/Theme';
 import type {
   IPendingColumnCreate,
   IPendingIndexCreate,
@@ -18,7 +18,11 @@ import type {
 } from '@renderer/database/ddl/types';
 import { useForm } from '@renderer/hooks/useForm';
 import { Autocomplete } from '@renderer/components/AutocompleteFree';
-import { parseColumnTypeInput } from '../../utils';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { getColumnToggleChanges, prepareColumnDraft } from './utils';
+import { selectConnectionPresentations } from '@renderer/stores/Workspace/selectors';
+import type { NewColumnFormData, PreparedColumnDraft } from './types';
 import styles from './styles.module.css';
 
 interface ITableOption extends ITable {
@@ -30,7 +34,6 @@ interface IReferenceColumnOption {
   label: string;
   value: string;
   constraintType: string;
-  column?: IColumnInfo;
 }
 
 const getGeneratedForeignKeyName = (table: string, column: string, referenceTable: string) => {
@@ -59,36 +62,29 @@ const defaultForm: IFormData = {
 
 const ModalNewColumn = ({
   show,
-  idConnection,
-  table,
-  types,
-  tables,
-  hasPrimaryKey,
-  supportsAutoIncrement,
-  canUseAutoIncrement,
-  indexMethods = [],
+  tableStore,
   onClose,
   onAdd,
 }: IModalNewColumnProps) => {
   const { modal: colors } = useThemeStore((state) => state.activeTheme);
-  const { getTableColumns, getTableRestrictions } = useDatabaseStore(
-    useShallow((state) => ({
-      getTableColumns: state.getTableColumns,
-      getTableRestrictions: state.getTableRestrictions,
-    })),
-  );
+  const getTableRestrictions = useDatabaseStore((state) => state.getTableRestrictions);
   const t = useI18nStore((state) => state.t);
   const showToast = useToastStore((state) => state.showToast);
+  const { tableContext, columnTypes: types, restrictions, pendingRestrictions } = useTableInfoStore(tableStore,
+    useShallow((store) => ({ tableContext: store.tableContext, columnTypes: store.columnTypes,
+      restrictions: store.restrictions, pendingRestrictions: store.pendingRestrictions })));
+  const connection = useWorkspaceStore((store) => selectConnectionPresentations(store).get(tableContext.idConnection));
+  const structure = connection?.structure;
+  const catalog = useWorkspaceStore((store) => store.dialectCatalog);
+  const loadDialectCatalog = useWorkspaceStore((store) => store.loadDialectCatalog);
+  const hasPrimaryKey = [...restrictions, ...pendingRestrictions].some((item) => item.constraint_type === 'primary_key');
+  const { idConnection, table } = tableContext;
+  const tables = useWorkspaceStore((store) => store.connectionsInfo.get(idConnection)?.tables);
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
   const [referenceRestrictions, setReferenceRestrictions] = React.useState<
     IColumnRestrictionsInfo[]
   >([]);
-  const [referenceColumns, setReferenceColumns] = React.useState<IColumnInfo[]>([]);
   const [loadingRestrictions, setLoadingRestrictions] = React.useState(false);
-
-  const typeItems = React.useMemo(() => {
-    return types?.length ? types : ['varchar', 'text', 'integer', 'serial', 'boolean'];
-  }, [types]);
 
   const tableOptions = React.useMemo<ITableOption[]>(() => {
     return (tables || []).map((item) => {
@@ -107,10 +103,6 @@ const ModalNewColumn = ({
   }, [tableOptions, state.reference_table]);
 
   const referenceColumnOptions = React.useMemo<IReferenceColumnOption[]>(() => {
-    const referenceColumnsByName = new Map(
-      referenceColumns.map((column) => [column.column_name, column]),
-    );
-
     return referenceRestrictions
       .filter((restriction) => ['primary_key', 'unique_key'].includes(restriction.constraint_type))
       .flatMap((restriction) =>
@@ -121,125 +113,117 @@ const ModalNewColumn = ({
               : `${columnName} (Unique)`,
           value: columnName,
           constraintType: restriction.constraint_type,
-          column: referenceColumnsByName.get(columnName),
         })),
       );
-  }, [referenceColumns, referenceRestrictions]);
+  }, [referenceRestrictions]);
 
-  const close = React.useCallback(() => {
+  const resetAndClose = React.useCallback(() => {
     reset();
     setReferenceRestrictions([]);
-    setReferenceColumns([]);
     onClose?.();
   }, [reset, onClose]);
 
-  const onSubmit = React.useCallback(
-    handleSubmit((data) => {
-      const columnName = data.column_name.trim();
-      const parsedColumnType = parseColumnTypeInput(data.data_type);
-      const dataType = parsedColumnType.data_type;
+  const onReady = React.useCallback((
+    result: Extract<PreparedColumnDraft, { status: 'ready' }>,
+    data: NewColumnFormData,
+  ) => {
+    const column: IPendingColumnCreate = { ...result.column, __pendingId: generateHash() };
+    const columnName = column.column_name;
+    const reference: IPendingReferenceCreate | undefined = data.is_foreign_key
+      ? {
+          __pendingId: generateHash(),
+          constraint_name: getGeneratedForeignKeyName(
+            table,
+            columnName,
+            selectedReferenceTable!.table_name,
+          ),
+          table_schema: '',
+          table_name: table,
+          column_name: columnName,
+          reference_table_schema: selectedReferenceTable!.table_schema || '',
+          reference_table_name: selectedReferenceTable!.table_name,
+          reference_column_name: data.reference_column_name,
+        }
+      : undefined;
 
-      if (!columnName || !dataType) return;
-      if (data.is_foreign_key && (!selectedReferenceTable || !data.reference_column_name)) return;
+    const index: IPendingIndexCreate | undefined = data.is_index
+      ? {
+          __pendingId: generateHash(),
+          index_name: getGeneratedIndexName(table, [columnName]),
+          index_method: result.defaultIndexMethod,
+          is_unique: false,
+          is_primary: false,
+          is_valid: true,
+          column_names: [columnName],
+          column_orders: ['ASC'],
+        }
+      : undefined;
 
-      if (data.is_unique && data.column_default.trim()) {
-        showToast({
-          type: 'warn',
-          title: t('column.uniqueFixedDefaultTitle'),
-          description: t('column.uniqueFixedDefaultDescription'),
-        });
-        return;
-      }
+    const shouldClose = onAdd?.(column, {
+      constraintType: result.constraintType,
+      reference,
+      index,
+    });
+    return shouldClose !== false;
+  }, [onAdd, table, selectedReferenceTable]);
 
-      if (data.is_auto_increment && canUseAutoIncrement && !canUseAutoIncrement(dataType)) {
-        showToast({
-          type: 'warn',
-          title: t('toast.invalidAutoIncrementType'),
-          description: t('column.autoIncrementTypesHelp'),
-        });
-        return;
-      }
+  const fieldsLocked = !structure;
+  const typeItems = types?.length ? types : structure?.fallbackColumnTypes || [];
+  const changePrimaryKey = (checked: boolean) => {
+    if (fieldsLocked || hasPrimaryKey) return;
+    setState((previous) => ({
+      ...previous,
+      ...getColumnToggleChanges(previous, { type: 'toggle-primary-key', checked }, hasPrimaryKey),
+    }));
+  };
+  const changeUnique = (checked: boolean) => {
+    if (fieldsLocked) return;
+    setState((previous) => ({
+      ...previous,
+      ...getColumnToggleChanges(previous, { type: 'toggle-unique', checked }, hasPrimaryKey),
+    }));
+  };
+  const changeAutoIncrement = (checked: boolean) => {
+    if (fieldsLocked) return;
+    setState((previous) => ({
+      ...previous,
+      ...getColumnToggleChanges(previous, { type: 'toggle-auto-increment', checked }, hasPrimaryKey),
+    }));
+  };
+  const bind = <K extends keyof IFormData>(name: K) => {
+    const binding = register(name);
+    return { ...binding, onChange: (event: Parameters<typeof binding.onChange>[0]) => {
+      binding.onChange('target' in event ? event : { ...event, value: event.value ?? '' });
+    } };
+  };
+  const close = resetAndClose;
+  const onSubmit = handleSubmit((data) => {
+    if (!show || !structure) return;
+    const eligibility = tableStore.getState().columnTypeEligibility[data.data_type.trim()];
+    const hasReference = !!selectedReferenceTable && !!data.reference_column_name;
+    const result = prepareColumnDraft(data, structure.defaultIndexMethod, eligibility, hasReference);
+    if (result.status === 'incomplete') return;
+    if (result.status === 'blocked') {
+      const messages = {
+        'unique-default': ['column.uniqueFixedDefaultTitle', 'column.uniqueFixedDefaultDescription'],
+        'auto-type': ['toast.invalidAutoIncrementType', 'column.autoIncrementTypesHelp'],
+        'auto-needs-key': ['column.autoIncrementNeedsIndex', 'column.autoIncrementNeedsIndexDescription'],
+      } as const;
+      const [title, description] = messages[result.reason];
+      showToast({ type: 'warn', title: t(title), description: t(description) });
+      return;
+    }
+    if (onReady(result, data)) resetAndClose();
+  });
+  const retry = () => void loadDialectCatalog().catch(() => {});
 
-      if (data.is_auto_increment && !data.is_primary_key && !data.is_unique) {
-        showToast({
-          type: 'warn',
-          title: t('column.autoIncrementNeedsIndex'),
-          description: t('column.autoIncrementNeedsIndexDescription'),
-        });
-        return;
-      }
-
-      const column: IPendingColumnCreate = {
-        __pendingId: generateHash(),
-        column_name: columnName,
-        ...parsedColumnType,
-        data_type: dataType,
-        is_nullable: data.is_auto_increment ? false : !data.required,
-        column_default: data.is_auto_increment
-          ? undefined
-          : data.column_default.trim() || undefined,
-        is_auto_increment: data.is_auto_increment,
-        description: data.description.trim() || undefined,
-      };
-
-      const reference: IPendingReferenceCreate | undefined = data.is_foreign_key
-        ? {
-            __pendingId: generateHash(),
-            constraint_name: getGeneratedForeignKeyName(
-              table,
-              columnName,
-              selectedReferenceTable!.table_name,
-            ),
-            table_schema: '',
-            table_name: table,
-            column_name: columnName,
-            reference_table_schema: selectedReferenceTable!.table_schema || '',
-            reference_table_name: selectedReferenceTable!.table_name,
-            reference_column_name: data.reference_column_name,
-          }
-        : undefined;
-
-      const index: IPendingIndexCreate | undefined = data.is_index
-        ? {
-            __pendingId: generateHash(),
-            index_name: getGeneratedIndexName(table, [columnName]),
-            index_method: indexMethods[0] || '',
-            is_unique: false,
-            is_primary: false,
-            is_valid: true,
-            column_names: [columnName],
-            column_orders: ['ASC'],
-          }
-        : undefined;
-
-      const shouldClose = onAdd?.(column, {
-        constraintType: data.is_primary_key
-          ? 'primary_key'
-          : data.is_unique
-            ? 'unique_key'
-            : undefined,
-        reference,
-        index,
-      });
-      if (shouldClose !== false) close();
-    }),
-    [
-      handleSubmit,
-      onAdd,
-      close,
-      showToast,
-      selectedReferenceTable,
-      table,
-      indexMethods,
-      canUseAutoIncrement,
-      t,
-    ],
-  );
+  React.useEffect(() => {
+    if (show && !structure && catalog.status === 'idle') void loadDialectCatalog().catch(() => {});
+  }, [show, structure, catalog.status, loadDialectCatalog]);
 
   React.useEffect(() => {
     if (!show || !state.is_foreign_key || !selectedReferenceTable) {
       setReferenceRestrictions([]);
-      setReferenceColumns([]);
       return;
     }
 
@@ -248,20 +232,13 @@ const ModalNewColumn = ({
     const load = async () => {
       try {
         setLoadingRestrictions(true);
-        const [restrictions, columns] = await Promise.all([
-          getTableRestrictions(idConnection, {
-            schema: selectedReferenceTable.table_schema || '',
-            table: selectedReferenceTable.table_name,
-          }),
-          getTableColumns(idConnection, {
-            schema: selectedReferenceTable.table_schema || '',
-            table: selectedReferenceTable.table_name,
-          }),
-        ]);
+        const restrictions = await getTableRestrictions(idConnection, {
+          schema: selectedReferenceTable.table_schema || '',
+          table: selectedReferenceTable.table_name,
+        });
 
         if (!ignore) {
           setReferenceRestrictions(restrictions || []);
-          setReferenceColumns(columns || []);
         }
       } finally {
         if (!ignore) setLoadingRestrictions(false);
@@ -274,7 +251,6 @@ const ModalNewColumn = ({
       ignore = true;
     };
   }, [
-    getTableColumns,
     getTableRestrictions,
     idConnection,
     selectedReferenceTable,
@@ -307,7 +283,7 @@ const ModalNewColumn = ({
             label={t('field.name')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            {...register('column_name')}
+            {...bind('column_name')}
           />
 
           <Autocomplete
@@ -317,7 +293,7 @@ const ModalNewColumn = ({
             data={typeItems}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            {...register('data_type')}
+            {...bind('data_type')}
           />
         </Row>
 
@@ -327,9 +303,9 @@ const ModalNewColumn = ({
             label={t('field.defaultValue')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            disabled={state.is_auto_increment}
+            disabled={fieldsLocked || state.is_auto_increment}
             title={state.is_auto_increment ? t('column.autoIncrementNoDefault') : undefined}
-            {...register('column_default')}
+            {...bind('column_default')}
           />
 
           <Input
@@ -337,7 +313,7 @@ const ModalNewColumn = ({
             label={t('field.comment')}
             color={colors.fieldColor}
             backgroundColor={colors.fieldBackgroundColor}
-            {...register('description')}
+            {...bind('description')}
           />
         </Row>
 
@@ -347,17 +323,10 @@ const ModalNewColumn = ({
               type="checkbox"
               name="is_primary_key"
               checked={state.is_primary_key}
-              disabled={hasPrimaryKey}
+              disabled={fieldsLocked || hasPrimaryKey}
               title={hasPrimaryKey ? t('message.primaryKeyAlreadyExistsTitle') : undefined}
               onChange={(event) => {
-                const checked = event.target.checked;
-                setState((prevState) => ({
-                  ...prevState,
-                  is_primary_key: checked,
-                  is_unique: checked ? false : prevState.is_unique,
-                  is_auto_increment:
-                    !checked && !prevState.is_unique ? false : prevState.is_auto_increment,
-                }));
+                changePrimaryKey(event.target.checked);
               }}
             />
             {t('field.primaryKey')}
@@ -368,7 +337,8 @@ const ModalNewColumn = ({
               type="checkbox"
               name="required"
               checked={state.required}
-              onChange={register('required').onChange}
+              disabled={fieldsLocked}
+              onChange={bind('required').onChange}
             />
             {t('field.required')}
           </label>
@@ -378,38 +348,23 @@ const ModalNewColumn = ({
               type="checkbox"
               name="is_unique"
               checked={state.is_unique}
+              disabled={fieldsLocked}
               onChange={(event) => {
-                const checked = event.target.checked;
-                setState((prevState) => ({
-                  ...prevState,
-                  is_unique: checked,
-                  is_primary_key: checked ? false : prevState.is_primary_key,
-                  is_auto_increment:
-                    !checked && !prevState.is_primary_key ? false : prevState.is_auto_increment,
-                }));
+                changeUnique(event.target.checked);
               }}
             />
             {t('field.unique')}
           </label>
 
-          {supportsAutoIncrement && (
+          {structure?.supportsAutoIncrement && (
             <label className={styles.checkbox} style={{ color: colors.color }}>
               <input
                 type="checkbox"
                 name="is_auto_increment"
                 checked={state.is_auto_increment}
+                disabled={fieldsLocked}
                 onChange={(event) => {
-                  const checked = event.target.checked;
-
-                  setState((prevState) => ({
-                    ...prevState,
-                    is_auto_increment: checked,
-                    required: checked ? true : prevState.required,
-                    column_default: checked ? '' : prevState.column_default,
-                    is_primary_key: checked && !hasPrimaryKey ? true : prevState.is_primary_key,
-                    is_unique: checked && hasPrimaryKey ? true : prevState.is_unique,
-                    is_foreign_key: checked ? false : prevState.is_foreign_key,
-                  }));
+                  changeAutoIncrement(event.target.checked);
                 }}
               />
               {t('column.autoIncrement')}
@@ -421,7 +376,7 @@ const ModalNewColumn = ({
               type="checkbox"
               name="is_index"
               checked={state.is_index}
-              onChange={register('is_index').onChange}
+                onChange={bind('is_index').onChange}
             />
             {t('field.index')}
           </label>
@@ -431,8 +386,8 @@ const ModalNewColumn = ({
               type="checkbox"
               name="is_foreign_key"
               checked={state.is_foreign_key}
-              disabled={state.is_auto_increment}
-              onChange={register('is_foreign_key').onChange}
+              disabled={fieldsLocked || state.is_auto_increment}
+              onChange={bind('is_foreign_key').onChange}
             />
             {t('tabs.foreignKeys')}
           </label>
@@ -449,10 +404,11 @@ const ModalNewColumn = ({
               extractValue={(item) => item.value}
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
-              {...register('reference_table')}
+              disabled={fieldsLocked}
+              {...bind('reference_table')}
               onChange={({ name, value }) => {
+                if (!show) return;
                 setReferenceRestrictions([]);
-                setReferenceColumns([]);
                 setState((prevState) => ({
                   ...prevState,
                   [name!]: value || '',
@@ -472,7 +428,8 @@ const ModalNewColumn = ({
               color={colors.fieldColor}
               backgroundColor={colors.fieldBackgroundColor}
               emptyMessage={t('message.noPkOrUniqueColumn')}
-              {...register('reference_column_name')}
+              disabled={fieldsLocked}
+              {...bind('reference_column_name')}
             />
           </Row>
         )}
@@ -492,8 +449,15 @@ const ModalNewColumn = ({
             {t('settings.customization.cancel')}
           </Button>
 
+          {(!structure && catalog.status === 'error') && (
+            <Button text onClick={retry}>
+              {t('column.retryDraft')}
+            </Button>
+          )}
+
           <Button
             type="submit"
+            disabled={fieldsLocked}
             color={colors.saveButtonColor}
             backgroundColor={colors.saveButtonBackgroundColor}
             xs={6}
@@ -512,14 +476,7 @@ export default ModalNewColumn;
 
 interface IModalNewColumnProps {
   show?: boolean;
-  idConnection: string;
-  table: string;
-  types: string[];
-  tables: ITable[];
-  hasPrimaryKey?: boolean;
-  supportsAutoIncrement?: boolean;
-  canUseAutoIncrement?(dataType: string): boolean;
-  indexMethods?: string[];
+  tableStore: TableInfoStoreApi;
   onClose?(): void;
   onAdd?(
     column: IPendingColumnCreate,
@@ -531,17 +488,4 @@ interface IModalNewColumnProps {
   ): boolean | void;
 }
 
-interface IFormData {
-  column_name: string;
-  data_type: string;
-  column_default: string;
-  description: string;
-  required: boolean;
-  is_primary_key: boolean;
-  is_unique: boolean;
-  is_auto_increment: boolean;
-  is_foreign_key: boolean;
-  is_index: boolean;
-  reference_table: string;
-  reference_column_name: string;
-}
+type IFormData = NewColumnFormData;

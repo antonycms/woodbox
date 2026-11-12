@@ -1,3 +1,4 @@
+import type { ExplainAnalysis } from '@shared/types/databaseExplain';
 import type { ITableSort } from '@renderer/components/Table/dtos';
 import type { Dialect } from '@shared/types/connections';
 import type { DatabaseRow, IRunSqlResult } from '@shared/types/database';
@@ -6,6 +7,7 @@ import type { ITableQuery } from '@renderer/utils/sql';
 export interface IQueryResult extends IRunSqlResult {
   loading?: boolean;
   queryExecutionId?: string;
+  resultRevision?: string;
   message?: string;
   query: string;
   date_run?: string;
@@ -46,6 +48,7 @@ export interface IQueryCaptureState {
 }
 
 export interface IQueryExplainResult {
+  analysis?: ExplainAnalysis;
   dialect: Dialect;
   originalQuery: string;
 }

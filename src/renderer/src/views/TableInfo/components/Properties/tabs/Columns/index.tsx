@@ -1,3 +1,7 @@
+import { selectConnectionPresentations } from '@renderer/stores/Workspace/selectors';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { resolvePropertySelection } from '../../hooks/resolvePropertySelection';
+import type { ColumnGridInput } from '@renderer/stores/TableInfo/types';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
@@ -9,7 +13,6 @@ import { Text } from '@renderer/components/Text';
 import { RefreshButton } from '@renderer/components/RefreshButton';
 import type { IColumnInfo } from '@shared/types/database';
 import { generateHash } from '@shared/utils/string';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import type {
   IPendingColumnChange,
   IPendingColumnCreate,
@@ -22,24 +25,24 @@ import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
-import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
+import type { IColumn, ISortDirection, ITableSort, TableEditBatch } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliation';
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
-import { generateAddColumnsDdl, getColumnType } from '@renderer/database/ddl';
+import { requestStructureDdl, toStructureColumn, toStructureReference, toStructureRestriction } from '@renderer/stores/TableInfo/ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import {
+  getColumnGridIdentity,
+  getColumnGridTypeText,
   getColumnSearchValues,
   getColumnSelectionKey,
   getEditedColumnFields,
   getGeneratedConstraintName,
   getOriginalColumnName,
-  normalizeOptionalString,
   parseBooleanLabelValue,
-  parseColumnTypeInput,
   serializeColumnBooleanLabels,
 } from './utils';
 
@@ -51,7 +54,6 @@ const Columns = ({ tableStore }: IColumnsProps) => {
   const {
     tableInfo: { properties: theme },
   } = useThemeStore((state) => state.activeTheme);
-  const connectionsInfo = useWorkspaceStore((state) => state.connectionsInfo);
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
   const {
@@ -68,13 +70,11 @@ const Columns = ({ tableStore }: IColumnsProps) => {
     restrictions,
     addPendingColumn,
     addPendingIndex,
-    updatePendingColumn,
     addPendingRestriction,
     addPendingReference,
     removePendingColumn,
     addPendingDroppedColumns,
     removePendingDroppedColumns,
-    addPendingChangedColumn,
     removePendingChangedColumns,
     clearPendingChanges,
     loadColumnTypes,
@@ -101,13 +101,11 @@ const Columns = ({ tableStore }: IColumnsProps) => {
       restrictions: state.restrictions,
       addPendingColumn: state.addPendingColumn,
       addPendingIndex: state.addPendingIndex,
-      updatePendingColumn: state.updatePendingColumn,
       addPendingRestriction: state.addPendingRestriction,
       addPendingReference: state.addPendingReference,
       removePendingColumn: state.removePendingColumn,
       addPendingDroppedColumns: state.addPendingDroppedColumns,
       removePendingDroppedColumns: state.removePendingDroppedColumns,
-      addPendingChangedColumn: state.addPendingChangedColumn,
       removePendingChangedColumns: state.removePendingChangedColumns,
       clearPendingChanges: state.clearPendingChanges,
       loadColumnTypes: state.loadColumnTypes,
@@ -122,6 +120,8 @@ const Columns = ({ tableStore }: IColumnsProps) => {
   );
   const { idConnection: id_connection, schema, table, mode, objectType, dialect } = tableContext;
 
+  const structure = useWorkspaceStore((state) => selectConnectionPresentations(state).get(id_connection)?.structure);
+  const catalogStatus = useWorkspaceStore((state) => state.dialectCatalog.status);
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedColumns, setSelectedColumns] = React.useState<IColumnInfo[]>([]);
   const [columnFilterText, setColumnFilterText] = React.useState('');
@@ -132,7 +132,6 @@ const Columns = ({ tableStore }: IColumnsProps) => {
   const isReadOnlyObject = objectType === 'view' || objectType === 'materialized_view';
 
   const lastFetchDateSerialized = toDateTime(lastFetchDate.columns);
-  const connectionInfo = connectionsInfo.get(id_connection);
   const booleanLabels = React.useMemo(
     () => ({ yes: t('common.yes'), no: t('common.no') }),
     [t],
@@ -178,25 +177,20 @@ const Columns = ({ tableStore }: IColumnsProps) => {
     ],
     [changedColumnsByOriginalName, existingColumns, pendingColumnRows],
   );
-  const hasPrimaryKey = React.useMemo(
-    () =>
-      restrictions.some((restriction) => restriction.constraint_type === 'primary_key') ||
-      pendingRestrictions.some((restriction) => restriction.constraint_type === 'primary_key'),
-    [pendingRestrictions, restrictions],
-  );
-
+  const getSearchValues = React.useCallback((column: IColumnInfo) =>
+    getColumnSearchValues(column, getColumnGridTypeText(column)), []);
   const filteredColumnsAndSortedColumns = useFilteredSortedRows({
     rows: existingColumns,
     filterText: columnFilterText,
     sort,
-    getSearchValues: getColumnSearchValues,
+    getSearchValues,
   });
 
   const filteredPendingColumnRows = useFilteredSortedRows({
     rows: pendingColumnRows,
     filterText: columnFilterText,
     sort,
-    getSearchValues: getColumnSearchValues,
+    getSearchValues,
   });
   const newColumnRows = React.useMemo(
     () =>
@@ -231,8 +225,8 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         sortable: true,
         type: 'autocomplete-free',
         dataAutocomplete: columnTypes,
-        getEditValue: (column) => getColumnType(column),
-        render: (column) => getColumnType(column),
+        getEditValue: (column) => getColumnGridTypeText(column),
+        render: (column) => getColumnGridTypeText(column),
       },
       {
         label: t('field.nullable'),
@@ -242,7 +236,7 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         type: 'autocomplete',
         dataAutocomplete: [booleanLabels.yes, booleanLabels.no],
       },
-      ...(dialect.supportsAutoIncrement
+      ...(structure?.supportsAutoIncrement
         ? [
             {
               label: t('column.autoInc'),
@@ -267,7 +261,7 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         sortable: true,
       },
     ],
-    [booleanLabels, columnTypes, dialect.supportsAutoIncrement, isReadOnlyObject, t],
+    [booleanLabels, columnTypes, structure?.supportsAutoIncrement, tableStore, isReadOnlyObject, t],
   );
 
   const handleOpenNewColumnModal = React.useCallback(() => {
@@ -284,6 +278,10 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         index?: IPendingIndexCreate;
       },
     ) => {
+      const state = tableStore.getState();
+      const changes = new Map(state.pendingChangedColumns.map((item) => [item.__originalColumn.column_name, item]));
+      const allColumns = [...state.columns.map((item) => changes.get(item.column_name) || item), ...state.pendingColumns];
+      const { references, pendingReferences, indexes, pendingIndexes } = state;
       const columnName = column.column_name.toLowerCase();
       const alreadyExists = allColumns.some(
         (item) => item.column_name.toLowerCase() === columnName,
@@ -363,151 +361,29 @@ const Columns = ({ tableStore }: IColumnsProps) => {
     ],
   );
 
-  const handleUpdateColumn = React.useCallback(
-    (column: IColumnInfo, attribute: string, value: unknown) => {
-      let nextValue: unknown = value;
-      let extraColumnChanges: Partial<IColumnInfo> = {};
-
-      if (attribute === 'column_name') {
-        nextValue = String(value ?? '').trim();
-
-        if (!nextValue) {
-          showToast({ type: 'warn', title: t('toast.columnNameRequired') });
-          return;
+  const handleEditColumnBatch = React.useCallback(
+    ({ edits }: TableEditBatch) => {
+      const inputs: ColumnGridInput[] = [];
+      const newRows = new Map(pendingColumnRows.map((item) => [(item as IPendingColumnCreate).__pendingId, item]));
+      for (const edit of edits) {
+        const column = edit.isNewRow
+          ? newRows.get(String(edit.rowKey))
+          : filteredColumnsAndSortedColumns[edit.rowIndex];
+        if (!column) continue;
+        const identity = getColumnGridIdentity(column);
+        if (edit.attribute === 'is_nullable_label' || edit.attribute === 'is_auto_increment_label') {
+          inputs.push({ identity, edit: {
+            attribute: edit.attribute === 'is_nullable_label' ? 'is_nullable' : 'is_auto_increment',
+            value: parseBooleanLabelValue(edit.value, booleanLabels),
+          } });
+        } else if (edit.attribute === 'column_name' || edit.attribute === 'data_type' ||
+                   edit.attribute === 'column_default' || edit.attribute === 'description') {
+          inputs.push({ identity, edit: { attribute: edit.attribute, value: edit.value ?? null } });
         }
-
-        const currentPendingId = (column as IPendingColumnCreate).__pendingId;
-        const currentOriginalColumnName = getOriginalColumnName(column);
-        const alreadyExists = allColumns.some((item) => {
-          const itemPendingId = (item as IPendingColumnCreate).__pendingId;
-          const itemOriginalColumnName = getOriginalColumnName(item);
-
-          if (currentPendingId && itemPendingId === currentPendingId) return false;
-          if (!currentPendingId && itemOriginalColumnName === currentOriginalColumnName) {
-            return false;
-          }
-
-          return item.column_name.toLowerCase() === String(nextValue).toLowerCase();
-        });
-
-        if (alreadyExists) {
-          showToast({ type: 'warn', title: t('toast.columnExists') });
-          return;
-        }
-      } else if (attribute === 'data_type') {
-        const normalizedColumnType = String(value ?? '').trim();
-
-        if (!normalizedColumnType) {
-          showToast({ type: 'warn', title: t('toast.columnTypeRequired') });
-          return;
-        }
-
-        const isRevertedChange = normalizedColumnType === getColumnType(column);
-        const parsedColumnType = isRevertedChange
-          ? column
-          : parseColumnTypeInput(normalizedColumnType);
-
-        nextValue = parsedColumnType.data_type;
-        extraColumnChanges = parsedColumnType;
-      } else if (attribute === 'is_nullable_label') {
-        const parsedNullableValue = parseBooleanLabelValue(value, booleanLabels);
-
-        if (parsedNullableValue === null) {
-          showToast({
-            type: 'warn',
-            title: t('toast.invalidNullable'),
-            description: t('toast.invalidNullableHelp'),
-          });
-          return;
-        }
-
-        attribute = 'is_nullable';
-        nextValue = parsedNullableValue;
-      } else if (attribute === 'is_auto_increment_label') {
-        const parsedAutoIncrementValue = parseBooleanLabelValue(value, booleanLabels);
-
-        if (parsedAutoIncrementValue === null) {
-          showToast({
-            type: 'warn',
-            title: t('toast.invalidAutoIncrement'),
-            description: t('toast.invalidAutoIncrementHelp'),
-          });
-          return;
-        }
-
-        if (
-          parsedAutoIncrementValue &&
-          dialect.canUseAutoIncrement &&
-          !dialect.canUseAutoIncrement(column.data_type)
-        ) {
-          showToast({
-            type: 'warn',
-            title: t('toast.invalidAutoIncrementType'),
-            description: t('column.autoIncrementTypesHelp'),
-          });
-          return;
-        }
-
-        attribute = 'is_auto_increment';
-        nextValue = parsedAutoIncrementValue;
-
-        if (parsedAutoIncrementValue) {
-          extraColumnChanges = {
-            column_default: undefined,
-            is_nullable: false,
-            is_nullable_label: booleanLabels.no,
-          };
-        }
-      } else if (['column_default', 'description'].includes(attribute)) {
-        nextValue = normalizeOptionalString(value);
-      } else {
-        return;
       }
-
-      const columnChanges = {
-        [attribute]: nextValue,
-        ...extraColumnChanges,
-      } as Partial<IColumnInfo>;
-      const pendingId = (column as IPendingColumnCreate).__pendingId;
-
-      if (pendingId) {
-        updatePendingColumn(pendingId, columnChanges);
-        return;
-      }
-
-      addPendingChangedColumn(column, columnChanges);
+      tableStore.getState().editColumnGrid(inputs);
     },
-    [
-      addPendingChangedColumn,
-      allColumns,
-      booleanLabels,
-      dialect,
-      showToast,
-      updatePendingColumn,
-      t,
-    ],
-  );
-
-  const handleEditColumn = React.useCallback(
-    (indexRow: number, attribute: string, value: unknown) => {
-      const column = filteredColumnsAndSortedColumns[indexRow];
-      if (!column) return;
-
-      handleUpdateColumn(column, attribute, value);
-    },
-    [filteredColumnsAndSortedColumns, handleUpdateColumn],
-  );
-
-  const handleEditNewColumn = React.useCallback(
-    (rowKey: React.Key, attribute: string, value: unknown) => {
-      const column = pendingColumnRows.find(
-        (item) => (item as IPendingColumnCreate).__pendingId === rowKey,
-      );
-      if (!column) return;
-
-      handleUpdateColumn(column, attribute, value);
-    },
-    [handleUpdateColumn, pendingColumnRows],
+    [booleanLabels, filteredColumnsAndSortedColumns, pendingColumnRows, tableStore],
   );
 
   const handleRemoveSelectedColumns = React.useCallback(() => {
@@ -550,17 +426,9 @@ const Columns = ({ tableStore }: IColumnsProps) => {
   ]);
 
   const handleUndoSelectedDroppedColumns = React.useCallback(() => {
-    const droppedColumnNamesToUndo = selectedColumns
-      .filter((column) => droppedColumnNames.has(column.column_name))
-      .map((column) => column.column_name);
-    const changedColumnNamesToUndo = selectedColumns
-      .map(getOriginalColumnName)
-      .filter((columnName) => changedColumnsByOriginalName.has(columnName));
-
-    if (!droppedColumnNamesToUndo.length && !changedColumnNamesToUndo.length) return;
-
-    if (droppedColumnNamesToUndo.length) removePendingDroppedColumns(droppedColumnNamesToUndo);
-    if (changedColumnNamesToUndo.length) removePendingChangedColumns(changedColumnNamesToUndo);
+    const names = selectedColumns.map(getOriginalColumnName);
+    removePendingDroppedColumns(names);
+    removePendingChangedColumns(names);
     setSelectedColumns([]);
   }, [
     selectedColumns,
@@ -588,14 +456,16 @@ const Columns = ({ tableStore }: IColumnsProps) => {
       },
       {
         text: t('modal.generateDdl'),
-        onClick: () => {
-          setDdlSql(
-            generateAddColumnsDdl(dialect, schema, table, selectedColumns, {
-              references,
-              restrictions,
-            }),
-          );
-
+        onClick: async () => {
+          const context = tableStore.getState().tableContext;
+          const isCurrent = () => tableStore.getState().tableContext === context;
+          const state = tableStore.getState();
+          const changes = new Map(state.pendingChangedColumns.map((column) => [column.__originalColumn.column_name, column]));
+          const current = state.columns.map((column) => changes.get(column.column_name) || column);
+          const selected = resolvePropertySelection(selectedColumns, current, state.pendingColumns, getOriginalColumnName);
+          const sql = await requestStructureDdl({type:'add-columns',policyId:dialect,target:{schema,table},columns:selected.map(toStructureColumn),references:state.references.map(toStructureReference),restrictions:state.restrictions.map(toStructureRestriction)}, isCurrent);
+          if (!sql || !isCurrent()) return;
+          setDdlSql(sql);
           setShowDdlModal(true);
         },
       },
@@ -629,9 +499,9 @@ const Columns = ({ tableStore }: IColumnsProps) => {
 
     if (mode === 'create') return;
 
-    loadTableColumns(id_connection, { schema, table });
-    loadTableRestrictions(id_connection, { schema, table });
-    loadTableReferences(id_connection, { schema, table });
+    loadTableColumns(id_connection, { schema, table }, true);
+    loadTableRestrictions(id_connection, { schema, table }, true);
+    loadTableReferences(id_connection, { schema, table }, true);
   }, []);
 
   React.useEffect(() => {
@@ -662,23 +532,21 @@ const Columns = ({ tableStore }: IColumnsProps) => {
       <ModalGenerateDDL
         show={showDdlModal}
         sql={ddlSql}
-        dialect={dialect}
         onClose={() => setShowDdlModal(false)}
       />
 
       <ModalNewColumn
         show={showNewColumnModal}
-        idConnection={id_connection}
-        table={table}
-        types={columnTypes}
-        tables={connectionInfo?.tables || []}
-        hasPrimaryKey={hasPrimaryKey}
-        supportsAutoIncrement={dialect.supportsAutoIncrement}
-        canUseAutoIncrement={dialect.canUseAutoIncrement}
-        indexMethods={dialect.indexMethods || []}
+        tableStore={tableStore}
         onClose={() => setShowNewColumnModal(false)}
         onAdd={handleAddPendingColumn}
       />
+
+      {!structure && (catalogStatus === 'error' || catalogStatus === 'ready') && (
+        <Button text onClick={() => { void useWorkspaceStore.getState().loadDialectCatalog().catch(() => {}); }}>
+          {t('column.retryDraft')}
+        </Button>
+      )}
 
       <FilterInput
         filterBar={theme.bar}
@@ -693,8 +561,7 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         onContextMenu={isReadOnlyObject ? undefined : onContextMenuTable}
         onSelectRow={setSelectedColumns}
         rows={filteredColumnsAndSortedColumns}
-        onEditRow={isReadOnlyObject ? undefined : handleEditColumn}
-        onEditNewRow={isReadOnlyObject ? undefined : handleEditNewColumn}
+        onEditBatch={isReadOnlyObject ? undefined : handleEditColumnBatch}
         editedRows={editedColumnRows}
         newRows={newColumnRows}
         newRowsPosition="end"

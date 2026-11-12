@@ -3,9 +3,8 @@ import { useShallow } from 'zustand/react/shallow';
 import type { ProjectTreeItem } from '../types';
 import type { IScriptMetadata as IScript } from '@shared/types/workspace';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
+import { selectConnectionPresentations, selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
 import { useI18nStore } from '@renderer/stores/I18n';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { formatSizeFromBytes } from '@renderer/utils/methods';
 
 export const useProjectTree = (
@@ -15,6 +14,7 @@ export const useProjectTree = (
 ) => {
   const t = useI18nStore((state) => state.t);
   const connectionsGroupPerProject = useWorkspaceStore(selectConnectionsGroupPerProject);
+  const connectionPresentations = useWorkspaceStore(selectConnectionPresentations);
   const { scripts, connectionsInfo } = useWorkspaceStore(
     useShallow((state) => ({
       scripts: state.scripts,
@@ -70,7 +70,10 @@ export const useProjectTree = (
         data: { id_project: project.id },
         childs: project.connections.map((connection) => {
           const connectionInfo = connectionsInfo.get(connection.id);
-          const dialect = getRendererDialect(connection.dialect);
+          const presentation = connectionPresentations.get(connection.id);
+          const supportsSchemas = presentation?.capabilities?.supports_schemas;
+          const supportsFunctions = presentation?.capabilities?.supports_functions;
+          const mode = presentation?.mode;
 
           const dataConnection = {
             id_project: project.id,
@@ -94,7 +97,7 @@ export const useProjectTree = (
               };
             }) || [];
 
-          let functionsThreeView: ProjectTreeItem[] = dialect.supportsFunctions
+          let functionsThreeView: ProjectTreeItem[] = supportsFunctions === true
             ? connectionInfo?.functions?.map((fn, index) => {
                 const { function_name, function_schema } = fn;
 
@@ -139,7 +142,7 @@ export const useProjectTree = (
             ({ data }) => data.object_type === 'materialized_view',
           );
 
-          let schemasThreeView: ProjectTreeItem[] = dialect.supportsSchemas
+          let schemasThreeView: ProjectTreeItem[] = supportsSchemas === true
             ? connectionInfo?.schemas?.map?.((schema) => {
                 const tablesSchema = tablesThreeView.filter(
                   ({ data }) => data.table_schema === schema,
@@ -215,18 +218,20 @@ export const useProjectTree = (
             id: connection.id,
             label: connection.description,
             labelInfo:
-              dialect.connectionMode === 'file'
+              mode === 'file'
                 ? connection.database
-                : dialect.connectionMode === 'react-native-bridge'
+                : mode === 'react-native-bridge'
                   ? connection.reactNativeBridge?.appName || connection.reactNativeBridge?.appId
-                  : `${connection.host}:${connection.port}`,
+                  : mode === 'network'
+                    ? `${connection.host}:${connection.port}`
+                    : undefined,
             loading: loadingConnectionsIdSet.has(connection.id),
             isConnected: !!connectionInfo,
             icon: 'database' as const,
             type: 'connection' as const,
             data: { id_connection: connection.id, description_connection: connection.description },
             childs: [
-              dialect.supportsSchemas && {
+              supportsSchemas === true && {
                 id: `schemas_${connection.id}`,
                 type: 'schemas',
                 label: t('sidebar.schemas'),
@@ -235,7 +240,7 @@ export const useProjectTree = (
                 showChildCount: true,
                 data: dataConnection,
               },
-              !dialect.supportsSchemas && {
+              supportsSchemas === false && {
                 id: `tables_${connection.id}`,
                 type: 'tables',
                 label: t('tabs.tables'),
@@ -243,7 +248,7 @@ export const useProjectTree = (
                 showChildCount: true,
                 data: dataConnection,
               },
-              !dialect.supportsSchemas &&
+              supportsSchemas === false &&
                 !!viewsThreeView.length && {
                   id: `views_${connection.id}`,
                   type: 'views',
@@ -252,7 +257,7 @@ export const useProjectTree = (
                   showChildCount: true,
                   data: dataConnection,
                 },
-              !dialect.supportsSchemas &&
+              supportsSchemas === false &&
                 !!materializedViewsThreeView.length && {
                   id: `mat_views_${connection.id}`,
                   type: 'materializedViews',
@@ -280,6 +285,7 @@ export const useProjectTree = (
   }, [
     checkFilterText,
     connectionsGroupPerProject,
+    connectionPresentations,
     connectionsInfo,
     filterTextSerialized,
     loadingConnectionsIdSet,

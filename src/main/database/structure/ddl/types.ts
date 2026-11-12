@@ -1,5 +1,3 @@
-import type { Dialect } from '@shared/types/connections';
-
 export interface DdlColumnInfo {
   column_name: string;
   data_type: string;
@@ -15,7 +13,7 @@ export interface DdlColumnInfo {
 }
 
 export interface DdlColumnChange extends DdlColumnInfo {
-  __originalColumn: DdlColumnInfo;
+  original: DdlColumnInfo;
 }
 
 export interface DdlRestrictionInfo {
@@ -45,7 +43,8 @@ export interface DdlIndexInfo {
   columns?: DdlColumnInfo[];
 }
 
-export interface RendererDialectDdlHelpers {
+export interface StructureDialectDdlHelpers {
+  getAutoIncrementRestriction(name: string): DdlRestrictionInfo | undefined;
   quoteIdent(value: string): string;
   quoteLiteral(value: string): string;
   getColumnType(column: DdlColumnInfo): string;
@@ -54,137 +53,98 @@ export interface RendererDialectDdlHelpers {
   normalizeOptionalString(value?: string): string | undefined;
 }
 
-export interface DmlUpdateRow {
-  originalRow: Record<string, unknown>;
-  changes: Record<string, unknown>;
-}
+export interface StructureDialectDdl {
+  getColumnTypeDdl?(column: DdlColumnInfo, helpers: StructureDialectDdlHelpers): string;
 
-export interface RendererDialectDmlHelpers {
-  quoteIdent(value: string): string;
-  quoteLiteral(value: string): string;
-  getTableName(schema: string | undefined, table: string): string;
-  serializeValue(value: unknown): string;
-  serializeWhereValue(column: string, value: unknown): string;
-}
-
-export interface RendererDialectDml {
-  getInsertDml(
-    schema: string | undefined,
-    table: string,
-    rows: Record<string, unknown>[],
-    columnOrder: string[] | undefined,
-    helpers: RendererDialectDmlHelpers,
-  ): string;
-
-  getUpdateDml(
-    schema: string | undefined,
-    table: string,
-    rows: DmlUpdateRow[],
-    whereColumns: string[],
-    helpers: RendererDialectDmlHelpers,
-  ): string;
-
-  getDeleteDml(
-    schema: string | undefined,
-    table: string,
-    rows: Record<string, unknown>[],
-    whereColumns: string[],
-    helpers: RendererDialectDmlHelpers,
-  ): string;
-}
-
-export interface RendererDialectDdl {
-  getColumnTypeDdl?(column: DdlColumnInfo, helpers: RendererDialectDdlHelpers): string;
-
-  getColumnDefinitionDdl(column: DdlColumnInfo, helpers: RendererDialectDdlHelpers): string;
+  getColumnDefinitionDdl(column: DdlColumnInfo, helpers: StructureDialectDdlHelpers): string;
 
   getConstraintCommentDdl(
     tableName: string,
     constraintName: string,
     comment: string | undefined,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getColumnCommentDdl(
     tableName: string,
     columnName: string,
     comment: string | undefined,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getTableCommentDdl(
     tableName: string,
     comment: string | undefined,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getRenameTableDdl(
     schema: string | undefined,
     table: string,
     newTable: string,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getCreateTableDdl(
     tableName: string,
     columns: DdlColumnInfo[],
     restrictions: DdlRestrictionInfo[],
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getPostCreateTableRestrictionsDdl(
     tableName: string,
     restrictions: DdlRestrictionInfo[],
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string[];
 
   getAddColumnDdl(
     tableName: string,
     column: DdlColumnInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
     restrictions?: DdlRestrictionInfo[],
   ): string[];
 
   getPostCreateRestrictionAddColumnDdl(
     tableName: string,
     column: DdlColumnInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string[];
 
   getDropColumnDdl(
     tableName: string,
     columnName: string,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getDropAutoIncrementDdl?(
     tableName: string,
     column: DdlColumnInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getDropConstraintDdl(
     tableName: string,
     constraint: DdlRestrictionInfo | DdlReferenceInfo | string,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getDropIndexDdl(
     schema: string | undefined,
     table: string,
     indexName: string,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getRestrictionDefinitionDdl(
     restriction: DdlRestrictionInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getCreateRestrictionDdl(
     tableName: string,
     restriction: DdlRestrictionInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getCreateConstraintFromDefinitionDdl(
@@ -192,50 +152,40 @@ export interface RendererDialectDdl {
     constraintName: string,
     definition: string,
     comment: string | undefined,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getCreateIndexDdl(
     schema: string | undefined,
     table: string,
     index: DdlIndexInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getCreateReferenceDdl(
     tableName: string,
     reference: DdlReferenceInfo,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string;
 
   getChangeColumnDdl(
     tableName: string,
     column: DdlColumnChange,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string[];
 
   getPostCreateRestrictionChangeColumnDdl(
     tableName: string,
     column: DdlColumnChange,
-    helpers: RendererDialectDdlHelpers,
+    helpers: StructureDialectDdlHelpers,
   ): string[];
 }
 
-export interface RendererDialect {
-  id: Dialect;
-  label: string;
-  editorDialect: Dialect;
-  defaultPort?: number;
-  connectionMode?: 'network' | 'file' | 'react-native-bridge';
-  supportsSsl?: boolean;
-  supportsSchemas: boolean;
-  supportsFunctions: boolean;
-  supportsAutoIncrement: boolean;
-  canUseAutoIncrement?(dataType: string): boolean;
+
+import type { StructureColumn } from '@shared/types/databaseDdl';
+export interface StructureColumnChange extends StructureColumn { original: StructureColumn }
+export interface StructureDialect {
   quoteIdent(value: string): string;
-  getQualifiedName(schema: string | undefined, name: string): string;
-  commonColumnTypes: string[];
-  indexMethods?: string[];
-  dml: RendererDialectDml;
-  ddl: RendererDialectDdl;
+  getQualifiedName(schema: string | undefined, table: string): string;
+  ddl: StructureDialectDdl;
 }

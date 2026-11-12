@@ -18,7 +18,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
-import { generateTriggersDdl } from '@renderer/database/ddl';
+import { formatStructureDefinitions } from '@renderer/stores/TableInfo/ddl';
 import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
 
 interface ITriggersProps {
@@ -40,7 +40,7 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
       tableContext: state.tableContext,
     })),
   );
-  const { idConnection: id_connection, schema, table, dialect } = tableContext;
+  const { idConnection: id_connection, schema, table } = tableContext;
   const handleFunctionCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedTriggers, setSelectedTriggers] = React.useState<ITriggerInfo[]>([]);
@@ -54,7 +54,11 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
       {
         text: t('modal.generateDdl'),
         onClick: () => {
-          setDdlSql(generateTriggersDdl(selectedTriggers));
+          const byKey = new Map(tableStore.getState().triggers.map(item => [getTriggerSelectionKey(item), item]));
+          const selected = selectedTriggers.map(item => byKey.get(getTriggerSelectionKey(item))).filter(Boolean);
+          const sql = formatStructureDefinitions(selected.map(item => ({ name: item.trigger_name, sql: item.trigger_definition })));
+          if (!sql) return;
+          setDdlSql(sql);
           setShowDdlModal(true);
         },
       },
@@ -141,7 +145,7 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
   });
 
   React.useEffect(() => {
-    loadTableTriggers(id_connection, { schema, table });
+    loadTableTriggers(id_connection, { schema, table }, true);
   }, [id_connection, loadTableTriggers, schema, table]);
 
   React.useEffect(() => {
@@ -159,7 +163,6 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
       <ModalGenerateDDL
         show={showDdlModal}
         sql={ddlSql}
-        dialect={dialect}
         onClose={() => setShowDdlModal(false)}
       />
 

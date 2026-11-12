@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { IEditorRef } from '@renderer/components/Editor';
 import type { ISortDirection } from '@renderer/components/Table/dtos';
@@ -25,7 +25,7 @@ interface QueryExecutionOptions {
   refEditor: React.RefObject<IEditorRef>;
   results: Pick<
     ReturnType<typeof useQueryResults>,
-    'resultActiveTabId' | 'querysResultData' | 'makeNewTabResult' | 'makeUpdateResultTab'
+    'resultActiveTabId' | 'querysResultData' | 'beginResultExecution' | 'getResultExecution'
   >;
 }
 
@@ -43,7 +43,9 @@ export const useQueryExecution = ({
       runExplainSql: state.runExplainSql,
     })),
   );
-  const { resultActiveTabId: activeTabId, querysResultData, makeNewTabResult, makeUpdateResultTab } = results;
+  const { resultActiveTabId: activeTabId, querysResultData, beginResultExecution, getResultExecution } = results;
+  const pendingQueryIdsRef = React.useRef(new Set<string>());
+  const editorExecutionRef = React.useRef<object | undefined>(undefined);
   const {
     cancelingQueryIds,
     forgetCanceledQuery,
@@ -55,17 +57,29 @@ export const useQueryExecution = ({
   const executeQuery = async (params: IExecuteQueryParams) => {
     const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
     const preparedQuery = prepareQueryVariables(query, variableValues);
+    const previous = activeTabId ? querysResultData.get(activeTabId) : undefined;
+    const columnTypes = !forceNewTab && !openNewTab && getResultExecution(activeTabId)?.isCurrent() && previous?.type === 'SELECT' &&
+      prepareQueryVariables(previous.query, previous.variableValues) === preparedQuery
+      ? previous.columns_info?.map(({ name, type }) => ({ name, type })) : undefined;
     const queryExecutionId = generateHash();
 
-    const updateTabResultData =
+    const execution = beginResultExecution(
       !forceNewTab && !openNewTab && activeTabId
-        ? makeUpdateResultTab(activeTabId)
-        : makeNewTabResult({
+        ? { idTab: activeTabId, queryExecutionId }
+        : { queryExecutionId, data: {
             query,
             variableValues,
             type: 'SELECT',
             date_run: new Date().toISOString(),
-          });
+          } },
+    );
+    if (!execution) return;
+    const updateTabResultData = execution.update;
+    const editorExecution = {};
+    editorExecutionRef.current = editorExecution;
+    const editor = refEditor.current;
+    const editorValue = editor?.getValue?.();
+    pendingQueryIdsRef.current.add(queryExecutionId);
 
     updateTabResultData({
       type: 'SELECT',
@@ -73,17 +87,20 @@ export const useQueryExecution = ({
       variableValues,
       loading: true,
       queryExecutionId,
+      resultRevision: queryExecutionId,
       date_run: new Date().toISOString(),
     });
 
     try {
-      refEditor.current.setMarkers([]);
+      editor?.setMarkers([]);
 
       const [
         { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, { queryExecutionId });
+      ] = await runSql(id_connection, preparedQuery, { queryExecutionId, ...(columnTypes?.length ? { columnTypes } : {}) });
 
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
         );
@@ -108,7 +125,9 @@ export const useQueryExecution = ({
         queryExecutionId: undefined,
       });
     } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
         );
@@ -126,18 +145,24 @@ export const useQueryExecution = ({
         queryExecutionId: undefined,
       });
 
+      if (editorExecutionRef.current !== editorExecution || !editor ||
+        refEditor.current !== editor || editor.getValue?.() !== editorValue) return;
+
       const errorOffset = getQueryErrorOffset(error);
 
       if (errorOffset === undefined) return;
 
       const editorQueryStartOffset = params.editorOffset || 0;
-      const errorPosition = refEditor.current.getPositionAt(editorQueryStartOffset + errorOffset);
-      const endPosition = refEditor.current.getPositionAt(editorQueryStartOffset + query.length);
+      const errorPosition = editor.getPositionAt(editorQueryStartOffset + errorOffset);
+      const endPosition = editor.getPositionAt(editorQueryStartOffset + query.length);
 
       if (!errorPosition || !endPosition) return;
 
-      refEditor.current.setMarkers([makeQueryErrorMarker(message, errorPosition, endPosition)]);
-      refEditor.current.setPosition(errorPosition);
+      editor.setMarkers([makeQueryErrorMarker(message, errorPosition, endPosition)]);
+      editor.setPosition(errorPosition);
+    } finally {
+      pendingQueryIdsRef.current.delete(queryExecutionId);
+      forgetCanceledQuery(queryExecutionId);
     }
   };
 
@@ -147,7 +172,7 @@ export const useQueryExecution = ({
     const dialectId = dialect;
     const queryExecutionId = generateHash();
 
-    const updateTabResultData = makeNewTabResult({
+    const execution = beginResultExecution({ queryExecutionId, data: {
       query,
       variableValues,
       type: 'EXPLAIN',
@@ -157,12 +182,17 @@ export const useQueryExecution = ({
         dialect: dialectId,
         originalQuery: query,
       },
-    });
+    } });
+    if (!execution) return;
+    const updateTabResultData = execution.update;
+    editorExecutionRef.current = {};
+    pendingQueryIdsRef.current.add(queryExecutionId);
 
     updateTabResultData({
       type: 'EXPLAIN',
       loading: true,
       queryExecutionId,
+      resultRevision: queryExecutionId,
       date_run: new Date().toISOString(),
     });
 
@@ -171,15 +201,18 @@ export const useQueryExecution = ({
         queryExecutionId,
       });
 
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
         );
         return;
       }
 
+      const { explainAnalysis, ...resultData } = result;
       updateTabResultData({
-        ...result,
+        ...resultData,
         type: 'EXPLAIN',
         query,
         variableValues,
@@ -188,10 +221,13 @@ export const useQueryExecution = ({
         explain: {
           dialect: dialectId,
           originalQuery: query,
+          analysis: explainAnalysis,
         },
       });
     } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
         );
@@ -206,6 +242,9 @@ export const useQueryExecution = ({
         loading: false,
         queryExecutionId: undefined,
       });
+    } finally {
+      pendingQueryIdsRef.current.delete(queryExecutionId);
+      forgetCanceledQuery(queryExecutionId);
     }
   };
 
@@ -214,6 +253,8 @@ export const useQueryExecution = ({
 
     if (!tab?.loading || !tab.queryExecutionId) return;
 
+    const execution = getResultExecution(idTab, tab.queryExecutionId);
+    if (!execution || !pendingQueryIdsRef.current.has(tab.queryExecutionId)) return;
     markQueryCanceling(tab.queryExecutionId);
 
     let canceled = false;
@@ -221,24 +262,29 @@ export const useQueryExecution = ({
     try {
       canceled = await cancelRunSql(id_connection, tab.queryExecutionId);
 
-      if (canceled) {
-        makeUpdateResultTab(idTab)(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
+      if (canceled && execution.isCurrent()) {
+        execution.update(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
       }
     } finally {
-      if (!canceled) forgetCanceledQuery(tab.queryExecutionId);
+      if (!canceled || !pendingQueryIdsRef.current.has(tab.queryExecutionId)) forgetCanceledQuery(tab.queryExecutionId);
       removeCancelingQueryId(tab.queryExecutionId);
     }
   };
 
   const refreshResultSqlTab = async (idTab: string) => {
     const tab = querysResultData.get(idTab);
-    const updateTabResultData = makeUpdateResultTab(idTab);
+    if (!tab) return;
     const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
     const queryExecutionId = generateHash();
+    const execution = beginResultExecution({ idTab, queryExecutionId });
+    if (!execution) return;
+    const updateTabResultData = execution.update;
+    pendingQueryIdsRef.current.add(queryExecutionId);
 
     updateTabResultData({
       loading: true,
       queryExecutionId,
+      resultRevision: queryExecutionId,
       date_run: new Date().toISOString(),
     });
 
@@ -250,7 +296,9 @@ export const useQueryExecution = ({
         queryExecutionId,
       });
 
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
         return;
       }
@@ -275,7 +323,9 @@ export const useQueryExecution = ({
         captureRows: true,
       });
     } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
         return;
       }
@@ -289,6 +339,9 @@ export const useQueryExecution = ({
         loading: false,
         queryExecutionId: undefined,
       });
+    } finally {
+      pendingQueryIdsRef.current.delete(queryExecutionId);
+      forgetCanceledQuery(queryExecutionId);
     }
   };
 
@@ -297,12 +350,15 @@ export const useQueryExecution = ({
 
     if (!lastTabResult || lastTabResult.loading || !lastTabResult.auto_paginated) return;
 
-    const updateTabResultData = makeUpdateResultTab(idTab);
-
     const query = lastTabResult.query;
     const preparedQuery = prepareQueryVariables(query, lastTabResult.variableValues);
     const newPage = (lastTabResult.page || 1) + 1;
+    const columnTypes = getResultExecution(idTab)?.isCurrent() ? lastTabResult.columns_info?.map(({ name, type }) => ({ name, type })) : undefined;
     const queryExecutionId = generateHash();
+    const execution = beginResultExecution({ idTab, queryExecutionId });
+    if (!execution) return;
+    const updateTabResultData = execution.update;
+    pendingQueryIdsRef.current.add(queryExecutionId);
 
     updateTabResultData({
       loading: true,
@@ -316,10 +372,13 @@ export const useQueryExecution = ({
       ] = await runSql(id_connection, preparedQuery, {
         page: newPage,
         orderBy: lastTabResult.orderBy,
+        columnTypes,
         queryExecutionId,
       });
 
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), {
             query,
@@ -347,7 +406,9 @@ export const useQueryExecution = ({
         queryExecutionId: undefined,
       });
     } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), {
             query,
@@ -366,6 +427,9 @@ export const useQueryExecution = ({
         loading: false,
         queryExecutionId: undefined,
       });
+    } finally {
+      pendingQueryIdsRef.current.delete(queryExecutionId);
+      forgetCanceledQuery(queryExecutionId);
     }
   };
 
@@ -378,14 +442,19 @@ export const useQueryExecution = ({
     if (!tab || tab.loading) return;
 
     const orderBy = getNextSort(tab.orderBy, columnName, sortType);
-    const updateTabResultData = makeUpdateResultTab(idTab);
     const preparedQuery = prepareQueryVariables(tab.query, tab.variableValues);
+    const columnTypes = getResultExecution(idTab)?.isCurrent() ? tab.columns_info?.map(({ name, type }) => ({ name, type })) : undefined;
     const queryExecutionId = generateHash();
+    const execution = beginResultExecution({ idTab, queryExecutionId });
+    if (!execution) return;
+    const updateTabResultData = execution.update;
+    pendingQueryIdsRef.current.add(queryExecutionId);
 
     updateTabResultData({
       loading: true,
       orderBy,
       queryExecutionId,
+      resultRevision: queryExecutionId,
       date_run: new Date().toISOString(),
     });
 
@@ -395,10 +464,13 @@ export const useQueryExecution = ({
       ] = await runSql(id_connection, preparedQuery, {
         page: 1,
         orderBy,
+        columnTypes,
         queryExecutionId,
       });
 
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
         return;
       }
@@ -422,13 +494,18 @@ export const useQueryExecution = ({
         queryExecutionId: undefined,
       });
     } catch (error) {
-      if (wasQueryCanceled(queryExecutionId)) {
+      const canceled = wasQueryCanceled(queryExecutionId);
+      if (!execution.isCurrent()) return;
+      if (canceled) {
         updateTabResultData(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
         return;
       }
 
       const message = formatQueryErrorMessage(error, t('common.unknownErrorNoDot'));
       updateTabResultData({ type: 'ERROR', message, loading: false, queryExecutionId: undefined });
+    } finally {
+      pendingQueryIdsRef.current.delete(queryExecutionId);
+      forgetCanceledQuery(queryExecutionId);
     }
   };
 

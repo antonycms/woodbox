@@ -1,10 +1,11 @@
+import { serializeInitialWhere } from '@renderer/database/tableFilters';
 import { useEffect } from 'react';
 import { writeStorageValue } from '@renderer/utils/storage';
 import {
   APP_TABS_SESSION_STORAGE_KEY,
-  IAppTab,
-  IAppTabGroup,
-  IAppTabsSession,
+  type IAppTab,
+  type IAppTabGroup,
+  type IAppTabsSession,
 } from '@renderer/stores/AppTab/types';
 
 export const useSaveTabsOnStorage = (
@@ -23,7 +24,8 @@ export const useSaveTabsOnStorage = (
 
       const { id, groupId, title, subtitle, unsaved, data } = tab;
 
-      serializableTabs.push({ id, groupId, title, subtitle, unsaved, data });
+      serializableTabs.push({ id, groupId, title, subtitle, unsaved, data: data.type === 'table-info'
+        ? { ...data, initialWhere: serializeInitialWhere(data.initialWhere) } : data });
     }
 
     const nextActiveTabId = serializableTabs.some((tab) => tab.id === activeTabId)

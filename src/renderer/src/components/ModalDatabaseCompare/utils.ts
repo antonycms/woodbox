@@ -1,3 +1,4 @@
+import type { ConnectionPresentation } from '@renderer/stores/Workspace/types';
 import type { DatabaseObjectType, IFunctionDb, ITable } from '@shared/types/database';
 import type { DatabaseCompareSelectableObject, ObjectGroup } from './types';
 
@@ -88,3 +89,9 @@ export const getObjectDisplayName = (object: DatabaseCompareSelectableObject) =>
 
   return `${object.name}(${object.functionIdentityArguments})`;
 };
+
+export const getCompareSchemaSupport = (
+  sourceConnectionId: string | undefined,
+  targetConnectionId: string | undefined,
+  presentations: ReadonlyMap<string, ConnectionPresentation>,
+) => presentations.get(sourceConnectionId || targetConnectionId)?.capabilities?.supports_schemas === true;

@@ -1,3 +1,5 @@
+import structureDdl from '../structure/ddl/mysql';
+import { mysqlFilterColumns } from '../tableFilters/columns';
 import type { FieldPacket, ResultSetHeader } from 'mysql2';
 import { quoteMysqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
 import type { DatabaseRow, SerializedRunSqlResult } from '@shared/types/database';
@@ -129,12 +131,59 @@ const getMysqlTypeName = (field: FieldPacket & { extendedTypeName?: string; type
 };
 
 const mysql: DatabaseDialectAdapter = {
+  structureDdl,
   id: 'mysql',
+  indexMethods: ['BTREE', 'HASH'],
+  columnEditing: {
+    canUseAutoIncrement: (dataType) =>
+      ['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint'].includes(
+        dataType.trim().toLowerCase().split(/[\s(]/)[0],
+      ),
+  },
+  commonColumnTypes: [
+    'varchar',
+    'text',
+    'int',
+    'bigint',
+    'tinyint',
+    'boolean',
+    'decimal',
+    'date',
+    'datetime',
+    'timestamp',
+    'json',
+  ],
+  staticColumnTypes: [
+    'bigint', 'blob', 'boolean', 'char', 'date', 'datetime', 'decimal', 'double',
+    'float', 'int', 'json', 'longtext', 'mediumtext', 'text', 'time', 'timestamp',
+    'tinyint', 'varchar',
+  ],
+  connectionDescriptor: {
+    label: 'MySQL',
+    mode: 'network',
+    defaultPort: 3306,
+    supportsSsl: true,
+  },
   client: 'mysql2',
   queries,
   // Fail closed for case-variant self-joins on any lower_case_table_names mode.
   queryIdentifierRules: { caseInsensitive: true },
   quoteIdentifier,
+  getTableFilterColumns: mysqlFilterColumns,
+  rowChangesInsertBindingBudget: 10_000,
+  resolveRowChangeTable: async (instance, { schema, table }) => {
+    const qualified = schema ? `${quoteIdentifier(schema)}.${quoteIdentifier(table)}` : quoteIdentifier(table);
+    const definition = getRows<{ definition?: string }>(await instance.raw(`SHOW CREATE TABLE ${qualified}`))[0]?.definition;
+    if (definition && /^CREATE\s+TEMPORARY\s+TABLE\b/i.test(definition)) {
+      throw new Error('O salvamento guiado de tabelas temporárias MySQL não está disponível. Use o editor SQL.');
+    }
+    const rows = await instance('information_schema.TABLES')
+      .select('TABLE_SCHEMA as schema', 'TABLE_NAME as table')
+      .whereRaw('TABLE_SCHEMA = COALESCE(?, DATABASE())', [schema ?? null])
+      .where('TABLE_NAME', table);
+    if (rows.length !== 1) throw new Error('Não foi possível identificar a tabela de forma inequívoca.');
+    return { schema: String(rows[0].schema), table: String(rows[0].table) };
+  },
   getConnectionConfig: (config) => ({
     host: config.host,
     port: config.port,

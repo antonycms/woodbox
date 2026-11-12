@@ -8,7 +8,18 @@ import { getTablesFromQuerySql } from '@renderer/utils/sql';
 import { getCaptureRowHash } from '../utils/queryResult';
 import type { IDataMakeTabResult, IDataUpdateabResult, IQueryResult } from '../dtos';
 
-export const useQueryResults = () => {
+interface ResultExecution {
+  queryExecutionId: string;
+  isCurrent: () => boolean;
+  update: (params: IDataUpdateabResult) => void;
+}
+
+type BeginResultExecutionParams = { queryExecutionId: string } & (
+  | { idTab: string; data?: never }
+  | { idTab?: never; data: IDataMakeTabResult }
+);
+
+export const useQueryResults = (idConnection: string) => {
   const t = useI18nStore((state) => state.t);
   const [resultActiveTabId, setResultActiveTabId] = React.useState<string>(null);
 
@@ -17,13 +28,21 @@ export const useQueryResults = () => {
   const [querysResultData, setQuerysResultData] = React.useState<Map<React.Key, IQueryResult>>(
     new Map(),
   );
+  const tabIdsRef = React.useRef(new Set<string>());
+  const scopeRef = React.useRef({ idConnection, active: true, executions: new Map<string, ResultExecution>() });
+  if (scopeRef.current.idConnection !== idConnection) {
+    scopeRef.current = { idConnection, active: true, executions: new Map() };
+  }
+  const scope = scopeRef.current;
 
-  const makeUpdateResultTab = React.useCallback((idTab: string) => {
+  const makeUpdateResultTab = React.useCallback((idTab: string, isCurrent: () => boolean = () => true) => {
     const updateTabResultData = (params: IDataUpdateabResult) => {
+      if (!isCurrent() || !tabIdsRef.current.has(idTab)) return;
       setQuerysResultData((prevState) => {
+        if (!isCurrent() || !prevState.has(idTab)) return prevState;
         const newMap = new Map(prevState);
 
-        const prevTabResultData = prevState.get(idTab) || ({} as IQueryResult);
+        const prevTabResultData = prevState.get(idTab);
         const { captureRows, ...dataParams } = params;
         const queryChanged =
           typeof dataParams.query === 'string' &&
@@ -107,21 +126,44 @@ export const useQueryResults = () => {
         queryExecutionId,
       };
 
+      tabIdsRef.current.add(idTab);
       setTabsResult((prevState) => [...prevState, tab]);
       setResultActiveTabId(idTab);
+      setQuerysResultData((prevState) => new Map(prevState).set(idTab, queryResultData));
 
-      const updateTabResultData = makeUpdateResultTab(idTab);
-
-      updateTabResultData(queryResultData);
-
-      return updateTabResultData;
+      return idTab;
     },
-    [makeUpdateResultTab, tabsResult.length],
+    [tabsResult.length],
   );
+
+  const beginResultExecution = (params: BeginResultExecutionParams): ResultExecution | undefined => {
+    if (scopeRef.current !== scope || !scope.active ||
+      (params.idTab !== undefined && !tabIdsRef.current.has(params.idTab))) return;
+    const idTab = params.idTab ?? makeNewTabResult(params.data);
+    const isCurrent = () => scopeRef.current === scope && scope.active &&
+      tabIdsRef.current.has(idTab) && scope.executions.get(idTab) === execution;
+    const execution: ResultExecution = {
+      queryExecutionId: params.queryExecutionId,
+      isCurrent,
+      update: makeUpdateResultTab(idTab, isCurrent),
+    };
+    scope.executions.set(idTab, execution);
+    return execution;
+  };
+
+  const getResultExecution = (idTab: string, queryExecutionId?: string) => {
+    const execution = scope.executions.get(idTab);
+    return execution && (queryExecutionId === undefined || execution.queryExecutionId === queryExecutionId)
+      && execution.isCurrent() ? execution : undefined;
+  };
 
   const removeTabResult = React.useCallback(
     (idTab: string | string[]) => {
       const tabsIdToRemove = new Set(Array.isArray(idTab) ? idTab : [idTab]);
+      for (const id of tabsIdToRemove) {
+        tabIdsRef.current.delete(id);
+        scopeRef.current.executions.delete(id);
+      }
 
       setTabsResult((prevState) => {
         if (resultActiveTabId && tabsIdToRemove.has(resultActiveTabId)) {
@@ -239,12 +281,20 @@ export const useQueryResults = () => {
     [removeTabResult],
   );
 
+  React.useEffect(() => {
+    scope.active = true;
+    return () => {
+      scope.active = false;
+      scope.executions.clear();
+    };
+  }, [scope]);
+
   return {
     resultActiveTabId,
     tabsResult,
     querysResultData,
-    makeUpdateResultTab,
-    makeNewTabResult,
+    beginResultExecution,
+    getResultExecution,
     removeTabResult,
     toggleResultCapture,
     clearResultCapture,

@@ -13,7 +13,7 @@ const withoutConnectionsInfo = (info: Map<string, IConnectionInfo>, ids: string[
 };
 
 // Tokens are private: they coordinate requests without notifying subscribers.
-const connectionInfoRequests = new Map<string, symbol>();
+const connectionInfoRequests = new Map<string, Promise<void>>();
 const pendingConnectionClosures = new Map<string, number>();
 
 const invalidateConnectionInfoWhile = async (ids: string[], operation: () => Promise<unknown>) => {
@@ -42,21 +42,36 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
   scripts: [],
   connections: [],
   connectionTypes: [],
+  dialectCatalog: { status: 'idle' },
   connectionsInfo: new Map(),
 
   initialize: runPromiseOnce(async () => {
     await get().refresh();
   }),
 
+  loadDialectCatalog: runPromiseOnce(async () => {
+    set({ dialectCatalog: { status: 'loading' } });
+    try {
+      const items = await window.api.database.getDialects();
+      set({
+        dialectCatalog: { status: 'ready', items },
+        connectionTypes: items.map((item) => item.id),
+      });
+    } catch (error: unknown) {
+      set({ dialectCatalog: { status: 'error' } });
+      throw error;
+    }
+  }),
+
   refresh: async () => {
-    const [projects, scripts, connections, connectionTypes] = await Promise.all([
+    const [projects, scripts, connections] = await Promise.all([
       window.api.projects.list(),
       window.api.scripts.list(),
       window.api.connections.list(),
-      window.api.database.getDialects(),
+      get().loadDialectCatalog(),
     ]);
 
-    set({ projects, scripts, connections, connectionTypes });
+    set({ projects, scripts, connections });
   },
 
   addProject: async (data) => {
@@ -178,27 +193,29 @@ export const useWorkspaceStore = create<IWorkspaceStore>()((set, get) => ({
 
   testConnection: (...args) => window.api.connections.test(...args),
 
-  loadConnectionInfo: async (id) => {
-    if (pendingConnectionClosures.has(id)) return;
+  loadConnectionInfo: (id, force = false) => {
+    if (pendingConnectionClosures.has(id)) return Promise.resolve();
+    const pending = connectionInfoRequests.get(id);
+    if (pending && !force) return pending;
 
-    const request = Symbol();
-    connectionInfoRequests.set(id, request);
-
-    try {
-      const connectionInfo = await window.api.connections.getInfo(id);
+    const request = Promise.resolve().then(() => {
+      if (connectionInfoRequests.get(id) !== request || pendingConnectionClosures.has(id)) return;
+      return window.api.connections.getInfo(id);
+    }).then((connectionInfo) => {
       if (connectionInfoRequests.get(id) !== request) return;
-
       set((state) => {
         const connectionsInfo = new Map(state.connectionsInfo);
         if (connectionInfo) connectionsInfo.set(id, connectionInfo);
         else connectionsInfo.delete(id);
         return { connectionsInfo };
       });
-    } catch (error) {
+    }).catch((error) => {
       if (connectionInfoRequests.get(id) === request) throw error;
-    } finally {
+    }).finally(() => {
       if (connectionInfoRequests.get(id) === request) connectionInfoRequests.delete(id);
-    }
+    });
+    connectionInfoRequests.set(id, request);
+    return request;
   },
 
   reloadConnectionInfo: async (id) => {

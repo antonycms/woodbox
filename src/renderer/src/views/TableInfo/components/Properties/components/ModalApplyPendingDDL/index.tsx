@@ -8,7 +8,6 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import { copyToClipboard } from '@renderer/utils/methods';
-import { getRendererDialect, type RendererDialect } from '@renderer/database/dialects';
 import styles from './styles.module.css';
 
 const ModalApplyPendingDDL = ({
@@ -17,7 +16,6 @@ const ModalApplyPendingDDL = ({
   applying,
   onClose,
   onApply,
-  dialect = getRendererDialect(),
 }: IModalApplyPendingDDLProps) => {
   const t = useI18nStore((state) => state.t);
   const { modal: colors } = useThemeStore((state) => state.activeTheme);
@@ -45,7 +43,6 @@ const ModalApplyPendingDDL = ({
       <div className={styles.editorContainer}>
         <Editor
           hidePreview
-          dialect={dialect.editorDialect}
           language="sql"
           value={editableSql}
           onChange={setEditableSql}
@@ -105,6 +102,5 @@ interface IModalApplyPendingDDLProps {
   sql: string;
   applying?: boolean;
   onClose?(): void;
-  dialect?: RendererDialect;
   onApply?(sql: string): void;
 }

@@ -15,18 +15,12 @@ import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import { useForm } from '@renderer/hooks/useForm';
 import TableInfo from '@renderer/views/TableInfo';
-import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalRenameTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalRenameTableProps) => {
     const t = useI18nStore((state) => state.t);
-    const runSql = useDatabaseStore((state) => state.runSql);
-    const { loadConnectionInfo, connections } = useWorkspaceStore(
-      useShallow((state) => ({
-        loadConnectionInfo: state.loadConnectionInfo,
-        connections: state.connections,
-      })),
-    );
+    const executeObjectCommand = useDatabaseStore((state) => state.executeObjectCommand);
+    const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
     const { addTab, getTab } = useAppTabStore(
       useShallow((state) => ({ addTab: state.addTab, getTab: state.getTab })),
     );
@@ -34,13 +28,6 @@ export const ModalRenameTable = React.memo(
     const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
-    const dialect = React.useMemo(
-      () =>
-        getRendererDialect(
-          connections.find((connection) => connection.id === idConnection)?.dialect,
-        ),
-      [connections, idConnection],
-    );
     const { register, handleSubmit, setState, reset } = useForm<IDataRenameTable>({ name: '' });
 
     const close = React.useCallback(() => {
@@ -61,14 +48,9 @@ export const ModalRenameTable = React.memo(
       try {
         setLoading(true);
 
-        await runSql(
-          idConnection,
-          `ALTER TABLE ${dialect.getQualifiedName(schema, table)} RENAME TO ${dialect.quoteIdent(
-            name,
-          )};`,
-        );
+        await executeObjectCommand(idConnection, { type: 'rename-table', schema, table, newName: name });
 
-        await loadConnectionInfo(idConnection);
+        await loadConnectionInfo(idConnection, true);
 
         const oldTabId = `${idConnection}_${schema}_${table}`;
         const newTabId = `${idConnection}_${schema}_${name}`;

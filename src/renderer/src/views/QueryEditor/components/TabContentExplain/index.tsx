@@ -12,7 +12,7 @@ import { CancelIcon, ExportIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
 import type { IQueryResult } from '../../dtos';
 import styles from './styles.module.css';
-import { analyzeExplain, getRawPlanJson, type ExplainRow } from './utils';
+import { presentExplainAnalysis, getRawPlanJson } from './utils';
 
 import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiTable from '~icons/mdi/table';
@@ -35,9 +35,9 @@ export const TabContentExplain = ({
   const [viewMode, setViewMode] = React.useState<'analysis' | 'json'>('analysis');
   const [now, setNow] = React.useState(Date.now());
 
-  const analysis = React.useMemo(() => analyzeExplain(data, t), [data, t]);
+  const analysis = React.useMemo(() => presentExplainAnalysis(data.explain?.analysis, t), [data.explain?.analysis, t]);
   const rawPlanJson = React.useMemo(
-    () => getRawPlanJson((data.rows || []) as ExplainRow[]),
+    () => getRawPlanJson(data.rows || []),
     [data.rows],
   );
 

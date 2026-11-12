@@ -101,7 +101,7 @@ const References = ({ tableStore }: IReferencesProps) => {
   );
 
   React.useEffect(() => {
-    loadTableUsedAsReference(id_connection, { schema, table });
+    loadTableUsedAsReference(id_connection, { schema, table }, true);
   }, [id_connection, loadTableUsedAsReference, schema, table]);
 
   return (

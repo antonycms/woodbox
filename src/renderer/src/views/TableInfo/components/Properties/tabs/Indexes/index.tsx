@@ -1,3 +1,4 @@
+import { resolvePropertySelection } from '../../hooks/resolvePropertySelection';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
@@ -24,7 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
-import { generateIndexesDdl } from '@renderer/database/ddl';
+import { formatStructureDefinitions } from '@renderer/stores/TableInfo/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { IIndexInfoSerialized } from './dtos';
 import {
@@ -82,7 +83,7 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
       tableContext: state.tableContext,
     })),
   );
-  const { idConnection: id_connection, schema, table, mode, dialect } = tableContext;
+  const { idConnection: id_connection, schema, table, mode } = tableContext;
 
   const [contextMenuPosition, setContextMenuPosition] = React.useState<IContextMenuPosition>();
   const [selectedIndexes, setSelectedIndexes] = React.useState<IIndexInfo[]>([]);
@@ -234,6 +235,8 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
 
   const handleAddPendingIndex = React.useCallback(
     (index: IPendingIndexCreate) => {
+      const { indexes, pendingIndexes } = tableStore.getState();
+      const allIndexes = [...indexes, ...pendingIndexes];
       const indexName = index.index_name.toLowerCase();
       const alreadyExists = allIndexes.some((item) => item.index_name.toLowerCase() === indexName);
 
@@ -292,7 +295,11 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
       {
         text: t('modal.generateDdl'),
         onClick: () => {
-          setDdlSql(generateIndexesDdl(selectedIndexes));
+          const state = tableStore.getState();
+          const selected = resolvePropertySelection(selectedIndexes, state.indexes, state.pendingIndexes, (row) => row.index_name);
+          const sql = formatStructureDefinitions(selected.map(item => ({ name: item.index_name, sql: item.index_definition })));
+          if (!sql) return;
+          setDdlSql(sql);
           setShowDdlModal(true);
         },
       },
@@ -318,7 +325,7 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
   React.useEffect(() => {
     if (mode === 'create') return;
 
-    loadTableIndexes(id_connection, { schema, table });
+    loadTableIndexes(id_connection, { schema, table }, true);
   }, [id_connection, loadTableIndexes, mode, schema, table]);
 
   React.useEffect(() => {
@@ -342,15 +349,13 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
       <ModalGenerateDDL
         show={showDdlModal}
         sql={ddlSql}
-        dialect={dialect}
         onClose={() => setShowDdlModal(false)}
       />
 
       <ModalNewIndex
         show={showNewIndexModal}
-        table={table}
+        tableStore={tableStore}
         columns={availableColumnNames}
-        indexMethods={dialect.indexMethods || []}
         onClose={() => setShowNewIndexModal(false)}
         onAdd={handleAddPendingIndex}
       />

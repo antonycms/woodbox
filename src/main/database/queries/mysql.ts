@@ -5,7 +5,8 @@ const quoteIdent = (value: string) => `\`${String(value).replace(/`/g, '``')}\``
 const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 const sqlQuoteIdent = (sqlExpression: string) =>
   `CONCAT('\`', REPLACE(${sqlExpression}, '\`', '\`\`'), '\`')`;
-const getTableName = ({ table }: ITableWithSchema) => quoteIdent(table);
+const getTableName = ({ schema, table }: ITableWithSchema) =>
+  schema ? `${quoteIdent(schema)}.${quoteIdent(table)}` : quoteIdent(table);
 
 const getTables = () => /* sql */ `
   SELECT
@@ -41,14 +42,6 @@ const getTableColumns = ({ table, schema }: ITableWithSchema) => /* sql */ `
   WHERE table_schema = ${schema ? quoteLiteral(schema) : 'DATABASE()'}
   AND table_name = ${quoteLiteral(table)}
   ORDER BY ordinal_position;
-`;
-
-const getColumnTypes = () => /* sql */ `
-  SELECT 'bigint' AS name UNION SELECT 'blob' UNION SELECT 'boolean' UNION SELECT 'char'
-  UNION SELECT 'date' UNION SELECT 'datetime' UNION SELECT 'decimal' UNION SELECT 'double'
-  UNION SELECT 'float' UNION SELECT 'int' UNION SELECT 'json' UNION SELECT 'longtext'
-  UNION SELECT 'mediumtext' UNION SELECT 'text' UNION SELECT 'time' UNION SELECT 'timestamp'
-  UNION SELECT 'tinyint' UNION SELECT 'varchar';
 `;
 
 const getTableReferences = ({ table }: ITableWithSchema) => /* sql */ `
@@ -129,9 +122,9 @@ const getTableRestrictions = ({ table, schema }: ITableWithSchema) => /* sql */ 
   ORDER BY tc.constraint_name;
 `;
 
-const getTotalRowsCountInTable = ({ table, where }: ITableWithSchema & { where?: string }) => {
+const getTotalRowsCountInTable = ({ table, schema, where }: ITableWithSchema & { where?: string }) => {
   const whereQuery = where ? `WHERE ${where}` : '';
-  return /* sql */ `SELECT count(*) as total_rows FROM ${getTableName({ table })} ${whereQuery};`;
+  return /* sql */ `SELECT count(*) as total_rows FROM ${getTableName({ schema, table })} ${whereQuery};`;
 };
 
 const serializeOrderBy = (orderBy?: IOrderBy[]) => {
@@ -147,6 +140,7 @@ const serializeOrderBy = (orderBy?: IOrderBy[]) => {
 
 const selectWithOffset = ({
   table,
+  schema,
   where,
   orderBy,
   limit = 50,
@@ -159,6 +153,7 @@ const selectWithOffset = ({
   return /* sql */ `
     SELECT * FROM ${getTableName({
       table,
+      schema,
     })} ${whereQuery} ${orderByQuery} LIMIT ${limit} OFFSET ${offset};
   `;
 };
@@ -236,7 +231,6 @@ const cancelProcess = (pid: number) => /* sql */ `KILL QUERY ${pid};`;
 export default {
   getTables,
   getTableColumns,
-  getColumnTypes,
   getTableReferences,
   getTableUsedAsReference,
   getTotalRowsCountInTable,

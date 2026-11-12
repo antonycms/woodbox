@@ -1,41 +1,8 @@
-import type { RendererDialect } from '@renderer/database/dialects';
-import type {
-  DmlUpdateRow,
-  RendererDialectDdlHelpers,
-  RendererDialectDmlHelpers,
-} from '@renderer/database/dialects/types';
-import type {
-  IColumnInfo,
-  IColumnReferenceInfo,
-  IColumnRestrictionsInfo,
-  IIndexInfo,
-  ITriggerInfo,
-} from '@shared/types/database';
-import type {
-  IPendingColumnChange,
-  IPendingColumnCreate,
-  IPendingColumnDrop,
-  IPendingIndexCreate,
-  IPendingIndexDrop,
-  IPendingReferenceCreate,
-  IPendingReferenceDrop,
-  IPendingRestrictionCreate,
-  IPendingRestrictionDrop,
-} from '@renderer/database/ddl/types';
+import type { StructureColumn, StructureReference, StructureRestriction, StructureIndex } from '@shared/types/databaseDdl';
+import type { StructureDialect, StructureDialectDdlHelpers, StructureColumnChange } from './types';
+import { quoteLiteral } from './syntax';
 
-export const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
-
-const serializeDmlValue = (value: unknown) => {
-  if (value === null || value === undefined) return 'NULL';
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
-  if (value instanceof Date) return quoteLiteral(value.toISOString());
-  if (typeof value === 'object') return quoteLiteral(JSON.stringify(value));
-
-  return quoteLiteral(String(value));
-};
-
-const getTableName = (dialect: RendererDialect, schema: string | undefined, table: string) => {
+const getTableName = (dialect: StructureDialect, schema: string | undefined, table: string) => {
   return dialect.getQualifiedName(schema, table);
 };
 
@@ -45,7 +12,7 @@ const normalizeOptionalString = (value?: string) => {
   return trimmedValue || undefined;
 };
 
-export const getColumnType = (column: IColumnInfo) => {
+export const getColumnType = (column: StructureColumn) => {
   if (column.character_maximum_length) {
     return `${column.data_type}(${column.character_maximum_length})`;
   }
@@ -61,9 +28,14 @@ export const getColumnType = (column: IColumnInfo) => {
   return column.data_type;
 };
 
-const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => {
-  const helpers: RendererDialectDdlHelpers = {
+export const getDdlHelpers = (dialect: StructureDialect, restrictions: StructureRestriction[] = []): StructureDialectDdlHelpers => {
+  const autoKeys = new Map<string, StructureRestriction>();
+  for (const restriction of restrictions) {
+    if (['primary_key', 'unique_key'].includes(restriction.constraint_type) && restriction.column_names?.length === 1 && !autoKeys.has(restriction.column_names[0])) autoKeys.set(restriction.column_names[0], restriction);
+  }
+  const helpers: StructureDialectDdlHelpers = {
     quoteIdent: dialect.quoteIdent,
+    getAutoIncrementRestriction: name => autoKeys.get(name),
     quoteLiteral,
     getColumnType: (column) =>
       dialect.ddl.getColumnTypeDdl?.(column, helpers) || getColumnType(column),
@@ -75,64 +47,14 @@ const getDdlHelpers = (dialect: RendererDialect): RendererDialectDdlHelpers => {
   return helpers;
 };
 
-const getDmlHelpers = (dialect: RendererDialect): RendererDialectDmlHelpers => {
-  const helpers: RendererDialectDmlHelpers = {
-    quoteIdent: dialect.quoteIdent,
-    quoteLiteral,
-    getTableName: (schema, table) => getTableName(dialect, schema, table),
-    serializeValue: serializeDmlValue,
-    serializeWhereValue: (column, value) => {
-      if (value === null || value === undefined) return `${dialect.quoteIdent(column)} IS NULL`;
-
-      return `${dialect.quoteIdent(column)} = ${helpers.serializeValue(value)}`;
-    },
-  };
-
-  return helpers;
+const groupByConstraintName = (references: StructureReference[] = []) => {
+  const groups: Record<string, StructureReference[]> = Object.create(null);
+  for (const reference of references) (groups[reference.constraint_name] ||= []).push(reference);
+  return groups;
 };
 
-export const generateInsertDdl = (
-  dialect: RendererDialect,
-  schema: string | undefined,
-  table: string,
-  rows: Record<string, unknown>[],
-  columnOrder?: string[],
-) => {
-  return dialect.dml.getInsertDml(schema, table, rows, columnOrder, getDmlHelpers(dialect));
-};
-
-export const generateUpdateDdl = (
-  dialect: RendererDialect,
-  schema: string | undefined,
-  table: string,
-  rows: DmlUpdateRow[],
-  whereColumns: string[],
-) => {
-  return dialect.dml.getUpdateDml(schema, table, rows, whereColumns, getDmlHelpers(dialect));
-};
-
-export const generateDeleteDdl = (
-  dialect: RendererDialect,
-  schema: string | undefined,
-  table: string,
-  rows: Record<string, unknown>[],
-  whereColumns: string[],
-) => {
-  return dialect.dml.getDeleteDml(schema, table, rows, whereColumns, getDmlHelpers(dialect));
-};
-
-const groupByConstraintName = (references: IColumnReferenceInfo[] = []) => {
-  return references.reduce<Record<string, IColumnReferenceInfo[]>>((groups, reference) => {
-    const group = groups[reference.constraint_name] || [];
-
-    return { ...groups, [reference.constraint_name]: [...group, reference] };
-  }, {});
-};
-
-const getConstraintColumns = (references: IColumnReferenceInfo[]) => {
-  return [...references]
-    .sort((a, b) => (a.constraint_order || 0) - (b.constraint_order || 0))
-    .map((reference) => reference.column_name);
+const getConstraintColumns = (references: StructureReference[]) => {
+  return references.map((reference) => reference.column_name);
 };
 
 const hasAllColumnsSelected = (constraintColumns: string[], selectedColumns: Set<string>) => {
@@ -142,10 +64,10 @@ const hasAllColumnsSelected = (constraintColumns: string[], selectedColumns: Set
 };
 
 const getReferencesDdlBySelectedColumns = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
   selectedColumnNames: Set<string>,
-  references: IColumnReferenceInfo[] = [],
+  references: StructureReference[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
 
@@ -169,10 +91,10 @@ const getReferencesDdlBySelectedColumns = (
 };
 
 const getRestrictionsDdlBySelectedColumns = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
   selectedColumnNames: Set<string>,
-  restrictions: IColumnRestrictionsInfo[] = [],
+  restrictions: StructureRestriction[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
 
@@ -195,14 +117,14 @@ const getRestrictionsDdlBySelectedColumns = (
 };
 
 export const generateReferencesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
-  references: IColumnReferenceInfo[],
+  references: StructureReference[],
 ) => {
   const tableName = getTableName(dialect, schema, table);
   const helpers = getDdlHelpers(dialect);
-  const constraints = new Map<string, IColumnReferenceInfo>();
+  const constraints = new Map<string, StructureReference>();
 
   references.forEach((reference) => {
     if (!constraints.has(reference.constraint_name)) {
@@ -227,10 +149,10 @@ export const generateReferencesDdl = (
 };
 
 export const generateRestrictionsDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
-  restrictions: IColumnRestrictionsInfo[],
+  restrictions: StructureRestriction[],
 ) => {
   const tableName = getTableName(dialect, schema, table);
   const helpers = getDdlHelpers(dialect);
@@ -251,56 +173,29 @@ export const generateRestrictionsDdl = (
     .join('\n\n');
 };
 
-export const generateTriggersDdl = (triggers: ITriggerInfo[]) => {
-  return triggers
-    .map((trigger) => trigger.trigger_definition)
-    .filter((definition): definition is string => !!definition)
-    .map((definition) => (definition.endsWith(';') ? definition : `${definition};`))
-    .join('\n\n');
-};
-
-export const generateIndexesDdl = (indexes: IIndexInfo[]) => {
-  return indexes
-    .map((index) => index.index_definition)
-    .filter((definition): definition is string => !!definition)
-    .map((definition) => (definition.endsWith(';') ? definition : `${definition};`))
-    .join('\n\n');
-};
-
-const isAutoIncrementColumnRestriction = (
-  columns: IColumnInfo[],
-  restriction: IColumnRestrictionsInfo,
+const getRestrictionsWithoutAutoIncrementColumnConstraint = <T extends StructureRestriction>(
+  columns: StructureColumn[], restrictions: T[] = [],
 ) => {
-  if (!['primary_key', 'unique_key'].includes(restriction.constraint_type || '')) return false;
-  if (restriction.column_names?.length !== 1) return false;
-
-  return columns.some(
-    (column) => column.is_auto_increment && column.column_name === restriction.column_names?.[0],
-  );
-};
-
-const getRestrictionsWithoutAutoIncrementColumnConstraint = <T extends IColumnRestrictionsInfo>(
-  columns: IColumnInfo[],
-  restrictions: T[] = [],
-) => {
-  return restrictions.filter(
-    (restriction) => !isAutoIncrementColumnRestriction(columns, restriction),
-  );
+  const auto = new Set(columns.filter((column) => column.is_auto_increment).map((column) => column.column_name));
+  return restrictions.filter((restriction) => !(
+    ['primary_key', 'unique_key'].includes(restriction.constraint_type || '') &&
+    restriction.column_names?.length === 1 && auto.has(restriction.column_names[0])
+  ));
 };
 
 export const generateAddColumnsDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
-  columns: IColumnInfo[],
+  columns: StructureColumn[],
   options?: {
-    references?: IColumnReferenceInfo[];
-    restrictions?: IColumnRestrictionsInfo[];
+    references?: StructureReference[];
+    restrictions?: StructureRestriction[];
   },
 ) => {
   if (!columns?.length) return '';
 
-  const helpers = getDdlHelpers(dialect);
+  const helpers = getDdlHelpers(dialect, options?.restrictions);
   const tableName = getTableName(dialect, schema, table);
   const selectedColumnNames = new Set(columns.map((column) => column.column_name));
   const restrictions = options?.restrictions || [];
@@ -331,16 +226,16 @@ export const generateAddColumnsDdl = (
 };
 
 const getDropConstraintsDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
   droppedColumnNames: Set<string>,
   options: {
-    restrictions?: IColumnRestrictionsInfo[];
-    references?: IColumnReferenceInfo[];
+    restrictions?: StructureRestriction[];
+    references?: StructureReference[];
   },
 ) => {
   const helpers = getDdlHelpers(dialect);
-  const constraintsToDrop = new Map<string, IColumnRestrictionsInfo | IColumnReferenceInfo>();
+  const constraintsToDrop = new Map<string, StructureRestriction | StructureReference>();
 
   options.restrictions?.forEach((restriction) => {
     const hasDroppedColumn = restriction.column_names?.some((columnName) =>
@@ -362,9 +257,9 @@ const getDropConstraintsDdl = (
 };
 
 const getDropAutoIncrementDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  columns: IColumnInfo[] = [],
+  columns: StructureColumn[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
 
@@ -377,12 +272,12 @@ const getDropAutoIncrementDdl = (
 };
 
 const getDropPendingRestrictionsDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  restrictions: IPendingRestrictionDrop[] = [],
+  restrictions: StructureRestriction[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
-  const constraints = new Map<string, IPendingRestrictionDrop>();
+  const constraints = new Map<string, StructureRestriction>();
 
   restrictions.forEach((restriction) => constraints.set(restriction.constraint_name, restriction));
 
@@ -392,12 +287,12 @@ const getDropPendingRestrictionsDdl = (
 };
 
 const getDropPendingReferencesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  references: IPendingReferenceDrop[] = [],
+  references: StructureReference[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
-  const constraints = new Map<string, IPendingReferenceDrop>();
+  const constraints = new Map<string, StructureReference>();
 
   references.forEach((reference) => constraints.set(reference.constraint_name, reference));
 
@@ -407,10 +302,10 @@ const getDropPendingReferencesDdl = (
 };
 
 const getDropPendingIndexesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
-  indexes: IPendingIndexDrop[] = [],
+  indexes: StructureIndex[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
   const indexNames = [...new Set(indexes.map((index) => index.index_name))];
@@ -421,9 +316,9 @@ const getDropPendingIndexesDdl = (
 };
 
 const getCreateRestrictionsDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  restrictions: IPendingRestrictionCreate[] = [],
+  restrictions: StructureRestriction[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
 
@@ -433,12 +328,13 @@ const getCreateRestrictionsDdl = (
 };
 
 const getCreateIndexesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
-  indexes: IPendingIndexCreate[] = [],
-  availableColumns: IColumnInfo[] = [],
+  indexes: StructureIndex[] = [],
+  availableColumns: StructureColumn[] = [],
 ) => {
+  if (!indexes.length) return [];
   const helpers = getDdlHelpers(dialect);
   const columnsByName = new Map(availableColumns.map((column) => [column.column_name, column]));
 
@@ -450,7 +346,7 @@ const getCreateIndexesDdl = (
         ...index,
         columns: (index.column_names || [])
           .map((columnName) => columnsByName.get(columnName))
-          .filter((column): column is IColumnInfo => !!column),
+          .filter((column): column is StructureColumn => !!column),
       },
       helpers,
     ),
@@ -458,9 +354,9 @@ const getCreateIndexesDdl = (
 };
 
 const getCreateReferencesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  references: IPendingReferenceCreate[] = [],
+  references: StructureReference[] = [],
 ) => {
   const helpers = getDdlHelpers(dialect);
 
@@ -470,15 +366,15 @@ const getCreateReferencesDdl = (
 };
 
 const getChangeColumnDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   tableName: string,
-  column: IPendingColumnChange,
+  column: StructureColumnChange,
 ) => {
   return dialect.ddl.getChangeColumnDdl(tableName, column, getDdlHelpers(dialect));
 };
 
 const generateRenameTableDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
   newTable: string | undefined,
@@ -491,14 +387,14 @@ const generateRenameTableDdl = (
 };
 
 export const generateCreateTableDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
   changes: {
-    columns: IPendingColumnCreate[];
-    indexes?: IPendingIndexCreate[];
-    restrictions?: IPendingRestrictionCreate[];
-    references?: IPendingReferenceCreate[];
+    columns: StructureColumn[];
+    indexes?: StructureIndex[];
+    restrictions?: StructureRestriction[];
+    references?: StructureReference[];
     tableComment?: string;
   },
 ) => {
@@ -532,22 +428,22 @@ export const generateCreateTableDdl = (
 };
 
 export const generatePendingTableChangesDdl = (
-  dialect: RendererDialect,
+  dialect: StructureDialect,
   schema: string | undefined,
   table: string,
   changes: {
-    columns: IPendingColumnCreate[];
-    droppedColumns?: IPendingColumnDrop[];
-    changedColumns?: IPendingColumnChange[];
-    indexes?: IPendingIndexCreate[];
-    droppedIndexes?: IPendingIndexDrop[];
-    restrictions?: IPendingRestrictionCreate[];
-    droppedRestrictions?: IPendingRestrictionDrop[];
-    references?: IPendingReferenceCreate[];
-    droppedReferences?: IPendingReferenceDrop[];
-    existingRestrictions?: IColumnRestrictionsInfo[];
-    existingReferences?: IColumnReferenceInfo[];
-    existingColumns?: IColumnInfo[];
+    columns: StructureColumn[];
+    droppedColumns?: StructureColumn[];
+    changedColumns?: StructureColumnChange[];
+    indexes?: StructureIndex[];
+    droppedIndexes?: StructureIndex[];
+    restrictions?: StructureRestriction[];
+    droppedRestrictions?: StructureRestriction[];
+    references?: StructureReference[];
+    droppedReferences?: StructureReference[];
+    existingRestrictions?: StructureRestriction[];
+    existingReferences?: StructureReference[];
+    existingColumns?: StructureColumn[];
     newTableName?: string;
     tableComment?: string;
     tableCommentChanged?: boolean;
@@ -581,19 +477,19 @@ export const generatePendingTableChangesDdl = (
     return '';
   }
 
-  const helpers = getDdlHelpers(dialect);
+  const helpers = getDdlHelpers(dialect, restrictions);
   const tableName = getTableName(dialect, schema, table);
   const finalTableName = getTableName(dialect, schema, newTableName || table);
   const droppedColumnNames = new Set(droppedColumns.map((column) => column.column_name));
   const changedColumnsByOriginalName = new Map(
-    changedColumns.map((column) => [column.__originalColumn.column_name, column]),
+    changedColumns.map((column) => [column.original.column_name, column]),
   );
-  const availableColumns = [
+  const availableColumns = indexes.length ? [
     ...(changes.existingColumns || [])
       .filter((column) => !droppedColumnNames.has(column.column_name))
       .map((column) => changedColumnsByOriginalName.get(column.column_name) || column),
     ...columns,
-  ];
+  ] : [];
   const dropColumnStatements = droppedColumns.map((column) =>
     dialect.ddl.getDropColumnDdl(tableName, column.column_name, helpers),
   );

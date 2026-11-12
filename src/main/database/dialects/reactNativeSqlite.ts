@@ -1,3 +1,4 @@
+import structureDdl from '../structure/ddl/sqlite';
 import type { IReactNativeBridgeConnectionConfig } from '@shared/types/reactNativeBridge';
 import sqlite from './sqlite';
 import type { DatabaseDialectAdapter } from '../types';
@@ -6,6 +7,7 @@ import ClientSqlite3 from 'knex/lib/dialects/sqlite3';
 import { executeReactNativeBridgeSql, resolveReactNativeBridgeSqlSession } from '../../reactNativeBridge/service';
 
 const transactionSessions = new WeakMap<object, string>();
+const readRequestSessions = new WeakMap<object, string>();
 
 interface ReactNativeBridgeConnection {
   reactNativeBridge?: IReactNativeBridgeConnectionConfig;
@@ -44,7 +46,7 @@ class ReactNativeBridgeSqliteClient extends ClientSqlite3 {
 
     // Knex creates a dedicated client per transaction, including BEGIN/ROLLBACK.
     // A disconnected transaction must fail, never continue on another app session.
-    let sessionId = transactionSessions.get(this);
+    let sessionId = this.transacting ? transactionSessions.get(this) : readRequestSessions.get(connection);
     if (this.transacting && !sessionId) {
       sessionId = (await resolveReactNativeBridgeSqlSession(connection.reactNativeBridge!)).id;
       transactionSessions.set(this, sessionId);
@@ -66,9 +68,28 @@ class ReactNativeBridgeSqliteClient extends ClientSqlite3 {
 
 const reactNativeSqlite: DatabaseDialectAdapter = {
   ...sqlite,
+  structureDdl,
   id: 'react-native-sqlite',
+  connectionDescriptor: {
+    label: 'React Native SQLite',
+    mode: 'react-native-bridge',
+    supportsSsl: false,
+  },
   client: ReactNativeBridgeSqliteClient as ClientSqlite3,
   getConnectionConfig: ({ reactNativeBridge }) => ({ reactNativeBridge }),
+  beginTableFilterRequest: async (connection) => {
+    const config = (connection as ReactNativeBridgeConnection).reactNativeBridge;
+    if (!config) throw new Error('Adapter React Native Bridge não informado.');
+    const session = await resolveReactNativeBridgeSqlSession(config);
+    readRequestSessions.set(connection, session.id);
+    return () => { readRequestSessions.delete(connection); };
+  },
+  resolveRowChangeTable: async (instance, table) => {
+    const client = instance.client as ReactNativeBridgeSqliteClient;
+    const session = await resolveReactNativeBridgeSqlSession(client.connectionSettings.reactNativeBridge!);
+    const target = await sqlite.resolveRowChangeTable(instance, table);
+    return { ...target, identity: session.id };
+  },
 };
 
 export default reactNativeSqlite;

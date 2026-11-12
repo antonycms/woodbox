@@ -1,6 +1,15 @@
 import type { TranslationKey } from './en';
 
 export const ptBR: Record<TranslationKey, string> = {
+  'filter.invalidValue': 'O valor não pode ser usado neste filtro.',
+  'filter.insufficientPrecision': 'O valor não tem precisão suficiente para esta comparação.',
+  'filter.unsupportedValue': 'Este tipo de valor não é suportado neste filtro.',
+  'filter.unresolvedTarget': 'Não foi possível identificar a coluna do filtro.',
+  'filter.unknownContext': 'Não foi possível determinar uma comparação fiel para esta coluna.',
+  'filter.unfaithfulPreview': 'Não foi possível gerar um WHERE equivalente para este valor.',
+  'filter.contextChanged': 'O contexto da coluna mudou. Gere o filtro novamente ou edite o WHERE.',
+  'filter.invalidFilter': 'O filtro salvo é inválido ou tem uma versão não suportada.',
+
   'onboarding.welcome': 'Boas-vindas ao Woodbox',
   'onboarding.progress': 'Etapas da configuração inicial',
   'onboarding.skip': 'Pular tour',
@@ -271,6 +280,10 @@ export const ptBR: Record<TranslationKey, string> = {
   'common.clear': 'Limpar',
   'common.connected': 'Conectado',
   'common.loading': 'Carregando...',
+  'connectionForm.catalogError': 'Não foi possível carregar os bancos disponíveis.',
+  'connectionForm.catalogEmpty': 'Nenhum banco disponível para configurar uma conexão.',
+  'connectionForm.retryCatalog': 'Tentar novamente',
+  'connectionForm.dialectUnavailable': 'O banco selecionado não está disponível no catálogo.',
   'common.selectAll': 'Selecionar todas',
   'message.confirmProductionQuery':
     'Esta conexão está marcada como Produção. Confirme para executar uma operação que pode alterar dados ou estrutura.',
@@ -640,6 +653,14 @@ export const ptBR: Record<TranslationKey, string> = {
   'column.autoIncrementNeedsIndex': 'Auto incremento precisa de índice.',
   'column.autoIncrementNeedsIndexDescription': 'Marque Chave Primária ou Única.',
   'column.autoIncrementNoDefault': 'Auto incremento não permite valor padrão.',
+  'ddl.definition': 'Definição',
+  'ddl.blocked': 'Não foi possível gerar todo o lote.',
+  'ddl.missingDefinition': 'Não há definição disponível para {{name}}.',
+  'ddl.incompleteIntent': 'A intenção de {{name}} está incompleta.',
+  'ddl.unsupported': 'Não foi possível representar {{name}} ({{field}}) neste gerador.',
+  'dml.previewError': 'Não foi possível preparar o INSERT.',
+  'ddl.previewError': 'Não foi possível preparar o DDL.',
+  'column.retryDraft': 'Tentar novamente',
   'column.newColumn': 'Nova coluna',
   'column.referencedTable': 'Tabela referenciada',
   'column.referencedColumn': 'Coluna referenciada',
@@ -658,6 +679,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'foreignKey.filter': 'Filtrar chaves por nome, coluna ou tabela (separe por vírgula)',
   'foreignKey.referencedTable': 'Tabela Referenciada',
   'foreignKey.referencedColumn': 'Coluna Referenciada',
+  'index.methodsUnavailable': 'Não foi possível carregar as opções de índice.',
   'index.columnOrder': 'Ordem das colunas',
   'index.uniqueSingle': 'Único',
   'reference.singular': 'Referência',
@@ -731,6 +753,7 @@ export const ptBR: Record<TranslationKey, string> = {
   'query.joinUpdateOnly': 'Resultados com múltiplas tabelas ou aliases permitem apenas atualizar registros existentes.',
   'query.rowMissingPk':
     'A linha alterada não possui informação da PK "{{pk}}" no resultado da query.',
+  'table.missingRowIdentityColumn': 'A linha não possui um valor válido para identificar a coluna "{{column}}". Recarregue os dados antes de salvar.',
   'import.importedRows': '{{count}} linha(s) importada(s).',
   'import.fileSummary': '{{fileName}} — {{rows}} linha(s), {{columns}} coluna(s).',
   'file.choose': 'Escolher arquivo',

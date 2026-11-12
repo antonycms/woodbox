@@ -14,7 +14,6 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { IDefineSQlAutocompleteParams, defineSQlAutocomplete } from './autocompleteDefault';
 import { getCurrentQuerySqlFromContentRange } from '@renderer/utils/sql';
-import type { Dialect } from '@shared/types/connections';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 
 const Editor = ({
@@ -761,7 +760,6 @@ export default Editor;
 export interface IEditorProps {
   ref?: React.Ref<IEditorRef>;
   language?: 'sql' | 'json';
-  dialect?: Dialect;
   value?: string;
   initialValue?: string;
   scroll?: IScroll;

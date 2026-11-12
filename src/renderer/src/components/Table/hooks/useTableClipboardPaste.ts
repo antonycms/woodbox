@@ -1,7 +1,7 @@
 import React from 'react';
-import type { IColumn, TableCellEditValue, TableMutableRef, TableSerializedRow } from '../dtos';
+import type { IColumn, TableEditBatch, TableCellEditValue, TableMutableRef, TableSerializedRow } from '../dtos';
 import styles from '../styles.module.css';
-import { parseClipboardGrid } from '../utils';
+import { captureTableCellEdit, parseClipboardGrid } from '../utils';
 
 interface UseTableClipboardPasteParams<Row = Record<string, unknown>> {
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -13,6 +13,7 @@ interface UseTableClipboardPasteParams<Row = Record<string, unknown>> {
   columnsRef: TableMutableRef<IColumn<Row>[]>;
   onEditRow?(indexRow: number, attribute: string, value: unknown, rowKey?: React.Key): void;
   onEditNewRow?(rowKey: React.Key, attribute: string, value: unknown): void;
+  onEditBatch?(batch: TableEditBatch): void;
   onSaveCell(
     indexRow: number,
     rowColumnKey: string,
@@ -32,6 +33,7 @@ export const useTableClipboardPaste = <Row>({
   columnsRef,
   onEditRow,
   onEditNewRow,
+  onEditBatch,
   onSaveCell,
 }: UseTableClipboardPasteParams<Row>) => {
   const handlePaste = React.useCallback(
@@ -59,7 +61,7 @@ export const useTableClipboardPaste = <Row>({
 
         if (!row || row.__is_removed || !column?.editable || value === undefined) return [];
         if (column.type === 'autocomplete' && !column.dataAutocomplete?.includes(value)) return [];
-        if (row.__is_new_row ? !onEditNewRow : !onEditRow) return [];
+        if (!onEditBatch && (row.__is_new_row ? !onEditNewRow : !onEditRow)) return [];
 
         return [{ rowIndex, attribute: String(column.attribute), value }];
       });
@@ -67,6 +69,11 @@ export const useTableClipboardPaste = <Row>({
       if (!edits.length) return;
 
       event.preventDefault();
+      if (onEditBatch) {
+        onEditBatch({ source: 'paste', edits: edits.map(({ rowIndex, attribute, value }) =>
+          captureTableCellEdit(serializedRowsRef.current[rowIndex], rowIndex, attribute, value)) });
+        return;
+      }
       edits.forEach(({ rowIndex, attribute, value }) => {
         onSaveCell(rowIndex, attribute, value, true, false);
       });
@@ -77,6 +84,7 @@ export const useTableClipboardPaste = <Row>({
       cellEditingKeyRef,
       columnsRef,
       onEditNewRow,
+      onEditBatch,
       onEditRow,
       onSaveCell,
       selectedCellsRef,

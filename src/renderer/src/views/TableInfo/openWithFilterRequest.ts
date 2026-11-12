@@ -1,3 +1,4 @@
+import type { InitialWhere } from '@shared/types/database';
 import { create } from 'zustand';
 
 export type TableInfoOpenWithFilterRequest = {
@@ -5,7 +6,7 @@ export type TableInfoOpenWithFilterRequest = {
   idConnection: string;
   schema?: string;
   table: string;
-  initialWhere: string;
+  initialWhere?: InitialWhere;
 };
 
 type TableInfoOpenWithFilterRequestStore = {

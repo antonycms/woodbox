@@ -31,18 +31,17 @@ const Definition = ({ tableStore }: IDefinitionProps) => {
       tableContext: state.tableContext,
     })),
   );
-  const { idConnection: id_connection, schema, table, dialect } = tableContext;
+  const { idConnection: id_connection, schema, table } = tableContext;
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
 
   React.useEffect(() => {
-    loadTableDefinition(id_connection, { schema, table });
+    loadTableDefinition(id_connection, { schema, table }, true);
   }, [id_connection, loadTableDefinition, schema, table]);
 
   return (
     <>
       <div className={styles.editorContainer}>
         <Editor
-          dialect={dialect.editorDialect}
           language="sql"
           readonly
           value={loading.definition ? '' : definition}

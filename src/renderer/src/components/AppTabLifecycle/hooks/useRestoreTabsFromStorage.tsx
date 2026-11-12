@@ -1,3 +1,4 @@
+import { restoreInitialWhere } from '@renderer/database/tableFilters';
 import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { IAppTab } from '@renderer/stores/AppTab/types';
@@ -47,17 +48,20 @@ export const useRestoreTabsFromStorage = () => {
         }
 
         if (tab.data?.type === 'table-info') {
+          const initialWhere = restoreInitialWhere(tab.data);
+          const data = { ...tab.data, initialWhere };
+          Reflect.deleteProperty(data, 'initialFilter');
           const {
             id_connection,
             schema,
             table,
-            initialWhere,
             filterLocked,
             initialTab,
           } = tab.data;
 
           restoredTabs.push({
             ...tab,
+            data,
             title: `${schema ? `${schema}.` : ''}${table}`,
             component: () => (
               <TableInfo

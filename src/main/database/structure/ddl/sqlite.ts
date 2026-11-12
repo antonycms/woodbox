@@ -1,18 +1,16 @@
-import { quoteSqlIdentifier as quoteIdent } from '@shared/utils/sql';
-import type { RendererDialect, RendererDialectDdl } from './types';
-import { defaultDml } from './dml';
-import { getIndexColumnsDdl } from './utils';
+import type { StructureDialectDdl } from './types';
+import { getIndexColumnsDdl } from './syntax';
 
 
 const getDefaultSql = (
   value: string | undefined,
-  helpers: Parameters<RendererDialectDdl['getColumnDefinitionDdl']>[1],
+  helpers: Parameters<StructureDialectDdl['getColumnDefinitionDdl']>[1],
 ) => {
   const defaultValue = helpers.normalizeOptionalString(value);
   return defaultValue ? ` DEFAULT ${defaultValue}` : '';
 };
 
-const sqliteDdl: RendererDialectDdl = {
+const sqliteDdl: StructureDialectDdl = {
   getColumnDefinitionDdl(column, helpers) {
     const notNull = column.is_nullable ? '' : ' NOT NULL';
 
@@ -124,7 +122,7 @@ const sqliteDdl: RendererDialectDdl = {
   },
 
   getChangeColumnDdl(tableName, column, helpers) {
-    const originalColumnName = column.__originalColumn.column_name;
+    const originalColumnName = column.original.column_name;
     const currentColumnName = column.column_name;
 
     if (!currentColumnName || currentColumnName === originalColumnName) return [];
@@ -141,21 +139,4 @@ const sqliteDdl: RendererDialectDdl = {
   },
 };
 
-const sqlite: RendererDialect = {
-  id: 'sqlite',
-  label: 'SQLite',
-  editorDialect: 'sqlite',
-  connectionMode: 'file',
-  supportsSchemas: false,
-  supportsFunctions: false,
-  supportsAutoIncrement: false,
-  quoteIdent,
-  getQualifiedName: (schema, name) =>
-    schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
-  indexMethods: [],
-  commonColumnTypes: ['text', 'integer', 'real', 'numeric', 'blob'],
-  dml: defaultDml,
-  ddl: sqliteDdl,
-};
-
-export default sqlite;
+export default sqliteDdl;

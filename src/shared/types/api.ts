@@ -1,11 +1,15 @@
+import type { IRunExplainResult } from './databaseExplain';
+import type { PrepareStructureDdlRequest, PreparedStructureDdl } from './databaseDdl';
 import type * as Connections from './connections';
 import type * as Workspace from './workspace';
 import type * as Database from './database';
+import type { ColumnGridData } from './databaseStructure';
 import type * as Imports from './imports';
 import type * as AI from './ai';
 import type * as Bridge from './reactNativeBridge';
 import type * as Compare from './databaseCompare';
 import type * as Updates from './updates';
+import type { SaveRowChangesResult, RowChangesIntent } from './rowChanges';
 
 import type * as Preferences from './preferences';
 export type Unsubscribe = () => void;
@@ -16,10 +20,10 @@ export interface WoodboxApi {
   connections: {
     list: () => Promise<Connections.IConnectionPublic[]>;
     get: (id: string) => Promise<Connections.IConnectionPublic | undefined>;
-    add: (data: Connections.IConnectionConfig) => Promise<void>;
-    edit: (id: string, data: Connections.IConnectionCreate) => Promise<void>;
+    add: (data: Connections.IConnectionInput) => Promise<void>;
+    edit: (id: string, data: Connections.IConnectionCreateInput) => Promise<void>;
     remove: (id: string) => Promise<void>;
-    test: (data: Connections.IConnectionTest) => Promise<void>;
+    test: (data: Connections.IConnectionTestInput) => Promise<void>;
     close: (id: string) => Promise<void>;
     getInfo: (id: string) => Promise<Database.IConnectionInfo | null>;
     previewImport: (params: Imports.IImportConnectionsParams) => Promise<Imports.IImportConnectionsPreview>;
@@ -71,22 +75,27 @@ export interface WoodboxApi {
     logout: () => Promise<void>;
   };
   reactNativeBridge: {
-    getStatus: () => Promise<Bridge.ReactNativeBridgeStatus>;
+    getStatus: () => Promise<Bridge.ReactNativeBridgeConnectionStatus>;
     getSessions: () => Promise<Bridge.ReactNativeBridgeSessionInfo[]>;
-    start: (source?: string, options?: { host?: string; port?: number }) => Promise<Bridge.ReactNativeBridgeStatus>;
+    start: (source?: string, options?: { host?: string; port?: number }) => Promise<Bridge.ReactNativeBridgeConnectionStatus>;
     stop: (source?: string) => Promise<void>;
     onEvent: (listener: (data: Bridge.ReactNativeBridgeEvent) => void) => Unsubscribe;
     onSessionConnected: (listener: (data: Bridge.ReactNativeBridgeSessionInfo[]) => void) => Unsubscribe;
     onSessionDisconnected: (listener: (data: Bridge.ReactNativeBridgeSessionInfo[]) => void) => Unsubscribe;
   };
   database: {
-    getDialects: () => Promise<Connections.Dialect[]>;
+    getDialects: () => Promise<Database.IDatabaseDialectInfo[]>;
+    readInitialWhere: (connectionId: string, request: Database.ReadInitialWhereRequest) => Promise<Database.ReadInitialWhereResult>;
+    prepareInitialWhere: (connectionId: string, request: Database.PrepareInitialWhereRequest) => Promise<Database.PreparedInitialWhere>;
     getTableData: (connectionId: string, params: Database.IParamsGetTableData) => Promise<Database.IDataTable>;
-    getTableRowsCount: (connectionId: string, params: Omit<Database.IParamsGetTableData, 'page' | 'limit' | 'orderBy'>) => Promise<number>;
+    getTableRowsCount: (connectionId: string, params: Database.IParamsGetTableRowsCount) => Promise<number>;
     getQueryRowsCount: (connectionId: string, sql: string) => Promise<number>;
     getExportPreview: (connectionId: string, params: Pick<Database.IExportDataParams, 'source'>) => Promise<Database.IExportDataPreview>;
     getTableColumns: (connectionId: string, filters: TableFilters) => Promise<Database.IColumnInfo[]>;
-    getColumnTypes: (connectionId: string) => Promise<{ name: string }[]>;
+    getColumnGridData: (connectionId: string, filters: TableFilters) => Promise<ColumnGridData>;
+    prepareInsertDml: (request: Database.PrepareInsertDmlRequest) => Promise<string>;
+    prepareStructureDdl: (request: PrepareStructureDdlRequest) => Promise<PreparedStructureDdl>;
+    getColumnTypes: (connectionId: string) => Promise<Database.ColumnTypeSuggestionsResult>;
     getTableReferences: (connectionId: string, filters: TableFilters) => Promise<Database.IColumnReferenceInfo[]>;
     getTableUsedAsReference: (connectionId: string, filters: TableFilters) => Promise<Database.IColumnReferenceInfo[]>;
     getTableRestrictions: (connectionId: string, filters: TableFilters) => Promise<Database.IColumnRestrictionsInfo[]>;
@@ -94,10 +103,10 @@ export interface WoodboxApi {
     getTableIndexes: (connectionId: string, filters: TableFilters) => Promise<Database.IIndexInfo[]>;
     getTableTriggers: (connectionId: string, filters: TableFilters) => Promise<Database.ITriggerInfo[]>;
     getFunctionDefinition: (connectionId: string, filters: { schema: string; functionName: string; functionIdentityArguments?: string }) => Promise<{ definition: string }[]>;
+    executeObjectCommand: (connectionId: string, command: Database.DatabaseObjectCommand) => Promise<void>;
     runSql: (connectionId: string, sql: string, options?: Database.IOptionsRunSql) => Promise<Database.IRunSqlResult[]>;
-    updateQueryRows: (connectionId: string, updates: Database.QueryRowUpdate[]) => Promise<void>;
-    resolveQueryResultColumns: (connectionId: string, params: Database.IResolveQueryResultColumnsParams) => Promise<Database.SerializedRunSqlColumn[]>;
-    runExplainSql: (connectionId: string, sql: string, options?: Pick<Database.IOptionsRunSql, 'queryExecutionId'>) => Promise<Database.IRunSqlResult[]>;
+    saveRowChanges: (connectionId: string, intent: RowChangesIntent) => Promise<SaveRowChangesResult>;
+    runExplainSql: (connectionId: string, sql: string, options?: Pick<Database.IOptionsRunSql, 'queryExecutionId'>) => Promise<IRunExplainResult[]>;
     exportData: (connectionId: string, params: Database.IExportDataParams) => Promise<Database.IExportDataResult>;
     importTableData: (connectionId: string, params: Database.IImportTableDataParams) => Promise<Database.IImportTableDataResult>;
     cancelRunSql: (connectionId: string, queryExecutionId: string) => Promise<boolean>;

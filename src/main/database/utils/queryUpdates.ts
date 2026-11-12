@@ -1,4 +1,4 @@
-import type { QueryRowUpdate } from '../types/database';
+import type { QueryRowUpdate } from '../types';
 
 // Knex/drivers interpret question marks as placeholders even inside quoted
 // identifiers. Do not let placeholder escaping change the target identity.
@@ -31,7 +31,9 @@ export const mergeQueryUpdates = (
       ) {
         return { updates: [], conflict: column };
       }
-      previous.changes = { ...previous.changes, [column]: value };
+      Object.defineProperty(previous.changes, column, {
+        value, enumerable: true, configurable: true, writable: true,
+      });
     }
   }
   return { updates: [...merged.values()] };

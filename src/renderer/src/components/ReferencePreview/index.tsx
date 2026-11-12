@@ -1,5 +1,7 @@
+import { serializeInitialWhere } from '@renderer/database/tableFilters';
+import type { ReadInitialWhereResult, TableFilterColumnInfo } from '@shared/types/database';
+import { getTableFilterErrorMessage } from '@renderer/database/tableFilters';
 import { useShallow } from 'zustand/react/shallow';
-import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import { Button } from '@renderer/components/Button';
 import {
@@ -13,10 +15,8 @@ import Table, { type ITableContextMenuData } from '@renderer/components/Table';
 import { Text } from '@renderer/components/Text';
 import { useI18nStore } from '@renderer/stores/I18n';
 import type { IColumnReferenceInfo } from '@shared/types/database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useThemeStore } from '@renderer/stores/Theme';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
@@ -40,8 +40,8 @@ interface IReferencePreviewProps {
     schema: string,
     table: string,
     filterColumn: string,
-    filterValue: string,
-  ) => void;
+    filterValue: unknown,
+  ) => void | Promise<void>;
 }
 
 interface IReferenceHistoryItem {
@@ -54,6 +54,10 @@ interface IReferenceContextMenu {
   position: IContextMenuPosition;
 }
 
+interface PreviewColumn extends IColumn {
+  columnInfo: TableFilterColumnInfo;
+}
+
 const getTableName = (reference?: IColumnReferenceInfo) =>
   reference
     ? `${reference.reference_table_schema ? `${reference.reference_table_schema}.` : ''}${
@@ -61,15 +65,12 @@ const getTableName = (reference?: IColumnReferenceInfo) =>
       }`
     : '';
 
-const getReferenceKey = (reference: IColumnReferenceInfo, value: unknown) =>
-  [
-    reference.reference_table_schema,
-    reference.reference_table_name,
-    reference.reference_column_name,
-    String(value),
-  ].join('\0');
+const getReferenceKey = (connectionId: string, item?: IReferenceHistoryItem) => item
+  ? JSON.stringify([connectionId, item.reference.reference_table_schema, item.reference.reference_table_name,
+      serializeInitialWhere({ column: item.reference.reference_column_name, value: item.value })])
+  : '';
 
-const getTableKey = (schema: string, table: string) => [schema, table].join('\0');
+const getTableKey = (connectionId: string, schema: string, table: string) => [connectionId, schema, table].join('\0');
 
 const ReferencePreview = ({
   active,
@@ -84,19 +85,12 @@ const ReferencePreview = ({
     tableInfo: { data: theme },
   } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
-  const connections = useWorkspaceStore((state) => state.connections);
   const { openTableWithFilter } = useOpenTableTab();
-  const { getTableColumns, getTableData, getTableReferences } = useDatabaseStore(
+  const { readInitialWhere, getTableReferences } = useDatabaseStore(
     useShallow((state) => ({
-      getTableColumns: state.getTableColumns,
-      getTableData: state.getTableData,
+      readInitialWhere: state.readInitialWhere,
       getTableReferences: state.getTableReferences,
     })),
-  );
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(connections.find((connection) => connection.id === idConnection)?.dialect),
-    [connections, idConnection],
   );
 
   const [history, setHistory] = React.useState<IReferenceHistoryItem[]>([]);
@@ -105,22 +99,23 @@ const ReferencePreview = ({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const [rowsCache, setRowsCache] = React.useState(new Map<string, Record<string, unknown>>());
-  const [columnsCache, setColumnsCache] = React.useState(new Map<string, IColumn[]>());
+  const [columnsCache, setColumnsCache] = React.useState(new Map<string, PreviewColumn[]>());
   const [referencesCache, setReferencesCache] = React.useState(
     new Map<string, IColumnReferenceInfo[]>(),
   );
   const [contextMenu, setContextMenu] = React.useState<IReferenceContextMenu>();
 
+  const mounted = React.useRef(true);
+  React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const currentItem = history[historyIndex];
   const currentReference = currentItem?.reference;
   const currentValue = currentItem?.value;
   const currentTableKey = currentReference
-    ? getTableKey(currentReference.reference_table_schema, currentReference.reference_table_name)
+    ? getTableKey(idConnection, currentReference.reference_table_schema, currentReference.reference_table_name)
     : '';
-  const currentReferenceKey =
-    currentReference && currentValue !== null && currentValue !== undefined
-      ? getReferenceKey(currentReference, currentValue)
-      : '';
+  const currentReferenceKey = getReferenceKey(idConnection, currentItem);
+  const scope = React.useRef({ idConnection, currentItem, active });
+  scope.current = { idConnection, currentItem, active };
   const currentRow = currentReferenceKey ? rowsCache.get(currentReferenceKey) : undefined;
   const currentColumns = currentTableKey ? columnsCache.get(currentTableKey) || [] : [];
   const currentReferences = currentTableKey ? referencesCache.get(currentTableKey) || [] : [];
@@ -142,42 +137,34 @@ const ReferencePreview = ({
   }, [currentReference, currentRow]);
 
   const loadReferenceData = React.useCallback(async () => {
-    if (!active || !currentReference || !currentReferenceKey || loading || error) return;
+    if (!active || !currentReference || !currentItem || loading || error) return;
     if (rowsCache.has(currentReferenceKey) && columnsCache.has(currentTableKey)) return;
-
+    const requestScope = scope.current;
+    const isCurrent = () => mounted.current && scope.current.idConnection === requestScope.idConnection
+      && scope.current.currentItem === requestScope.currentItem && scope.current.active;
     setLoading(true);
     setError(undefined);
-
     try {
-      const escapedValue = String(currentValue).replace(/'/g, "''");
-      const where = `${dialect.quoteIdent(
-        currentReference.reference_column_name,
-      )} = '${escapedValue}'`;
-
-      const [columns, references, result] = await Promise.all([
-        columnsCache.has(currentTableKey)
-          ? Promise.resolve(undefined)
-          : getTableColumns(idConnection, {
-              schema: currentReference.reference_table_schema,
-              table: currentReference.reference_table_name,
-            }),
-        referencesCache.has(currentTableKey)
-          ? Promise.resolve(undefined)
-          : getTableReferences(idConnection, {
-              schema: currentReference.reference_table_schema,
-              table: currentReference.reference_table_name,
-            }),
-        rowsCache.has(currentReferenceKey)
-          ? Promise.resolve(undefined)
-          : getTableData(idConnection, {
-              schema: currentReference.reference_table_schema,
-              table: currentReference.reference_table_name,
-              page: 1,
-              limit: 1,
-              where,
-            }),
-      ]);
-
+      const target = {
+        schema: currentReference.reference_table_schema,
+        table: currentReference.reference_table_name,
+      };
+      const needsColumns = !columnsCache.has(currentTableKey);
+      const loadRow = async (): Promise<ReadInitialWhereResult> => {
+        const columnInfo = columnsCache.get(currentTableKey)
+          ?.find((column) => column.attribute === currentReference.reference_column_name)?.columnInfo;
+        const input = { ...target, column: currentReference.reference_column_name, value: currentItem.value,
+          ...(columnInfo ? { columnInfo } : {}) };
+        return readInitialWhere(idConnection, { ...input, page: 1, limit: 1, includeColumns: needsColumns });
+      };
+      const rowRequest = loadRow();
+      const referencesRequest = referencesCache.has(currentTableKey)
+        ? Promise.resolve(undefined)
+        : getTableReferences(idConnection, target);
+      const [result, references] = await Promise.all([rowRequest, referencesRequest]);
+      if (!isCurrent()) return;
+      if (result.error) throw result.error;
+      const columns = result.columns;
       if (columns) {
         const referenceColumns = references || [];
         const fkMap = new Map(
@@ -189,7 +176,10 @@ const ReferencePreview = ({
           nextState.set(
             currentTableKey,
             columns.map(
-              (column): IColumn => ({
+              (column): PreviewColumn => ({
+                columnInfo: { column_name: column.column_name, data_type: column.data_type,
+                  udt_name: column.udt_name, comparison_type: column.comparison_type,
+                  comparison_collation: column.comparison_collation },
                 label: column.column_name,
                 info: column.data_type,
                 attribute: column.column_name,
@@ -217,28 +207,12 @@ const ReferencePreview = ({
         });
       }
     } catch (error: unknown) {
-      setError(getErrorMessage(error) || t('reference.loadError'));
+      if (isCurrent()) setError(getTableFilterErrorMessage(error, t));
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
-  }, [
-    active,
-    columnsCache,
-    currentReference,
-    currentReferenceKey,
-    currentTableKey,
-    currentValue,
-    dialect,
-    getTableColumns,
-    getTableData,
-    getTableReferences,
-    idConnection,
-    t,
-    loading,
-    error,
-    referencesCache,
-    rowsCache,
-  ]);
+  }, [active, columnsCache, currentReference, currentItem, currentTableKey, currentReferenceKey, readInitialWhere,
+    getTableReferences, idConnection, t, loading, error, referencesCache, rowsCache]);
 
   const handleContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement, MouseEvent>, data: ITableContextMenuData) => {
@@ -277,7 +251,7 @@ const ReferencePreview = ({
   );
 
   const handleOpenReferencedTable = React.useCallback(
-    (attribute: string, value: unknown) => {
+    async (attribute: string, value: unknown) => {
       const reference = currentFkMap.get(attribute);
 
       if (!reference || value === null || value === undefined) return;
@@ -291,15 +265,15 @@ const ReferencePreview = ({
 
       const openReferencedTable = onOpenTable || openTableWithFilter;
 
-      openReferencedTable(
+      try { await openReferencedTable(
         idConnection,
         reference.reference_table_schema,
         reference.reference_table_name,
         reference.reference_column_name,
-        String(value),
-      );
+        value,
+      ); } catch (error) { setError(getTableFilterErrorMessage(error, t)); }
     },
-    [canOpenTable, currentFkMap, historyIndex, idConnection, onOpenTable, openTableWithFilter],
+    [canOpenTable, currentFkMap, historyIndex, idConnection, onOpenTable, openTableWithFilter, t],
   );
 
   React.useEffect(() => {
@@ -400,7 +374,6 @@ const ReferencePreview = ({
           </div>
         ) : viewMode === 'json' ? (
           <Editor
-            dialect={dialect.editorDialect}
             language="json"
             readonly
             hidePreview

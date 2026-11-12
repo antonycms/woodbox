@@ -1,7 +1,8 @@
 import React from 'react';
 import { ContextMenu, type IContextMenuOption } from '@renderer/components/ContextMenu';
-import { generateInsertDdl } from '@renderer/database/ddl';
-import type { RendererDialect } from '@renderer/database/dialects';
+import { useInsertDmlPreview } from '@renderer/hooks/useInsertDmlPreview';
+import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
+import type { Dialect } from '@shared/types/connections';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { copyToClipboard } from '@renderer/utils/methods';
 import type { IQueryResult } from '@renderer/views/QueryEditor/dtos';
@@ -9,20 +10,20 @@ import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Dat
 
 interface ResultContextMenuProps {
   contextMenuTable?: IContextMenuTable;
+  idConnection: string;
   data: IQueryResult;
-  dialect: RendererDialect;
+  dialect: Dialect;
   editable: boolean;
   singleResultTable?: NonNullable<IQueryResult['tables_info']>[number];
   onClose: () => void;
   onOpenExportModal: () => void;
   onSetSelectedCellsNull: () => void;
   onRemoveSelectedRows: () => void;
-  onSetDdlSql: (sql: string) => void;
-  onShowDdlModal: () => void;
 }
 
 export const ResultContextMenu = ({
   contextMenuTable,
+  idConnection,
   data,
   dialect,
   editable,
@@ -31,10 +32,12 @@ export const ResultContextMenu = ({
   onOpenExportModal,
   onSetSelectedCellsNull,
   onRemoveSelectedRows,
-  onSetDdlSql,
-  onShowDdlModal,
 }: ResultContextMenuProps) => {
   const t = useI18nStore((state) => state.t);
+  const preview = useInsertDmlPreview({
+    idConnection, policyId: dialect, schema: singleResultTable?.schema, table: singleResultTable?.name,
+    query: data.query, resultRevision: data.resultRevision, menu: contextMenuTable,
+  });
 
   const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
     return [
@@ -70,16 +73,7 @@ export const ResultContextMenu = ({
         onClick: () => {
           if (!singleResultTable) return;
 
-          onSetDdlSql(
-            generateInsertDdl(
-              dialect,
-              singleResultTable.schema,
-              singleResultTable.name,
-              contextMenuTable?.data?.getRows() || [],
-              data.columns,
-            ),
-          );
-          onShowDdlModal();
+          void preview.prepare(contextMenuTable?.data?.getRows() || [], data.columns);
         },
         show: () => !!singleResultTable,
       },
@@ -88,16 +82,7 @@ export const ResultContextMenu = ({
         onClick: () => {
           if (!singleResultTable) return;
 
-          onSetDdlSql(
-            generateInsertDdl(
-              dialect,
-              singleResultTable.schema,
-              singleResultTable.name,
-              contextMenuTable?.data?.getSelectedCellRows() || [],
-              data.columns,
-            ),
-          );
-          onShowDdlModal();
+          void preview.prepare(contextMenuTable?.data?.getSelectedCellRows() || [], data.columns);
         },
         show: () => !!singleResultTable,
       },
@@ -105,16 +90,17 @@ export const ResultContextMenu = ({
   }, [
     contextMenuTable,
     data.columns,
-    dialect,
+    preview.prepare,
     editable,
     onOpenExportModal,
     onRemoveSelectedRows,
-    onSetDdlSql,
     onSetSelectedCellsNull,
-    onShowDdlModal,
     singleResultTable,
     t,
   ]);
 
-  return <ContextMenu position={contextMenuTable?.position} onClose={onClose} options={contextMenuOptions} />;
+  return <>
+    <ContextMenu position={contextMenuTable?.position} onClose={onClose} options={contextMenuOptions} />
+    <ModalGenerateDDL show={preview.show} sql={preview.sql} onClose={preview.close} />
+  </>;
 };

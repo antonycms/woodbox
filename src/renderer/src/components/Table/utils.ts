@@ -1,6 +1,16 @@
-import type { IColumn, TableSearchOptions } from './dtos';
+import type { IColumn, TableCellEdit, TableCellEditValue, TableSearchOptions, TableSerializedRow } from './dtos';
 
 export const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
+
+export const captureTableCellEdit = <Row>(
+  row: TableSerializedRow<Row>, rowIndex: number, attribute: string, value: TableCellEditValue,
+): TableCellEdit => ({
+  rowKey: row.__key_row,
+  rowIndex: row.__row_index ?? rowIndex,
+  isNewRow: Boolean(row.__is_new_row),
+  attribute,
+  value: Array.isArray(value) ? [...value] : value,
+});
 
 export const parseClipboardGrid = (text: string) => {
   const normalizedText = text.replace(/\r\n?/g, '\n').replace(/\n$/, '');

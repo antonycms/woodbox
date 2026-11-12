@@ -1,3 +1,4 @@
+import type { InitialWhere } from '@shared/types/database';
 import type { TableInfoStoreApi } from '@renderer/stores/TableInfo';
 
 export interface ITableInfoProps {
@@ -7,7 +8,7 @@ export interface ITableInfoProps {
   appTabId?: string;
   mode?: 'view' | 'create';
   draftTabId?: string;
-  initialWhere?: string;
+  initialWhere?: InitialWhere;
   filterLocked?: boolean;
   initialTab?: string;
 }

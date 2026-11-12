@@ -1,13 +1,12 @@
+import type { InitialWhere } from '@shared/types/database';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { useAppTabStore } from '@renderer/stores/AppTab';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
-import { getRendererDialect } from '@renderer/database/dialects';
 import TableInfo from '@renderer/views/TableInfo';
 import { requestOpenTableWithFilter } from '@renderer/views/TableInfo/openWithFilterRequest';
 
 interface IOpenTableOptions {
-  initialWhere?: string;
+  initialWhere?: InitialWhere;
   initialTab?: string;
 }
 
@@ -19,35 +18,35 @@ export const useOpenTableTab = () => {
       setActiveTabId: state.setActiveTabId,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
 
   const openTable = React.useCallback(
     (idConnection: string, schema: string | undefined, table: string, options?: IOpenTableOptions) => {
+      const filtered = !!options?.initialWhere;
       const tabId = `${idConnection}_${schema}_${table}`;
       const existingTab = getTab(tabId);
-      const initialTab = options?.initialTab || (options?.initialWhere ? 'tabData' : undefined);
+      const initialTab = options?.initialTab || (filtered ? 'tabData' : undefined);
 
-      if (options?.initialWhere && existingTab?.unsaved) {
+      if (filtered && existingTab?.unsaved) {
         setActiveTabId(tabId);
         requestOpenTableWithFilter({
           tabId,
           idConnection,
           schema,
           table,
-          initialWhere: options.initialWhere,
+          initialWhere: options?.initialWhere,
         });
         return;
       }
 
-      if (existingTab && !options?.initialWhere) {
+      if (existingTab && !filtered) {
         setActiveTabId(tabId);
         return;
       }
 
       addTab({
         id: tabId,
-        replaceId: options?.initialWhere ? existingTab?.id : undefined,
-        groupId: options?.initialWhere ? existingTab?.groupId : undefined,
+        replaceId: filtered ? existingTab?.id : undefined,
+        groupId: filtered ? existingTab?.groupId : undefined,
         title: `${schema ? `${schema}.` : ''}${table}`,
         data: {
           type: 'table-info',
@@ -73,22 +72,10 @@ export const useOpenTableTab = () => {
   );
 
   const openTableWithFilter = React.useCallback(
-    (
-      idConnection: string,
-      schema: string | undefined,
-      table: string,
-      filterColumn: string,
-      filterValue: string,
-    ) => {
-      const dialect = getRendererDialect(
-        connections.find((connection) => connection.id === idConnection)?.dialect,
-      );
-      const escapedValue = filterValue.replace(/'/g, "''");
-      const initialWhere = `${dialect.quoteIdent(filterColumn)} = '${escapedValue}'`;
-
-      openTable(idConnection, schema, table, { initialWhere, initialTab: 'tabData' });
+    (idConnection: string, schema: string | undefined, table: string, filterColumn: string, filterValue: unknown) => {
+      openTable(idConnection, schema, table, { initialWhere: { column: filterColumn, value: structuredClone(filterValue) }, initialTab: 'tabData' });
     },
-    [connections, openTable],
+    [openTable],
   );
 
   return { openTable, openTableWithFilter };

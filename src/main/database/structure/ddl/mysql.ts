@@ -1,13 +1,5 @@
-import { quoteMysqlIdentifier as quoteIdent } from '@shared/utils/sql';
-import type {
-  DdlColumnInfo,
-  DdlReferenceInfo,
-  DdlRestrictionInfo,
-  RendererDialect,
-  RendererDialectDdl,
-} from './types';
-import { defaultDml } from './dml';
-import { getIndexColumnsDdl } from './utils';
+import type { StructureDialectDdl, DdlColumnInfo, DdlReferenceInfo, DdlRestrictionInfo } from './types';
+import { getIndexColumnsDdl } from './syntax';
 
 const mysqlIntegerTypes = new Set(['tinyint', 'smallint', 'mediumint', 'int', 'integer', 'bigint']);
 const mysqlPrefixIndexTypes = new Set([
@@ -35,7 +27,7 @@ const mysqlStringTypesMaxLength = new Map([
 
 const getMysqlColumnType = (
   column: DdlColumnInfo,
-  helpers: Parameters<RendererDialectDdl['getColumnDefinitionDdl']>[1],
+  helpers: Parameters<StructureDialectDdl['getColumnDefinitionDdl']>[1],
 ) => {
   const columnType = helpers.normalizeOptionalString(column.udt_name);
   const dataType = String(column.data_type || '').toLowerCase();
@@ -60,7 +52,7 @@ const getMysqlColumnType = (
 
 const getDefaultSql = (
   value: string | undefined,
-  helpers: Parameters<RendererDialectDdl['getColumnDefinitionDdl']>[1],
+  helpers: Parameters<StructureDialectDdl['getColumnDefinitionDdl']>[1],
 ) => {
   const defaultValue = helpers.normalizeOptionalString(value);
   return defaultValue ? ` DEFAULT ${defaultValue}` : '';
@@ -72,35 +64,17 @@ const isReferenceConstraint = (
   return 'reference_table_name' in constraint && !!constraint.reference_table_name;
 };
 
-const isAutoIncrementRestriction = (column: DdlColumnInfo, restriction: DdlRestrictionInfo) => {
-  return (
-    ['primary_key', 'unique_key'].includes(restriction.constraint_type || '') &&
-    restriction.column_names?.length === 1 &&
-    restriction.column_names[0] === column.column_name
-  );
-};
-
-const getAutoIncrementRestriction = (column: DdlColumnInfo, restrictions: DdlRestrictionInfo[]) => {
-  return restrictions.find((restriction) => isAutoIncrementRestriction(column, restriction));
-};
-
-const canUseAutoIncrement = (dataType: string) => {
-  const normalizedDataType = dataType.trim().toLowerCase().split('(')[0];
-
-  return mysqlIntegerTypes.has(normalizedDataType);
-};
-
 const getMysqlChangeColumnDdl = (
   tableName: string,
-  column: Parameters<RendererDialectDdl['getChangeColumnDdl']>[1],
-  helpers: Parameters<RendererDialectDdl['getChangeColumnDdl']>[2],
+  column: Parameters<StructureDialectDdl['getChangeColumnDdl']>[1],
+  helpers: Parameters<StructureDialectDdl['getChangeColumnDdl']>[2],
   options: {
     includeAutoIncrement: boolean;
     forceModify?: boolean;
     skipRename?: boolean;
   },
 ) => {
-  const originalColumn = column.__originalColumn;
+  const originalColumn = column.original;
   const originalColumnName = originalColumn.column_name;
   const currentColumnName = column.column_name;
   const targetColumnName = currentColumnName || originalColumnName;
@@ -144,7 +118,7 @@ const getMysqlChangeColumnDdl = (
   return statements;
 };
 
-const mysqlDdl: RendererDialectDdl = {
+const mysqlDdl: StructureDialectDdl = {
   getColumnDefinitionDdl(column, helpers) {
     const nullSql = column.is_auto_increment
       ? ' NOT NULL'
@@ -199,14 +173,14 @@ const mysqlDdl: RendererDialectDdl = {
     return [];
   },
 
-  getAddColumnDdl(tableName, column, helpers, restrictions = []) {
+  getAddColumnDdl(tableName, column, helpers) {
     if (!column.is_auto_increment) {
       return [
         `ALTER TABLE ${tableName}\n  ADD COLUMN ${this.getColumnDefinitionDdl(column, helpers)};`,
       ];
     }
 
-    const autoIncrementRestriction = getAutoIncrementRestriction(column, restrictions);
+    const autoIncrementRestriction = helpers.getAutoIncrementRestriction(column.column_name);
 
     if (!autoIncrementRestriction) {
       return [
@@ -335,7 +309,7 @@ const mysqlDdl: RendererDialectDdl = {
   },
 
   getPostCreateRestrictionChangeColumnDdl(tableName, column, helpers) {
-    if (!column.is_auto_increment || column.__originalColumn.is_auto_increment) return [];
+    if (!column.is_auto_increment || column.original.is_auto_increment) return [];
 
     return getMysqlChangeColumnDdl(tableName, column, helpers, {
       includeAutoIncrement: true,
@@ -345,36 +319,4 @@ const mysqlDdl: RendererDialectDdl = {
   },
 };
 
-const mysql: RendererDialect = {
-  id: 'mysql',
-  label: 'MySQL',
-  editorDialect: 'mysql',
-  connectionMode: 'network',
-  defaultPort: 3306,
-  supportsSsl: true,
-  supportsSchemas: false,
-  supportsFunctions: false,
-  supportsAutoIncrement: true,
-  canUseAutoIncrement,
-  quoteIdent,
-  getQualifiedName: (schema, name) =>
-    schema ? `${quoteIdent(schema)}.${quoteIdent(name)}` : quoteIdent(name),
-  indexMethods: ['BTREE', 'HASH'],
-  commonColumnTypes: [
-    'varchar',
-    'text',
-    'int',
-    'bigint',
-    'tinyint',
-    'boolean',
-    'decimal',
-    'date',
-    'datetime',
-    'timestamp',
-    'json',
-  ],
-  dml: defaultDml,
-  ddl: mysqlDdl,
-};
-
-export default mysql;
+export default mysqlDdl;

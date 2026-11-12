@@ -1,3 +1,6 @@
+import { analyzeExplainResult } from './explain';
+import { getStructureOptions, getColumnGridPresentation, getColumnAutoIncrementSupport } from './structure/columns';
+import { prepareInitialWhere as prepareInitialWhereValue, readInitialWhere as readInitialWhereValue } from './tableFilters';
 import { getErrorMessage } from '@shared/utils/error';
 import { exportRowsToFile } from '../files/exportData';
 import { connect as connectSocket, isIP } from 'node:net';
@@ -9,10 +12,13 @@ import {
   releaseReactNativeBridgeGateway,
   retainReactNativeBridgeGateway,
 } from '../reactNativeBridge/gateway';
-import { getDialectAdapter, getDialectIds } from './dialects';
+import { getDialectAdapter, getDialectIds, getDialectCapabilities } from './dialects';
 import type { DatabaseCompareParams } from '@shared/types/databaseCompare';
 import type {
   DatabaseRow,
+  DatabaseObjectCommand,
+  IDatabaseDialectInfo,
+  ColumnTypeSuggestionsResult,
   IDatabaseProcess,
   ITable,
   IFunctionDb,
@@ -22,14 +28,13 @@ import type {
   IIndexInfo,
   ITriggerInfo,
   IParamsGetTableData,
+  IParamsGetTableRowsCount,
   IOptionsRunSql,
   IExportDataParams,
   ExportDataSource as ExportSource,
   IServerOutputMessage,
   IImportTableDataParams,
   IImportTableDataResult,
-  QueryRowUpdate,
-  IResolveQueryResultColumnsParams,
 } from '@shared/types/database';
 import type { Dialect, IConnectionConfig, IConnectionTest } from '@shared/types/connections';
 import type { IConnection, ITableWithSchema } from './types';
@@ -47,9 +52,10 @@ import {
 } from './utils/reactNativeBridge';
 import { getExportSql } from './utils/exportSql';
 import { restrictQueryColumnSources } from './utils/querySources';
-import { applyQueryUpdates } from './queryUpdates';
+import { saveRowChanges as saveConnectionRowChanges } from './rowChanges';
+import type { RowChangesIntent } from '@shared/types/rowChanges';
 import { executeStatements } from './executeStatements';
-import { resolveQueryResultColumns as resolveQueryResultColumnsCore } from './queryResultColumns';
+import { buildObjectCommandSql } from './objectCommands';
 import {
   hasSqlStatementSeparator,
   isReadOnlySelectQuery,
@@ -302,7 +308,16 @@ const makeConnectionInstance = async (config: IConnectionConfig, noPool?: boolea
   return instance;
 };
 
-export const getDialects = () => getDialectIds();
+export const getDialects = (): IDatabaseDialectInfo[] =>
+  getDialectIds().map((id) => {
+    const adapter = getDialectAdapter(id);
+    return {
+      id,
+      ...adapter.connectionDescriptor,
+      ...getDialectCapabilities(adapter),
+      ...getStructureOptions(adapter),
+    };
+  });
 
 export const testConnection = async (config: IConnectionTest) => {
   const storedConfig =
@@ -428,6 +443,11 @@ const getConnection = async (connectionId: string) => {
   }
 };
 
+export const saveRowChanges = async (connectionId: string, intent: RowChangesIntent) => {
+  const connection = await getConnection(connectionId);
+  return saveConnectionRowChanges(connection, getDialectAdapter(connection.dialect), intent);
+};
+
 /**
  * return schemas(postgres only) and tables.
  */
@@ -451,31 +471,49 @@ export const getConnectionInfo = async (connectionId: string) => {
   const functions = functionsRaw ? adapter.getRows<IFunctionDb>(functionsRaw) : [];
   const supportsTableComments = ['postgres', 'mysql'].includes(connection.dialect);
 
-  return { tables, schemas, functions, supports_table_comments: supportsTableComments };
+  return { tables, schemas, functions, dialect: connection.dialect, ...getDialectCapabilities(adapter), ...getStructureOptions(adapter), supports_table_comments: supportsTableComments };
 };
 
-export const getTableColumns = async (connectionId: string, { table, schema }: ITableWithSchema) => {
-  const connection = await getConnection(connectionId);
-  const { instance, dialect } = connection;
-
-  const adapter = getDialectAdapter(dialect);
-  const query = adapter.queries;
-
-  const raw = await instance.raw(query.getTableColumns({ table, schema }));
-
+const readTableColumns = async (connection: IConnection, { table, schema }: ITableWithSchema) => {
+  const adapter = getDialectAdapter(connection.dialect);
+  const raw = await connection.instance.raw(adapter.queries.getTableColumns({ table, schema }));
   return adapter.getRows<IColumnInfo>(raw);
 };
+export const getTableColumns = async (connectionId: string, filters: ITableWithSchema) =>
+  readTableColumns(await getConnection(connectionId), filters);
 
-export const getColumnTypes = async (connectionId: string) => {
+export const getColumnGridData = async (connectionId: string, filters: ITableWithSchema) => {
+  const connection = await getConnection(connectionId);
+  const adapter = getDialectAdapter(connection.dialect);
+  const columns = await readTableColumns(connection, filters);
+  return { rows: columns.map((column) => ({ ...column,
+    display_type: getColumnGridPresentation(column).typeText,
+    auto_increment_eligible: !adapter.columnEditing || adapter.columnEditing.canUseAutoIncrement(column.data_type),
+  })) };
+};
+
+export const getColumnTypes = async (connectionId: string): Promise<ColumnTypeSuggestionsResult> => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
 
   const adapter = getDialectAdapter(dialect);
   const query = adapter.queries;
 
-  const raw = await instance.raw(query.getColumnTypes());
+  const staticTypes = getStructureOptions(adapter).columnTypeSuggestions;
+  if (staticTypes) return staticTypes;
 
-  return adapter.getRows<{ name: string }>(raw);
+  const sql = query.getColumnTypes?.();
+  if (!sql) throw new Error('Esta conexão não oferece um catálogo de tipos.');
+  const raw = await instance.raw(sql);
+  const types = adapter.getRows<{ name: string }>(raw);
+  const typeNames = [...new Set([...adapter.commonColumnTypes, ...types.map((item) => item.name)])].filter(Boolean);
+  const autoIncrementSupport = getColumnAutoIncrementSupport({ policyId: dialect, dataTypes: typeNames });
+
+  return {
+    types,
+    commonTypes: [...adapter.commonColumnTypes],
+    autoIncrementTypes: Object.fromEntries(typeNames.map((type, index) => [type, autoIncrementSupport[index]])),
+  };
 };
 
 export const getTableReferences = async (connectionId: string, { table, schema }: ITableWithSchema) => {
@@ -575,6 +613,15 @@ export const compareDatabases = async (params: DatabaseCompareParams) => {
 /**
  * return table rows with pagination.
  */
+export const prepareInitialWhere = async (connectionId: string, request: import('@shared/types/database').PrepareInitialWhereRequest) => {
+  const connection = await getConnection(connectionId);
+  return prepareInitialWhereValue(connection, getDialectAdapter(connection.dialect), request);
+};
+export const readInitialWhere = async (connectionId: string, request: import('@shared/types/database').ReadInitialWhereRequest) => {
+  const connection = await getConnection(connectionId);
+  return readInitialWhereValue(connection, getDialectAdapter(connection.dialect), request);
+};
+
 export const getTableData = async (
   connectionId: string,
   {
@@ -601,7 +648,7 @@ export const getTableData = async (
 
 export const getTableRowsCount = async (
   connectionId: string,
-  { table, schema, where }: { table: string; schema?: string; where?: string },
+  { table, schema, where }: IParamsGetTableRowsCount,
 ) => {
   const connection = await getConnection(connectionId);
   const { instance, dialect } = connection;
@@ -698,9 +745,14 @@ export const runSql = async (
   connectionId: string,
   sql: string,
   options?: IOptionsRunSql,
+) => runSqlOnConnection(await getConnection(connectionId), sql, options);
+
+const runSqlOnConnection = async (
+  connection: IConnection,
+  sql: string,
+  options?: IOptionsRunSql,
 ) => {
-  const connection = await getConnection(connectionId);
-  const { instance, dialect } = connection;
+  const { id: connectionId, instance, dialect } = connection;
   const adapter = getDialectAdapter(dialect);
 
   const sql_original = sql.trim();
@@ -751,8 +803,7 @@ export const runSql = async (
     let results: { raw: unknown; statement: string }[];
 
     try {
-      results = await executeStatements(instance, dbConnection, adapter, dialect, statements,
-        options?.rowChangesTransaction);
+      results = await executeStatements(instance, dbConnection, dialect, statements);
     } catch (error) {
       if (auto_paginated) throw sanitizeAutoPaginatedError(error, sql_final, sql_original);
       throw error;
@@ -771,6 +822,7 @@ export const runSql = async (
           dbConnection,
           sql: sql_original,
           results: serializedResults,
+          columnTypes: options?.columnTypes,
         });
       } catch {
         // Metadata failures must never enable editing through inferred origins.
@@ -783,14 +835,10 @@ export const runSql = async (
   }
 };
 
-export const updateQueryRows = async (connectionId: string, updates: QueryRowUpdate[]) => {
-  const { instance, dialect } = await getConnection(connectionId);
-  await applyQueryUpdates(instance, getDialectAdapter(dialect), updates);
-};
-
-export const resolveQueryResultColumns = async (connectionId: string, params: IResolveQueryResultColumnsParams) => {
-  const { instance, dialect } = await getConnection(connectionId);
-  return resolveQueryResultColumnsCore(instance, getDialectAdapter(dialect), params);
+export const executeObjectCommand = async (connectionId: string, command: DatabaseObjectCommand): Promise<void> => {
+  const connection = await getConnection(connectionId);
+  const sql = buildObjectCommandSql(getDialectAdapter(connection.dialect), command);
+  await runSqlOnConnection(connection, sql);
 };
 
 export const runExplainSql = async (
@@ -810,7 +858,8 @@ export const runExplainSql = async (
     throw new Error('EXPLAIN analisa uma instrução SQL por vez.');
   }
 
-  return runSql(connectionId, adapter.getExplainSql(sqlFinal), options);
+  const results = await runSql(connectionId, adapter.getExplainSql(sqlFinal), options);
+  return results.map((result) => ({ ...result, explainAnalysis: analyzeExplainResult(connection.dialect, result) }));
 };
 
 export const importTableData = async (

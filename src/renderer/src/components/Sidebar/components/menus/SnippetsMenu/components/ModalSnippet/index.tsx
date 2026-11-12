@@ -42,7 +42,7 @@ export const ModalSnippet = React.memo((props: IModalSnippetProps) => {
   const [form, setForm] = React.useState(emptyForm);
 
   const dialectOptions = React.useMemo(() => {
-    return (connectionTypes?.length ? connectionTypes : ['postgres', 'mysql', 'sqlite']).map(
+    return connectionTypes.map(
       (dialect) => ({ label: dialect, value: dialect }),
     );
   }, [connectionTypes]);

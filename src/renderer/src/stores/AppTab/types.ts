@@ -1,3 +1,4 @@
+import type { InitialWhere } from '@shared/types/database';
 export interface IAppTabStore {
   pendingRemoveTabs?: IPendingRemoveTabs;
   restoreSession(session: {
@@ -50,7 +51,7 @@ export type IAppTabData =
       id_connection: string;
       table: string;
       schema?: string;
-      initialWhere?: string;
+      initialWhere?: InitialWhere;
       filterLocked?: boolean;
       initialTab?: string;
     }

@@ -1,8 +1,9 @@
+import type { InitialWhere } from '@shared/types/database';
+import { getTableFilterErrorMessage, filterPreparationError } from '@renderer/database/tableFilters';
 import { useRowChanges } from '@renderer/hooks/useRowChanges';
 import { normalizeCellValue } from '@renderer/utils/tableRows';
 import { ValuePreview, type ValuePreviewRequest } from './components/ValuePreview';
 import { useShallow } from 'zustand/react/shallow';
-import { getErrorMessage } from '@shared/utils/error';
 import React from 'react';
 import Table, {
   type ITableContextMenuData,
@@ -14,7 +15,6 @@ import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/Tabl
 import { toDateTime } from '@renderer/utils/date';
 import type { IColumn, ISortDirection } from '@renderer/components/Table/dtos';
 import { useThemeStore } from '@renderer/stores/Theme';
-import ModalGenerateDDL from '../Properties/components/ModalGenerateDDL';
 import ModalDataError from './components/ModalDataError';
 import FilterInput from '@renderer/components/FilterInput';
 import { ModalExportData } from '@renderer/components/ModalExportData';
@@ -30,7 +30,7 @@ import type { IContextMenuTable } from './types';
 
 interface IDataProps {
   tableStore: TableInfoStoreApi;
-  initialWhere?: string;
+  initialWhere?: InitialWhere;
   filterLocked?: boolean;
   onRegisterRefresh?: (refresh: () => void | Promise<void>) => void;
   onPendingRowsChangesChange?: (hasPendingChanges: boolean) => void;
@@ -77,9 +77,6 @@ const Data = ({
   const [contextMenuTable, setContextMenuTable] = React.useState<IContextMenuTable>();
   const [dataErrorMessage, setDataErrorMessage] = React.useState<string>();
   const [showNoPkModal, setShowNoPkModal] = React.useState(false);
-  const [applyingChanges, setApplyingChanges] = React.useState(false);
-  const [ddlSql, setDdlSql] = React.useState('');
-  const [showDdlModal, setShowDdlModal] = React.useState(false);
   const [showExportModal, setShowExportModal] = React.useState(false);
   const [valuePreview, setValuePreview] = React.useState<ValuePreviewRequest>();
   const showValuePreview = !!valuePreview;
@@ -89,13 +86,14 @@ const Data = ({
 
   const handleDataError = React.useCallback(
     (error: unknown) => {
-      setDataErrorMessage(getErrorMessage(error) || t('common.unknownError'));
+      setDataErrorMessage(getTableFilterErrorMessage(error, t));
     },
     [t],
   );
 
   const {
     items,
+    resultRevision,
     loading,
     loadingRowsCount,
     rowsCount,
@@ -103,6 +101,8 @@ const Data = ({
     lastFetchDate,
     whereInput,
     appliedWhere,
+    filterPreparing,
+    filterBlocked,
     setWhereInput,
     handleLoadRowsCount,
     loadData,
@@ -139,19 +139,18 @@ const Data = ({
     resetRows,
   } = useRowChanges({ items, columns, restrictions, onCloseMenu: closeContextMenuTable });
 
-  const { handleSaveItems, handleApplyWithoutPrimaryKey } = useTableDataPersistence({
+  const { saving: applyingChanges, handleSaveItems, handleApplyWithoutPrimaryKey } = useTableDataPersistence({
     idConnection: id_connection,
     schema,
     table,
-    dialect,
     columns,
     items,
     editedFieldsRows,
     droppedRows,
     newRows,
+    loading,
     primaryKeyColumns,
-    applyingChanges,
-    setApplyingChanges,
+    readOnly: isReadOnlyObject,
     setShowNoPkModal,
     refreshData,
     resetRows,
@@ -195,23 +194,16 @@ const Data = ({
 
   const handleWhereInputChange = React.useCallback(
     (value: string) => {
-      if (!filterLocked) setWhereInput(value);
+      if (!filterLocked && !filterPreparing) setWhereInput(value);
     },
-    [filterLocked],
+    [filterLocked, filterPreparing, setWhereInput],
   );
 
-  const closeDdlModal = React.useCallback(() => {
-    setShowDdlModal(false);
-  }, []);
-
-  const openDdlModal = React.useCallback(() => {
-    setShowDdlModal(true);
-  }, []);
-
   const openExportModal = React.useCallback(() => {
+    if (filterPreparing || filterBlocked) { handleDataError(filterPreparationError('invalid-filter')); return; }
     setShowExportModal(true);
     setContextMenuTable(undefined);
-  }, []);
+  }, [filterPreparing, filterBlocked, handleDataError]);
 
   const closeExportModal = React.useCallback(() => {
     setShowExportModal(false);
@@ -226,18 +218,18 @@ const Data = ({
   }, []);
 
   const handleFkCellClick = React.useCallback(
-    (attribute: string, value: unknown) => {
+    async (attribute: string, value: unknown) => {
       const ref = fkMap.get(attribute);
       if (!ref || value === null || value === undefined) return;
-      openTableWithFilter(
+      try { await openTableWithFilter(
         id_connection,
         ref.reference_table_schema,
         ref.reference_table_name,
         ref.reference_column_name,
-        String(value),
-      );
+        value,
+      ); } catch (error) { handleDataError(error); }
     },
-    [fkMap, id_connection, openTableWithFilter],
+    [fkMap, id_connection, openTableWithFilter, handleDataError],
   );
 
   const handleFkPreviewClick = React.useCallback(
@@ -356,22 +348,23 @@ const Data = ({
   );
 
   const applyFilter = React.useCallback(
-    async (nextWhereInput: string) => {
+    async (nextWhereInput: string, fromHistory = false) => {
+      if (filterPreparing) return;
       await applyFilterData(nextWhereInput, () => {
         addFilterHistory(nextWhereInput);
         resetRows();
-      });
+      }, fromHistory);
     },
-    [addFilterHistory, applyFilterData, resetRows],
+    [addFilterHistory, applyFilterData, resetRows, filterPreparing],
   );
 
   const handleFilterKeyDown = React.useCallback(
     async (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== 'Enter') return;
+      if (e.key !== 'Enter' || filterPreparing) return;
 
       await applyFilter(whereInput);
     },
-    [applyFilter, whereInput],
+    [applyFilter, whereInput, filterPreparing],
   );
 
   const handleKeyDown = React.useCallback(
@@ -422,24 +415,13 @@ const Data = ({
   }, [hasPendingRowsChanges, onPendingRowsChangesChange]);
 
   React.useEffect(() => {
-    if (columns.length === 0) {
-      loadTableColumns(id_connection, { table, schema });
-    }
-
-    if (references.length === 0) {
-      loadTableReferences(id_connection, { table, schema });
-    }
-
-    if (restrictions.length === 0) {
-      loadTableRestrictions(id_connection, { table, schema });
-    }
+    loadTableColumns(id_connection, { table, schema }, true);
+    loadTableReferences(id_connection, { table, schema }, true);
+    loadTableRestrictions(id_connection, { table, schema }, true);
   }, [
     id_connection,
     table,
     schema,
-    columns.length,
-    references.length,
-    restrictions.length,
     loadTableColumns,
     loadTableReferences,
     loadTableRestrictions,
@@ -465,9 +447,9 @@ const Data = ({
         suggestions={columnNames}
         onChange={handleWhereInputChange}
         historyItems={filterHistory}
-        onHistorySelect={applyFilter}
+        onHistorySelect={(text) => applyFilter(text, true)}
         onKeyDown={handleFilterKeyDown}
-        disabled={filterLocked}
+        disabled={filterLocked || filterPreparing}
       />
 
       <div className={styles.content}>
@@ -496,7 +478,6 @@ const Data = ({
         <ValuePreview
           preview={valuePreview}
           id_connection={id_connection}
-          dialect={dialect.editorDialect}
           selectedCell={selectedCell}
           selectedCellValue={selectedCellValue}
           selectedReference={selectedReference}
@@ -526,15 +507,8 @@ const Data = ({
         onLoadRowsCount={handleLoadRowsCount}
       />
 
-      <ModalGenerateDDL
-        show={showDdlModal}
-        sql={ddlSql}
-        dialect={dialect}
-        onClose={closeDdlModal}
-      />
-
       <ModalExportData
-        show={showExportModal}
+        show={showExportModal && !filterPreparing && !filterBlocked}
         idConnection={id_connection}
         source={exportSource}
         fileName={[schema, table].filter(Boolean).join('.')}
@@ -556,6 +530,8 @@ const Data = ({
       />
 
       <DataContextMenu
+        idConnection={id_connection}
+        resultRevision={resultRevision}
         contextMenuTable={contextMenuTable}
         columnNames={columnNames}
         dialect={dialect}
@@ -566,8 +542,6 @@ const Data = ({
         onOpenExportModal={openExportModal}
         onSetSelectedCellsNull={handleSetSelectedCellsNull}
         onRemoveSelectedRows={handleRemoveSelectedRows}
-        onSetDdlSql={setDdlSql}
-        onShowDdlModal={openDdlModal}
       />
     </div>
   );

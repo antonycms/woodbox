@@ -26,6 +26,18 @@ export interface ReactNativeBridgeStatus {
   sessions: ReactNativeBridgeSessionInfo[];
 }
 
+export type ReactNativeBridgeConnectionAdapter = Pick<ReactNativeBridgeAdapterInfo, 'id' | 'label'>;
+
+export interface ReactNativeBridgeConnectionSession extends Pick<
+  ReactNativeBridgeSessionInfo, 'id' | 'appId' | 'appName' | 'platform' | 'deviceName'
+> {
+  adapters: ReactNativeBridgeConnectionAdapter[];
+}
+
+export interface ReactNativeBridgeConnectionStatus extends ReactNativeBridgeStatus {
+  connectionSessions: ReactNativeBridgeConnectionSession[];
+}
+
 export interface IReactNativeBridgeConnectionConfig {
   appId?: string;
   appName?: string;

@@ -21,12 +21,12 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
-import { getRendererDialect } from '@renderer/database/dialects';
+import { selectConnectionPresentations } from '@renderer/stores/Workspace/selectors';
 import { DEFAULT_OPTIONS, KIND_LABEL_KEY, MESSAGE_LABEL_KEY, OPERATION_LABEL_KEY } from './constants';
 import { DdlModal } from './components/DdlModal';
 import { ObjectsModal } from './components/ObjectsModal';
 import type { DatabaseCompareSelectableObject, IModalDatabaseCompareProps } from './types';
-import { getObjectKey, mergeFunctions, mergeTables } from './utils';
+import { getCompareSchemaSupport, getObjectKey, mergeFunctions, mergeTables } from './utils';
 import styles from './styles.module.css';
 
 const RESULT_OPERATIONS = ['modify', 'create', 'delete'] as const;
@@ -49,6 +49,7 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
       loadConnectionInfo: state.loadConnectionInfo,
     })),
   );
+  const connectionPresentations = useWorkspaceStore(selectConnectionPresentations);
   const compareDatabases = useDatabaseStore((state) => state.compare);
   const { table: tableTheme, modal: modalTheme, feedback } = useThemeStore((state) => state.activeTheme);
 
@@ -74,9 +75,9 @@ export const ModalDatabaseCompare = React.memo((props: IModalDatabaseCompareProp
   const sourceInfo = sourceConnectionId ? connectionsInfo.get(sourceConnectionId) : undefined;
   const targetInfo = targetConnectionId ? connectionsInfo.get(targetConnectionId) : undefined;
 
-  const supportsSchemas = React.useMemo(() => {
-    return getRendererDialect(sourceConnection?.dialect || targetConnection?.dialect).supportsSchemas;
-  }, [sourceConnection?.dialect, targetConnection?.dialect]);
+  const supportsSchemas = getCompareSchemaSupport(
+    sourceConnection?.id, targetConnection?.id, connectionPresentations,
+  );
 
   const allTables = React.useMemo(() => {
     return mergeTables(sourceInfo?.tables || [], targetInfo?.tables || []);

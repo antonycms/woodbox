@@ -20,7 +20,7 @@ import TableInfo from '@renderer/views/TableInfo';
 export const ModalRenameSchema = React.memo(
   ({ show, idConnection, schema, onClose }: IModalRenameSchemaProps) => {
     const t = useI18nStore((state) => state.t);
-    const runSql = useDatabaseStore((state) => state.runSql);
+    const executeObjectCommand = useDatabaseStore((state) => state.executeObjectCommand);
     const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
     const { tabs, addTab, activeTabId, setActiveTabId } = useAppTabStore(
       useShallow((state) => ({
@@ -54,11 +54,8 @@ export const ModalRenameSchema = React.memo(
       try {
         setLoading(true);
 
-        await runSql(
-          idConnection,
-          `ALTER SCHEMA ${quoteIdent(schema)} RENAME TO ${quoteIdent(name)};`,
-        );
-        await loadConnectionInfo(idConnection);
+        await executeObjectCommand(idConnection, { type: 'rename-schema', schema, newName: name });
+        await loadConnectionInfo(idConnection, true);
 
         let nextActiveTabId = activeTabId;
         const tabsToUpdate = tabs.filter((tab) => {
@@ -226,5 +223,3 @@ export interface IModalRenameSchemaProps {
 interface IDataRenameSchema {
   name: string;
 }
-
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;

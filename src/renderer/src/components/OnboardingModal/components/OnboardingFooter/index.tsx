@@ -14,6 +14,7 @@ interface Props {
   submit?: boolean;
   loading?: boolean;
   disabled?: boolean;
+  continueDisabled?: boolean;
   finish?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const OnboardingFooter = ({
   submit,
   loading,
   disabled,
+  continueDisabled,
   finish,
 }: Props) => {
   const t = useI18nStore((state) => state.t);
@@ -73,7 +75,7 @@ export const OnboardingFooter = ({
           type={submit ? 'submit' : 'button'}
           onClick={onContinue}
           loading={loading}
-          disabled={disabled}
+          disabled={disabled || continueDisabled}
           color={colors.saveButtonColor}
           backgroundColor={colors.saveButtonBackgroundColor}
           icon={() => <ForwardIcon size={16} aria-hidden="true" />}

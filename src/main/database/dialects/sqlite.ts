@@ -1,3 +1,5 @@
+import structureDdl from '../structure/ddl/sqlite';
+import { sqliteFilterColumns } from '../tableFilters/columns';
 import { quoteSqlIdentifier as quoteIdentifier } from '@shared/utils/sql';
 import type { DatabaseRow, IColumnInfo, SerializedRunSqlResult } from '@shared/types/database';
 import queries from '../queries/sqlite';
@@ -186,12 +188,36 @@ const hasMissingColumnsInfo = (result: SerializedRunSqlResult) => {
   return result.columns.some((column) => !columnsInfo.get(column));
 };
 
+const sqliteColumnTypes = ['text', 'integer', 'real', 'numeric', 'blob'];
+
 const sqlite: DatabaseDialectAdapter = {
+  structureDdl,
   id: 'sqlite',
+  indexMethods: [],
+  commonColumnTypes: sqliteColumnTypes,
+  staticColumnTypes: sqliteColumnTypes,
+  connectionDescriptor: {
+    label: 'SQLite',
+    mode: 'file',
+    supportsSsl: false,
+  },
   client: 'sqlite3',
   queries,
   queryIdentifierRules: { caseInsensitive: true },
   quoteIdentifier,
+  getTableFilterColumns: sqliteFilterColumns,
+  resolveRowChangeTable: async (instance, { schema, table }) => {
+    const databases: { name: string }[] = schema ? [] : await instance.raw('PRAGMA database_list');
+    const namespaces = schema ? [schema] : ['temp', 'main', ...databases.map((database) => database.name).filter((name) => name !== 'temp' && name !== 'main')];
+    for (const name of namespaces) {
+      const rows: { name: string }[] = await instance.raw(
+        `SELECT name FROM ${quoteIdentifier(name)}.sqlite_master WHERE type IN ('table', 'view') AND name = ? COLLATE NOCASE`, [table],
+      );
+      if (rows.length === 1) return { schema: name, table: rows[0].name };
+    }
+    throw new Error('A tabela não existe mais. Atualize os dados antes de salvar.');
+  },
+  rowChangesInsertBindingBudget: 900,
   getConnectionConfig: ({ database }) => ({
     filename: database,
   }),
@@ -221,7 +247,17 @@ const sqlite: DatabaseDialectAdapter = {
       } satisfies SerializedRunSqlResult,
     ];
   },
-  resolveRunSqlColumnsInfo: async ({ instance, dbConnection, sql, results }) => {
+  resolveRunSqlColumnsInfo: async ({ instance, dbConnection, sql, results, columnTypes }) => {
+    // Presentation hints only. Never reuse/infer editable origins from this input.
+    if (results.length === 1 && columnTypes?.length === results[0].columns.length &&
+      results[0].columns.every((name, index) => name === columnTypes[index].name)) {
+      const known = new Map(columnTypes.map((column) => [column.name, column.type]));
+      const result = results[0];
+      const current = new Map(result.columns_info?.map((column) => [column.name, column]));
+      results = [{ ...result, columns_info: result.columns.map((name) => ({
+        ...current.get(name), name, type: current.get(name)?.type || known.get(name),
+      })) }];
+    }
     if (!results.some(hasMissingColumnsInfo)) return results;
 
     const tables = getTablesFromQuerySql(sql);

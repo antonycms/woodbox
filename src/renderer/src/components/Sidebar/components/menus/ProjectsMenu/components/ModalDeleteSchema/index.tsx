@@ -17,7 +17,7 @@ import { useToastStore } from '@renderer/stores/Toast';
 export const ModalDeleteSchema = React.memo(
   ({ show, idConnection, schema, onClose }: IModalDeleteSchemaProps) => {
     const t = useI18nStore((state) => state.t);
-    const runSql = useDatabaseStore((state) => state.runSql);
+    const executeObjectCommand = useDatabaseStore((state) => state.executeObjectCommand);
     const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
     const { tabs, removeTab } = useAppTabStore(
       useShallow((state) => ({ tabs: state.tabs, removeTab: state.removeTab })),
@@ -39,10 +39,7 @@ export const ModalDeleteSchema = React.memo(
       try {
         setLoading(true);
 
-        await runSql(
-          idConnection,
-          `DROP SCHEMA ${quoteIdent(schema)}${cascade ? ' CASCADE' : ''};`,
-        );
+        await executeObjectCommand(idConnection, { type: 'drop-schema', schema, cascade });
 
         if (cascade) {
           const tabsToRemove = tabs
@@ -63,7 +60,7 @@ export const ModalDeleteSchema = React.memo(
           }
         }
 
-        await loadConnectionInfo(idConnection);
+        await loadConnectionInfo(idConnection, true);
 
         showToast({
           type: 'success',
@@ -141,5 +138,3 @@ export interface IModalDeleteSchemaProps {
   schema?: string;
   onClose?: () => void;
 }
-
-const quoteIdent = (value: string) => `"${String(value).replace(/"/g, '""')}"`;

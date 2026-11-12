@@ -1,3 +1,4 @@
+import { resolvePropertySelection } from '../../hooks/resolvePropertySelection';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
@@ -24,7 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
-import { generateReferencesDdl } from '@renderer/database/ddl';
+import { requestStructureDdl, toStructureReference } from '@renderer/stores/TableInfo/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import { IReferenceSerialized } from './dtos';
@@ -237,6 +238,8 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
 
   const handleAddPendingReference = React.useCallback(
     (reference: IPendingReferenceCreate) => {
+      const { references, pendingReferences } = tableStore.getState();
+      const allReferences = [...references, ...pendingReferences];
       const constraintName = reference.constraint_name.toLowerCase();
       const alreadyExists = allReferences.some(
         (item) => item.constraint_name.toLowerCase() === constraintName,
@@ -308,8 +311,15 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
       },
       {
         text: t('modal.generateDdl'),
-        onClick: () => {
-          setDdlSql(generateReferencesDdl(dialect, schema, table, selectedReferences));
+        onClick: async () => {
+          const context = tableStore.getState().tableContext;
+          const isCurrent = () => tableStore.getState().tableContext === context;
+          const state = tableStore.getState();
+          const selected = resolvePropertySelection(selectedReferences, state.references, state.pendingReferences,
+            (row) => JSON.stringify([row.constraint_name, row.column_name]));
+          const sql = await requestStructureDdl({type:'references',policyId:dialect,target:{schema,table},references:selected.map(item=>({...toStructureReference(item),source:(item as IPendingReferenceCreate).__pendingId?'draft':'loaded'}))}, isCurrent);
+          if (!sql || !isCurrent()) return;
+          setDdlSql(sql);
           setShowDdlModal(true);
         },
       },
@@ -349,7 +359,7 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
   React.useEffect(() => {
     if (mode === 'create') return;
 
-    loadTableReferences(id_connection, { schema, table });
+    loadTableReferences(id_connection, { schema, table }, true);
   }, [id_connection, loadTableReferences, mode, schema, table]);
 
   React.useEffect(() => {
@@ -373,7 +383,6 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
       <ModalGenerateDDL
         show={showDdlModal}
         sql={ddlSql}
-        dialect={dialect}
         onClose={() => setShowDdlModal(false)}
       />
 

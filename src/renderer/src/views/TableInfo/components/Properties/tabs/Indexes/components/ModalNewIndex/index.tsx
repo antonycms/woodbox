@@ -1,4 +1,9 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { selectConnectionPresentations } from '@renderer/stores/Workspace/selectors';
+import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
+import { Text } from '@renderer/components/Text';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { AutocompleteMulti } from '@renderer/components/AutocompleteMulti';
 import { Button } from '@renderer/components/Button';
@@ -36,20 +41,29 @@ const getGeneratedIndexName = (
 
 const defaultForm: IFormData = {
   column_names: [],
-  index_method: 'btree',
+  index_method: '',
   column_orders: {},
 };
 
 const ModalNewIndex = ({
   show,
-  table,
+  tableStore,
   columns,
-  indexMethods = [],
   onClose,
   onAdd,
 }: IModalNewIndexProps) => {
   const { modal: colors } = useThemeStore((state) => state.activeTheme);
   const t = useI18nStore((state) => state.t);
+  const { table, idConnection } = useTableInfoStore(tableStore, (state) => state.tableContext);
+  const { dialectCatalog, loadDialectCatalog } = useWorkspaceStore(useShallow((state) => ({
+    dialectCatalog: state.dialectCatalog,
+    loadDialectCatalog: state.loadDialectCatalog,
+  })));
+  const structure = useWorkspaceStore(
+    (state) => selectConnectionPresentations(state).get(idConnection)?.structure,
+  );
+  const indexMethods = structure?.indexMethods;
+  const defaultIndexMethod = structure?.defaultIndexMethod;
   const { state, register, handleSubmit, reset, setState } = useForm<IFormData>(defaultForm);
 
   const selectedColumns = React.useMemo(
@@ -93,9 +107,10 @@ const ModalNewIndex = ({
 
   const onSubmit = React.useCallback(
     handleSubmit((data) => {
+      if (!indexMethods) return;
       const columnNames = data.column_names.filter(Boolean);
       const columnOrders = columnNames.map((columnName) => data.column_orders[columnName] || 'ASC');
-      const indexMethod = data.index_method || indexMethods[0] || '';
+      const indexMethod = data.index_method || defaultIndexMethod || '';
 
       if (!columnNames.length) return;
 
@@ -113,21 +128,38 @@ const ModalNewIndex = ({
       const shouldClose = onAdd?.(index);
       if (shouldClose !== false) close();
     }),
-    [handleSubmit, onAdd, close, table, indexMethods],
+    [handleSubmit, onAdd, close, table, indexMethods, defaultIndexMethod],
   );
 
   React.useEffect(() => {
-    if (!show) return;
+    if (show && dialectCatalog.status === 'idle') void loadDialectCatalog().catch(() => {});
+  }, [show, dialectCatalog.status, loadDialectCatalog]);
+
+  React.useEffect(() => {
+    if (!show || !indexMethods) return;
 
     setState((prevState) => ({
       ...prevState,
-      index_method: indexMethods[0] || '',
+      index_method: defaultIndexMethod || '',
     }));
-  }, [show, indexMethods, setState]);
+  }, [show, indexMethods, defaultIndexMethod, setState]);
 
   return (
     <Modal title={t('modal.newIndex')} width="440px" show={show} closeOutside onClose={close}>
       <form className={styles.form} onSubmit={onSubmit}>
+        {!indexMethods && (
+          <>
+            <Text userSelect={false} color={colors.color}>
+              {dialectCatalog.status === 'idle' || dialectCatalog.status === 'loading'
+                ? t('common.loading') : t('index.methodsUnavailable')}
+            </Text>
+            {dialectCatalog.status === 'error' && (
+              <Button type="button" onClick={() => void loadDialectCatalog().catch(() => {})}>
+                {t('connectionForm.retryCatalog')}
+              </Button>
+            )}
+          </>
+        )}
         <Row>
           <AutocompleteMulti
             md={12}
@@ -139,7 +171,7 @@ const ModalNewIndex = ({
             {...register('column_names')}
           />
 
-          {!!indexMethods.length && (
+          {!!indexMethods?.length && (
             <Autocomplete
               md={12}
               required
@@ -201,6 +233,7 @@ const ModalNewIndex = ({
 
           <Button
             type="submit"
+            disabled={!indexMethods}
             color={colors.saveButtonColor}
             backgroundColor={colors.saveButtonBackgroundColor}
             xs={6}
@@ -219,9 +252,8 @@ export default ModalNewIndex;
 
 interface IModalNewIndexProps {
   show?: boolean;
-  table: string;
+  tableStore: TableInfoStoreApi;
   columns: string[];
-  indexMethods?: string[];
   onClose?(): void;
   onAdd?(index: IPendingIndexCreate): boolean | void;
 }

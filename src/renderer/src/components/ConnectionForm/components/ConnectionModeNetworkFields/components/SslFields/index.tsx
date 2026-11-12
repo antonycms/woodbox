@@ -1,3 +1,4 @@
+import type { IConnectionTestInput } from '@shared/types/connections';
 import { useShallow } from 'zustand/react/shallow';
 import { useDialogsStore } from '@renderer/stores/Dialogs';
 import React from 'react';
@@ -5,7 +6,7 @@ import { ActivatableSection } from '@renderer/components/ActivatableSection';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { useI18nStore } from '@renderer/stores/I18n';
-import type { IDataNewConnection, RegisterField, SetConnectionFormState } from '../../../../types';
+import type { RegisterField, SetConnectionFormState } from '../../../../types';
 import styles from './styles.module.css';
 
 const sslFileFields = ['sslCaCert', 'sslCert', 'sslKey'] as const;
@@ -13,7 +14,7 @@ type SslFileField = (typeof sslFileFields)[number];
 
 interface ISslFieldsProps {
   register: RegisterField;
-  state: IDataNewConnection;
+  state: IConnectionTestInput;
   setState: SetConnectionFormState;
   color: string;
   backgroundColor: string;

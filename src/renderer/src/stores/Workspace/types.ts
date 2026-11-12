@@ -1,11 +1,25 @@
 import type { WoodboxApi } from '@shared/types/api';
 import type { IProject, IProjectCreate, IScriptMetadata } from '@shared/types/workspace';
-import type { IConnectionPublic, IConnectionCreate } from '@shared/types/connections';
-import type { IConnectionInfo } from '@shared/types/database';
+import type { IConnectionPublic, IConnectionCreateInput } from '@shared/types/connections';
+import type { IDatabaseDialectInfo, IConnectionInfo, IConnectionDialectDescriptor, IDatabaseTechnicalCapabilities, DatabaseStructureOptions } from '@shared/types/database';
+
+export type DialectCatalogState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; items: IDatabaseDialectInfo[] }
+  | { status: 'error' };
+
+export interface ConnectionPresentation {
+  dialect: IConnectionPublic['dialect'];
+  structure?: DatabaseStructureOptions;
+  mode?: IConnectionDialectDescriptor['mode'];
+  capabilities?: IDatabaseTechnicalCapabilities;
+}
 
 export interface IWorkspaceStore {
   initialize(): Promise<void>;
   refresh(): Promise<void>;
+  loadDialectCatalog(): Promise<void>;
   
   projects: IProject[];
   addProject(data: IProjectCreate): Promise<IProject>;
@@ -21,13 +35,14 @@ export interface IWorkspaceStore {
 
   connections: IConnectionPublic[];
   connectionTypes: string[];
+  dialectCatalog: DialectCatalogState;
   connectionsInfo: Map<string, IConnectionInfo>;
-  addConnection(data: IConnectionCreate): Promise<void>;
+  addConnection(data: IConnectionCreateInput): Promise<void>;
   editConnection: WoodboxApi['connections']['edit'];
   removeConnection: WoodboxApi['connections']['remove'];
   testConnection: WoodboxApi['connections']['test'];
-  loadConnectionInfo(id: string): Promise<void>;
-  reloadConnectionInfo(id: string): Promise<void>;
+  loadConnectionInfo(id: string, force?: boolean): Promise<void>;
+  reloadConnectionInfo(id: string, force?: boolean): Promise<void>;
   closeConnection: WoodboxApi['connections']['close'];
   importConnectionsFromSource: WoodboxApi['connections']['import'];
   previewImportConnectionsFromSource: WoodboxApi['connections']['previewImport'];

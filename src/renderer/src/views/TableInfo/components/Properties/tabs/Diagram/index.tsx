@@ -205,7 +205,8 @@ const Diagram = ({ tableStore, active }: IDiagramProps) => {
 
   React.useEffect(() => {
     // Monta uma vez: a aba é recriada quando a tabela/conexão muda.
-    loadData();
+    loadTableReferences(id_connection, { schema, table }, true);
+    loadTableUsedAsReference(id_connection, { schema, table }, true);
   }, []);
 
   React.useEffect(() => {

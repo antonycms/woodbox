@@ -1,8 +1,9 @@
 import type { IColumnInfo } from '@shared/types/database';
+import type { ColumnGridIdentity } from '@renderer/stores/TableInfo/types';
 import type {
   IPendingColumnChange,
+  IPendingColumnCreate,
 } from '@renderer/database/ddl/types';
-import { getColumnType } from '@renderer/database/ddl';
 
 export interface IColumnBooleanLabels {
   yes: string;
@@ -13,14 +14,6 @@ export interface IColumnInfoSerialized extends IColumnInfo {
   is_nullable_label: string;
   is_auto_increment_label: string;
 }
-
-export const parseColumnTypeInput = (value: unknown): Partial<IColumnInfo> => ({
-  data_type: String(value ?? '').trim(),
-  character_maximum_length: undefined,
-  numeric_precision: undefined,
-  numeric_scale: undefined,
-  datetime_precision: undefined,
-});
 
 export const getColumnSelectionKey = (column: IColumnInfo) =>
   (column as IColumnInfo & { __pendingId?: string }).__pendingId ||
@@ -35,12 +28,6 @@ export const getGeneratedConstraintName = (
   const suffix = type === 'primary_key' ? 'pk' : 'unique';
 
   return `${table}_${columns.join('_')}_${suffix}`.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-};
-
-export const normalizeOptionalString = (value: unknown) => {
-  const normalizedValue = String(value ?? '').trim();
-
-  return normalizedValue || undefined;
 };
 
 const normalizeBooleanText = (value: unknown) =>
@@ -78,6 +65,14 @@ export const serializeColumnBooleanLabels = (
 export const getOriginalColumnName = (column: IColumnInfo) =>
   (column as IPendingColumnChange).__originalColumn?.column_name || column.column_name;
 
+export const getColumnGridIdentity = (column: IColumnInfo): ColumnGridIdentity => {
+  const created = column as IPendingColumnCreate;
+  return created.__pendingId ? { pendingId: created.__pendingId }
+    : { originalName: getOriginalColumnName(column) };
+};
+
+export const getColumnGridTypeText = (column: IColumnInfo) => column.display_type ?? column.data_type;
+
 export const getEditedColumnFields = (
   column: IPendingColumnChange,
   labels: IColumnBooleanLabels,
@@ -99,19 +94,19 @@ export const getEditedColumnFields = (
 
   return editableAttributes.reduce<Record<string, unknown>>((acc, attribute) => {
     const originalValue =
-      attribute === 'data_type' ? getColumnType(originalColumn) : originalColumn[attribute];
+      attribute === 'data_type' ? (originalColumn.display_type ?? originalColumn.data_type) : originalColumn[attribute];
     const changedValue =
-      attribute === 'data_type' ? getColumnType(changedColumn) : changedColumn[attribute];
+      attribute === 'data_type' ? (changedColumn.display_type ?? changedColumn.data_type) : changedColumn[attribute];
 
     if (String(originalValue ?? '') !== String(changedValue ?? '')) {
       acc[attribute] = changedValue ?? '';
     }
 
     return acc;
-  }, {});
+  }, { display_type: changedColumn.display_type ?? changedColumn.data_type });
 };
 
-export const getColumnSearchValues = (column: IColumnInfo) => [
+export const getColumnSearchValues = (column: IColumnInfo, typeText: string) => [
   column.column_name,
-  getColumnType(column),
+  typeText,
 ];

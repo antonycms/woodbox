@@ -23,7 +23,7 @@ export const ConnectionStep = ({ active, idProject, onSaved, onSkip, onBack }: P
       <ConnectionForm
         idProject={idProject}
         onSaved={onSaved}
-        renderActions={({ testConnection, testing, saving }) => (
+        renderActions={({ testConnection, testing, saving, available }) => (
           <>
             <Row>
               <Button
@@ -32,7 +32,7 @@ export const ConnectionStep = ({ active, idProject, onSaved, onSkip, onBack }: P
                 md={3}
                 onClick={testConnection}
                 loading={testing}
-                disabled={saving}
+                disabled={saving || !available}
                 color={colors.testButtonColor}
                 backgroundColor={colors.testButtonBackgroundColor}
               >
@@ -43,6 +43,7 @@ export const ConnectionStep = ({ active, idProject, onSaved, onSkip, onBack }: P
               onSkip={onSkip}
               onBack={onBack}
               disabled={testing}
+              continueDisabled={!available}
               loading={saving}
               submit
             />

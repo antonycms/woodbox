@@ -14,6 +14,8 @@ import type {
   ISortDirection,
   ITableSort,
   TableCellEditValue,
+  TableCellEdit,
+  TableEditBatch,
   TableSerializedRow,
   TableCellPosition,
   TableSearchOccurrence,
@@ -32,6 +34,7 @@ import { useTableSearchController } from './hooks/useTableSearchController';
 import { useTableSelectionController } from './hooks/useTableSelectionController';
 import {
   cellKey,
+  captureTableCellEdit,
   findSearchIndex,
   replaceSearchValue,
   serializeTableCopyValue,
@@ -73,6 +76,7 @@ interface ITableProps<Row = Record<string, unknown>> {
   onScrollEnd?(): void;
   onEditRow?(indexRow: number, attribute: string, value: unknown, rowKey?: React.Key): void;
   onEditNewRow?(rowKey: React.Key, attribute: string, value: unknown): void;
+  onEditBatch?(batch: TableEditBatch): void;
   editedRows?: Map<React.Key, Partial<Row>>;
   newRows?: Map<React.Key, Partial<Row>>;
   newRowsPosition?: 'start' | 'end';
@@ -106,6 +110,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     removedRows,
     onEditRow,
     onEditNewRow,
+    onEditBatch,
     sort,
     onSort,
     onSelectRow,
@@ -311,7 +316,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
           !!column.editable &&
           column.type !== 'autocomplete' &&
           column.type !== 'autocomplete-multi' &&
-          !row.__is_removed && (row.__is_new_row ? !!onEditNewRow : !!onEditRow);
+          !row.__is_removed && (!!onEditBatch || (row.__is_new_row ? !!onEditNewRow : !!onEditRow));
 
         if (findSearchIndex(serializedValue, query, options) !== -1) {
           occurrences.push({
@@ -331,6 +336,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     columns,
     getResolvedCellValue,
     onEditNewRow,
+    onEditBatch,
     onEditRow,
     searchState.matchCase,
     searchState.query,
@@ -575,10 +581,19 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
         window.requestAnimationFrame(() => refScrollContainer.current?.focus());
       }
 
+      const edits: TableCellEdit[] = [];
+      const dispatchBatch = () => {
+        if (onEditBatch && edits.length) onEditBatch({ source: 'edit', edits });
+      };
       const saveCell = (rowIndex: number, attribute: string) => {
         const row = serializedRowsRef.current[rowIndex];
 
         if (!row || row.__is_removed) return;
+
+        if (onEditBatch) {
+          edits.push(captureTableCellEdit(row, rowIndex, attribute, newValue));
+          return;
+        }
 
         if (row.__is_new_row) {
           onEditNewRow?.(row.__key_row, attribute, newValue);
@@ -603,6 +618,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
 
       if (!shouldReplicate) {
         saveCell(indexRow, rowColumnKey);
+        dispatchBatch();
         return;
       }
 
@@ -617,16 +633,17 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
             return;
           }
         }
-        if (row.__is_new_row ? !onEditNewRow : !onEditRow) return;
+        if (!onEditBatch && (row.__is_new_row ? !onEditNewRow : !onEditRow)) return;
 
         saveCell(rowIndex, String(column.attribute));
       });
+      dispatchBatch();
     },
-    [onEditNewRow, onEditRow],
+    [onEditBatch, onEditNewRow, onEditRow],
   );
 
   const replaceSearchOccurrence = React.useCallback(
-    (occurrence: TableSearchOccurrence, replaceAll: boolean) => {
+    (occurrence: TableSearchOccurrence, replaceAll: boolean, collectedEdits?: TableCellEdit[]) => {
       if (!occurrence.canReplace || !searchState.query) return false;
 
       const row = serializedRowsRef.current[occurrence.rowIndex];
@@ -649,13 +666,20 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
 
       if (nextValue === serializedValue) return false;
 
-      onSaveCell(row.__index_row, String(column.attribute), nextValue, true, false);
+      if (onEditBatch) {
+        const edit = captureTableCellEdit(row, row.__index_row, String(column.attribute), nextValue);
+        if (collectedEdits) collectedEdits.push(edit);
+        else onEditBatch({ source: 'replace-current', edits: [edit] });
+      } else {
+        onSaveCell(row.__index_row, String(column.attribute), nextValue, true, false);
+      }
 
       return true;
     },
     [
       getResolvedCellValue,
       onSaveCell,
+      onEditBatch,
       searchState.matchCase,
       searchState.query,
       searchState.replace,
@@ -670,9 +694,11 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
   }, [activeSearchOccurrence, replaceSearchOccurrence]);
 
   const handleReplaceAll = React.useCallback(() => {
-    searchOccurrences.forEach((occurrence) => replaceSearchOccurrence(occurrence, true));
+    const edits: TableCellEdit[] = [];
+    searchOccurrences.forEach((occurrence) => replaceSearchOccurrence(occurrence, true, onEditBatch ? edits : undefined));
+    if (onEditBatch && edits.length) onEditBatch({ source: 'replace-all', edits });
     setSearchState((prevState) => ({ ...prevState, activeIndex: 0 }));
-  }, [replaceSearchOccurrence, searchOccurrences]);
+  }, [onEditBatch, replaceSearchOccurrence, searchOccurrences]);
 
   const onBlurCell = React.useCallback(() => {
     setCellEditingKey(null);
@@ -1241,6 +1267,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     columnsRef,
     onEditRow,
     onEditNewRow,
+    onEditBatch,
     onSaveCell,
   });
 

@@ -1,4 +1,74 @@
+import type { Dialect } from './connections';
+
+export interface IConnectionDialectDescriptor {
+  label: string;
+  mode: 'network' | 'file' | 'react-native-bridge';
+  defaultPort?: number;
+  supportsSsl: boolean;
+}
+
+export interface IDatabaseTechnicalCapabilities {
+  supports_schemas: boolean;
+  supports_functions: boolean;
+  supports_process_list: boolean;
+}
+
+export interface DatabaseStructureOptions {
+  columnTypeSuggestions?: ColumnTypeSuggestionsResult;
+  indexMethods: string[];
+  defaultIndexMethod: string;
+  supportsAutoIncrement: boolean;
+  fallbackColumnTypes: string[];
+}
+
+export interface IDatabaseDialectInfo extends IConnectionDialectDescriptor, IDatabaseTechnicalCapabilities, DatabaseStructureOptions {
+  id: Dialect;
+}
+
+export interface ColumnTypeSuggestionsResult {
+  types: { name: string }[];
+  commonTypes: string[];
+  autoIncrementTypes: Record<string, boolean>;
+}
+
 export type DatabaseRow = Record<string, unknown>;
+
+export interface PrepareInsertDmlRequest {
+  policyId: Dialect;
+  target: { schema?: string; table: string };
+  rows: DatabaseRow[];
+  columnOrder?: string[];
+}
+
+export type InitialWhere = string | InitialWhereValue;
+export interface InitialWhereValue {
+  column: string;
+  value: unknown;
+  // Used only when migrating contextual filters saved by older versions.
+  legacyContext?: string;
+}
+export interface TableFilterColumnInfo {
+  column_name: string;
+  data_type: string;
+  udt_name?: string;
+  comparison_type?: string;
+  comparison_collation?: string;
+}
+export type PrepareInitialWhereRequest = InitialWhereValue & {
+  schema?: string; table: string; includeColumns?: boolean;
+  columnInfo?: TableFilterColumnInfo;
+};
+export interface PreparedInitialWhere {
+  where: string;
+  columns?: (IColumnInfo & TableFilterColumnInfo)[];
+}
+export type ReadInitialWhereRequest = PrepareInitialWhereRequest & {
+  page?: number; limit?: number; orderBy?: IOrderBy[];
+};
+export interface ReadInitialWhereResult extends PreparedInitialWhere {
+  data: DatabaseRow[];
+  error?: import('./ipc').IpcError;
+}
 
 export type DatabaseObjectType = 'table' | 'view' | 'materialized_view';
 
@@ -19,7 +89,15 @@ export interface IFunctionDb {
   function_identity_arguments?: string;
 }
 
-export interface IConnectionInfo {
+export type DatabaseObjectCommand =
+  | { type: 'create-schema'; schema: string }
+  | { type: 'rename-schema'; schema: string; newName: string }
+  | { type: 'drop-schema'; schema: string; cascade: boolean }
+  | { type: 'rename-table'; schema?: string; table: string; newName: string }
+  | { type: 'drop-table'; schema?: string; table: string };
+
+export interface IConnectionInfo extends IDatabaseTechnicalCapabilities, DatabaseStructureOptions {
+  dialect: Dialect;
   tables: ITable[];
   functions: IFunctionDb[];
   schemas?: string[];
@@ -27,6 +105,8 @@ export interface IConnectionInfo {
 }
 
 export interface IColumnInfo {
+  display_type?: string;
+  auto_increment_eligible?: boolean;
   column_name: string;
   data_type: string;
   is_nullable: boolean;
@@ -106,21 +186,48 @@ export interface IOrderBy {
   sortType: 'ASC' | 'DESC';
 }
 
-export interface IParamsGetTableData {
-  table: string;
-  schema?: string;
+export type CanonicalTableFilterValue =
+  | { kind: 'text'; value: string }
+  | { kind: 'number'; value: string }
+  | { kind: 'boolean'; value: boolean }
+  | { kind: 'null' }
+  | { kind: 'bigint'; value: string }
+  | { kind: 'instant'; value: string }
+  | { kind: 'bytes'; encoding: 'base64'; value: string };
+
+export type TableFilterUnavailableReason =
+  | 'invalid-value'
+  | 'insufficient-precision'
+  | 'unsupported-value'
+  | 'unresolved-target'
+  | 'unknown-context'
+  | 'unfaithful-preview'
+  | 'context-changed'
+  | 'invalid-filter';
+
+type TableFilterTarget = { schema?: string; table: string };
+
+export type IParamsGetTableData = TableFilterTarget & { where?: string } & {
   page: number;
   limit?: number;
-  where?: string;
   orderBy?: IOrderBy[];
-}
+};
+
+export type IParamsGetTableRowsCount = TableFilterTarget & { where?: string };
+
+export type ExportDataSource =
+  | (TableFilterTarget & { where?: string } & {
+      type: 'table';
+      orderBy?: IOrderBy[];
+    })
+  | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
 
 export interface IOptionsRunSql {
   limit?: number;
   page?: number;
   orderBy?: IOrderBy[];
   queryExecutionId?: string;
-  rowChangesTransaction?: { schema?: string; table: string };
+  columnTypes?: { name: string; type?: string }[];
 }
 
 export interface QueryColumnSource {
@@ -129,24 +236,12 @@ export interface QueryColumnSource {
   column: string;
 }
 
-export interface QueryRowUpdate {
-  schema?: string;
-  table: string;
-  primaryKey: Record<string, string | number | boolean>;
-  changes: DatabaseRow;
-}
-
 export interface SerializedRunSqlColumn {
   name: string;
   type?: string;
   source?: QueryColumnSource;
   // Opaque origin supplied by the driver; resolved to names only when saving.
   source_ref?: string;
-}
-
-export interface IResolveQueryResultColumnsParams {
-  sql: string;
-  columns: SerializedRunSqlColumn[];
 }
 
 export interface IRunSqlResult {
@@ -169,10 +264,6 @@ export interface SerializedRunSqlResult extends IRunSqlResult {
 }
 
 export type ExportDataFormat = 'csv' | 'json' | 'jsonl' | 'xlsx' | 'clipboard';
-
-export type ExportDataSource =
-  | { type: 'table'; schema?: string; table: string; where?: string; orderBy?: IOrderBy[] }
-  | { type: 'query'; sql: string; orderBy?: IOrderBy[] };
 
 export interface IExportDataParams {
   source: ExportDataSource;

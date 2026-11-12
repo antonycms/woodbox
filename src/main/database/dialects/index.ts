@@ -1,4 +1,5 @@
 import type { Dialect } from '@shared/types/connections';
+import type { IDatabaseTechnicalCapabilities } from '@shared/types/database';
 import postgres from './postgres';
 import mysql from './mysql';
 import sqlite from './sqlite';
@@ -23,3 +24,9 @@ export const getDialectAdapter = (dialect: Dialect): DatabaseDialectAdapter => {
 
   return adapter;
 };
+
+export const getDialectCapabilities = (adapter: DatabaseDialectAdapter): IDatabaseTechnicalCapabilities => ({
+  supports_schemas: Boolean(adapter.queries.getAllSchemas),
+  supports_functions: Boolean(adapter.queries.getFunctions),
+  supports_process_list: Boolean(adapter.queries.getProcessList),
+});

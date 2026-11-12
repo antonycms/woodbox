@@ -1,3 +1,4 @@
+import { resolvePropertySelection } from '../../hooks/resolvePropertySelection';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import Table from '@renderer/components/Table';
@@ -24,7 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
-import { generateRestrictionsDdl } from '@renderer/database/ddl';
+import { requestStructureDdl, toStructureRestriction } from '@renderer/stores/TableInfo/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
 
@@ -209,6 +210,8 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
 
   const handleAddPendingRestriction = React.useCallback(
     (restriction: IPendingRestrictionCreate) => {
+      const { restrictions, pendingRestrictions } = tableStore.getState();
+      const allRestrictions = [...restrictions, ...pendingRestrictions];
       const constraintName = restriction.constraint_name.toLowerCase();
       const alreadyExists = allRestrictions.some(
         (item) => item.constraint_name.toLowerCase() === constraintName,
@@ -268,8 +271,14 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
       },
       {
         text: t('modal.generateDdl'),
-        onClick: () => {
-          setDdlSql(generateRestrictionsDdl(dialect, schema, table, selectedRestrictions));
+        onClick: async () => {
+          const context = tableStore.getState().tableContext;
+          const isCurrent = () => tableStore.getState().tableContext === context;
+          const state = tableStore.getState();
+          const selected = resolvePropertySelection(selectedRestrictions, state.restrictions, state.pendingRestrictions, (row) => row.constraint_name);
+          const sql = await requestStructureDdl({type:'restrictions',policyId:dialect,target:{schema,table},restrictions:selected.map(item=>({...toStructureRestriction(item),source:(item as IPendingRestrictionCreate).__pendingId?'draft':'loaded'}))}, isCurrent);
+          if (!sql || !isCurrent()) return;
+          setDdlSql(sql);
           setShowDdlModal(true);
         },
       },
@@ -303,7 +312,7 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
   React.useEffect(() => {
     if (mode === 'create') return;
 
-    loadTableRestrictions(id_connection, { schema, table });
+    loadTableRestrictions(id_connection, { schema, table }, true);
   }, [id_connection, loadTableRestrictions, mode, schema, table]);
 
   React.useEffect(() => {
@@ -327,7 +336,6 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
       <ModalGenerateDDL
         show={showDdlModal}
         sql={ddlSql}
-        dialect={dialect}
         onClose={() => setShowDdlModal(false)}
       />
 
@@ -336,7 +344,6 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
         table={table}
         columns={availableColumnNames}
         hasPrimaryKey={hasPrimaryKey}
-        dialect={dialect}
         onClose={() => setShowNewRestrictionModal(false)}
         onAdd={handleAddPendingRestriction}
       />

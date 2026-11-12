@@ -13,18 +13,12 @@ import { useDatabaseStore } from '@renderer/stores/Database';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
-import { getRendererDialect } from '@renderer/database/dialects';
 
 export const ModalDeleteTable = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalDeleteTableProps) => {
     const t = useI18nStore((state) => state.t);
-    const runSql = useDatabaseStore((state) => state.runSql);
-    const { loadConnectionInfo, connections } = useWorkspaceStore(
-      useShallow((state) => ({
-        loadConnectionInfo: state.loadConnectionInfo,
-        connections: state.connections,
-      })),
-    );
+    const executeObjectCommand = useDatabaseStore((state) => state.executeObjectCommand);
+    const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
     const { tabs, removeTab } = useAppTabStore(
       useShallow((state) => ({ tabs: state.tabs, removeTab: state.removeTab })),
     );
@@ -32,13 +26,6 @@ export const ModalDeleteTable = React.memo(
     const { modal: colors } = useThemeStore((state) => state.activeTheme);
 
     const [loading, setLoading] = React.useState(false);
-    const dialect = React.useMemo(
-      () =>
-        getRendererDialect(
-          connections.find((connection) => connection.id === idConnection)?.dialect,
-        ),
-      [connections, idConnection],
-    );
     const tableName = [schema, table].filter(Boolean).join('.');
 
     const handleConfirm = async () => {
@@ -47,7 +34,7 @@ export const ModalDeleteTable = React.memo(
       try {
         setLoading(true);
 
-        await runSql(idConnection, `DROP TABLE ${dialect.getQualifiedName(schema, table)};`);
+        await executeObjectCommand(idConnection, { type: 'drop-table', schema, table });
 
         const tabsToRemove = tabs
           .filter((tab) => {
@@ -66,7 +53,7 @@ export const ModalDeleteTable = React.memo(
           removeTab(tabsToRemove, { keepHistory: false, force: true });
         }
 
-        await loadConnectionInfo(idConnection);
+        await loadConnectionInfo(idConnection, true);
 
         showToast({
           type: 'success',

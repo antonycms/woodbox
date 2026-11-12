@@ -1,7 +1,9 @@
+import type { StructureDialectDdl } from './structure/ddl/types';
 import type { Knex } from 'knex';
-import type { DatabaseRow, IOrderBy, SerializedRunSqlColumn, SerializedRunSqlResult } from '@shared/types/database';
+import type { DatabaseRow, IConnectionDialectDescriptor, IOrderBy, SerializedRunSqlColumn, SerializedRunSqlResult } from '@shared/types/database';
 import type { Dialect, IConnectionConfig } from '@shared/types/connections';
 import type { QueryIdentifierRules } from './utils/querySources';
+import type { FilterColumn } from './tableFilters/comparison';
 
 export interface IConnection {
   id: string;
@@ -14,7 +16,7 @@ export interface DatabaseDialectQueries {
   getAllSchemas?(): string;
   getFunctions?(): string;
   getTableColumns(params: ITableWithSchema): string;
-  getColumnTypes(): string;
+  getColumnTypes?(): string;
   getTableReferences(params: ITableWithSchema): string;
   getTableUsedAsReference(params: ITableWithSchema): string;
   getTableRestrictions(params: ITableWithSchema): string;
@@ -47,10 +49,17 @@ export interface ResolveRunSqlColumnsInfoContext {
   dbConnection: object;
   sql: string;
   results: SerializedRunSqlResult[];
+  columnTypes?: { name: string; type?: string }[];
 }
 
 export interface DatabaseDialectAdapter {
+  structureDdl: StructureDialectDdl;
   id: Dialect;
+  commonColumnTypes: readonly string[];
+  staticColumnTypes?: readonly string[];
+  indexMethods: readonly string[];
+  columnEditing?: { canUseAutoIncrement(dataType: string): boolean };
+  connectionDescriptor: IConnectionDialectDescriptor;
   client: Knex.Config['client'];
   queries: DatabaseDialectQueries;
   queryIdentifierRules?: QueryIdentifierRules;
@@ -65,6 +74,11 @@ export interface DatabaseDialectAdapter {
   resolveQueryColumnSources?(instance: Knex, columns: SerializedRunSqlColumn[]): Promise<SerializedRunSqlColumn[]>;
   splitStatements?(sql: string): string[];
   quoteIdentifier(value: string): string;
+  getTableFilterColumns(instance: Knex, connection: object, target: ITableWithSchema, column?: string): Promise<FilterColumn[]>;
+  beginTableFilterRequest?(connection: object): Promise<() => void>;
+  resolveRowChangeTable(instance: Knex, table: ITableWithSchema): Promise<RowChangeTableIdentity>;
+  // Conservative statement budget, not a claim about runtime/server limits.
+  rowChangesInsertBindingBudget: number;
   // Count target rows even when the assigned values are unchanged.
   executeQueryUpdate(
     transaction: Knex.Transaction,
@@ -80,6 +94,10 @@ export interface ITableWithSchema {
   schema?: string;
 }
 
+export interface RowChangeTableIdentity extends ITableWithSchema {
+  identity?: string;
+}
+
 export interface IGetTableDataParams {
   table: string;
   schema?: string;
@@ -87,4 +105,11 @@ export interface IGetTableDataParams {
   actualPage?: number;
   where?: string;
   orderBy?: IOrderBy[];
+}
+
+export interface QueryRowUpdate {
+  schema?: string;
+  table: string;
+  primaryKey: Record<string, string | number | boolean>;
+  changes: DatabaseRow;
 }

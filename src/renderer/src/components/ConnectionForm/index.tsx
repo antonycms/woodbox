@@ -12,51 +12,25 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useToastStore } from '@renderer/stores/Toast';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { Autocomplete } from '@renderer/components/Autocomplete';
-import type { ConnectionEnvironment, IConnectionCreate, Dialect } from '@shared/types/connections';
-import { getRendererDialect, getRendererDialectOptions } from '@renderer/database/dialects';
+import type { ConnectionEnvironment, Dialect, IConnectionTestInput } from '@shared/types/connections';
+import type { IDatabaseDialectInfo } from '@shared/types/database';
+import { Text } from '@renderer/components/Text';
+import { applyConnectionDialectChange, getInitialConnectionFormData } from './utils';
 import { ConnectionModeFileFields } from './components/ConnectionModeFileFields';
 import { ConnectionModeNetworkFields } from './components/ConnectionModeNetworkFields';
 import { ReactNativeBridgeFields } from './components/ReactNativeBridgeFields';
-import type { IDataNewConnection } from './types';
 
-const getConnectionData = (data: IDataNewConnection, idProject?: string): IConnectionCreate => {
-  const dialect = getRendererDialect(data.dialect);
-  const isReactNativeBridge = dialect.connectionMode === 'react-native-bridge';
-  const isNetworkConnection = dialect.connectionMode === 'network';
-  const useSsl = !!(dialect.supportsSsl && data.ssl);
-
-  return {
-    ...data,
-    host: isNetworkConnection ? data.host : '',
-    port: isNetworkConnection ? Number(data.port) : 0,
-    database: isReactNativeBridge
-      ? data.reactNativeBridge?.adapterLabel || data.reactNativeBridge?.adapterId || ''
-      : data.database,
-    username: isReactNativeBridge ? '' : data.username,
-    password: isReactNativeBridge ? '' : data.password,
-    ssl: useSsl,
-    sslRejectUnauthorized: useSsl ? !!data.sslRejectUnauthorized : false,
-    sslCaCert: useSsl ? data.sslCaCert : '',
-    sslCert: useSsl ? data.sslCert : '',
-    sslKey: useSsl ? data.sslKey : '',
-    ssh: isNetworkConnection ? data.ssh : undefined,
-    reactNativeBridge: isReactNativeBridge ? data.reactNativeBridge : undefined,
-    id_project: idProject || data.id_project,
-  };
-};
-
-export const ConnectionForm = React.memo(
-  ({ idProject, idConnection, onClose, onSaved, renderActions }: IConnectionFormProps) => {
+const ReadyConnectionForm = React.memo(
+  ({ idProject, idConnection, onClose, onSaved, renderActions, dialects }: IConnectionFormProps & { dialects: IDatabaseDialectInfo[] }) => {
     const showToast = useToastStore((state) => state.showToast);
     const t = useI18nStore((state) => state.t);
 
-    const { connections, addConnection, editConnection, connectionTypes, testConnection } =
+    const { connections, addConnection, editConnection, testConnection } =
       useWorkspaceStore(
         useShallow((state) => ({
           connections: state.connections,
           addConnection: state.addConnection,
           editConnection: state.editConnection,
-          connectionTypes: state.connectionTypes,
           testConnection: state.testConnection,
         })),
       );
@@ -68,31 +42,20 @@ export const ConnectionForm = React.memo(
     const formRef = React.useRef<HTMLFormElement>(null);
     const busyRef = React.useRef(false);
 
-    const defaultDialect = getRendererDialect(connectionTypes[0]);
-    const dialectOptions = getRendererDialectOptions(connectionTypes);
+    const dialectsById = React.useMemo(
+      () => new Map(dialects.map((item) => [item.id, item])),
+      [dialects],
+    );
+    const defaultDialect = dialects[0];
+    const dialectOptions = dialects;
 
     const { state, register, handleSubmit, reset, setState, getValue } =
-      useForm<IDataNewConnection>({
-        dialect: defaultDialect.id,
-        environment: 'development',
-        description: '',
-        host: '',
-        port: defaultDialect.defaultPort || '',
-        database: '',
-        username: '',
-        password: '',
-        ssl: false,
-        sslRejectUnauthorized: false,
-        sslCaCert: '',
-        sslCert: '',
-        sslKey: '',
-        reactNativeBridge: undefined,
-      });
+      useForm<IConnectionTestInput>(getInitialConnectionFormData(defaultDialect));
 
-    const selectedDialect = getRendererDialect(state.dialect);
-    const isReactNativeBridge = selectedDialect.connectionMode === 'react-native-bridge';
-    const isFileConnection = selectedDialect.connectionMode === 'file';
-    const isNetworkConnection = selectedDialect.connectionMode === 'network';
+    const selectedDialect = dialectsById.get(state.dialect);
+    const isReactNativeBridge = selectedDialect?.mode === 'react-native-bridge';
+    const isFileConnection = selectedDialect?.mode === 'file';
+    const isNetworkConnection = selectedDialect?.mode === 'network';
     const connectionEnvironmentOptions = React.useMemo<
       { label: string; value: ConnectionEnvironment }[]
     >(
@@ -113,24 +76,14 @@ export const ConnectionForm = React.memo(
     const handleDialectChange = React.useCallback(
       (event: FormChangeValue) => {
         const dialect = event.value as Dialect;
-        const spec = getRendererDialect(dialect);
+        const spec = dialectsById.get(dialect);
+        if (!spec) return;
 
         registerDialect.onChange(event);
 
-        setState((prevState) => ({
-          ...prevState,
-          dialect,
-          host: spec.connectionMode === 'file' ? '' : prevState.host,
-          port: spec.connectionMode === 'file' ? '' : spec.defaultPort || prevState.port,
-          ssl: spec.supportsSsl ? prevState.ssl : false,
-          sslRejectUnauthorized: spec.supportsSsl ? prevState.sslRejectUnauthorized : false,
-          sslCaCert: spec.supportsSsl ? prevState.sslCaCert : '',
-          sslCert: spec.supportsSsl ? prevState.sslCert : '',
-          sslKey: spec.supportsSsl ? prevState.sslKey : '',
-          ssh: spec.connectionMode === 'network' ? prevState.ssh : undefined,
-        }));
+        setState((prevState) => applyConnectionDialectChange(prevState, spec));
       },
-      [registerDialect],
+      [dialectsById, registerDialect],
     );
 
     const close = React.useCallback(() => {
@@ -140,8 +93,12 @@ export const ConnectionForm = React.memo(
 
     const onSubmit = React.useCallback(
       handleSubmit(async (data) => {
-        const isReactNativeBridgeConnection =
-          getRendererDialect(data.dialect).connectionMode === 'react-native-bridge';
+        const descriptor = dialectsById.get(data.dialect);
+        if (!descriptor) {
+          showToast({ type: 'error', title: t('connectionForm.dialectUnavailable') });
+          return;
+        }
+        const isReactNativeBridgeConnection = descriptor.mode === 'react-native-bridge';
 
         if (isReactNativeBridgeConnection && !data.reactNativeBridge?.adapterId) {
           showToast({
@@ -151,7 +108,7 @@ export const ConnectionForm = React.memo(
           return;
         }
 
-        const connection = getConnectionData(data, idProject);
+        const connection = { ...data, id_project: idProject || data.id_project };
 
         if (busyRef.current) return;
         busyRef.current = true;
@@ -177,7 +134,7 @@ export const ConnectionForm = React.memo(
           setSaving(false);
         }
       }),
-      [idProject, idConnection, showToast, t, addConnection, editConnection, onSaved, close],
+      [idProject, idConnection, showToast, t, addConnection, editConnection, onSaved, close, dialectsById],
     );
 
     const checkConnection = useCallback(async () => {
@@ -187,7 +144,12 @@ export const ConnectionForm = React.memo(
       if (!checkDataForm) return;
 
       const formValue = getValue();
-      const connection = getConnectionData(formValue, idProject);
+      const descriptor = dialectsById.get(formValue.dialect);
+      if (!descriptor) {
+        showToast({ type: 'error', title: t('connectionForm.dialectUnavailable') });
+        return;
+      }
+      const connection = { ...formValue, id_project: idProject || formValue.id_project };
 
       try {
         busyRef.current = true;
@@ -206,7 +168,7 @@ export const ConnectionForm = React.memo(
         busyRef.current = false;
         setLoadingTestConnection(false);
       }
-    }, [getValue, idProject, testConnection, showToast, t]);
+    }, [getValue, idProject, testConnection, showToast, t, dialectsById]);
 
     React.useEffect(() => {
       if (!idConnection) return;
@@ -308,7 +270,7 @@ export const ConnectionForm = React.memo(
               backgroundColor={colors.fieldBackgroundColor}
               textColor={colors.color}
               hasSavedPassword={!!(idConnection && connectionSavedData?.hasPassword)}
-              supportsSsl={!!selectedDialect.supportsSsl}
+              supportsSsl={!!selectedDialect?.supportsSsl}
               savedSsh={connectionSavedData?.ssh}
             />
           )}
@@ -317,7 +279,7 @@ export const ConnectionForm = React.memo(
         <Divider size={4} />
 
         {renderActions ? (
-          renderActions({ testConnection: checkConnection, testing: loadingTestConnection, saving })
+          renderActions({ testConnection: checkConnection, testing: loadingTestConnection, saving, available: true })
         ) : (
           <Row>
             <Button
@@ -366,6 +328,60 @@ export const ConnectionForm = React.memo(
   },
 );
 
+ReadyConnectionForm.displayName = 'ReadyConnectionForm';
+
+export const ConnectionForm = React.memo((props: IConnectionFormProps) => {
+  const { dialectCatalog, loadDialectCatalog } = useWorkspaceStore(useShallow((state) => ({
+    dialectCatalog: state.dialectCatalog,
+    loadDialectCatalog: state.loadDialectCatalog,
+  })));
+  const t = useI18nStore((state) => state.t);
+  const colors = useThemeStore((state) => state.activeTheme.modal);
+
+  React.useEffect(() => {
+    if (dialectCatalog.status === 'idle') void loadDialectCatalog().catch(() => {});
+  }, [dialectCatalog.status, loadDialectCatalog]);
+
+  if (dialectCatalog.status === 'ready' && dialectCatalog.items.length) {
+    return <ReadyConnectionForm {...props} dialects={dialectCatalog.items} />;
+  }
+
+  const unavailableMessage = dialectCatalog.status === 'ready'
+    ? t('connectionForm.catalogEmpty')
+    : dialectCatalog.status === 'error'
+      ? t('connectionForm.catalogError')
+      : t('common.loading');
+
+  return (
+    <>
+      <Text userSelect={false} color={colors.color}>{unavailableMessage}</Text>
+      {dialectCatalog.status === 'error' && (
+        <Button
+          onClick={() => void loadDialectCatalog().catch(() => {})}
+          color={colors.testButtonColor}
+          backgroundColor={colors.testButtonBackgroundColor}
+        >
+          {t('connectionForm.retryCatalog')}
+        </Button>
+      )}
+      {props.renderActions ? props.renderActions({
+        testConnection: async () => {}, testing: false, saving: false, available: false,
+      }) : props.onClose && (
+        <Row>
+          <Spacer />
+          <Button
+            onClick={props.onClose}
+            color={colors.cancelButtonColor}
+            backgroundColor={colors.cancelButtonBackgroundColor}
+          >
+            {t('common.cancel')}
+          </Button>
+        </Row>
+      )}
+    </>
+  );
+});
+
 ConnectionForm.displayName = 'ConnectionForm';
 
 export interface IConnectionFormProps {
@@ -377,5 +393,6 @@ export interface IConnectionFormProps {
     testConnection: () => Promise<void>;
     testing: boolean;
     saving: boolean;
+    available: boolean;
   }) => React.ReactNode;
 }

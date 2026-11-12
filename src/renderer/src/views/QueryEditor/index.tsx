@@ -12,9 +12,9 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
+import { selectConnectionPresentations, selectProcessListSupportByConnection } from '@renderer/stores/Workspace/selectors';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { ModalExportData } from '@renderer/components/ModalExportData';
 import ProcessList from '@renderer/views/ProcessList';
 import { useQueryAutocomplete } from './hooks/useQueryAutocomplete';
@@ -42,6 +42,12 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
     })),
   );
 
+  const processListSupport = useWorkspaceStore((state) =>
+    selectProcessListSupportByConnection(state).get(id_connection),
+  );
+  const connectionDialect = useWorkspaceStore(
+    (state) => selectConnectionPresentations(state).get(id_connection)?.dialect,
+  );
   const activeTheme = useThemeStore((state) => state.activeTheme);
 
   const {
@@ -61,9 +67,8 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
     () => connections.find((connection) => connection.id === id_connection),
     [connections, id_connection],
   );
-  const dialect = getRendererDialect(currentConnection?.dialect);
-  const supportsProcessList =
-    currentConnection?.dialect === 'postgres' || currentConnection?.dialect === 'mysql';
+  const dialect = connectionDialect || 'postgres';
+  const supportsProcessList = processListSupport === true;
   const isProductionConnection = currentConnection?.environment === 'production';
 
   const refEditor = React.useRef<IEditorRef>(null);
@@ -76,13 +81,13 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
   const [isEditorReady, setIsEditorReady] = React.useState(false);
 
   const { autocomplete, tableReferences, handleUpdateCurrentQueryInfo } = useQueryAutocomplete(
-    id_connection, currentConnection?.dialect,
+    id_connection, connectionDialect,
   );
 
-  const results = useQueryResults();
+  const results = useQueryResults(id_connection);
   
   const queryExecution = useQueryExecution({
-    id_connection, refEditor, results, dialect: currentConnection?.dialect || 'postgres'
+    id_connection, refEditor, results, dialect
   });
 
   const queryRequests = useQueryRequests({
@@ -410,7 +415,6 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
         <Editor
           ref={refEditor}
           autoFocus
-          dialect={dialect.editorDialect}
           onChange={saveScript}
           onChangeCurrentValue={handleUpdateCurrentQueryInfo}
           onDidChangeContent={clearEditorErrorMarkers}
@@ -452,7 +456,6 @@ export const QueryEditor = ({ id_connection, id_script, isActiveTab = true }: IQ
       />
 
       <ModalConfirmProductionQuery
-        dialect={dialect.editorDialect}
         show={!!pendingProductionQueryExecution}
         sql={pendingProductionSql}
         onCancel={closeProductionConfirmModal}

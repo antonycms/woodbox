@@ -4,7 +4,6 @@ import Editor, { type IEditorProps } from '@renderer/components/Editor';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
-import type { Dialect } from '@shared/types/connections';
 import SpatialMap from './components/SpatialMap';
 import { getSpatialPreviewData, serializePreviewValue } from './spatial';
 import styles from './styles.module.css';
@@ -14,7 +13,6 @@ import IconMdiMap from '~icons/mdi/map';
 
 interface IReferenceValuePreviewProps {
   column?: Pick<IColumn, 'label' | 'attribute' | 'info'>;
-  dialect: Dialect;
   readonly?: boolean;
   value: unknown;
   language?: IEditorProps['language'];
@@ -23,7 +21,6 @@ interface IReferenceValuePreviewProps {
 
 const ReferenceValuePreview = ({
   column,
-  dialect,
   readonly,
   value,
   onChange,
@@ -82,7 +79,6 @@ const ReferenceValuePreview = ({
           <SpatialMap geoJson={spatialPreview.geoJson} />
         ) : (
           <Editor
-            dialect={dialect}
             language={language}
             readonly={readonly}
             hidePreview

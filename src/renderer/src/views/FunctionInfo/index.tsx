@@ -11,7 +11,6 @@ import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
 import { generateHash } from '@shared/utils/string';
 import { useDatabaseStore } from '@renderer/stores/Database';
-import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import { IconRefresh, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';
@@ -19,7 +18,6 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import ModalApplyPendingDDL from '@renderer/views/TableInfo/components/Properties/components/ModalApplyPendingDDL';
-import { getRendererDialect } from '@renderer/database/dialects';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import styles from './styles.module.css';
 
@@ -42,15 +40,7 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
       runSql: state.runSql,
     })),
   );
-  const connections = useWorkspaceStore((state) => state.connections);
   const showToast = useToastStore((state) => state.showToast);
-  const dialect = React.useMemo(
-    () =>
-      getRendererDialect(
-        connections.find((connection) => connection.id === id_connection)?.dialect,
-      ),
-    [connections, id_connection],
-  );
   const handleEditorCtrlClick = useEditorCtrlClickNavigate(id_connection);
   const refEditor = React.useRef<IEditorRef>(null);
 
@@ -213,7 +203,6 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
                   <div className={styles.editorContainer} onKeyDownCapture={handleKeyDown}>
                     <Editor
                       ref={refEditor}
-                      dialect={dialect.editorDialect}
                       language="sql"
                       onChange={setDefinition}
                       onCtrlClick={handleEditorCtrlClick}
@@ -269,7 +258,6 @@ const FunctionInfo = ({ id_connection, schema, function_name }: IFunctionInfoPro
         sql={pendingSql}
         applying={applying}
         onClose={() => setShowApplyModal(false)}
-        dialect={dialect}
         onApply={handleApply}
       />
     </div>
