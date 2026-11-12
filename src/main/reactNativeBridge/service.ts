@@ -7,7 +7,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const findSessionWithRetry = async (config: IReactNativeBridgeConnectionConfig) => {
   const startedAt = Date.now();
-  const timeoutMs = 3000;
+  const timeoutMs = 10000;
 
   while (Date.now() - startedAt < timeoutMs) {
     const session = findReactNativeBridgeSession({
