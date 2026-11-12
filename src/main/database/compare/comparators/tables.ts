@@ -5,7 +5,7 @@ import type {
   DatabaseCompareMessage,
   DatabaseCompareOptions,
 } from '@shared/types/databaseCompare';
-import { getCompareDdlBuilder, type CompareDdlBuilder, type CompareColumnChanges } from '../../compareDdl';
+import { getCompareDdlBuilder, type CompareDdlBuilder, type CompareColumnChanges } from '../ddl';
 import { getDialectAdapter } from '../../dialects';
 import type {
   ColumnInfo,

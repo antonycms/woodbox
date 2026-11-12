@@ -1,17 +1,14 @@
-import { prepareInsertDml } from './insertDml';
+import { prepareInsertDml } from './rowChanges/insertDml';
 import { prepareStructureDdl } from './structure/ddl';
 import addListener from '../utils/addListener';
 import {
   getDialects,
   readInitialWhere,
   prepareInitialWhere,
-  testConnection,
-  closeConnection,
   getConnectionInfo,
   getTableData,
   getTableRowsCount,
   getQueryRowsCount,
-  getExportDataPreview,
   getTableColumns,
   getColumnGridData,
   getColumnTypes,
@@ -22,19 +19,14 @@ import {
   getTableIndexes,
   getTableTriggers,
   getFunctionDefinition,
-  executeObjectCommand,
-  runSql,
   saveRowChanges,
-  runExplainSql,
-  exportData,
-  importTableData,
-  cancelRunSql,
-  getServerOutput,
-  clearServerOutput,
   getProcessList,
   cancelProcess,
   compareDatabases,
 } from './core';
+import { getExportDataPreview, exportData, importTableData } from './transfer';
+import { runSql, cancelRunSql, runExplainSql, executeObjectCommand } from './execution';
+import { testConnection, closeConnection, getServerOutput, clearServerOutput } from './connections';
 
 // dialect
 addListener('@get:dialects', getDialects);
@@ -72,4 +64,3 @@ addListener('@get:process_list', getProcessList);
 addListener('@post:cancel_process', cancelProcess);
 addListener('@post:compare_databases', compareDatabases);
 
-export { closeAllConnections } from './core';

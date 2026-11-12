@@ -1,5 +1,5 @@
 import type { PrepareInsertDmlRequest } from '@shared/types/database';
-import { getDialectAdapter } from './dialects';
+import { getDialectAdapter } from '../dialects';
 
 const quoteLiteral = (value: string) => `'${String(value).replace(/'/g, "''")}'`;
 

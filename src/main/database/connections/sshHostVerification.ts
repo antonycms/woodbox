@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { dialog } from 'electron';
-import { getSshHostFingerprint, saveSshHostFingerprint } from '../storage/store';
+import { getSshHostFingerprint, saveSshHostFingerprint } from '../../storage/store';
 
 const pendingVerifications = new Map<string, Promise<boolean>>();
 

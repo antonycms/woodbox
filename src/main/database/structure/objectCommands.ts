@@ -1,6 +1,6 @@
 import type { DatabaseObjectCommand } from '@shared/types/database';
-import { getDialectCapabilities } from './dialects';
-import type { DatabaseDialectAdapter } from './types';
+import { getDialectCapabilities } from '../dialects';
+import type { DatabaseDialectAdapter } from '../types';
 
 export const buildObjectCommandSql = (
   adapter: DatabaseDialectAdapter,

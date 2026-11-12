@@ -3,7 +3,7 @@ import type { DatabaseRow, SerializedRunSqlColumn } from '@shared/types/database
 import type { SaveRowChangesResult, RowChange, QueryRowChangesIntent } from '@shared/types/rowChanges';
 import { queryTableKey } from '../utils/queryUpdates';
 import type { DatabaseDialectAdapter, QueryRowUpdate, RowChangeTableIdentity } from '../types';
-import { resolveQueryResultColumns } from '../queryResultColumns';
+import { resolveQueryResultColumns } from './queryResultColumns';
 import { restrictQueryColumnSources } from '../utils/querySources';
 import { assertRowChangeIdentifiers, getPrimaryKey } from './metadata';
 import { buildQueryUpdates, getQueryEditTargets } from './queryTargets';

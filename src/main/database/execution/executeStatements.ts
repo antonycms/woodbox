@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import type { Dialect } from '@shared/types/connections';
-import { prepareUserSqlStatement } from './utils/sql';
+import { prepareUserSqlStatement } from '../utils/sql';
 
 export const executeStatements = async (
   instance: Knex,

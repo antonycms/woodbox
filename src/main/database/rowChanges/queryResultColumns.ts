@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { RowChangesSource } from '@shared/types/rowChanges';
-import type { DatabaseDialectAdapter } from './types';
-import { getFlatSelectTables, restrictQueryColumnSources } from './utils/querySources';
+import type { DatabaseDialectAdapter } from '../types';
+import { getFlatSelectTables, restrictQueryColumnSources } from '../utils/querySources';
 
 // Called only when saving edited results. Never execute the user's SELECT again.
 export const resolveQueryResultColumns = async (

@@ -9,7 +9,8 @@ import { trustRenderer } from './ipc/security';
 import { app, shell, BrowserWindow, globalShortcut, Menu } from 'electron';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 
-import { closeAllConnections } from './database';
+import './database';
+import { closeAllConnections } from './database/connections';
 import { getWindowState, saveWindowState } from './storage/store';
 import { initAutoUpdater } from './updater';
 

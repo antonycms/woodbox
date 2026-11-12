@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { normalizeConnectionInput } from '../database/connectionInput';
+import { normalizeConnectionInput } from '../database/connections/connectionInput';
 import type { IpcArgs, IpcChannel } from '@shared/types/ipc';
 import { connection, exportProjects, importConnections, projectExportFormat, projectImportFormat } from './schemas/connections';
 import { project, script, snippet } from './schemas/workspace';

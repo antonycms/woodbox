@@ -2,9 +2,9 @@ import type { Knex } from 'knex';
 import {
   isQueryUpdateIdentifier,
   mergeQueryUpdates,
-} from './utils/queryUpdates';
-import type { DatabaseDialectAdapter, QueryRowUpdate } from './types';
-import { createRowChangeMetadata, type RowChangeMetadataLoader } from './rowChanges/metadata';
+} from '../utils/queryUpdates';
+import type { DatabaseDialectAdapter, QueryRowUpdate } from '../types';
+import { createRowChangeMetadata, type RowChangeMetadataLoader } from './metadata';
 
 const serializeValue = (value: unknown): string | number | boolean | null => {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;

@@ -3,7 +3,6 @@ import type { Dialect, ConnectionEnvironment, IConnectionConfig } from '@shared/
 import type { IAIAppAction, IAIQueryApproval } from '@shared/types/ai';
 import { isStepCount, jsonSchema, type Schema, type ToolSet, tool } from 'ai';
 import {
-  closeConnection,
   getConnectionInfo,
   getFunctionDefinition,
   getTableColumns,
@@ -11,8 +10,9 @@ import {
   getTableReferences,
   getTableRestrictions,
   getTableRowsCount,
-  runExplainSql,
 } from '../database/core';
+import { runExplainSql } from '../database/execution';
+import { closeConnection } from '../database/connections';
 import { generateHash } from '@shared/utils/string';
 import {
   addConnectionSaved,

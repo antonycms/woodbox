@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import type { DatabaseRow } from '@shared/types/database';
 import type { TableRowChangesIntent } from '@shared/types/rowChanges';
 import type { DatabaseDialectAdapter } from '../types';
-import { executeQueryUpdates } from '../queryUpdates';
+import { executeQueryUpdates } from './queryUpdates';
 import { assertRowChangeIdentifiers } from './metadata';
 import { queryTableKey } from '../utils/queryUpdates';
 import type { RowChangesPlan } from './planner';

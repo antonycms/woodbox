@@ -1,5 +1,5 @@
 import type { DatabaseCompareItem, DatabaseCompareOptions } from '@shared/types/databaseCompare';
-import { getCompareDdlBuilder } from '../../compareDdl';
+import { getCompareDdlBuilder } from '../ddl';
 import { getDialectAdapter } from '../../dialects';
 import type { Snapshot } from '../types';
 import {

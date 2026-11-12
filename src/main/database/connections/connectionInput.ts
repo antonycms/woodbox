@@ -1,4 +1,4 @@
-import { getDialectAdapter, getDialectIds } from './dialects';
+import { getDialectAdapter, getDialectIds } from '../dialects';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);

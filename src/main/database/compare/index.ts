@@ -5,12 +5,12 @@ import type {
   DatabaseCompareResult,
   DatabaseCompareMessage,
 } from '@shared/types/databaseCompare';
-import { compareFunctions } from './compare/comparators/functions';
-import { compareSequences } from './compare/comparators/sequences';
-import { compareTables } from './compare/comparators/tables';
-import type { ConnectionGetter } from './compare/types';
-import { getSnapshot } from './compare/snapshot';
-import { makeItemFactory } from './compare/utils';
+import { compareFunctions } from './comparators/functions';
+import { compareSequences } from './comparators/sequences';
+import { compareTables } from './comparators/tables';
+import type { ConnectionGetter } from './types';
+import { getSnapshot } from './snapshot';
+import { makeItemFactory } from './utils';
 
 export const compareDatabases = async (
   params: DatabaseCompareParams,
