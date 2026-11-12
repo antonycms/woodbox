@@ -3,8 +3,8 @@ import type { DatabaseRow } from '@shared/types/database';
 import type { TableRowChangesIntent } from '@shared/types/rowChanges';
 import type { DatabaseDialectAdapter } from '../types';
 import { executeQueryUpdates } from './queryUpdates';
-import { assertRowChangeIdentifiers } from './metadata';
 import { queryTableKey } from '../utils/queryUpdates';
+import { quoteDatabaseIdentifier } from '../utils/sql';
 import type { RowChangesPlan } from './planner';
 
 // Same value semantics as generated DML previews: a present undefined is NULL,
@@ -55,14 +55,22 @@ export const executeTableRowChanges = async (
   columnOrder?: string[],
 ) => {
   const target = intent.source;
-  assertRowChangeIdentifiers([target.schema, target.table]);
-  const quote = adapter.quoteIdentifier;
+  const identifiers = new Set([target.table, ...(target.schema !== undefined ? [target.schema] : [])]);
+  const rows = [...intent.inserts, ...intent.deletes, ...intent.updates.flatMap(({ filters, values }) => [filters, values])];
+  for (const row of rows) {
+    for (const name of Object.keys(row)) identifiers.add(name);
+  }
+  if ([...identifiers].some((name) => !name || name.includes('\0'))) {
+    throw new Error('Os identificadores dessas alterações não são suportados para edição segura.');
+  }
+  const hasSpecialIdentifiers = [...identifiers].some((name) => /[?\\]/.test(name));
+  const quote = hasSpecialIdentifiers
+    ? (name: string) => quoteDatabaseIdentifier(adapter.id, name) : adapter.quoteIdentifier;
   const tableName = target.schema ? `${quote(target.schema)}.${quote(target.table)}` : quote(target.table);
   const pending: { sql: string; values: (string | number | boolean | null)[] }[] = [];
   const where = (row: DatabaseRow) => {
     const columns = Object.keys(row);
     if (!columns.length) throw new Error('Não foi possível identificar o registro.');
-    assertRowChangeIdentifiers(columns);
     const values: (string | number | boolean | null)[] = [];
     const sql = columns.map((column) => {
       const value = serializeValue(row[column]);
@@ -81,7 +89,6 @@ export const executeTableRowChanges = async (
   const orderedNames = columnOrder || [...new Set(intent.inserts.flatMap((row) => Object.keys(row)))];
   const orderedSet = new Set(orderedNames);
   for (const row of intent.inserts) {
-    assertRowChangeIdentifiers(Object.keys(row));
     const columns = [
       ...orderedNames.filter((name) => Object.hasOwn(row, name)),
       ...Object.keys(row).filter((name) => !orderedSet.has(name)),
@@ -102,7 +109,6 @@ export const executeTableRowChanges = async (
     }
   }
   for (const { filters, values: changes } of intent.updates) {
-    assertRowChangeIdentifiers(Object.keys(changes));
     const match = where(filters);
     pending.push({
       sql: `UPDATE ${tableName} SET ${Object.keys(changes).map((column) => `${quote(column)} = ?`).join(', ')} WHERE ${match.sql}`,
@@ -111,5 +117,19 @@ export const executeTableRowChanges = async (
   }
   // Column existence and constraints are checked by the database. Any failure
   // rolls back the whole batch, including statements already executed.
-  for (const statement of pending) await trx.raw(statement.sql, statement.values);
+  if (!hasSpecialIdentifiers) {
+    for (const statement of pending) await trx.raw(statement.sql, statement.values);
+    return;
+  }
+
+  // Skip Raw's placeholder parser for these names. The transaction client leases
+  // its existing connection; releaseConnection is a no-op until commit/rollback.
+  const dbConnection = await trx.client.acquireConnection();
+  try {
+    for (const statement of pending) {
+      await trx.client.query(dbConnection, { method: 'raw', sql: statement.sql, bindings: statement.values });
+    }
+  } finally {
+    await trx.client.releaseConnection(dbConnection);
+  }
 };

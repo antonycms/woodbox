@@ -1,6 +1,6 @@
 import type { CanonicalTableFilterValue, IColumnInfo, TableFilterColumnInfo } from '@shared/types/database';
 import type { Dialect } from '@shared/types/connections';
-import { quoteSqlIdentifier, quoteMysqlIdentifier } from '@shared/utils/sql';
+import { quoteDatabaseIdentifier } from '../utils/sql';
 import { unavailable } from './values';
 
 export interface FilterColumn extends IColumnInfo { comparison_collation?: string; comparison_type?: string; presentationHidden?: boolean }
@@ -11,11 +11,7 @@ export interface FilterOperand { literal: string }
 
 export const filterIdentifier = (dialect: Dialect, name: string) => {
   if (name.includes('\0')) return unavailable('invalid-value');
-  if (dialect === 'mysql') return quoteMysqlIdentifier(name);
-  if (dialect === 'postgres' && name.includes('?')) {
-    return 'U&' + quoteSqlIdentifier(name.replace(/\\/g, '\\\\').replace(/\?/g, '\\003f'));
-  }
-  return quoteSqlIdentifier(name);
+  return quoteDatabaseIdentifier(dialect, name);
 };
 export const filterTarget = (dialect: Dialect, target: { schema?: string; table: string }) =>
   target.schema ? `${filterIdentifier(dialect, target.schema)}.${filterIdentifier(dialect, target.table)}` : filterIdentifier(dialect, target.table);
@@ -32,6 +28,22 @@ const sqlText = (dialect: Dialect, value: string): FilterOperand => {
       : `CONVERT(X'${Buffer.from(value, 'utf8').toString('hex')}' USING utf8mb4)` };
   return { literal: value.includes('\0')
     ? `CAST(X'${Buffer.from(value, 'utf8').toString('hex')}' AS TEXT)` : `'${value.replace(/'/g, "''")}'` };
+};
+
+// Normal FK navigation preserves the received value; the database owns coercion.
+export const getFilterOperand = (dialect: Dialect, value: CanonicalTableFilterValue): FilterOperand | undefined => {
+  switch (value.kind) {
+    case 'null': return undefined;
+    case 'text':
+    case 'instant': return sqlText(dialect, value.value);
+    case 'number':
+    case 'bigint': return { literal: value.value };
+    case 'boolean': return { literal: dialect === 'postgres' ? (value.value ? 'TRUE' : 'FALSE') : (value.value ? '1' : '0') };
+    case 'bytes': {
+      const hex = Buffer.from(value.value, 'base64').toString('hex');
+      return { literal: dialect === 'postgres' ? `decode('${hex}', 'hex')` : `X'${hex}'` };
+    }
+  }
 };
 const integerText = (value: CanonicalTableFilterValue) => {
   if (!['text', 'number', 'bigint', 'boolean'].includes(value.kind)) return unavailable('unsupported-value');
@@ -70,6 +82,7 @@ const validTime = (text: string) => {
   return !!match && Number(match[1]) < 24 && Number(match[2]) < 60 && Number(match[3]) < 60;
 };
 
+// Compatibility only for old persisted filters carrying a comparison context.
 export const compareFilterValue = (dialect: Dialect, column: TableFilterColumnInfo, value: CanonicalTableFilterValue, requireComparisonContext = true) => {
   if (value.kind === 'number' && (!Number.isFinite(Number(value.value))
     || (Number.isInteger(Number(value.value)) && !Number.isSafeInteger(Number(value.value))))) return unavailable('insufficient-precision');

@@ -1,4 +1,14 @@
 import type { Dialect } from '@shared/types/connections';
+import { quoteSqlIdentifier, quoteMysqlIdentifier } from '@shared/utils/sql';
+
+// Avoid Knex's PostgreSQL placeholder replacement inside quoted identifiers.
+export const quoteDatabaseIdentifier = (dialect: Dialect, name: string) => {
+  if (dialect === 'mysql') return quoteMysqlIdentifier(name);
+  if (dialect === 'postgres' && name.includes('?')) {
+    return 'U&' + quoteSqlIdentifier(name.replace(/\\/g, '\\\\').replace(/\?/g, '\\003f'));
+  }
+  return quoteSqlIdentifier(name);
+};
 
 export const sanitizeAutoPaginatedError = (
   error: unknown,
