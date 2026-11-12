@@ -53,7 +53,8 @@ const runSqlOnConnection = async (
   const sql_original = sql.trim();
   let sql_final = sql_original;
 
-  const isSelectQuery = isReadOnlySelectQuery(sql_final);
+  const isSelectQuery = isReadOnlySelectQuery(sql_final) &&
+    !hasSqlStatementSeparator(sql_final.replace(/;+\s*$/, ''));
   const normalized = normalizeSqlForKeywordSearch(sql_final);
   let auto_paginated = false;
 

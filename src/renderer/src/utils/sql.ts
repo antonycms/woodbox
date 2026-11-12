@@ -167,24 +167,35 @@ const getBlankLineSeparatorEnd = (content: string, index: number) => {
   return getLineBreakEnd(content, firstLineBreakEnd);
 };
 
-const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
+const getSqlQuerySeparators = (content: string, blankLines = true, dialect?: string): SqlQuerySeparator[] => {
   const separators: SqlQuerySeparator[] = [];
   let index = 0;
+  let createStatement = false;
+  let routine = false;
+  let blockDepth = 0;
+  let previousWord = '';
 
   while (index < content.length) {
     const char = content[index];
     const nextChar = content[index + 1];
 
-    if (char === "'") {
+    if (char === "'" || char === '`') {
+      const quote = char;
+      const backslashEscapes = dialect === 'mysql' || (quote === "'" && /(?:^|\W)[eE]$/.test(content.slice(0, index)));
       index++;
 
       while (index < content.length) {
-        if (content[index] === "'" && content[index + 1] === "'") {
+        if (backslashEscapes && content[index] === '\\') {
           index += 2;
           continue;
         }
 
-        if (content[index] === "'") {
+        if (content[index] === quote && content[index + 1] === quote) {
+          index += 2;
+          continue;
+        }
+
+        if (content[index] === quote) {
           index++;
           break;
         }
@@ -192,6 +203,12 @@ const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
         index++;
       }
 
+      continue;
+    }
+
+    if (char === '[' && dialect !== 'postgres' && dialect !== 'mysql') {
+      const end = content.indexOf(']', index + 1);
+      index = end < 0 ? content.length : end + 1;
       continue;
     }
 
@@ -215,7 +232,7 @@ const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
       continue;
     }
 
-    if (char === '-' && nextChar === '-') {
+    if ((char === '-' && nextChar === '-') || (dialect === 'mysql' && char === '#')) {
       index += 2;
 
       while (index < content.length && content[index] !== '\n' && content[index] !== '\r') {
@@ -227,14 +244,18 @@ const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
 
     if (char === '/' && nextChar === '*') {
       index += 2;
+      let depth = 1;
 
-      while (index < content.length) {
-        if (content[index] === '*' && content[index + 1] === '/') {
+      while (index < content.length && depth) {
+        if (content[index] === '/' && content[index + 1] === '*' && dialect !== 'mysql') {
+          depth++;
           index += 2;
-          break;
+        } else if (content[index] === '*' && content[index + 1] === '/') {
+          depth--;
+          index += 2;
+        } else {
+          index++;
         }
-
-        index++;
       }
 
       continue;
@@ -251,13 +272,31 @@ const getSqlQuerySeparators = (content: string): SqlQuerySeparator[] => {
       }
     }
 
-    if (char === ';') {
+    if (!blankLines && /[a-z_]/i.test(char)) {
+      const word = content.slice(index).match(/^[a-z_][a-z_0-9$]*/i)[0].toUpperCase();
+      if (word === 'CREATE') createStatement = true;
+      if (createStatement && /^(FUNCTION|PROCEDURE|TRIGGER|EVENT)$/.test(word)) routine = true;
+      if (routine) {
+        if (word === 'BEGIN' || (word === 'CASE' && previousWord !== 'END')) blockDepth++;
+        if (word === 'END' && !/^\s+(?:IF|LOOP|WHILE|REPEAT|FOR)\b/i.test(content.slice(index + word.length))) {
+          blockDepth = Math.max(0, blockDepth - 1);
+        }
+      }
+      previousWord = word;
+      index += word.length;
+      continue;
+    }
+
+    if (char === ';' && !blockDepth) {
+      createStatement = false;
+      routine = false;
+      previousWord = '';
       separators.push({ index, end: index + 1 });
       index++;
       continue;
     }
 
-    const blankLineSeparatorEnd = getBlankLineSeparatorEnd(content, index);
+    const blankLineSeparatorEnd = blankLines ? getBlankLineSeparatorEnd(content, index) : undefined;
 
     if (blankLineSeparatorEnd !== undefined) {
       separators.push({ index, end: blankLineSeparatorEnd });
@@ -278,7 +317,7 @@ const trimSqlRange = (content: string, start: number, end: number) => {
   while (sqlStart < sqlEnd && /\s/.test(content[sqlStart])) sqlStart++;
   while (sqlStart < sqlEnd && /\s/.test(content[sqlEnd - 1])) sqlEnd--;
 
-  if (content[sqlStart] === ';') {
+  if (sqlStart < sqlEnd && content[sqlStart] === ';') {
     sqlStart++;
     while (sqlStart < sqlEnd && /\s/.test(content[sqlStart])) sqlStart++;
   }
@@ -331,3 +370,21 @@ export const getCurrentQuerySqlFromContentRange = (content: string, cursorOffset
 export const getCurrentQuerySqlFromContent = (content: string, cursorOffset?: number) => {
   return getCurrentQuerySqlFromContentRange(content, cursorOffset).sql;
 };
+
+// Blank lines separate the query under the cursor, but must not split executed SQL.
+export const splitQuerySql = (content: string, dialect?: string) => {
+  const statements: ReturnType<typeof trimSqlRange>[] = [];
+  let start = 0;
+
+  for (const separator of [...getSqlQuerySeparators(content, false, dialect), { index: content.length, end: content.length }]) {
+    const statement = trimSqlRange(content, start, separator.index);
+    if (removeSqlComments(dialect === 'mysql' ? statement.sql.replace(/^\s*#.*$/gm, '') : statement.sql).trim()) statements.push(statement);
+    start = separator.end;
+  }
+
+  return statements;
+};
+
+export const hasSqlTransactionCommand = (statements: { sql: string }[]) => statements.some(({ sql }) =>
+  /^(?:begin|commit|end|rollback|abort|savepoint|release|start\s+transaction|set\s+(?:(?:session|local)\s+)?transaction)\b/i.test(removeSqlComments(sql).trim()),
+);

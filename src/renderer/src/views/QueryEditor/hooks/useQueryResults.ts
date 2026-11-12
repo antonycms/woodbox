@@ -97,17 +97,12 @@ export const useQueryResults = (idConnection: string) => {
         query,
         affected_rows,
         page,
-        title = `Result ${tabsResult.length + 1}`,
+        title,
         variableValues,
         queryExecutionId,
       } = data;
 
       const idTab = generateHash();
-
-      const tab: ITab = {
-        idTab,
-        title,
-      };
 
       const queryResultData: IQueryResult = {
         type,
@@ -127,13 +122,13 @@ export const useQueryResults = (idConnection: string) => {
       };
 
       tabIdsRef.current.add(idTab);
-      setTabsResult((prevState) => [...prevState, tab]);
+      setTabsResult((prevState) => [...prevState, { idTab, title: title ?? `Result ${prevState.length + 1}` }]);
       setResultActiveTabId(idTab);
       setQuerysResultData((prevState) => new Map(prevState).set(idTab, queryResultData));
 
       return idTab;
     },
-    [tabsResult.length],
+    [],
   );
 
   const beginResultExecution = (params: BeginResultExecutionParams): ResultExecution | undefined => {

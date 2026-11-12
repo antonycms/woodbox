@@ -7,6 +7,7 @@ import { generateHash } from '@shared/utils/string';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { getNextSort } from '@renderer/utils/tableSort';
+import { hasSqlTransactionCommand, splitQuerySql } from '@renderer/utils/sql';
 import { prepareQueryVariables } from '../utils/queryVariables';
 import {
   formatQueryErrorMessage,
@@ -55,6 +56,25 @@ export const useQueryExecution = ({
   } = useQueryCancellation();
 
   const executeQuery = async (params: IExecuteQueryParams) => {
+    const statements = splitQuerySql(params.query, dialect);
+    // Transactions stay in a single request so BEGIN/COMMIT use the same connection.
+    if (hasSqlTransactionCommand(statements)) {
+      await executeStatement(params);
+      return;
+    }
+
+    for (const [index, statement] of statements.entries()) {
+      const completed = await executeStatement({
+        ...params,
+        query: statement.sql,
+        editorOffset: (params.editorOffset ?? 0) + statement.start,
+        openNewTab: index > 0 || params.openNewTab,
+      });
+      if (!completed) break;
+    }
+  };
+
+  const executeStatement = async (params: IExecuteQueryParams) => {
     const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
     const preparedQuery = prepareQueryVariables(query, variableValues);
     const previous = activeTabId ? querysResultData.get(activeTabId) : undefined;
@@ -94,36 +114,54 @@ export const useQueryExecution = ({
     try {
       editor?.setMarkers([]);
 
-      const [
-        { type, rows, columns, columns_info, column_sources_resolved, supports_row_management, row_management_table, affected_rows, auto_paginated, execution_time_ms },
-      ] = await runSql(id_connection, preparedQuery, { queryExecutionId, ...(columnTypes?.length ? { columnTypes } : {}) });
+      const statements = splitQuerySql(query, dialect);
+      const batch = statements.length > 1;
+      const sqlResults = await runSql(id_connection, preparedQuery, {
+        queryExecutionId,
+        ...(batch ? { limit: 0 } : {}),
+        ...(columnTypes?.length ? { columnTypes } : {}),
+      });
 
       const canceled = wasQueryCanceled(queryExecutionId);
-      if (!execution.isCurrent()) return;
+      if (!execution.isCurrent()) return false;
       if (canceled) {
         updateTabResultData(
           makeCanceledQueryResult(t('toast.queryCanceled'), { query, variableValues }),
         );
-        return;
+        return false;
       }
 
-      updateTabResultData({
-        page: 1,
-        query,
-        variableValues,
-        columns,
-        columns_info,
-        column_sources_resolved,
-        supports_row_management,
-        row_management_table,
-        rows,
-        type,
-        affected_rows,
-        auto_paginated,
-        execution_time_ms,
-        loading: false,
-        queryExecutionId: undefined,
-      });
+      if (!sqlResults.length) {
+        updateTabResultData({ loading: false, queryExecutionId: undefined });
+      }
+
+      for (const [index, result] of sqlResults.entries()) {
+        const resultQuery = batch ? statements[index]?.sql ?? query : query;
+        const resultExecution = index === 0 ? execution : beginResultExecution({
+          queryExecutionId,
+          data: { query: resultQuery, variableValues, type: result.type },
+        });
+        resultExecution?.update({
+          ...result,
+          columns: result.columns,
+          rows: result.rows,
+          columns_info: result.columns_info,
+          column_sources_resolved: result.column_sources_resolved,
+          supports_row_management: result.supports_row_management,
+          row_management_table: result.row_management_table,
+          affected_rows: result.affected_rows,
+          auto_paginated: result.auto_paginated,
+          execution_time_ms: result.execution_time_ms,
+          page: 1,
+          query: resultQuery,
+          variableValues,
+          loading: false,
+          queryExecutionId: undefined,
+          resultRevision: queryExecutionId,
+          date_run: new Date().toISOString(),
+        });
+      }
+      return true;
     } catch (error) {
       const canceled = wasQueryCanceled(queryExecutionId);
       if (!execution.isCurrent()) return;
