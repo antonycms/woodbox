@@ -11,7 +11,7 @@ import { Bar } from '@renderer/components/Bar';
 import type { IIndexInfo } from '@shared/types/database';
 import type {
   IPendingIndexCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { AddIcon, CancelIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { toDateTime } from '@renderer/utils/date';

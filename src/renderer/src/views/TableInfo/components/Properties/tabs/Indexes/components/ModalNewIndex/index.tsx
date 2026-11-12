@@ -16,7 +16,7 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import type {
   IPendingIndexCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import { useForm } from '@renderer/hooks/useForm';
 import styles from './styles.module.css';
 

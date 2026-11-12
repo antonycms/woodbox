@@ -12,7 +12,7 @@ import { RefreshButton } from '@renderer/components/RefreshButton';
 import type { IColumnRestrictionsInfo } from '@shared/types/database';
 import type {
   IPendingRestrictionCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';
 import { toDateTime } from '@renderer/utils/date';
 import { useI18nStore } from '@renderer/stores/I18n';

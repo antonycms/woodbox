@@ -3,7 +3,7 @@ import type { ColumnGridIdentity } from '@renderer/stores/TableInfo/types';
 import type {
   IPendingColumnChange,
   IPendingColumnCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 
 export interface IColumnBooleanLabels {
   yes: string;

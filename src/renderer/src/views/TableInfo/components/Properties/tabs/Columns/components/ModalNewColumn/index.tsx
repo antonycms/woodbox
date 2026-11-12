@@ -15,7 +15,7 @@ import type {
   IPendingColumnCreate,
   IPendingIndexCreate,
   IPendingReferenceCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import { useForm } from '@renderer/hooks/useForm';
 import { Autocomplete } from '@renderer/components/AutocompleteFree';
 import { useTableInfoStore, type TableInfoStoreApi } from '@renderer/stores/TableInfo';

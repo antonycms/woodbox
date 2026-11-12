@@ -10,7 +10,7 @@ import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
 import type {
   IPendingRestrictionCreate,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import { useForm } from '@renderer/hooks/useForm';
 import { generateHash } from '@shared/utils/string';
 import styles from './styles.module.css';

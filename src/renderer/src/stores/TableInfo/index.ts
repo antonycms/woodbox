@@ -27,7 +27,7 @@ import type {
   IPendingReferenceDrop,
   IPendingRestrictionCreate,
   IPendingRestrictionDrop,
-} from '@renderer/database/ddl/types';
+} from '@renderer/stores/TableInfo/types';
 import {
   type ILoadTableInfoFilters,
   type IOpenPendingChangesSqlModalOptions,

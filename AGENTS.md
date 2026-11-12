@@ -168,7 +168,7 @@ Sempre que possível, organize hooks dentro do componente nesta ordem:
 
 ## Banco de dados
 
-- No renderer, geração de DDL e seus tipos ficam em `database/ddl`; essa camada não deve importar stores ou views.
+- Geração e regras de DDL pertencem ao main; shared transporta contratos. Tipos dos rascunhos de estrutura da interface ficam em `stores/TableInfo/types.ts`.
 - Suporte a recursos específicos de banco deve vir dos metadados/adapters quando possível, não de checagens espalhadas na UI.
 - A UI deve consumir flags de suporte já normalizadas, ocultando ou desabilitando recursos indisponíveis.
 
