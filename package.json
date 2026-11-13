@@ -1,5 +1,6 @@
 {
   "name": "woodbox",
+  "desktopName": "woodbox.desktop",
   "version": "1.7.1",
   "description": "An application to manage databases",
   "main": "./out/main/index.js",
