@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import Icons from 'unplugin-icons/vite';
@@ -17,7 +17,6 @@ export default defineConfig({
         '@shared': resolve('src/shared'),
       },
     },
-    plugins: [externalizeDepsPlugin()],
   },
   preload: {
     resolve: {
@@ -25,7 +24,6 @@ export default defineConfig({
         '@shared': resolve('src/shared'),
       },
     },
-    plugins: [externalizeDepsPlugin()],
   },
   renderer: {
     define: {

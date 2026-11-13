@@ -5,3 +5,5 @@ allowBuilds:
   sqlite3: true
   cpu-features: true
   ssh2: true
+minimumReleaseAgeExclude:
+  - electron@45.3.2

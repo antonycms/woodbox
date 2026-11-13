@@ -93,7 +93,7 @@ const exportRowsToClipboard = async (
     rows.push(...batchRows.map((row) => serializeClipboardRow(row, columns)));
   });
 
-  clipboard.writeText(rows.join('\n'));
+  await clipboard.writeText(rows.join('\n'));
 
   return { canceled: false, rows: totalRows };
 };
