@@ -1,6 +1,6 @@
 import type { UpdateAvailablePayload, UpdateProgressPayload } from '@shared/types/updates';
 import { BrowserWindow, app } from 'electron';
-import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater';
+import type { AppUpdater, ProgressInfo, UpdateInfo } from 'electron-updater';
 import addListener from './utils/addListener';
 import { emitEvent } from './utils/emitEvent';
 
@@ -10,6 +10,7 @@ type ReleaseNoteInfo = {
 };
 
 let initialized = false;
+let updaterPromise: Promise<AppUpdater> | undefined;
 let downloadStarted = false;
 let latestUpdateVersion: string | undefined;
 
@@ -111,28 +112,33 @@ const downloadUpdate = async () => {
   if (!app.isPackaged || downloadStarted) return;
 
   downloadStarted = true;
-  await autoUpdater.downloadUpdate();
+  try {
+    const autoUpdater = await loadAutoUpdater();
+    await autoUpdater.downloadUpdate();
+  } catch (error) {
+    downloadStarted = false;
+    throw error;
+  }
 };
 
-const quitAndInstallUpdate = () => {
+const quitAndInstallUpdate = async () => {
   if (!app.isPackaged) return;
 
+  const autoUpdater = await loadAutoUpdater();
   autoUpdater.quitAndInstall();
 };
 
 addListener('@post:download_update', downloadUpdate);
 addListener('@post:quit_and_install_update', quitAndInstallUpdate);
 
-export const initAutoUpdater = (mainWindow: BrowserWindow) => {
-  if (initialized || !app.isPackaged) return;
-
-  initialized = true;
+const configureAutoUpdater = (autoUpdater: AppUpdater) => {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on('update-available', (info) => {
     latestUpdateVersion = info.version;
     downloadStarted = false;
+
     emitEvent('@event:update_available', toUpdateAvailablePayload(info));
   });
 
@@ -150,9 +156,72 @@ export const initAutoUpdater = (mainWindow: BrowserWindow) => {
     emitEvent('@event:update_error', { message: error.message });
   });
 
-  mainWindow.webContents.once('did-finish-load', () => {
-    autoUpdater.checkForUpdates().catch((error) => {
-      console.error(error);
+  return autoUpdater;
+};
+
+const loadAutoUpdater = () => {
+  updaterPromise ??= import('electron-updater')
+    .then(({ default: { autoUpdater } }) => configureAutoUpdater(autoUpdater))
+    .catch((error: unknown) => {
+      updaterPromise = undefined;
+      throw error;
     });
-  });
+  return updaterPromise;
+};
+
+export const initAutoUpdater = (mainWindow: BrowserWindow) => {
+  if (initialized || !app.isPackaged) return;
+  initialized = true;
+
+  let shown = mainWindow.isVisible();
+  let loaded = !!mainWindow.webContents.getURL() && !mainWindow.webContents.isLoadingMainFrame();
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const removeListeners = () => {
+    mainWindow.removeListener('show', onShow);
+    mainWindow.webContents.removeListener('did-finish-load', onLoad);
+    mainWindow.removeListener('closed', onClosed);
+    app.removeListener('before-quit', stop);
+  };
+  const stop = () => {
+    stopped = true;
+    if (timer !== undefined) clearTimeout(timer);
+    removeListeners();
+  };
+  const onClosed = () => {
+    stop();
+    initialized = false;
+    const nextWindow = BrowserWindow.getAllWindows().find((window) =>
+      window !== mainWindow && !window.isDestroyed(),
+    );
+    if (nextWindow) initAutoUpdater(nextWindow);
+  };
+  const check = () => {
+    if (!shown || !loaded || stopped || timer !== undefined) return;
+    // O import pesado só começa após exibir a janela, fora da pilha do show().
+    timer = setTimeout(() => {
+      if (stopped || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+        stop();
+        return;
+      }
+      void loadAutoUpdater()
+        .then((autoUpdater) => {
+          if (!stopped && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+            return autoUpdater.checkForUpdates();
+          }
+          return undefined;
+        })
+        .catch(console.error)
+        .finally(removeListeners);
+    }, 250);
+  };
+  const onShow = () => { shown = true; check(); };
+  const onLoad = () => { loaded = true; check(); };
+
+  mainWindow.once('show', onShow);
+  mainWindow.webContents.once('did-finish-load', onLoad);
+  mainWindow.once('closed', onClosed);
+  app.once('before-quit', stop);
+  check();
 };
