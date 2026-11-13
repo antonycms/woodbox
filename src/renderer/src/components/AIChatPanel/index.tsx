@@ -16,7 +16,7 @@ import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
 import useStorage from '@renderer/hooks/useStorage';
-import { IconAI } from '@renderer/styles/icons';
+import { AIChatToggle } from './components/AIChatToggle';
 import FunctionInfo from '@renderer/views/FunctionInfo';
 import TableInfo from '@renderer/views/TableInfo';
 import AIChat from './components/AIChat';
@@ -43,7 +43,6 @@ export const AIChatPanel = React.memo(() => {
     editorContextRequest,
     initialMessageRequest,
     openChatPanel,
-    toggleChatPanel,
     visible,
   } = useAIChatPanelStore(
     useShallow((state) => ({
@@ -54,7 +53,6 @@ export const AIChatPanel = React.memo(() => {
       editorContextRequest: state.editorContextRequest,
       initialMessageRequest: state.initialMessageRequest,
       openChatPanel: state.openChatPanel,
-      toggleChatPanel: state.toggleChatPanel,
       visible: state.visible,
     })),
   );
@@ -373,10 +371,6 @@ export const AIChatPanel = React.memo(() => {
     [],
   );
 
-  const handleTogglePanel = React.useCallback(() => {
-    toggleChatPanel();
-  }, [toggleChatPanel]);
-
   const handleEmptySubmit = React.useCallback(
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -526,25 +520,7 @@ export const AIChatPanel = React.memo(() => {
 
   return (
     <>
-      {!visible && (
-        <button
-          className={styles.toggleButton}
-          type="button"
-          title={t('aiChat.togglePanel')}
-          aria-label={t('aiChat.togglePanel')}
-          style={
-            {
-              '--borderColor': theme.bar.borderColor,
-              '--backgroundColor': theme.backgroundColor,
-              '--color': theme.color,
-              '--ascentColor': theme.ascentColor,
-            } as React.CSSProperties
-          }
-          onClick={handleTogglePanel}
-        >
-          <IconAI size={18} />
-        </button>
-      )}
+      {!visible && <AIChatToggle />}
 
       {visible && (
         <>
