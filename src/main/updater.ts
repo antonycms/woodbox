@@ -189,7 +189,9 @@ export const initAutoUpdater = (mainWindow: BrowserWindow) => {
 
   const removeListeners = () => {
     mainWindow.removeListener('show', onShow);
-    mainWindow.webContents.removeListener('did-finish-load', onLoad);
+    if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.removeListener('did-finish-load', onLoad);
+    }
     mainWindow.removeListener('closed', onClosed);
     app.removeListener('before-quit', stop);
   };
