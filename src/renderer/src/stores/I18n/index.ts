@@ -72,38 +72,21 @@ const createTranslators = (language: LanguageCode) => {
   return { t, tText };
 };
 
-export const useI18nStore = create<II18nStore>()((set, get) => {
-  const writeLocalLanguage = (language: LanguageCode) => {
-    writeStorageValue('@language:active', language);
-  };
-
-  const persistLanguage = (language: LanguageCode) => {
-    writeStorageValue('@language:active', language);
-    void window.api.preferences.set({ language }).catch(console.error);
-  };
-
+export const useI18nStore = create<II18nStore>()((set) => {
   const language = getStoredLanguage();
 
   return {
     language,
     availableLanguages,
     ...createTranslators(language),
-    hydrate: async () => {
-      const preferences = await window.api.preferences.get();
-      const storedLanguage = isLanguageCode(preferences.language) ? preferences.language : undefined;
-      const language = storedLanguage ?? get().language;
-
+    syncFromStorage: () => {
+      const language = getStoredLanguage();
       set({ language, ...createTranslators(language) });
-      if (storedLanguage) {
-        writeLocalLanguage(language);
-      } else {
-        persistLanguage(language);
-      }
     },
     changeLanguage: (nextLanguage) => {
       const language = isLanguageCode(nextLanguage) ? nextLanguage : DEFAULT_LANGUAGE;
       set({ language, ...createTranslators(language) });
-      persistLanguage(language);
+      writeStorageValue('@language:active', language);
     },
   };
 });

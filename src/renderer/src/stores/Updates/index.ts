@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { WoodboxApi } from '@shared/types/api';
 
 export const useUpdatesStore = create<WoodboxApi['updates']>()(() => ({
+  ignore: (...args) => window.api.updates.ignore(...args),
+  onIgnored: (...args) => window.api.updates.onIgnored(...args),
   download: (...args) => window.api.updates.download(...args),
   quitAndInstall: (...args) => window.api.updates.quitAndInstall(...args),
   onAvailable: (...args) => window.api.updates.onAvailable(...args),

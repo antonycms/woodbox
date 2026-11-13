@@ -15,8 +15,6 @@ import styles from './styles.module.css';
 
 type UpdateStatus = 'available' | 'downloading' | 'downloaded' | 'error';
 
-const ignoredUpdateStorageKey = '@update:ignored_version';
-
 const formatDate = (date?: string) => {
   if (!date) return null;
 
@@ -33,6 +31,8 @@ const formatDate = (date?: string) => {
 export const UpdateAvailableModal = React.memo(() => {
   const updates = useUpdatesStore(
     useShallow((state) => ({
+      ignore: state.ignore,
+      onIgnored: state.onIgnored,
       quitAndInstall: state.quitAndInstall,
       download: state.download,
       onAvailable: state.onAvailable,
@@ -60,13 +60,15 @@ export const UpdateAvailableModal = React.memo(() => {
     setErrorMessage(null);
   }, []);
 
-  const ignoreUpdate = React.useCallback(() => {
-    if (update?.version) {
-      window.localStorage.setItem(ignoredUpdateStorageKey, update.version);
+  const ignoreUpdate = React.useCallback(async () => {
+    try {
+      if (update?.version) await updates.ignore(update.version);
+      closeModal();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, t('common.unknownError')));
+      setStatus('error');
     }
-
-    closeModal();
-  }, [closeModal, update?.version]);
+  }, [closeModal, update?.version, updates, t]);
 
   const handleUpdate = React.useCallback(async () => {
     try {
@@ -92,14 +94,14 @@ export const UpdateAvailableModal = React.memo(() => {
 
   React.useEffect(() => {
     const removeAvailableListener = updates.onAvailable((nextUpdate: UpdateInfo) => {
-      const ignoredVersion = window.localStorage.getItem(ignoredUpdateStorageKey);
-
-      if (ignoredVersion === nextUpdate.version) return;
-
       setUpdate(nextUpdate);
       setStatus('available');
       setProgress(0);
       setErrorMessage(null);
+    });
+
+    const removeIgnoredListener = updates.onIgnored((version) => {
+      setUpdate((current) => current?.version === version ? null : current);
     });
 
     const removeProgressListener = updates.onProgress((nextProgress) => {
@@ -119,6 +121,7 @@ export const UpdateAvailableModal = React.memo(() => {
 
     return () => {
       removeAvailableListener();
+      removeIgnoredListener();
       removeProgressListener();
       removeDownloadedListener();
       removeErrorListener();

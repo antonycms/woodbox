@@ -23,9 +23,9 @@ import {
   getModule as getModuleWindowState,
 } from './modules/window_state';
 import {
-  initialValue as app_preferences,
-  getModule as getModuleAppPreferences,
-} from './modules/app_preferences';
+  initialValue as update_preferences,
+  getModule as getModuleUpdatePreferences,
+} from './modules/update_preferences';
 import { getModule as getModuleImportConnections } from './modules/importProjects';
 import { getModule as getModuleExportProjects } from './modules/exportProjects';
 
@@ -39,7 +39,7 @@ const store = new Store<Record<string, unknown>>({
     ai_chats,
     ssh_hosts,
     window_state,
-    app_preferences,
+    update_preferences,
   },
 });
 
@@ -54,9 +54,9 @@ export const {
 } = getModuleWindowState(store);
 
 export const {
-  get: getAppPreferences,
-  update: updateAppPreferences,
-} = getModuleAppPreferences(store);
+  getIgnoredVersion: getIgnoredUpdateVersion,
+  ignoreVersion: ignoreUpdateVersion,
+} = getModuleUpdatePreferences(store);
 
 export const {
   add: addProject,

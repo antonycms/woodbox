@@ -11,7 +11,6 @@ import type * as Compare from './databaseCompare';
 import type * as Updates from './updates';
 import type { SaveRowChangesResult, RowChangesIntent } from './rowChanges';
 
-import type * as Preferences from './preferences';
 export type Unsubscribe = () => void;
 
 type TableFilters = { table: string; schema?: string };
@@ -64,10 +63,6 @@ export interface WoodboxApi {
     appendMessages: (id: string, data: AI.IAIChatAppendMessagesInput) => Promise<void>;
     sendMessage: (data: AI.IAIChatRequest) => Promise<AI.IAIChatResponse>;
     cancelMessage: (requestId: string) => Promise<boolean>;
-  };
-  preferences: {
-    get: () => Promise<Preferences.AppPreferences>;
-    set: (preferences: Preferences.AppPreferencesPatch) => Promise<void>;
   };
   codex: {
     getAccount: () => Promise<AI.ICodexChatGPTAccount>;
@@ -126,6 +121,8 @@ export interface WoodboxApi {
     selectSshKey: () => Promise<string | null>;
   };
   updates: {
+    ignore: (version: string) => Promise<void>;
+    onIgnored: (listener: (version: string) => void) => Unsubscribe;
     download: () => Promise<void>;
     quitAndInstall: () => Promise<void>;
     onAvailable: (listener: (data: Updates.UpdateAvailablePayload) => void) => Unsubscribe;

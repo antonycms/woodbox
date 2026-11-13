@@ -47,8 +47,6 @@ const schemas = {
   '@post:append_ai_chat_messages': z.tuple([id, appendMessages]),
   '@post:ai_chat_message': z.tuple([chatRequest]),
   '@post:cancel_ai_chat_message': z.tuple([id]),
-  '@get:app_preferences': z.tuple([]),
-  '@post:app_preferences': z.tuple([z.object({ language: z.string().optional(), themeActiveName: z.string().optional(), customThemes: z.array(z.unknown()).optional() })]),
   '@get:codex_chatgpt_account': z.tuple([]),
   '@post:codex_chatgpt_login': z.tuple([]),
   '@post:codex_chatgpt_logout': z.tuple([]),
@@ -93,6 +91,7 @@ const schemas = {
   '@post:select_project_export_file': z.tuple([projectExportFormat]),
   '@post:select_ssl_file': z.tuple([]),
   '@post:select_ssh_key': z.tuple([]),
+  '@post:ignore_update': z.tuple([z.string().trim().min(1).max(128)]),
   '@post:download_update': z.tuple([]),
   '@post:quit_and_install_update': z.tuple([]),
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

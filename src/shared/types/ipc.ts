@@ -37,8 +37,6 @@ export interface IpcRequests {
   '@post:append_ai_chat_messages': WoodboxApi['aiChats']['appendMessages'];
   '@post:ai_chat_message': WoodboxApi['aiChats']['sendMessage'];
   '@post:cancel_ai_chat_message': WoodboxApi['aiChats']['cancelMessage'];
-  '@get:app_preferences': WoodboxApi['preferences']['get'];
-  '@post:app_preferences': WoodboxApi['preferences']['set'];
   '@get:codex_chatgpt_account': WoodboxApi['codex']['getAccount'];
   '@post:codex_chatgpt_login': WoodboxApi['codex']['startLogin'];
   '@post:codex_chatgpt_logout': WoodboxApi['codex']['logout'];
@@ -83,11 +81,13 @@ export interface IpcRequests {
   '@post:select_project_export_file': WoodboxApi['dialogs']['selectProjectExportFile'];
   '@post:select_ssl_file': WoodboxApi['dialogs']['selectSslFile'];
   '@post:select_ssh_key': WoodboxApi['dialogs']['selectSshKey'];
+  '@post:ignore_update': WoodboxApi['updates']['ignore'];
   '@post:download_update': WoodboxApi['updates']['download'];
   '@post:quit_and_install_update': WoodboxApi['updates']['quitAndInstall'];
 }
 
 export interface IpcEvents {
+  '@event:update_ignored': string;
   '@event:server_output': Parameters<Parameters<WoodboxApi['database']['onServerOutput']>[0]>[0];
   '@event:update_available': Parameters<Parameters<WoodboxApi['updates']['onAvailable']>[0]>[0];
   '@event:update_download_progress': Parameters<Parameters<WoodboxApi['updates']['onProgress']>[0]>[0];

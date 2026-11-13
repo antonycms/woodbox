@@ -35,6 +35,7 @@ export const useSaveTabsOnStorage = (
       serializableTabs.some((tab) => tab.groupId === group.id),
     );
 
+    // Shared restore snapshot only: open windows never replace their live tabs from storage.
     writeStorageValue(
       APP_TABS_SESSION_STORAGE_KEY,
       {

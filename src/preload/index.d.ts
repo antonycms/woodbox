@@ -3,7 +3,7 @@ import type { Environment } from 'monaco-editor';
 
 declare global {
   interface Window {
-    // Includes typed guided row changes, object commands and offline/initial table filters.
+    // Includes typed updates, guided row changes and offline/initial table filters.
     api: WoodboxApi;
     shiftPressed?: boolean;
     ctrlPressed?: boolean;

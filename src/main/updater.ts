@@ -3,6 +3,7 @@ import { BrowserWindow, app } from 'electron';
 import type { AppUpdater, ProgressInfo, UpdateInfo } from 'electron-updater';
 import addListener from './utils/addListener';
 import { emitEvent } from './utils/emitEvent';
+import { getIgnoredUpdateVersion, ignoreUpdateVersion } from './storage/store';
 
 type ReleaseNoteInfo = {
   readonly version: string;
@@ -128,6 +129,12 @@ const quitAndInstallUpdate = async () => {
   autoUpdater.quitAndInstall();
 };
 
+const ignoreUpdate = (version: string) => {
+  ignoreUpdateVersion(version);
+  emitEvent('@event:update_ignored', version);
+};
+
+addListener('@post:ignore_update', ignoreUpdate);
 addListener('@post:download_update', downloadUpdate);
 addListener('@post:quit_and_install_update', quitAndInstallUpdate);
 
@@ -139,7 +146,9 @@ const configureAutoUpdater = (autoUpdater: AppUpdater) => {
     latestUpdateVersion = info.version;
     downloadStarted = false;
 
-    emitEvent('@event:update_available', toUpdateAvailablePayload(info));
+    if (getIgnoredUpdateVersion() !== info.version) {
+      emitEvent('@event:update_available', toUpdateAvailablePayload(info));
+    }
   });
 
   autoUpdater.on('download-progress', (progress) => {

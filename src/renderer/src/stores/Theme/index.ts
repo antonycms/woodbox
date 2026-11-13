@@ -61,43 +61,22 @@ export const useThemeStore = create<IThemeStore>()((set, get) => {
     writeStorageValue('@theme:active', activeThemeName);
   };
 
-  const persistThemes = () => {
-    writeLocalThemes();
-    void window.api.preferences
-      .set({ customThemes: storedThemes, themeActiveName: activeThemeName })
-      .catch(console.error);
-  };
-
   const updateThemes = (options: { persist?: boolean } = {}) => {
     const availableThemes = availableThemesFrom(storedThemes);
     set({
       availableThemes,
       activeTheme: availableThemes.find((theme) => theme.name === activeThemeName) || defaultTheme,
     });
-    if (options.persist === false) {
-      writeLocalThemes();
-    } else {
-      persistThemes();
-    }
+    if (options.persist !== false) writeLocalThemes();
   };
 
   return {
     availableThemes,
     activeTheme: availableThemes.find((theme) => theme.name === activeThemeName) || defaultTheme,
-    hydrate: async () => {
-      const preferences = await window.api.preferences.get();
-      const hasStoredPreferences =
-        Array.isArray(preferences.customThemes) || typeof preferences.themeActiveName === 'string';
-
-      if (Array.isArray(preferences.customThemes)) {
-        storedThemes = preferences.customThemes.filter(isTheme);
-      }
-
-      if (typeof preferences.themeActiveName === 'string') {
-        activeThemeName = preferences.themeActiveName;
-      }
-
-      updateThemes({ persist: !hasStoredPreferences });
+    syncFromStorage: () => {
+      storedThemes = readStoredThemes();
+      activeThemeName = readActiveThemeName();
+      updateThemes({ persist: false });
     },
     addTheme: (theme, options) => {
       storedThemes = [...storedThemes.filter((item) => item.name !== theme.name), theme];
@@ -114,7 +93,7 @@ export const useThemeStore = create<IThemeStore>()((set, get) => {
       if (!activeTheme) throw new Error(useI18nStore.getState().t('theme.invalid'));
       activeThemeName = name;
       set({ activeTheme });
-      persistThemes();
+      writeLocalThemes();
     },
     createThemeFromColors: (themeName, colors, baseThemeName) => {
       const baseTheme =
