@@ -4,12 +4,14 @@ import Editor, { type IEditorProps } from '@renderer/components/Editor';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
-import SpatialMap from './components/SpatialMap';
+import { LoadingPlaceholder } from '@renderer/components/Loaders/LoadingPlaceholder';
 import { getSpatialPreviewData, serializePreviewValue } from './spatial';
 import styles from './styles.module.css';
 
 import IconMdiCodeJson from '~icons/mdi/code-json';
 import IconMdiMap from '~icons/mdi/map';
+
+const SpatialMap = React.lazy(() => import('./components/SpatialMap'));
 
 interface IReferenceValuePreviewProps {
   column?: Pick<IColumn, 'label' | 'attribute' | 'info'>;
@@ -76,7 +78,9 @@ const ReferenceValuePreview = ({
 
       <div className={styles.content}>
         {viewMode === 'map' && spatialPreview ? (
-          <SpatialMap geoJson={spatialPreview.geoJson} />
+          <React.Suspense fallback={<LoadingPlaceholder />}>
+            <SpatialMap geoJson={spatialPreview.geoJson} />
+          </React.Suspense>
         ) : (
           <Editor
             language={language}

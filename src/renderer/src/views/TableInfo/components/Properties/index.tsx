@@ -3,6 +3,7 @@ import React from 'react';
 import { Row } from '@renderer/components/Grid';
 import { Input } from '@renderer/components/Input';
 import { TabBar, TabContent, TabWindow } from '@renderer/components/Tabs';
+import { LoadingPlaceholder } from '@renderer/components/Loaders/LoadingPlaceholder';
 import { generateHash } from '@shared/utils/string';
 import { useForm } from '@renderer/hooks/useForm';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -16,7 +17,7 @@ import References from './tabs/References';
 import Definition from './tabs/Definition';
 import Triggers from './tabs/Triggers';
 import Indexes from './tabs/Indexes';
-import Diagram from './tabs/Diagram';
+const Diagram = React.lazy(() => import('./tabs/Diagram'));
 import styles from './styles.module.css';
 
 interface IPropertiesProps {
@@ -302,7 +303,9 @@ const Properties = (props: IPropertiesProps) => {
 
           {!isCreateMode && !isReadOnlyObject && (
             <TabContent activeTabId={activeTabId} idTab="7">
-              <Diagram tableStore={props.tableStore} active={activeTabId === '7'} />
+              <React.Suspense fallback={<LoadingPlaceholder />}>
+                <Diagram tableStore={props.tableStore} active={activeTabId === '7'} />
+              </React.Suspense>
             </TabContent>
           )}
 
