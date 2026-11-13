@@ -1,7 +1,7 @@
 import { getErrorMessage } from '@shared/utils/error';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { Autocomplete } from '@renderer/components/Autocomplete';
 import { Button } from '@renderer/components/Button';
 import { Divider } from '@renderer/components/Divider';
@@ -127,6 +127,7 @@ const getExcelCellValue = (value: ExcelJS.CellValue): unknown => {
 };
 
 const parseXlsxRows = async (buffer: ArrayBuffer, messages: ImportParserMessages) => {
+  const { default: ExcelJS } = await import('exceljs');
   const workbook = new ExcelJS.Workbook();
 
   await workbook.xlsx.load(buffer);

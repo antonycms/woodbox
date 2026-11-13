@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { clipboard, dialog } from 'electron';
-import ExcelJS from 'exceljs';
 import type { ExportDataFormat as ExportFormat, IExportDataParams, IExportDataResult } from '@shared/types/database';
 
 export type ExportRowsBatchConsumer = (
@@ -120,6 +119,7 @@ export const exportRowsToFile = async (
   let totalRows = 0;
 
   if (format === 'xlsx') {
+    const { default: ExcelJS } = await import('exceljs');
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ filename: filePath });
     const worksheet = workbook.addWorksheet('Dados');
 
