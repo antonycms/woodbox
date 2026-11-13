@@ -1,6 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import * as monaco from './monaco';
+import './monacoTheme';
 
 import useDebounce from '@renderer/hooks/useDebounce';
 import styles from './styles.module.css';
