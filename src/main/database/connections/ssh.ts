@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { createServer, type Socket } from 'node:net';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import ssh2, { type ClientChannel, type ConnectConfig } from 'ssh2';
+import type { ClientChannel, ConnectConfig } from 'ssh2';
 import type { ISshConnectionConfig } from '@shared/types/ssh';
 
 export interface SshTunnel {
@@ -14,7 +14,6 @@ export interface SshTunnel {
 }
 
 type VerifyHost = (host: string, port: number, key: Buffer) => Promise<boolean>;
-const { Client } = ssh2;
 
 const validPort = (port: number) => Number.isInteger(port) && port > 0 && port <= 65535;
 
@@ -68,6 +67,7 @@ export const openSshTunnel = async (
       throw new Error('Método de autenticação SSH inválido.');
   }
 
+  const { default: { Client } } = await import('ssh2');
   const client = new Client();
   const sockets = new Set<Socket>();
   const channels = new Set<ClientChannel>();
