@@ -2,17 +2,21 @@ appId: com.woodbox.app
 productName: Woodbox
 directories:
   buildResources: build
-files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{biome.json,CHANGELOG.md,README.md}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!docs/**'
-  - '!screenshots/**'
-  - '!tests/**'
-asarUnpack:
-  - resources/**
+fileOptions:
+  files:
+    - '!**/.vscode/*'
+    - '!src/*'
+    - '!electron.vite.config.{js,ts,mjs,cjs}'
+    - '!{biome.json,CHANGELOG.md,README.md}'
+    - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+    - '!docs/**'
+    - '!screenshots/**'
+    - '!tests/**'
+asar:
+  unpack:
+    - resources/**
+electronUpdaterCompatibility: '>=6'
+blockmap: v2
 win:
   executableName: Woodbox
 nsis:
@@ -24,8 +28,10 @@ mac:
   target:
     - dmg
     - zip
-  x64ArchFiles: Contents/Resources/app.asar.unpacked/node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
-  entitlementsInherit: build/entitlements.mac.plist
+  universal:
+    x64ArchFiles: Contents/Resources/app.asar.unpacked/node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
+  sign:
+    entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
@@ -33,7 +39,6 @@ mac:
 dmg:
   artifactName: ${name}-${version}-${arch}.${ext}
 linux:
-  syncDesktopName: true
   target:
     - AppImage
     - deb
@@ -44,10 +49,11 @@ appImage:
   artifactName: ${name}-${version}.${ext}
   compression: zstd
 toolsets:
-  appimage: "1.0.3"
+  appimage: "1.2.0"
 publish:
   provider: github
   owner: antonycms
   repo: woodbox
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
+electronGet:
+  mirrorOptions:
+    mirror: https://npmmirror.com/mirrors/electron/

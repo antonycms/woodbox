@@ -140,7 +140,7 @@ addListener('@post:quit_and_install_update', quitAndInstallUpdate);
 
 const configureAutoUpdater = (autoUpdater: AppUpdater) => {
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.autoInstallEvent = 'manual';
 
   autoUpdater.on('update-available', (info) => {
     latestUpdateVersion = info.version;
@@ -170,7 +170,7 @@ const configureAutoUpdater = (autoUpdater: AppUpdater) => {
 
 const loadAutoUpdater = () => {
   updaterPromise ??= import('electron-updater')
-    .then(({ default: { autoUpdater } }) => configureAutoUpdater(autoUpdater))
+    .then(({ autoUpdater }) => configureAutoUpdater(autoUpdater))
     .catch((error: unknown) => {
       updaterPromise = undefined;
       throw error;
