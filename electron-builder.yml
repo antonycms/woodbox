@@ -39,6 +39,9 @@ linux:
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
+  compression: zstd
+toolsets:
+  appimage: "1.0.3"
 publish:
   provider: github
   owner: antonycms
