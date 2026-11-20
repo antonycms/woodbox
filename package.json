@@ -1,7 +1,7 @@
 {
   "name": "woodbox",
   "desktopName": "woodbox.desktop",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "An application to manage databases",
   "main": "./out/main/index.js",
   "author": "https://github.com/antonycms",
