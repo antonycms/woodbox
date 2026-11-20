@@ -108,7 +108,7 @@ jobs:
           fi
 
           shopt -s nullglob
-          assets=(dist/*.AppImage dist/*.deb dist/*.rpm dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/*.yml)
+          assets=(dist/*.AppImage dist/*.deb dist/*.rpm dist/*.dmg dist/*.exe dist/*.zip dist/*.blockmap dist/latest*.yml)
           if [ "$RUNNER_OS" = "macOS" ]; then
             assets=(dist/*.dmg dist/*.zip dist/*.blockmap)
           fi
