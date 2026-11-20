@@ -1,6 +1,8 @@
 import type { TranslationKey } from './en';
 
 export const ptBR: Record<TranslationKey, string> = {
+  'query.executionResults': 'Resultados',
+  'query.executionResult': 'Resultado',
   'filter.invalidValue': 'O valor não pode ser usado neste filtro.',
   'filter.insufficientPrecision': 'O valor não tem precisão suficiente para esta comparação.',
   'filter.unsupportedValue': 'Este tipo de valor não é suportado neste filtro.',

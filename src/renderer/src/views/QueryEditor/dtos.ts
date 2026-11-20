@@ -10,6 +10,7 @@ export interface IQueryResult extends IRunSqlResult {
   resultRevision?: string;
   message?: string;
   query: string;
+  executionResults?: IQueryResult[];
   date_run?: string;
   page?: number;
   orderBy?: ITableSort[];

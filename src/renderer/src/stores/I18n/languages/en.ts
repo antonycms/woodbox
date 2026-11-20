@@ -1,4 +1,6 @@
 export const en = {
+  'query.executionResults': 'Results',
+  'query.executionResult': 'Result',
   'filter.invalidValue': 'This value cannot be used in this filter.',
   'filter.insufficientPrecision': 'This value has insufficient precision for this comparison.',
   'filter.unsupportedValue': 'This value type is not supported in this filter.',
