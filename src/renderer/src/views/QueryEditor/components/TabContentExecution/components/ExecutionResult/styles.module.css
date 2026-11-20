@@ -1,0 +1,49 @@
+.sql {
+  composes: queryText from '../../../../styles.module.css';
+  margin: 8px 10px 6px;
+}
+
+.sql summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sql summary::-webkit-details-marker {
+  display: none;
+}
+
+.sql summary::before {
+  content: '›';
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sql[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.sql summary pre {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sql[open] summary pre {
+  display: block;
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 10px 6px;
+  overflow: hidden;
+}

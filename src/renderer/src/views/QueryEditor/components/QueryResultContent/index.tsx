@@ -5,6 +5,7 @@ import { TabcontentError } from '../TabContentError';
 import { TabContentExplain } from '../TabContentExplain';
 import { TabContentGeneric } from '../TabContentGeneric';
 import { TabContentSelect } from '../TabContentSelect';
+import { TabContentExecution } from '../TabContentExecution';
 
 type IQueryResultContentProps = React.ComponentProps<typeof TabContentSelect>;
 
@@ -21,6 +22,10 @@ export const QueryResultContent = (props: IQueryResultContentProps) => {
 
   if (data.type === 'SELECT' || data.columns?.length) {
     return <TabContentSelect {...props} readOnly={data.type !== 'SELECT'} />;
+  }
+
+  if (data.type === 'EXECUTION') {
+    return <TabContentExecution data={data} />;
   }
 
   return <TabContentGeneric data={data} />;

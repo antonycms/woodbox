@@ -7,7 +7,7 @@ import { generateHash } from '@shared/utils/string';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { getNextSort } from '@renderer/utils/tableSort';
-import { hasSqlTransactionCommand, splitQuerySql } from '@renderer/utils/sql';
+import { hasSqlTransactionCommand, hasUnsafeSqlMutation, splitQuerySql } from '@renderer/utils/sql';
 import { prepareQueryVariables } from '../utils/queryVariables';
 import {
   formatQueryErrorMessage,
@@ -16,7 +16,7 @@ import {
   makeQueryErrorMarker,
   makeCanceledQueryResult,
 } from '../utils/queryResult';
-import type { IExecuteQueryParams } from '../dtos';
+import type { IExecuteQueryParams, IQueryResult, IDataUpdateabResult } from '../dtos';
 import { useQueryCancellation } from './useQueryCancellation';
 import type { useQueryResults } from './useQueryResults';
 
@@ -55,11 +55,19 @@ export const useQueryExecution = ({
     wasQueryCanceled,
   } = useQueryCancellation();
 
+  type BatchExecution = {
+    sql: string;
+    results: IQueryResult[];
+    execution?: ReturnType<typeof beginResultExecution>;
+  };
+
   const executeQuery = async (params: IExecuteQueryParams) => {
     const statements = splitQuerySql(params.query, dialect);
+    const group: BatchExecution | undefined = statements.length > 1 && statements.some(({ sql }) => hasUnsafeSqlMutation(sql))
+      ? { sql: params.query, results: [] } : undefined;
     // Transactions stay in a single request so BEGIN/COMMIT use the same connection.
     if (hasSqlTransactionCommand(statements)) {
-      await executeStatement(params);
+      await executeStatement(params, group);
       return;
     }
 
@@ -69,22 +77,23 @@ export const useQueryExecution = ({
         query: statement.sql,
         editorOffset: (params.editorOffset ?? 0) + statement.start,
         openNewTab: index > 0 || params.openNewTab,
-      });
+      }, group);
       if (!completed) break;
     }
   };
 
-  const executeStatement = async (params: IExecuteQueryParams) => {
+  const executeStatement = async (params: IExecuteQueryParams, group?: BatchExecution) => {
+    if (group?.execution && !group.execution.isCurrent()) return false;
     const { query, openNewTab, forceNewTab, markErrors, variableValues } = params;
     const preparedQuery = prepareQueryVariables(query, variableValues);
     const previous = activeTabId ? querysResultData.get(activeTabId) : undefined;
     const columnTypes = !forceNewTab && !openNewTab && getResultExecution(activeTabId)?.isCurrent() && previous?.type === 'SELECT' &&
       prepareQueryVariables(previous.query, previous.variableValues) === preparedQuery
       ? previous.columns_info?.map(({ name, type }) => ({ name, type })) : undefined;
-    const queryExecutionId = generateHash();
+    const queryExecutionId = group?.execution?.queryExecutionId ?? generateHash();
 
-    const execution = beginResultExecution(
-      !forceNewTab && !openNewTab && activeTabId
+    const execution = group?.execution ?? beginResultExecution(
+      !group && !forceNewTab && !openNewTab && activeTabId
         ? { idTab: activeTabId, queryExecutionId }
         : { queryExecutionId, data: {
             query,
@@ -94,7 +103,29 @@ export const useQueryExecution = ({
           } },
     );
     if (!execution) return;
-    const updateTabResultData = execution.update;
+    if (group) group.execution = execution;
+    const updateTabResultData = (params: IDataUpdateabResult) => {
+      if (params.type === 'ERROR') {
+        execution.update({ ...params, executionResults: undefined });
+        return;
+      }
+      if (!group) {
+        execution.update(params);
+        return;
+      }
+      if (!params.loading && params.type) {
+        group.results.push({ ...params, type: params.type, query: params.query ?? query });
+      }
+      execution.update({
+        type: group.results.length ? 'EXECUTION' : 'SELECT',
+        query: group.sql,
+        executionResults: [...group.results],
+        loading: params.loading ?? false,
+        queryExecutionId: params.queryExecutionId,
+        date_run: params.date_run ?? new Date().toISOString(),
+        resultRevision: queryExecutionId,
+      });
+    };
     const editorExecution = {};
     editorExecutionRef.current = editorExecution;
     const editor = refEditor.current;
@@ -103,6 +134,7 @@ export const useQueryExecution = ({
 
     updateTabResultData({
       type: 'SELECT',
+      executionResults: undefined,
       query,
       variableValues,
       loading: true,
@@ -118,7 +150,7 @@ export const useQueryExecution = ({
       const batch = statements.length > 1;
       const sqlResults = await runSql(id_connection, preparedQuery, {
         queryExecutionId,
-        ...(batch ? { limit: 0 } : {}),
+        ...(group || batch ? { limit: 0 } : {}),
         ...(columnTypes?.length ? { columnTypes } : {}),
       });
 
@@ -137,11 +169,10 @@ export const useQueryExecution = ({
 
       for (const [index, result] of sqlResults.entries()) {
         const resultQuery = batch ? statements[index]?.sql ?? query : query;
-        const resultExecution = index === 0 ? execution : beginResultExecution({
-          queryExecutionId,
-          data: { query: resultQuery, variableValues, type: result.type },
-        });
-        resultExecution?.update({
+        if (!group && sqlResults.length > 1) {
+          group = { sql: query, results: [], execution };
+        }
+        updateTabResultData({
           ...result,
           columns: result.columns,
           rows: result.rows,
@@ -301,7 +332,10 @@ export const useQueryExecution = ({
       canceled = await cancelRunSql(id_connection, tab.queryExecutionId);
 
       if (canceled && execution.isCurrent()) {
-        execution.update(makeCanceledQueryResult(t('toast.queryCanceled'), tab));
+        execution.update({
+          ...makeCanceledQueryResult(t('toast.queryCanceled'), tab),
+          executionResults: undefined,
+        });
       }
     } finally {
       if (!canceled || !pendingQueryIdsRef.current.has(tab.queryExecutionId)) forgetCanceledQuery(tab.queryExecutionId);
