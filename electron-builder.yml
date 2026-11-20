@@ -19,17 +19,17 @@ electronUpdaterCompatibility: '>=6'
 blockmap: v2
 win:
   executableName: Woodbox
+  verifyUpdateCodeSignature: false
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - dmg
     - zip
-  universal:
-    x64ArchFiles: Contents/Resources/app.asar.unpacked/node_modules/ssh2/lib/protocol/crypto/build/Release/sshcrypto.node
   sign:
     entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
