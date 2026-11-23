@@ -89,7 +89,7 @@ type CodexResponseEvent = {
 };
 
 const CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses';
-const CODEX_CLIENT_VERSION = '0.144.1';
+const CODEX_CLIENT_VERSION = '0.169.1';
 const MAX_CODEX_TOOL_STEPS = 6;
 
 const toCodexMessageContent = (
