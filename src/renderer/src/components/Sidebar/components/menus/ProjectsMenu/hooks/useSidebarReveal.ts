@@ -102,6 +102,8 @@ export const useSidebarReveal = (
     })),
   );
 
+  const hasRevealedRef = React.useRef(false);
+
   const sidebarRevealIndex = React.useMemo(() => {
     return buildSidebarRevealIndex(projectsSerialized);
   }, [projectsSerialized]);
@@ -129,15 +131,28 @@ export const useSidebarReveal = (
     }
   }, [activeTabId, tabs]);
 
+  const activeSidebarRevealKey = activeSidebarRevealTarget
+    ? getSidebarRevealKey(activeSidebarRevealTarget)
+    : undefined;
+
   React.useEffect(() => {
-    if (!activeSidebarRevealTarget) return
+    hasRevealedRef.current = false;
+  }, [activeTabId, activeSidebarRevealKey]);
+
+  React.useEffect(() => {
+    if (!activeSidebarRevealTarget || hasRevealedRef.current) return;
 
     const revealPath = getSidebarRevealPath(sidebarRevealIndex, activeSidebarRevealTarget);
 
-    if (!revealPath) return
+    if (!revealPath) return;
 
     return scheduleSidebarReveal(() => {
-      treeViewRef.current?.reveal(revealPath.id, revealPath.parentIds, { focus: false });
+      const treeView = treeViewRef.current;
+
+      if (!treeView) return;
+
+      hasRevealedRef.current = true;
+      treeView.reveal(revealPath.id, revealPath.parentIds, { focus: false });
     });
   }, [activeSidebarRevealTarget, activeTabId, sidebarRevealIndex]);
 };
