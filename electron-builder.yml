@@ -43,6 +43,7 @@ linux:
     - AppImage
     - deb
     - rpm
+    - pacman
   maintainer: electronjs.org
   category: Utility
 appImage:
