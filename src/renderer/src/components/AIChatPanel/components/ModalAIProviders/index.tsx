@@ -29,19 +29,19 @@ type ProviderForm = IAIProviderCreate & {
   hasApiKey?: boolean;
 };
 
-const providerOptions: { labelKey: TranslationKey; value: AIProviderType; suggestedModel: string }[] = [
-  { labelKey: 'aiProvider.type.openai', value: 'openai', suggestedModel: 'gpt-5-mini' },
-  { labelKey: 'aiProvider.type.anthropic', value: 'anthropic', suggestedModel: 'claude-sonnet-4-6' },
-  { labelKey: 'aiProvider.type.google', value: 'google', suggestedModel: 'gemini-2.5-flash' },
-  { labelKey: 'aiProvider.type.openrouter', value: 'openrouter', suggestedModel: 'openai/gpt-4o' },
-  { labelKey: 'aiProvider.type.openaiCompatible', value: 'openai-compatible', suggestedModel: '' },
-  { labelKey: 'aiProvider.type.codexChatGPT', value: 'codex-chatgpt', suggestedModel: 'gpt-5.6' },
+const providerOptions: { labelKey: TranslationKey; value: AIProviderType; suggestedModels: string[] }[] = [
+  { labelKey: 'aiProvider.type.codexChatGPT', value: 'codex-chatgpt', suggestedModels: ['gpt-6.2-sol', 'gpt-6-luna', 'gpt-6.2-astra'] },
+  { labelKey: 'aiProvider.type.openai', value: 'openai', suggestedModels: ['gpt-6.2-sol', 'gpt-6-luna', 'gpt-6.2-astra'] },
+  { labelKey: 'aiProvider.type.anthropic', value: 'anthropic', suggestedModels: ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5', 'claude-fable-5-2'] },
+  { labelKey: 'aiProvider.type.google', value: 'google', suggestedModels: ['gemini-4-hydrogen', 'gemini-4-neon', 'gemini-4-carbon'] },
+  { labelKey: 'aiProvider.type.openrouter', value: 'openrouter', suggestedModels: [] },
+  { labelKey: 'aiProvider.type.openaiCompatible', value: 'openai-compatible', suggestedModels: [] },
 ];
 
 const emptyProvider = (): ProviderForm => ({
   name: '',
-  type: 'openai',
-  models: ['gpt-5-mini'],
+  type: 'codex-chatgpt',
+  models: [...(providerOptions.find((option) => option.value === 'codex-chatgpt')?.suggestedModels || [''])],
   apiKey: '',
   baseURL: '',
 });
@@ -128,7 +128,7 @@ export const ModalAIProviders = React.memo(({ show, onClose }: IModalAIProviders
           ? {
               ...prevState,
               type,
-              models: [option?.suggestedModel || ''],
+              models: option?.suggestedModels.length ? [...option.suggestedModels] : [''],
               baseURL: type === 'openai-compatible' ? prevState.baseURL : '',
               apiKey: type === 'codex-chatgpt' ? '' : prevState.apiKey,
             }
