@@ -251,7 +251,16 @@ export interface SerializedRunSqlResult extends IRunSqlResult {
 
 export type ExportDataFormat = 'csv' | 'json' | 'jsonl' | 'xlsx' | 'clipboard';
 
+export interface IExportProgress {
+  exportId: string;
+  connectionId: string;
+  phase: 'preparing' | 'exporting' | 'finalizing';
+  rows: number;
+  totalRows?: number;
+}
+
 export interface IExportDataParams {
+  exportId: string;
   source: ExportDataSource;
   columns: string[];
   format: ExportDataFormat;
@@ -296,12 +305,22 @@ export interface IDatabaseProcess {
 
 export type DbCellValue = string | number | boolean | Date | null;
 
+export interface IImportProgress {
+  importId: string;
+  connectionId: string;
+  phase: 'preparing' | 'importing' | 'finalizing';
+  rows: number;
+  totalRows: number;
+}
+
 export interface IImportTableDataParams {
+  importId: string;
   schema?: string;
   table: string;
   rows: Record<string, DbCellValue>[];
 }
 
 export interface IImportTableDataResult {
+  canceled: boolean;
   insertedRows: number;
 }

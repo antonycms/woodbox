@@ -1,5 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { once } from 'events';
+import { finished } from 'stream/promises';
+import { publishExportFile } from './publishExportFile';
 import { clipboard, dialog } from 'electron';
 import type { ExportDataFormat as ExportFormat, IExportDataParams, IExportDataResult } from '@shared/types/database';
 
@@ -32,11 +35,6 @@ const normalizeExportFileName = (value?: string) => {
 const writeStream = (stream: fs.WriteStream, content: string) =>
   new Promise<void>((resolve, reject) => {
     stream.write(content, (error) => (error ? reject(error) : resolve()));
-  });
-
-const endStream = (stream: fs.WriteStream) =>
-  new Promise<void>((resolve, reject) => {
-    stream.end((error) => (error ? reject(error) : resolve()));
   });
 
 const jsonStringify = (value: unknown, space?: number) =>
@@ -87,13 +85,16 @@ const serializeClipboardRow = (row: Record<string, unknown>, columns: string[]) 
 const exportRowsToClipboard = async (
   { columns }: Pick<IExportDataParams, 'columns'>,
   eachRowsBatch: ExportRowsBatchConsumer,
+  beginPublishing: () => void,
 ): Promise<IExportDataResult> => {
   const rows: string[] = [columns.map(serializeClipboardCell).join('\t')];
   const totalRows = await eachRowsBatch(async (batchRows) => {
     rows.push(...batchRows.map((row) => serializeClipboardRow(row, columns)));
   });
 
-  await clipboard.writeText(rows.join('\n'));
+  const content = rows.join('\n');
+  beginPublishing();
+  clipboard.writeText(content);
 
   return { canceled: false, rows: totalRows };
 };
@@ -101,8 +102,11 @@ const exportRowsToClipboard = async (
 export const exportRowsToFile = async (
   { columns, format, fileName }: Pick<IExportDataParams, 'columns' | 'format' | 'fileName'>,
   eachRowsBatch: ExportRowsBatchConsumer,
+  checkCanceled: () => void,
+  beginPublishing = checkCanceled,
 ): Promise<IExportDataResult> => {
-  if (format === 'clipboard') return exportRowsToClipboard({ columns }, eachRowsBatch);
+  checkCanceled();
+  if (format === 'clipboard') return exportRowsToClipboard({ columns }, eachRowsBatch, beginPublishing);
 
   const extension = EXPORT_MIME_EXTENSIONS[format];
   const result = await dialog.showSaveDialog({
@@ -110,73 +114,84 @@ export const exportRowsToFile = async (
     filters: [EXPORT_FORMAT_FILTERS[format]],
   });
 
+  checkCanceled();
   if (result.canceled || !result.filePath) return { canceled: true, rows: 0 };
 
   const filePath =
     path.extname(result.filePath).toLowerCase() === `.${extension}`
       ? result.filePath
       : `${result.filePath}.${extension}`;
-  let totalRows = 0;
+  return publishExportFile(filePath, checkCanceled, async (temporaryPath) => {
+    let totalRows = 0;
 
-  if (format === 'xlsx') {
-    const { default: ExcelJS } = await import('exceljs');
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ filename: filePath });
-    const worksheet = workbook.addWorksheet('Dados');
+    const stream = fs.createWriteStream(temporaryPath, { flags: 'wx', encoding: 'utf8' });
+    const completion = finished(stream);
+    void completion.catch(() => {});
 
-    worksheet.columns = columns.map((column) => ({ header: column, key: column }));
+    try {
+      await once(stream, 'open');
+      if (format === 'xlsx') {
+        const { default: ExcelJS } = await import('exceljs');
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream });
+        const worksheet = workbook.addWorksheet('Dados');
+        worksheet.columns = columns.map((column) => ({ header: column, key: column }));
 
-    totalRows = await eachRowsBatch(async (batchRows) => {
-      for (const row of serializeExportRows(batchRows, columns)) {
-        worksheet.addRow(row).commit();
+        try {
+          totalRows = await eachRowsBatch(async (batchRows) => {
+            if (stream.errored) throw stream.errored;
+            for (const row of serializeExportRows(batchRows, columns)) {
+              worksheet.addRow(row).commit();
+            }
+          });
+        } finally {
+          worksheet.commit();
+          await Promise.race([workbook.commit(), completion]);
+        }
+        await completion;
+        return { canceled: false, filePath, rows: totalRows };
       }
-    });
 
-    worksheet.commit();
-    await workbook.commit();
+      if (format === 'csv') {
+        await writeStream(stream, `\ufeff${columns.map(serializeCsvCell).join(',')}\n`);
+
+        totalRows = await eachRowsBatch(async (batchRows) => {
+          const content = batchRows
+            .map((row) => columns.map((column) => serializeCsvCell(row[column])).join(','))
+            .join('\n');
+
+          if (content) await writeStream(stream, `${content}\n`);
+        });
+      }
+
+      if (format === 'jsonl') {
+        totalRows = await eachRowsBatch(async (batchRows) => {
+          const content = serializeExportRows(batchRows, columns).map((row) => jsonStringify(row)).join('\n');
+
+          if (content) await writeStream(stream, `${content}\n`);
+        });
+      }
+
+      if (format === 'json') {
+        let isFirstRow = true;
+
+        await writeStream(stream, '[\n');
+
+        totalRows = await eachRowsBatch(async (batchRows) => {
+          for (const row of serializeExportRows(batchRows, columns)) {
+            await writeStream(stream, `${isFirstRow ? '' : ',\n'}  ${jsonStringify(row)}`);
+            isFirstRow = false;
+          }
+        });
+
+        await writeStream(stream, '\n]\n');
+      }
+      stream.end();
+      await completion;
+    } finally {
+      stream.destroy();
+      await completion.catch(() => {});
+    }
 
     return { canceled: false, filePath, rows: totalRows };
-  }
-
-  const stream = fs.createWriteStream(filePath, { encoding: 'utf8' });
-
-  try {
-    if (format === 'csv') {
-      await writeStream(stream, `\ufeff${columns.map(serializeCsvCell).join(',')}\n`);
-
-      totalRows = await eachRowsBatch(async (batchRows) => {
-        const content = batchRows
-          .map((row) => columns.map((column) => serializeCsvCell(row[column])).join(','))
-          .join('\n');
-
-        if (content) await writeStream(stream, `${content}\n`);
-      });
-    }
-
-    if (format === 'jsonl') {
-      totalRows = await eachRowsBatch(async (batchRows) => {
-        const content = serializeExportRows(batchRows, columns).map((row) => jsonStringify(row)).join('\n');
-
-        if (content) await writeStream(stream, `${content}\n`);
-      });
-    }
-
-    if (format === 'json') {
-      let isFirstRow = true;
-
-      await writeStream(stream, '[\n');
-
-      totalRows = await eachRowsBatch(async (batchRows) => {
-        for (const row of serializeExportRows(batchRows, columns)) {
-          await writeStream(stream, `${isFirstRow ? '' : ',\n'}  ${jsonStringify(row)}`);
-          isFirstRow = false;
-        }
-      });
-
-      await writeStream(stream, '\n]\n');
-    }
-  } finally {
-    await endStream(stream);
-  }
-
-  return { canceled: false, filePath, rows: totalRows };
+  }, beginPublishing);
 };

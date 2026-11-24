@@ -102,7 +102,11 @@ export interface WoodboxApi {
     runSql: (connectionId: string, sql: string, options?: Database.IOptionsRunSql) => Promise<Database.IRunSqlResult[]>;
     saveRowChanges: (connectionId: string, intent: RowChangesIntent) => Promise<SaveRowChangesResult>;
     runExplainSql: (connectionId: string, sql: string, options?: Pick<Database.IOptionsRunSql, 'queryExecutionId'>) => Promise<IRunExplainResult[]>;
+    cancelExport: (connectionId: string, exportId: string) => Promise<boolean>;
+    onExportProgress: (listener: (progress: Database.IExportProgress) => void) => Unsubscribe;
     exportData: (connectionId: string, params: Database.IExportDataParams) => Promise<Database.IExportDataResult>;
+    cancelImport: (connectionId: string, importId: string) => Promise<boolean>;
+    onImportProgress: (listener: (progress: Database.IImportProgress) => void) => Unsubscribe;
     importTableData: (connectionId: string, params: Database.IImportTableDataParams) => Promise<Database.IImportTableDataResult>;
     cancelRunSql: (connectionId: string, queryExecutionId: string) => Promise<boolean>;
     getServerOutput: (connectionId: string) => Promise<Database.IServerOutputMessage[]>;

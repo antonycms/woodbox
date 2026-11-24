@@ -2,7 +2,7 @@ import type { ExportDataSource as ExportSource } from '@shared/types/database';
 import { serializeOrderBy } from './orderBy';
 import { hasSqlStatementSeparator, isReadOnlySelectQuery } from './sql';
 
-const getExportSourceBaseSql = (
+export const getExportSourceBaseSql = (
   source: ExportSource,
   quoteIdentifier: (value: string) => string,
 ) => {

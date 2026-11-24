@@ -11,7 +11,7 @@ import { Modal } from '@renderer/components/Modal';
 import { Input } from '@renderer/components/Input';
 import { Spacer } from '@renderer/components/Spacer';
 import { Text } from '@renderer/components/Text';
-import type { DbCellValue, IColumnInfo } from '@shared/types/database';
+import type { DbCellValue, IColumnInfo, IImportProgress } from '@shared/types/database';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useI18nStore } from '@renderer/stores/I18n';
@@ -231,10 +231,12 @@ const parseImportFile = async (
 
 export const ModalImportTableData = React.memo(
   ({ show, idConnection, schema, table, onClose }: IModalImportTableDataProps) => {
-    const { getTableColumns, importTableData } = useDatabaseStore(
+    const { getTableColumns, importTableData, cancelImport, onImportProgress } = useDatabaseStore(
       useShallow((state) => ({
         getTableColumns: state.getTableColumns,
         importTableData: state.importTableData,
+        cancelImport: state.cancelImport,
+        onImportProgress: state.onImportProgress,
       })),
     );
     const loadConnectionInfo = useWorkspaceStore((state) => state.loadConnectionInfo);
@@ -253,6 +255,14 @@ export const ModalImportTableData = React.memo(
     const [selectedFile, setSelectedFile] = React.useState<File>();
     const [csvSeparator, setCsvSeparator] = React.useState(';');
     const [csvParsedSeparator, setCsvParsedSeparator] = React.useState(';');
+    const [canceling, setCanceling] = React.useState(false);
+    const [progress, setProgress] = React.useState<IImportProgress>();
+    const importJob = React.useRef<{
+      id: string;
+      connectionId: string;
+      canceled: boolean;
+      started: boolean;
+    } | undefined>(undefined);
 
     const tableName = [schema, table].filter(Boolean).join('.');
     const selectedFileIsCsv = selectedFile ? isCsvFile(selectedFile) : false;
@@ -381,6 +391,7 @@ export const ModalImportTableData = React.memo(
     const handleImport = React.useCallback(
       async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (importJob.current || !idConnection || !table || !parsedFile || loadingFile) return;
 
         if (!mappedColumns.length) {
           return showToast({
@@ -390,8 +401,26 @@ export const ModalImportTableData = React.memo(
           });
         }
 
+        const job = {
+          id: crypto.randomUUID(),
+          connectionId: idConnection,
+          canceled: false,
+          started: false,
+        };
+        importJob.current = job;
+        setCanceling(false);
+        setProgress({
+          importId: job.id,
+          connectionId: idConnection,
+          phase: 'preparing',
+          rows: 0,
+          totalRows: parsedFile.rows.length,
+        });
         try {
           setImporting(true);
+          // Paint preparation and allow cancellation before mapping a large file.
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          if (job.canceled || importJob.current !== job) return;
           let fileData = parsedFile;
 
           if (selectedFile && isCsvFile(selectedFile) && csvParsedSeparator !== csvSeparator) {
@@ -401,18 +430,33 @@ export const ModalImportTableData = React.memo(
             fileData = parsed;
           }
 
-          const rows = fileData.rows.map((row) =>
-            Object.fromEntries(
-              mappedColumns.map(([tableColumn, fileColumnKey]) => {
-                const fileColumn = fileData.columns.find((column) => column.key === fileColumnKey);
-                return [tableColumn, fileColumn ? row[fileColumn.valueIndex] : null];
-              }),
-            ),
-          );
-
-          const result = await importTableData(idConnection, { schema, table, rows });
+          if (job.canceled || importJob.current !== job) return;
+          const rows: Record<string, DbCellValue>[] = [];
+          const fileColumns = new Map(fileData.columns.map((column) => [column.key, column.valueIndex]));
+          const mappingBatchSize = 5000;
+          for (let index = 0; index < fileData.rows.length; index += mappingBatchSize) {
+            if (job.canceled || importJob.current !== job) return;
+            for (const row of fileData.rows.slice(index, index + mappingBatchSize)) {
+              rows.push(
+                Object.fromEntries(mappedColumns.map(([tableColumn, fileColumnKey]) => {
+                  const valueIndex = fileColumns.get(fileColumnKey);
+                  return [tableColumn, valueIndex === undefined ? null : row[valueIndex]];
+                })),
+              );
+            }
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          }
+          if (job.canceled || importJob.current !== job) return;
+          job.started = true;
+          const result = await importTableData(idConnection, { importId: job.id, schema, table, rows });
+          if (importJob.current !== job) return;
+          if (result.canceled) {
+            showToast({ type: 'warn', title: t('import.canceled') });
+            return;
+          }
 
           await loadConnectionInfo(idConnection, true);
+          if (importJob.current !== job) return;
 
           showToast({
             type: 'success',
@@ -424,6 +468,7 @@ export const ModalImportTableData = React.memo(
 
           close();
         } catch (error: unknown) {
+          if (importJob.current !== job) return;
           showToast({
             type: 'error',
             title: t('toast.dataImportError'),
@@ -431,7 +476,12 @@ export const ModalImportTableData = React.memo(
             delay: 8000,
           });
         } finally {
-          setImporting(false);
+          if (importJob.current === job) {
+            importJob.current = undefined;
+            setImporting(false);
+            setCanceling(false);
+            setProgress(undefined);
+          }
         }
       },
       [
@@ -442,6 +492,7 @@ export const ModalImportTableData = React.memo(
         loadFile,
         mappedColumns,
         parsedFile,
+        loadingFile,
         schema,
         language,
         showToast,
@@ -452,6 +503,53 @@ export const ModalImportTableData = React.memo(
         table,
       ],
     );
+
+    const handleCancelImport = React.useCallback(async () => {
+      const job = importJob.current;
+      if (!job || canceling || progress?.phase === 'finalizing') return;
+      setCanceling(true);
+      if (!job.started) {
+        job.canceled = true;
+        showToast({ type: 'warn', title: t('import.canceled') });
+        return;
+      }
+      try {
+        const accepted = await cancelImport(job.connectionId, job.id);
+        if (!accepted && importJob.current === job) setCanceling(false);
+      } catch (error) {
+        if (importJob.current !== job) return;
+        setCanceling(false);
+        showToast({
+          type: 'error',
+          title: t('import.cancelError'),
+          description: getErrorMessage(error, t('common.unknownError')),
+        });
+      }
+    }, [cancelImport, canceling, progress?.phase, showToast, t]);
+
+    React.useEffect(() => {
+      if (!show) return;
+      const unsubscribe = onImportProgress((next) => {
+        const job = importJob.current;
+        if (job?.id === next.importId && job.connectionId === next.connectionId) setProgress(next);
+      });
+      return () => {
+        unsubscribe();
+        const job = importJob.current;
+        importJob.current = undefined;
+        if (job) {
+          job.canceled = true;
+          if (job.started) void cancelImport(job.connectionId, job.id).catch(() => {});
+        }
+        setImporting(false);
+        setCanceling(false);
+        setProgress(undefined);
+      };
+    }, [show, idConnection, schema, table, cancelImport, onImportProgress]);
+
+    const percentage = progress?.totalRows
+      ? Math.min(100, Math.floor((progress.rows / progress.totalRows) * 100))
+      : 0;
 
     React.useEffect(() => {
       loadColumns();
@@ -468,6 +566,7 @@ export const ModalImportTableData = React.memo(
               '--import-muted-color': settings.importMutedColor,
               '--import-field-background-color': colors.fieldBackgroundColor,
               '--import-field-color': colors.fieldColor,
+              '--import-progress-color': colors.saveButtonBackgroundColor,
             } as React.CSSProperties
           }
         >
@@ -536,6 +635,7 @@ export const ModalImportTableData = React.memo(
                     </div>
 
                     <Autocomplete
+                      disabled={importing}
                       data={parsedFile.columns}
                       value={mapping[column.column_name] || null}
                       placeholder={t('field.doNotImport')}
@@ -555,26 +655,44 @@ export const ModalImportTableData = React.memo(
 
           <Divider />
 
+          {importing && progress && (
+            <div className={styles.progress} role="status" aria-live="polite">
+              <Text userSelect={false} color={colors.color}>
+                {t(canceling ? 'import.canceling' : `import.${progress.phase}`, {
+                  count: progress.rows.toLocaleString(language),
+                  total: progress.totalRows.toLocaleString(language),
+                  percentage,
+                })}
+              </Text>
+              <progress
+                className={styles.progressBar}
+                max={100}
+                value={progress.phase === 'preparing' ? undefined : percentage}
+                aria-label={t('import.progressLabel')}
+              />
+            </div>
+          )}
+
           <Row>
             <Spacer />
 
             <Button
               color={colors.cancelButtonColor}
               backgroundColor={colors.cancelButtonBackgroundColor}
-              disabled={importing}
-              onClick={close}
+              disabled={canceling || (importing && progress?.phase === 'finalizing')}
+              onClick={importing ? handleCancelImport : close}
               xs={6}
               sm={4}
               md={3}
             >
-              {t('settings.customization.cancel')}
+              {t(importing ? 'import.cancel' : 'settings.customization.cancel')}
             </Button>
 
             <Button
               color={colors.saveButtonColor}
               backgroundColor={colors.saveButtonBackgroundColor}
               loading={importing}
-              disabled={loadingColumns || loadingFile || !idConnection || !table}
+              disabled={importing || loadingColumns || loadingFile || !parsedFile || !idConnection || !table}
               type="submit"
               xs={6}
               sm={4}

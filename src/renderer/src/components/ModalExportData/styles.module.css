@@ -34,3 +34,28 @@
   overflow: auto;
   padding-right: 4px;
 }
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--export-track-color);
+  accent-color: var(--export-progress-color);
+}
+
+.progressBar::-webkit-progress-bar {
+  background: var(--export-track-color);
+}
+
+.progressBar::-webkit-progress-value {
+  background: var(--export-progress-color);
+}

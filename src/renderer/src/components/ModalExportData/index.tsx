@@ -13,7 +13,7 @@ import { Spacer } from '@renderer/components/Spacer';
 import Table from '@renderer/components/Table';
 import type { IColumn } from '@renderer/components/Table/dtos';
 import { Text } from '@renderer/components/Text';
-import type { ExportDataFormat, ExportDataSource } from '@shared/types/database';
+import type { ExportDataFormat, ExportDataSource, IExportProgress } from '@shared/types/database';
 import { useDatabaseStore } from '@renderer/stores/Database';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { type TranslationKey } from '@renderer/stores/I18n/translations';
@@ -46,10 +46,12 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const { t, language } = useI18nStore(
     useShallow((state) => ({ t: state.t, language: state.language })),
   );
-  const { getExportPreview: getExportDataPreview, exportData } = useDatabaseStore(
+  const { getExportPreview: getExportDataPreview, exportData, cancelExport, onExportProgress } = useDatabaseStore(
     useShallow((state) => ({
       getExportPreview: state.getExportPreview,
       exportData: state.exportData,
+      cancelExport: state.cancelExport,
+      onExportProgress: state.onExportProgress,
     })),
   );
   const showToast = useToastStore((state) => state.showToast);
@@ -63,6 +65,9 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   const [showColumnsModal, setShowColumnsModal] = React.useState(false);
   const [loadingPreview, setLoadingPreview] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
+  const [canceling, setCanceling] = React.useState(false);
+  const [progress, setProgress] = React.useState<IExportProgress>();
+  const exportJob = React.useRef<{ id: string; connectionId: string } | undefined>(undefined);
 
   const previewColumns = React.useMemo<IColumn[]>(
     () =>
@@ -125,17 +130,22 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
   }, []);
 
   const handleExport = React.useCallback(async () => {
-    if (!idConnection || !source || exporting) return;
+    if (!idConnection || !source || exporting || exportJob.current) return;
 
     if (!selectedColumns.length) {
       showToast({ type: 'warn', title: t('exportData.selectColumnsWarn') });
       return;
     }
 
+    const exportId = crypto.randomUUID();
+    exportJob.current = { id: exportId, connectionId: idConnection };
+    setProgress({ exportId, connectionId: idConnection, phase: 'preparing', rows: 0 });
+    setCanceling(false);
     setExporting(true);
 
     try {
       const result = await exportData(idConnection, {
+        exportId,
         source,
         columns: selectedColumns,
         format,
@@ -143,7 +153,10 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         fileName,
       });
 
-      if (result.canceled) return;
+      if (result.canceled) {
+        showToast({ type: 'warn', title: t('exportData.canceled') });
+        return;
+      }
 
       showToast({
         type: 'success',
@@ -162,6 +175,9 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         delay: 8000,
       });
     } finally {
+      exportJob.current = undefined;
+      setCanceling(false);
+      setProgress(undefined);
       setExporting(false);
     }
   }, [
@@ -178,6 +194,37 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
     source,
     t,
   ]);
+
+  const handleCancelExport = React.useCallback(async () => {
+    const job = exportJob.current;
+    if (!job || canceling) return;
+    setCanceling(true);
+    try {
+      const accepted = await cancelExport(job.connectionId, job.id);
+      if (!accepted && exportJob.current === job) setCanceling(false);
+    } catch (error) {
+      if (exportJob.current !== job) return;
+      setCanceling(false);
+      showToast({
+        type: 'error',
+        title: t('exportData.cancelError'),
+        description: getTableFilterErrorMessage(error, t),
+      });
+    }
+  }, [cancelExport, canceling, showToast, t]);
+
+  React.useEffect(() => {
+    const unsubscribe = onExportProgress((next) => {
+      const job = exportJob.current;
+      if (job?.id === next.exportId && job.connectionId === next.connectionId) setProgress(next);
+    });
+    return () => {
+      unsubscribe();
+      const job = exportJob.current;
+      exportJob.current = undefined;
+      if (job) void cancelExport(job.connectionId, job.id).catch(() => {});
+    };
+  }, [cancelExport, onExportProgress]);
 
   React.useEffect(() => {
     if (!show) return;
@@ -238,7 +285,15 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         onClose={handleClose}
       >
         <Form id="modal_export_data_form" onSubmit={handleExport}>
-          <div className={styles.container}>
+          <div
+            className={styles.container}
+            style={
+              {
+                '--export-progress-color': colors.saveButtonBackgroundColor,
+                '--export-track-color': colors.fieldBackgroundColor,
+              } as React.CSSProperties
+            }
+          >
             <Row>
               <Autocomplete
                 xs={6}
@@ -298,6 +353,20 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
 
             <Divider />
 
+            {exporting && progress && (
+              <div className={styles.progress} role="status" aria-live="polite">
+                <Text userSelect={false} color={colors.color}>
+                  {t(canceling ? 'exportData.canceling' : `exportData.${progress.phase}`, {
+                    count: progress.rows.toLocaleString(language),
+                  })}
+                </Text>
+                <progress
+                  className={styles.progressBar}
+                  aria-label={t('exportData.progressLabel')}
+                />
+              </div>
+            )}
+
             <Row>
               <Button
                 xs={12}
@@ -319,13 +388,13 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
               <Button
                 color={colors.cancelButtonColor}
                 backgroundColor={colors.cancelButtonBackgroundColor}
-                onClick={handleClose}
-                disabled={exporting}
+                onClick={exporting ? handleCancelExport : handleClose}
+                disabled={canceling}
                 xs={6}
                 sm={3}
                 md={2}
               >
-                {t('settings.customization.cancel')}
+                {t(exporting ? 'exportData.cancel' : 'settings.customization.cancel')}
               </Button>
 
               <Button
@@ -334,7 +403,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
                 color={colors.saveButtonColor}
                 backgroundColor={colors.saveButtonBackgroundColor}
                 loading={exporting}
-                disabled={!selectedColumns.length || !source || !idConnection}
+                disabled={exporting || !selectedColumns.length || !source || !idConnection}
                 xs={6}
                 sm={3}
                 md={2}

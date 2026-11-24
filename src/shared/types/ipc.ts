@@ -67,7 +67,9 @@ export interface IpcRequests {
   '@post:run_sql': WoodboxApi['database']['runSql'];
   '@post:save_row_changes': WoodboxApi['database']['saveRowChanges'];
   '@post:run_explain_sql': WoodboxApi['database']['runExplainSql'];
+  '@post:cancel_export': WoodboxApi['database']['cancelExport'];
   '@post:export_data': WoodboxApi['database']['exportData'];
+  '@post:cancel_import': WoodboxApi['database']['cancelImport'];
   '@post:import_table_data': WoodboxApi['database']['importTableData'];
   '@post:cancel_run_sql': WoodboxApi['database']['cancelRunSql'];
   '@get:server_output': WoodboxApi['database']['getServerOutput'];
@@ -87,6 +89,8 @@ export interface IpcRequests {
 }
 
 export interface IpcEvents {
+  '@event:import_progress': Parameters<Parameters<WoodboxApi['database']['onImportProgress']>[0]>[0];
+  '@event:export_progress': Parameters<Parameters<WoodboxApi['database']['onExportProgress']>[0]>[0];
   '@event:update_ignored': string;
   '@event:server_output': Parameters<Parameters<WoodboxApi['database']['onServerOutput']>[0]>[0];
   '@event:update_available': Parameters<Parameters<WoodboxApi['updates']['onAvailable']>[0]>[0];

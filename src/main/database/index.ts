@@ -24,7 +24,7 @@ import {
   cancelProcess,
   compareDatabases,
 } from './core';
-import { getExportDataPreview, exportData, importTableData } from './transfer';
+import { getExportDataPreview, exportData, cancelExport, importTableData, cancelImport } from './transfer';
 import { runSql, cancelRunSql, runExplainSql, executeObjectCommand } from './execution';
 import { testConnection, closeConnection, getServerOutput, clearServerOutput } from './connections';
 
@@ -56,7 +56,9 @@ addListener('@post:run_sql', runSql);
 addListener('@post:save_row_changes', saveRowChanges);
 addListener('@post:run_explain_sql', runExplainSql);
 addListener('@post:export_data', exportData);
+addListener('@post:cancel_export', cancelExport);
 addListener('@post:import_table_data', importTableData);
+addListener('@post:cancel_import', cancelImport);
 addListener('@post:cancel_run_sql', cancelRunSql);
 addListener('@get:server_output', getServerOutput);
 addListener('@delete:server_output', clearServerOutput);
