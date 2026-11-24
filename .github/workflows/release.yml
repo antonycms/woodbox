@@ -57,6 +57,12 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Install Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
