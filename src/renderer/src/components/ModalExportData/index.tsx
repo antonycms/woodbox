@@ -285,15 +285,7 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
         onClose={handleClose}
       >
         <Form id="modal_export_data_form" onSubmit={handleExport}>
-          <div
-            className={styles.container}
-            style={
-              {
-                '--export-progress-color': colors.saveButtonBackgroundColor,
-                '--export-track-color': colors.fieldBackgroundColor,
-              } as React.CSSProperties
-            }
-          >
+          <div className={styles.container}>
             <Row>
               <Autocomplete
                 xs={6}
@@ -354,16 +346,12 @@ export const ModalExportData = React.memo((props: IModalExportDataProps) => {
             <Divider />
 
             {exporting && progress && (
-              <div className={styles.progress} role="status" aria-live="polite">
+              <div role="status" aria-live="polite">
                 <Text userSelect={false} color={colors.color}>
                   {t(canceling ? 'exportData.canceling' : `exportData.${progress.phase}`, {
                     count: progress.rows.toLocaleString(language),
                   })}
                 </Text>
-                <progress
-                  className={styles.progressBar}
-                  aria-label={t('exportData.progressLabel')}
-                />
               </div>
             )}
 

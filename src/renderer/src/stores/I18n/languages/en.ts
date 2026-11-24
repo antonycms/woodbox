@@ -724,7 +724,6 @@ export const en = {
   'exportData.cancel': 'Cancel export',
   'exportData.canceled': 'Export canceled.',
   'exportData.cancelError': 'Unable to cancel the export.',
-  'exportData.progressLabel': 'Export progress',
   'exportData.format': 'Format',
   'exportData.format.csv': 'CSV',
   'exportData.format.xlsx': 'XLSX',

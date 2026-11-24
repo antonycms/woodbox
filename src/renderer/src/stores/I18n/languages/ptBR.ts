@@ -728,7 +728,6 @@ export const ptBR: Record<TranslationKey, string> = {
   'exportData.cancel': 'Cancelar exportação',
   'exportData.canceled': 'Exportação cancelada.',
   'exportData.cancelError': 'Não foi possível cancelar a exportação.',
-  'exportData.progressLabel': 'Progresso da exportação',
   'exportData.format': 'Formato',
   'exportData.format.csv': 'CSV',
   'exportData.format.xlsx': 'XLSX',
