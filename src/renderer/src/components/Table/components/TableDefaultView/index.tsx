@@ -49,6 +49,7 @@ interface ITableDefaultViewProps<Row = Record<string, unknown>> {
   onCellLinkClick?(attribute: string, value: unknown): void;
   onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
+  cellLinkTooltip?: string;
 }
 
 const cellKey = (rowIndex: number, colIndex: number) => `${rowIndex}:${colIndex}`;
@@ -83,6 +84,7 @@ const TableDefaultView = <Row,>({
   onCellLinkClick,
   onCellLinkPreviewClick,
   cellLinkClickMode,
+  cellLinkTooltip,
 }: ITableDefaultViewProps<Row>) => {
   const t = useI18nStore((state) => state.t);
 
@@ -212,6 +214,7 @@ const TableDefaultView = <Row,>({
                   onFkCellClick={onCellLinkClick}
                   onFkCellPreviewClick={onCellLinkPreviewClick}
                   linkClickMode={cellLinkClickMode}
+                  linkTooltip={cellLinkTooltip}
                   isSelectedCell={selectedCells?.has(cellKey(indexRow, columnIndex))}
                   isSearchMatch={searchMatches?.has(cellKey(indexRow, columnIndex))}
                   isActiveSearchMatch={activeSearchCellKey === cellKey(indexRow, columnIndex)}

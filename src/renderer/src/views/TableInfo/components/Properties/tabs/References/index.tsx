@@ -126,6 +126,8 @@ const References = ({ tableStore }: IReferencesProps) => {
         rows={filteredAndSortedRows}
         sort={sort}
         onSort={handleSortReferences}
+        cellLinkClickMode="single"
+        cellLinkTooltip={t('tooltip.clickOpenTableInTab')}
         onCellLinkClick={handleCellLinkClick}
         columns={visibleColumns}
         columnVisibilityEnabled={columnVisibility.columns.length > 0}

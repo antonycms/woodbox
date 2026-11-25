@@ -514,6 +514,8 @@ export const ptBR: Record<TranslationKey, string> = {
   'tooltip.queryExecutionTime': 'Tempo de execução da query',
   'tooltip.referenceBack': 'Voltar referência',
   'tooltip.referenceForward': 'Avançar referência',
+  'tooltip.clickOpenTableInTab': 'Clique para abrir a tabela em outra aba',
+  'tooltip.clickOpenFunctionInTab': 'Clique para abrir a função em outra aba',
   'tooltip.clickOpenReferencedRow': 'Clique para abrir linha referenciada',
   'tooltip.ctrlClickOpenReferencedRow': '{{shortcut}}+click para abrir linha referenciada',
   'tooltip.previewOrOpenReferencedRow':

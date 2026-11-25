@@ -418,6 +418,8 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
         rows={filteredAndSortedReferences}
         sort={sort}
         onSort={handleSortReferences}
+        cellLinkClickMode="single"
+        cellLinkTooltip={t('tooltip.clickOpenTableInTab')}
         onCellLinkClick={handleCellLinkClick}
         newRows={newReferenceRows}
         newRowsPosition="end"

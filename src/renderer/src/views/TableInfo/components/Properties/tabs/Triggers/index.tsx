@@ -188,6 +188,8 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
         rows={filteredAndSortedTriggers}
         sort={sort}
         onSort={handleSortTriggers}
+        cellLinkClickMode="single"
+        cellLinkTooltip={t('tooltip.clickOpenFunctionInTab')}
         onCellLinkClick={handleFunctionLinkClick}
         columns={visibleColumns}
         columnVisibilityEnabled={columnVisibility.columns.length > 0}

@@ -91,6 +91,7 @@ interface ITableProps<Row = Record<string, unknown>> {
   onCellLinkClick?(attribute: string, value: unknown): void;
   onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
+  cellLinkTooltip?: string;
   initialAnalysisMode?: boolean;
   columnVisibilityEnabled?: boolean;
 }
@@ -119,6 +120,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     onCellLinkClick,
     onCellLinkPreviewClick,
     cellLinkClickMode = 'ctrl',
+    cellLinkTooltip,
     initialAnalysisMode,
     columnVisibilityEnabled,
   } = props;
@@ -1410,6 +1412,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
           onCellLinkClick={onCellLinkClick}
           onCellLinkPreviewClick={onCellLinkPreviewClick}
           cellLinkClickMode={cellLinkClickMode}
+          cellLinkTooltip={cellLinkTooltip}
         />
       ) : (
         <TableDefaultView
@@ -1442,6 +1445,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
           onCellLinkClick={onCellLinkClick}
           onCellLinkPreviewClick={onCellLinkPreviewClick}
           cellLinkClickMode={cellLinkClickMode}
+          cellLinkTooltip={cellLinkTooltip}
         />
       )}
     </div>

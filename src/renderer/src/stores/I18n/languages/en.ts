@@ -511,6 +511,8 @@ export const en = {
   'tooltip.queryExecutionTime': 'Query execution time',
   'tooltip.referenceBack': 'Back reference',
   'tooltip.referenceForward': 'Forward reference',
+  'tooltip.clickOpenTableInTab': 'Click to open the table in another tab',
+  'tooltip.clickOpenFunctionInTab': 'Click to open the function in another tab',
   'tooltip.clickOpenReferencedRow': 'Click to open referenced row',
   'tooltip.ctrlClickOpenReferencedRow': '{{shortcut}}+click to open referenced row',
   'tooltip.previewOrOpenReferencedRow':

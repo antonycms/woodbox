@@ -56,6 +56,7 @@ interface ITableColumnProps<Row> {
   onFkCellClick?(name: string, value: unknown): void;
   onFkCellPreviewClick?(name: string, value: unknown): void;
   linkClickMode?: 'ctrl' | 'single';
+  linkTooltip?: string;
   isSelectedCell?: boolean;
   isSearchMatch?: boolean;
   isActiveSearchMatch?: boolean;
@@ -101,6 +102,7 @@ const TableColumn = <Row,>({
   onFkCellClick,
   onFkCellPreviewClick,
   linkClickMode = 'ctrl',
+  linkTooltip,
   isSelectedCell,
   isSearchMatch,
   isActiveSearchMatch,
@@ -116,7 +118,7 @@ const TableColumn = <Row,>({
   const linkTitle = !isLinkClickable
     ? undefined
     : linkClickMode === 'single'
-      ? t('tooltip.clickOpenReferencedRow')
+      ? (linkTooltip ?? t('tooltip.clickOpenReferencedRow'))
       : onFkCellPreviewClick
         ? t('tooltip.previewOrOpenReferencedRow', { shortcut: primaryShortcutKeyLabel })
         : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: primaryShortcutKeyLabel });

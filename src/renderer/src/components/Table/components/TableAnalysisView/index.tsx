@@ -47,6 +47,7 @@ interface ITableAnalysisViewProps<Row = Record<string, unknown>> {
   onCellLinkClick?(attribute: string, value: unknown): void;
   onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
+  cellLinkTooltip?: string;
 }
 
 const analysisLinkStyle: React.CSSProperties = {
@@ -380,6 +381,7 @@ const TableAnalysisView = <Row,>({
   onCellLinkClick,
   onCellLinkPreviewClick,
   cellLinkClickMode = 'ctrl',
+  cellLinkTooltip,
 }: ITableAnalysisViewProps<Row>) => {
   const t = useI18nStore((state) => state.t);
   const columnsSizeStyle = React.useMemo(() => {
@@ -403,12 +405,12 @@ const TableAnalysisView = <Row,>({
   const linkTitle = React.useMemo(() => {
     if (!hasLinkColumns) return undefined;
 
-    if (cellLinkClickMode === 'single') return t('tooltip.clickOpenReferencedRow');
+    if (cellLinkClickMode === 'single') return cellLinkTooltip ?? t('tooltip.clickOpenReferencedRow');
 
     return onCellLinkPreviewClick
       ? t('tooltip.previewOrOpenReferencedRow', { shortcut: primaryShortcutKeyLabel })
       : t('tooltip.ctrlClickOpenReferencedRow', { shortcut: primaryShortcutKeyLabel });
-  }, [cellLinkClickMode, hasLinkColumns, onCellLinkPreviewClick, t]);
+  }, [cellLinkClickMode, cellLinkTooltip, hasLinkColumns, onCellLinkPreviewClick, t]);
 
   return (
     <div ref={scrollContainerRef} className={styles.analysis_container} style={containerStyle}>
