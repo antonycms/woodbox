@@ -10,6 +10,7 @@ export interface IAIChatInitialMessageRequest {
   id: string;
   content: string;
   contexts?: IAIChatInitialMessageContext[];
+  draftOnly?: boolean;
 }
 
 export interface IAIChatInitialMessageContext {
@@ -26,6 +27,7 @@ export interface IAIChatPanelStore {
   addEditorSelectionToChatContext(input: IAIChatEditorContextInput): void;
   clearEditorContextRequest(): void;
   startNewChatWithMessage(content: string, contexts?: IAIChatInitialMessageContext[]): void;
+  startNewChatWithDraft(content: string): void;
   clearInitialMessageRequest(): void;
   openChatPanel(chatId: string): void;
   closeChatPanel(): void;

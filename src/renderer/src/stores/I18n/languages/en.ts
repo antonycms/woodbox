@@ -63,6 +63,12 @@ export const en = {
   'settings.customization.customizeColors': 'Customize colors',
   'settings.customization.unsavedChanges': 'Custom colors applied. Save as a theme to reuse them or discard the changes.',
   'settings.customization.activeTheme': 'Active theme',
+  'settings.customization.chooseTheme': 'Choose a theme',
+  'settings.customization.advancedSettings': 'Advanced settings',
+  'settings.customization.aiTitle': 'Customize with AI',
+  'settings.customization.aiDescription': 'Describe the look you want. AI can adjust your current theme or create a new one.',
+  'settings.customization.aiPrompt': 'Create a dark theme with a graphite background and soft green accents without changing my current theme.',
+  'settings.customization.aiAction': 'Try it in chat',
   'settings.customization.currentCustomTheme': 'Current custom',
   'settings.customization.defaultThemeLabel': 'Aura (default)',
   'settings.customization.currentCustomHelp':

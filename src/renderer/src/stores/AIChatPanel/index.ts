@@ -16,6 +16,12 @@ export const useAIChatPanelStore = create<IAIChatPanelStore>()((set) => ({
       initialMessageRequest: { content, contexts, id: generateHash() },
       visible: true,
     }),
+  startNewChatWithDraft: (content) =>
+    set({
+      activeChatId: undefined,
+      initialMessageRequest: { content, draftOnly: true, id: generateHash() },
+      visible: true,
+    }),
   clearInitialMessageRequest: () => set({ initialMessageRequest: undefined }),
   openChatPanel: (chatId) => set({ activeChatId: chatId, visible: true }),
   closeChatPanel: () => set({ visible: false }),

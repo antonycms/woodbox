@@ -81,7 +81,7 @@ export const SettingsModal = React.memo(({ show, onClose }: ISettingsModalProps)
 
         <section className={styles.content}>
           {activeMenu === 'general' && <SettingsGeneralPanel />}
-          {activeMenu === 'customization' && <SettingsCustomizationPanel />}
+          {activeMenu === 'customization' && <SettingsCustomizationPanel onClose={onClose} />}
           {activeMenu === 'about' && <SettingsAboutPanel />}
         </section>
       </div>

@@ -7,6 +7,7 @@ import { Input } from '@renderer/components/Input';
 import { Modal } from '@renderer/components/Modal';
 import { Row } from '@renderer/components/Grid';
 import { Text } from '@renderer/components/Text';
+import { useAIChatPanelStore } from '@renderer/stores/AIChatPanel';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { type TranslateFn } from '@renderer/stores/I18n/types';
 import { currentCustomThemeName, defaultThemeName } from '@renderer/utils/theme';
@@ -279,7 +280,7 @@ const getAdvancedThemeFields = (theme: ITheme, t: TranslateFn) => {
   }));
 };
 
-export const SettingsCustomizationPanel = React.memo(() => {
+export const SettingsCustomizationPanel = React.memo(({ onClose }: { onClose?: () => void }) => {
   const { activeTheme, addTheme, removeTheme, changeTheme } = useThemeStore(
     useShallow((state) => ({
       activeTheme: state.activeTheme,
@@ -288,6 +289,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
       changeTheme: state.changeTheme,
     })),
   );
+  const startNewChatWithDraft = useAIChatPanelStore((state) => state.startNewChatWithDraft);
   const showToast = useToastStore((state) => state.showToast);
   const t = useI18nStore((state) => state.t);
   const inputFileRef = React.useRef<HTMLInputElement>(null);
@@ -302,6 +304,7 @@ export const SettingsCustomizationPanel = React.memo(() => {
   const [themeToRemove, setThemeToRemove] = React.useState<string>();
 
   const { modal: colors, settings } = activeTheme;
+  const themePrompt = t('settings.customization.aiPrompt');
 
   const advancedGroups = React.useMemo(() => {
     return getAdvancedThemeFields(activeTheme, t);
@@ -506,11 +509,33 @@ export const SettingsCustomizationPanel = React.memo(() => {
 
         <Divider size={8} />
 
-        <Text small color={colors.color} userSelect={false}>
-          {t('settings.customization.activeTheme')}
+        <Text small bold color={colors.color} userSelect={false}>
+          {t('settings.customization.chooseTheme')}
         </Text>
 
         <ThemePreviews onSelect={handleChangeTheme} />
+
+        <div className={styles.aiThemeTip} style={{ borderColor: settings.themeBorderColor }}>
+          <Text small bold color={colors.color} userSelect={false}>
+            {t('settings.customization.aiTitle')}
+          </Text>
+          <Text small color={settings.mutedColor} userSelect={false}>
+            {t('settings.customization.aiDescription')}
+          </Text>
+          <Text small color={colors.color} userSelect={false}>
+            {themePrompt}
+          </Text>
+          <Button
+            text
+            color={colors.saveButtonBackgroundColor}
+            onClick={() => {
+              startNewChatWithDraft(themePrompt);
+              onClose?.();
+            }}
+          >
+            {t('settings.customization.aiAction')}
+          </Button>
+        </div>
 
         <Divider size={16} />
 
@@ -520,65 +545,73 @@ export const SettingsCustomizationPanel = React.memo(() => {
           </Text>
         )}
 
-        <div
+        <details
+          className={styles.advancedGroup}
           style={
-              {
-                '--theme-border-color': settings.themeBorderColor,
-                '--theme-panel-background-color': settings.themePanelBackgroundColor,
-                '--theme-hover-background-color': settings.themeHoverBackgroundColor,
-                '--theme-muted-color': settings.mutedColor,
-              } as React.CSSProperties
+            {
+              '--theme-border-color': settings.themeBorderColor,
+              '--theme-panel-background-color': settings.themePanelBackgroundColor,
+              '--theme-hover-background-color': settings.themeHoverBackgroundColor,
+              '--theme-muted-color': settings.mutedColor,
+            } as React.CSSProperties
           }
         >
-          <Text small color={settings.mutedColor} userSelect={false}>
-            {t('settings.customization.currentCustomHelp', {
-              themeName: t('settings.customization.currentCustomTheme'),
-            })}
-          </Text>
-          <div className={styles.advancedGroups}>
-            {advancedGroups.map((group) => (
-              <details key={group.name} className={styles.advancedGroup}>
-                <summary className={styles.advancedGroupHeader}>
-                  <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
-                    {group.label}
-                  </span>
-                </summary>
+          <summary className={styles.advancedGroupHeader}>
+            <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
+              {t('settings.customization.advancedSettings')}
+            </span>
+          </summary>
+          <div className={styles.advancedContent}>
+            <Text small color={settings.mutedColor} userSelect={false}>
+              {t('settings.customization.currentCustomHelp', {
+                themeName: t('settings.customization.currentCustomTheme'),
+              })}
+            </Text>
+            <div className={styles.advancedGroups}>
+              {advancedGroups.map((group) => (
+                <details key={group.name} className={styles.advancedGroup}>
+                  <summary className={styles.advancedGroupHeader}>
+                    <span className={styles.advancedGroupTitle} style={{ color: colors.color }}>
+                      {group.label}
+                    </span>
+                  </summary>
 
-                <div className={styles.advancedGrid}>
-                  {group.fields.map((field) => {
-                    const isNativeColor = isNativeColorValue(field.value);
+                  <div className={styles.advancedGrid}>
+                    {group.fields.map((field) => {
+                      const isNativeColor = isNativeColorValue(field.value);
 
-                    return (
-                      <div key={field.path} className={styles.colorField}>
-                        <Input
-                          key={`${inputsVersion}:${field.path}`}
-                          label={field.label}
-                          type={isNativeColor ? 'color' : 'text'}
-                          defaultValue={
-                            isNativeColor ? getNativeColorValue(field.value) : field.value
-                          }
-                          onChange={(event) =>
-                            handleChangeAdvancedColor(
-                              field.path,
-                              isNativeColor
-                                ? getColorInputValue(event.target.value, field.value)
-                                : event.target.value,
-                            )
-                          }
-                          color={colors.fieldColor}
-                          backgroundColor={colors.fieldBackgroundColor}
-                          placeholderColor={settings.mutedColor}
-                          xs={12}
-                        />
-                        <span style={{ color: settings.mutedColor }}>{field.path}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </details>
-            ))}
+                      return (
+                        <div key={field.path} className={styles.colorField}>
+                          <Input
+                            key={`${inputsVersion}:${field.path}`}
+                            label={field.label}
+                            type={isNativeColor ? 'color' : 'text'}
+                            defaultValue={
+                              isNativeColor ? getNativeColorValue(field.value) : field.value
+                            }
+                            onChange={(event) =>
+                              handleChangeAdvancedColor(
+                                field.path,
+                                isNativeColor
+                                  ? getColorInputValue(event.target.value, field.value)
+                                  : event.target.value,
+                              )
+                            }
+                            color={colors.fieldColor}
+                            backgroundColor={colors.fieldBackgroundColor}
+                            placeholderColor={settings.mutedColor}
+                            xs={12}
+                          />
+                          <span style={{ color: settings.mutedColor }}>{field.path}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              ))}
+            </div>
           </div>
-        </div>
+        </details>
       </div>
 
       <div

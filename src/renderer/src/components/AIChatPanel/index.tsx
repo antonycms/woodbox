@@ -446,13 +446,15 @@ export const AIChatPanel = React.memo(() => {
       id: generateHash(),
     }));
 
-    setDraftNewChat(true);
-    setInitialMessage(buildAIChatMessageContent(initialMessageRequest.content, contexts));
-    setEmptyDraft(initialMessageRequest.content);
+
+    const { content, draftOnly } = initialMessageRequest;
+
+    setInitialMessage(draftOnly ? '' : buildAIChatMessageContent(content, contexts));
+    setEmptyDraft(content);
     setChatDraftContexts([]);
     setEmptyDraftContexts(contexts);
     setEmptyAISelection(undefined);
-    setPendingInitialMessage(true);
+    setPendingInitialMessage(!draftOnly);
     clearInitialMessageRequest();
   }, [clearInitialMessageRequest, initialMessageRequest]);
 

@@ -65,6 +65,12 @@ export const ptBR: Record<TranslationKey, string> = {
   'settings.customization.customizeColors': 'Personalizar cores',
   'settings.customization.unsavedChanges': 'Cores personalizadas aplicadas. Salve como tema para reutilizar ou descarte as alterações.',
   'settings.customization.activeTheme': 'Tema ativo',
+  'settings.customization.chooseTheme': 'Escolher tema',
+  'settings.customization.advancedSettings': 'Ajustes avançados',
+  'settings.customization.aiTitle': 'Personalize com IA',
+  'settings.customization.aiDescription': 'Descreva o visual que você quer. A IA pode ajustar o tema atual ou criar um novo.',
+  'settings.customization.aiPrompt': 'Crie um tema escuro com fundo grafite e detalhes em verde suave, sem alterar meu tema atual.',
+  'settings.customization.aiAction': 'Experimentar no chat',
   'settings.customization.currentCustomTheme': 'Personalizado atual',
   'settings.customization.defaultThemeLabel': 'Aura (padrão)',
   'settings.customization.currentCustomHelp':
