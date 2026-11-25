@@ -268,7 +268,7 @@
 
 .analysis_grid {
   display: grid;
-  grid-template-columns: var(--analysisColumnsSize);
+  grid-template-columns: var(--analysisRowNumberWidth) var(--analysisColumnsSize);
   min-width: max-content;
 }
 
@@ -299,8 +299,14 @@
   color: var(--colorHeader);
 }
 
-.analysis_header:first-child {
-  left: 0;
+.analysis_grid > .table_row_number:first-child {
+  grid-row-start: 1;
+  top: 0;
+  z-index: 6;
+}
+
+.analysis_header:nth-child(2) {
+  left: var(--analysisRowNumberWidth);
   z-index: 4;
 }
 
@@ -312,7 +318,7 @@
 
 .analysis_field {
   position: sticky;
-  left: 0;
+  left: var(--analysisRowNumberWidth);
   z-index: 2;
   background-color: var(--backgroundColorHeader);
   color: var(--colorHeader);

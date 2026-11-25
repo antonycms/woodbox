@@ -433,14 +433,15 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
       if (rowPosition === -1) return;
 
       const sizes = analysisColumnsSizeRef.current;
-      let cellLeft = sizes[0] || 0;
+      const pinnedWidth = rowNumberColumnWidth + (sizes[0] || 0);
+      let cellLeft = pinnedWidth;
       for (let i = 1; i <= rowPosition; i++) cellLeft += sizes[i] || 0;
 
       const cellRight = cellLeft + (sizes[rowPosition + 1] || 0);
       let left = container.scrollLeft;
 
-      if (cellLeft < container.scrollLeft + (sizes[0] || 0)) {
-        left = Math.max(0, cellLeft - (sizes[0] || 0));
+      if (cellLeft < container.scrollLeft + pinnedWidth) {
+        left = Math.max(0, cellLeft - pinnedWidth);
       } else if (cellRight > container.scrollLeft + container.clientWidth) {
         left = cellRight - container.clientWidth;
       }
@@ -448,7 +449,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
       container.scrollLeft = left;
       container.scrollTop = top;
     },
-    [rowHeight],
+    [rowHeight, rowNumberColumnWidth],
   );
 
   const scrollCellIntoView = React.useCallback(

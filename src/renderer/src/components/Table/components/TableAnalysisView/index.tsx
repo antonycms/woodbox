@@ -9,6 +9,8 @@ import { AutocompleteMultiBlank } from '@renderer/components/AutocompleteMultiBl
 import { useI18nStore } from '@renderer/stores/I18n';
 import { getPrimaryShortcutKeyLabel, isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import { serializeTableValue } from '../../utils';
+import { ROW_NUMBER_COLUMN_WIDTH } from '../../constants';
+import TableRowNumber from '../TableRowNumber';
 
 type TableCellEditValue = string | number | (string | number)[];
 
@@ -388,7 +390,11 @@ const TableAnalysisView = <Row,>({
     [rowHeight],
   );
   const gridStyle = React.useMemo(
-    () => ({ '--analysisColumnsSize': columnsSizeStyle }) as React.CSSProperties,
+    () =>
+      ({
+        '--analysisColumnsSize': columnsSizeStyle,
+        '--analysisRowNumberWidth': `${ROW_NUMBER_COLUMN_WIDTH}px`,
+      }) as React.CSSProperties,
     [columnsSizeStyle],
   );
   const hasLinkColumns = React.useMemo(() => {
@@ -407,6 +413,7 @@ const TableAnalysisView = <Row,>({
   return (
     <div ref={scrollContainerRef} className={styles.analysis_container} style={containerStyle}>
       <div className={styles.analysis_grid} style={gridStyle}>
+        <TableRowNumber isHeader />
         <TableAnalysisHeader
           columnIndex={0}
           width={columnsSize[0]}
@@ -432,6 +439,7 @@ const TableAnalysisView = <Row,>({
 
         {columns.map((column, columnIndex) => (
           <React.Fragment key={String(column.attribute)}>
+            <TableRowNumber indexRow={columnIndex} />
             <div
               className={styles.analysis_field}
               title={column.info ? `${column.label} ${column.info}` : column.label}
