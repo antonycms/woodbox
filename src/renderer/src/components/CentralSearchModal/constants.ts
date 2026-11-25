@@ -1,3 +1,4 @@
+import { normalizeCompactSearch, normalizeSearch } from '@renderer/utils/searchText';
 import type {
   ICentralSearchItem,
   ICentralSearchItemType,
@@ -62,18 +63,6 @@ export function getFunctionTabId(
 
 export function getQualifiedName(schema: string | undefined, name: string) {
   return schema ? `${schema}.${name}` : name;
-}
-
-export function normalizeSearch(value: string) {
-  return (value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-export function normalizeCompactSearch(value: string) {
-  return normalizeSearch(value).replace(/[\s_.-]+/g, '');
 }
 
 export function parseSearchText(value: string): IParsedSearch {

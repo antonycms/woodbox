@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { selectConnectionPresentations, selectConnectionsGroupPerProject } from '@renderer/stores/Workspace/selectors';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { formatSizeFromBytes } from '@renderer/utils/methods';
+import { matchesSearchText, normalizeSearch, prepareSearchText } from '@renderer/utils/searchText';
 
 export const useProjectTree = (
   filterText: string,
@@ -22,6 +23,13 @@ export const useProjectTree = (
     })),
   );
   const filterTextSerialized = filterText?.trim?.() ?? '';
+  const searchFilter = React.useMemo(() => {
+    const separatorIndex = filterTextSerialized.indexOf('.');
+    return {
+      schema: separatorIndex < 0 ? null : normalizeSearch(filterTextSerialized.slice(0, separatorIndex)),
+      name: prepareSearchText(filterTextSerialized.slice(separatorIndex + 1)),
+    };
+  }, [filterTextSerialized]);
 
   const scriptsByConnectionId = React.useMemo(() => {
     const grouped = new Map<string, IScript[]>();
@@ -49,12 +57,13 @@ export const useProjectTree = (
           : text === filterTextSerialized;
       }
 
-      return filterWithSchema
-        ? filterTextSerialized.startsWith(text2) &&
-            `${text2}.${text}`.trim().includes(filterTextSerialized)
-        : text?.includes?.(filterTextSerialized);
+      if (searchFilter.schema !== null && (!text2 || normalizeSearch(text2) !== searchFilter.schema)) {
+        return false;
+      }
+
+      return matchesSearchText(prepareSearchText(text), searchFilter.name);
     },
-    [filterTextSerialized, isWholeWordFilter],
+    [filterTextSerialized, isWholeWordFilter, searchFilter],
   );
 
   const projectsSerialized = React.useMemo(() => {

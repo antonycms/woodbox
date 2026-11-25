@@ -2,6 +2,7 @@ import React from 'react';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { classes } from '@renderer/styles/theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
+import { prepareSearchText } from '@renderer/utils/searchText';
 import { HistoryIcon } from '@renderer/styles/icons';
 import styles from './styles.module.css';
 
@@ -39,7 +40,7 @@ interface ITokenInfo {
   text: string;
 }
 
-const TOKEN_CHAR_REGEX = /[a-zA-Z0-9_.$"]/;
+const TOKEN_CHAR_REGEX = /[\p{L}\p{M}0-9_.$"]/u;
 const MAX_SUGGESTIONS = 24;
 
 const getTokenInfo = (value: string, cursorPosition: number): ITokenInfo => {
@@ -112,21 +113,26 @@ export default function FilterInput({
 
   const filteredSuggestions = React.useMemo(() => {
     const uniqueSuggestions = Array.from(new Set(suggestions)).filter(Boolean);
-    const normalizedText = tokenInfo.text.toLowerCase();
+    const filter = prepareSearchText(tokenInfo.text);
 
-    if (!showAll && !normalizedText) return [];
+    if (!showAll && !filter.normalized) return [];
 
     return uniqueSuggestions
-      .filter((suggestion) => suggestion.toLowerCase().includes(normalizedText))
-      .sort((suggestionA, suggestionB) => {
-        const aStartsWithText = suggestionA.toLowerCase().startsWith(normalizedText);
-        const bStartsWithText = suggestionB.toLowerCase().startsWith(normalizedText);
+      .flatMap((suggestion) => {
+        const candidate = prepareSearchText(suggestion);
 
-        if (aStartsWithText === bStartsWithText) return suggestionA.localeCompare(suggestionB);
+        if (candidate.normalized === filter.normalized) return [{ suggestion, rank: 0 }];
+        if (candidate.normalized.startsWith(filter.normalized)) return [{ suggestion, rank: 1 }];
+        if (candidate.normalized.includes(filter.normalized)) return [{ suggestion, rank: 2 }];
+        if (filter.compact && candidate.compact.includes(filter.compact)) {
+          return [{ suggestion, rank: candidate.compact.startsWith(filter.compact) ? 3 : 4 }];
+        }
 
-        return aStartsWithText ? -1 : 1;
+        return [];
       })
-      .slice(0, MAX_SUGGESTIONS);
+      .sort((a, b) => a.rank - b.rank || a.suggestion.localeCompare(b.suggestion))
+      .slice(0, MAX_SUGGESTIONS)
+      .map(({ suggestion }) => suggestion);
   }, [showAll, suggestions, tokenInfo.text]);
 
   const closeSuggestions = React.useCallback(() => {

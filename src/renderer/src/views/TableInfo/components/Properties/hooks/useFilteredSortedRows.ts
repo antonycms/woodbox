@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ITableSort } from '@renderer/components/Table/dtos';
+import { matchesSearchText, prepareSearchText } from '@renderer/utils/searchText';
 import { sortRows } from '@renderer/utils/tableSort';
 
 interface IUseFilteredSortedRowsParams<T> {
@@ -11,11 +12,9 @@ interface IUseFilteredSortedRowsParams<T> {
 
 const serializeFilterTexts = (filterText: string) =>
   filterText
-    .trim()
-    .toLowerCase()
     .split(',')
-    .map((text) => text.trim())
-    .filter(Boolean);
+    .map(prepareSearchText)
+    .filter(({ normalized }) => normalized);
 
 export function useFilteredSortedRows<T>({
   rows,
@@ -30,9 +29,9 @@ export function useFilteredSortedRows<T>({
 
     const filteredRows = rows.filter((row) =>
       getSearchValues(row).some((value) => {
-        const normalizedValue = String(value ?? '').toLowerCase();
+        const candidate = prepareSearchText(String(value ?? ''));
 
-        return texts.some((text) => normalizedValue.includes(text));
+        return texts.some((text) => matchesSearchText(candidate, text));
       }),
     );
 

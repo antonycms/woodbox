@@ -1,3 +1,4 @@
+import { normalizeCompactSearch, normalizeSearch } from '@renderer/utils/searchText';
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -464,8 +465,8 @@ export const CentralSearchModal = React.memo(() => {
   const { visibleItems, visibleRows } = React.useMemo(() => {
     if (!isOpen) return constants.EMPTY_VISIBLE_RESULT;
 
-    const filter = constants.normalizeSearch(parsedSearch.filter);
-    const compactFilter = constants.normalizeCompactSearch(filter);
+    const filter = normalizeSearch(parsedSearch.filter);
+    const compactFilter = normalizeCompactSearch(filter);
 
     const matchItem = (item: ICentralSearchItem) => {
       if (item.search.includes(filter)) return true;
