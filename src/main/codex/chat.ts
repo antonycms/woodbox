@@ -13,14 +13,16 @@ import {
   type AIQueryExecutionToolOutput,
 } from '../ai/tools';
 import { getValidCodexCredential } from './account';
+import { resolveChatImageDataUrl } from '../storage/aiChatImages';
 
 type CodexTextContent = { type?: string; text?: string };
 type CodexInputTextContent = { type: 'input_text'; text: string };
+type CodexInputImageContent = { type: 'input_image'; image_url: string; detail: 'auto' };
 type CodexOutputTextContent = { type: 'output_text'; text: string };
 type CodexMessageItem = {
   type: 'message';
   role: 'user' | 'assistant' | 'developer';
-  content: (CodexInputTextContent | CodexOutputTextContent)[];
+  content: (CodexInputTextContent | CodexOutputTextContent | CodexInputImageContent)[];
 };
 type CodexFunctionCallItem = {
   type: 'function_call';
@@ -59,6 +61,7 @@ type CodexStepResult = {
 };
 type CodexChatGPTRequest = IAIChatRequest & {
   instructions: string;
+  signal?: AbortSignal;
   tools?: ToolSet;
 };
 type CodexExecutableTool = Tool & {
@@ -82,6 +85,7 @@ type CodexResponseEvent = {
   item?: CodexOutputItem;
   response?: {
     output?: CodexOutputItem[];
+    error?: { message?: string };
   };
   error?: {
     message?: string;
@@ -92,22 +96,33 @@ const CODEX_API_ENDPOINT = 'https://chatgpt.com/backend-api/codex/responses';
 const CODEX_CLIENT_VERSION = '0.169.1';
 const MAX_CODEX_TOOL_STEPS = 6;
 
-const toCodexMessageContent = (
-  message: IAIChatMessageInput,
-): (CodexInputTextContent | CodexOutputTextContent)[] => {
-  if (message.role === 'assistant') {
-    return [{ type: 'output_text', text: message.content }];
+const toCodexInput = async (messages: IAIChatMessageInput[]): Promise<CodexInputItem[]> => {
+  // Keep recent images available for follow-up without growing every request indefinitely.
+  const recentImageIndexes = new Set<number>();
+  for (let index = messages.length - 1; index >= 0 && recentImageIndexes.size < 4; index--) {
+    if (messages[index].role === 'user' && messages[index].image) recentImageIndexes.add(index);
   }
 
-  return [{ type: 'input_text', text: message.content }];
-};
-
-const toCodexInput = (messages: IAIChatMessageInput[]): CodexInputItem[] =>
-  messages.map((message) => ({
-    type: 'message',
-    role: message.role,
-    content: toCodexMessageContent(message),
+  const input = await Promise.all(messages.map(async (message, index): Promise<CodexMessageItem> => {
+    const content: CodexMessageItem['content'] = [];
+    if (message.content.trim()) {
+      content.push({
+        type: message.role === 'user' ? 'input_text' : 'output_text',
+        text: message.content,
+      });
+    }
+    if (message.image && recentImageIndexes.has(index)) {
+      content.push({
+        type: 'input_image',
+        image_url: await resolveChatImageDataUrl(message.image),
+        detail: 'auto',
+      });
+    }
+    return { type: 'message', role: message.role, content };
   }));
+
+  return input.filter((item) => item.content.length);
+};
 
 const stringifyToolOutput = (output: unknown) => {
   if (typeof output === 'string') return output;
@@ -266,8 +281,9 @@ const readCodexSseResponse = async (response: Response): Promise<CodexStepResult
 
     const event = JSON.parse(data) as CodexResponseEvent;
 
-    if (event.error) {
-      throw new Error(event.error.message || 'Codex falhou ao responder.');
+    const error = event.error || event.response?.error;
+    if (error || event.type === 'response.failed') {
+      throw new Error(error?.message || 'Codex falhou ao responder.');
     }
 
     const isTextDelta = event.type?.includes('output_text') || event.type?.includes('message');
@@ -348,6 +364,7 @@ const createCodexResponse = async ({
   instructions,
   input,
   tools,
+  signal,
 }: {
   credential: Awaited<ReturnType<typeof getValidCodexCredential>>;
   sessionId: string;
@@ -355,6 +372,7 @@ const createCodexResponse = async ({
   instructions: string;
   input: CodexInputItem[];
   tools?: CodexToolDefinition[];
+  signal?: AbortSignal;
 }) => {
   if (!credential) {
     throw new Error('Entre com ChatGPT no provedor Codex antes de enviar mensagens.');
@@ -395,6 +413,7 @@ const createCodexResponse = async ({
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {
@@ -422,7 +441,7 @@ export const sendCodexChatGPTMessage = async (
 
   const sessionId = request.requestId || crypto.randomUUID();
   const tools = await toCodexTools(request.tools);
-  const input = toCodexInput(request.messages);
+  const input = await toCodexInput(request.messages);
   let latestText = '';
   const queryApprovals = new Map<string, IAIQueryApproval>();
   const appActions: IAIAppAction[] = [];
@@ -435,6 +454,7 @@ export const sendCodexChatGPTMessage = async (
       instructions: request.instructions,
       input,
       tools,
+      signal: request.signal,
     });
 
     if (result.text) latestText = result.text;

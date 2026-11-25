@@ -47,6 +47,7 @@ export const api: WoodboxApi = {
     edit: request('@post:update_ai_chat'),
     remove: request('@delete:ai_chat'),
     appendMessages: request('@post:append_ai_chat_messages'),
+    readImage: request('@get:ai_chat_image'),
     sendMessage: request('@post:ai_chat_message'),
     cancelMessage: request('@post:cancel_ai_chat_message'),
   },

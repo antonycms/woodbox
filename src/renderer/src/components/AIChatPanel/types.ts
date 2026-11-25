@@ -10,6 +10,7 @@ export interface IAIChatModelSelection {
 }
 
 export interface IAIChatModelSelectionProps {
+  supportsImages: boolean;
   modelGroups: IAIChatModelGroup[];
   selectedProviderId?: string;
   selectedModel?: string;

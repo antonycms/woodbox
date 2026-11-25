@@ -1,4 +1,5 @@
 import type Store from 'electron-store';
+import { removeChatImage, storeChatImage } from '../aiChatImages';
 import { generateHash } from '@shared/utils/string';
 import type {
   IAIChatMessage,
@@ -25,6 +26,9 @@ const normalizeMessage = (message: IAIChatMessage): IAIChatMessage => ({
   id: message.id || generateHash(12),
   role: message.role,
   content: message.content,
+  image: message.role === 'user' && message.image
+    ? { id: message.image.id, name: message.image.name, mimeType: message.image.mimeType }
+    : undefined,
   created_at: message.created_at || new Date().toISOString(),
   queryApprovals: message.queryApprovals,
   queryResult: message.queryResult,
@@ -79,30 +83,44 @@ export const getModule = (store: Store<Record<string, unknown>>) => {
     store.set(STORE_KEY, sortChats(chats));
   };
 
-  const appendMessages = (id: string, data: IAIChatAppendMessagesInput) => {
-    const chats = getChats(store);
-    const index = chats.findIndex((chat) => chat.id === id);
+  const appendMessages = async (id: string, data: IAIChatAppendMessagesInput) => {
+    const writtenImages: string[] = [];
 
-    if (index === -1) {
-      throw new Error(`Conversa de IA não encontrada: ${id}`);
+    try {
+      for (const message of data.messages) {
+        if (message.role !== 'user' || !message.image?.data) continue;
+        await storeChatImage(message.image);
+        writtenImages.push(message.image.id);
+      }
+
+      const chats = getChats(store);
+      const index = chats.findIndex((chat) => chat.id === id);
+
+      if (index === -1) {
+        throw new Error(`Conversa de IA não encontrada: ${id}`);
+      }
+
+      chats[index] = {
+        ...chats[index],
+        title: data.title?.trim() || chats[index].title,
+        summary: data.summary?.trim() ?? chats[index].summary,
+        messages: [...chats[index].messages, ...data.messages.map(normalizeMessage)],
+        updated_at: new Date().toISOString(),
+      };
+
+      store.set(STORE_KEY, sortChats(chats));
+    } catch (error) {
+      await Promise.allSettled(writtenImages.map(removeChatImage));
+      throw error;
     }
-
-    chats[index] = {
-      ...chats[index],
-      title: data.title?.trim() || chats[index].title,
-      summary: data.summary?.trim() ?? chats[index].summary,
-      messages: [...chats[index].messages, ...data.messages.map(normalizeMessage)],
-      updated_at: new Date().toISOString(),
-    };
-
-    store.set(STORE_KEY, sortChats(chats));
   };
 
-  const remove = (id: string) => {
-    store.set(
-      STORE_KEY,
-      getChats(store).filter((chat) => chat.id !== id),
-    );
+  const remove = async (id: string) => {
+    const chats = getChats(store);
+    const chat = chats.find((item) => item.id === id);
+    store.set(STORE_KEY, chats.filter((item) => item.id !== id));
+    const images = chat?.messages.flatMap((message) => message.image ? [message.image.id] : []) ?? [];
+    await Promise.allSettled(images.map(removeChatImage));
   };
 
   return { get, add, edit, appendMessages, remove };

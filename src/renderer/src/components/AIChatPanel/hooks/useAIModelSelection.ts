@@ -79,13 +79,18 @@ export const useAIModelSelection = ({
     );
   }, [chat, chats, modelGroups, selection]);
 
+  const supportsImages = aiProviders.some(
+    (provider) => provider.id === resolvedSelection?.providerId && provider.type === 'codex-chatgpt',
+  );
+
   return React.useMemo(
     () => ({
+      supportsImages,
       modelGroups,
       selectedProviderId: resolvedSelection?.providerId,
       selectedModel: resolvedSelection?.model,
       onModelChange,
     }),
-    [modelGroups, onModelChange, resolvedSelection?.model, resolvedSelection?.providerId],
+    [modelGroups, onModelChange, resolvedSelection?.model, resolvedSelection?.providerId, supportsImages],
   );
 };

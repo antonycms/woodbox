@@ -1,4 +1,9 @@
 import React from 'react';
+import IconPaperclip from '~icons/mdi/paperclip';
+import type { IAIChatImage } from '@shared/types/ai';
+import { AI_CHAT_IMAGE_MAX_BYTES, aiChatImageMimeTypes } from '@shared/utils/aiChatImages';
+import { useToastStore } from '@renderer/stores/Toast';
+import { AIChatImagePreview } from '../AIChatImagePreview';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { IconArrowUp, IconStop } from '@renderer/styles/icons';
 import type {
@@ -20,6 +25,10 @@ interface IAIChatComposerProps {
   value: string;
   canSubmit: boolean;
   loading?: boolean;
+  image?: IAIChatImage;
+  imageScope?: string;
+  supportsImages?: boolean;
+  onImageChange?(image?: IAIChatImage): void;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   contexts?: IAIChatDraftContext[];
   connectionOptions?: IAIChatConnectionOption[];
@@ -109,6 +118,10 @@ export const AIChatComposer = React.memo(
     value,
     canSubmit,
     loading,
+    image,
+    imageScope,
+    supportsImages,
+    onImageChange,
     textareaRef,
     contexts = [],
     connectionOptions = [],
@@ -131,6 +144,8 @@ export const AIChatComposer = React.memo(
     onKeyDown,
   }: IAIChatComposerProps) => {
     const t = useI18nStore((state) => state.t);
+    const showToast = useToastStore((state) => state.showToast);
+    const [readingImage, setReadingImage] = React.useState(false);
     const [openConnections, setOpenConnections] = React.useState(false);
     const [openModels, setOpenModels] = React.useState(false);
     const [connectionFilter, setConnectionFilter] = React.useState('');
@@ -138,6 +153,8 @@ export const AIChatComposer = React.memo(
     const [activeReference, setActiveReference] =
       React.useState<IActiveReference>();
     const [highlightedReferenceIndex, setHighlightedReferenceIndex] = React.useState(0);
+    const imageInputRef = React.useRef<HTMLInputElement>(null);
+    const imageReaderRef = React.useRef<FileReader | null>(null);
     const localTextareaRef = React.useRef<HTMLTextAreaElement>(null);
     const mirrorRef = React.useRef<HTMLDivElement>(null);
     const composerInputWrapRef = React.useRef<HTMLDivElement>(null);
@@ -313,8 +330,58 @@ export const AIChatComposer = React.memo(
       [onChange],
     );
 
+    const attachImage = React.useCallback((file: File) => {
+      const mimeType = aiChatImageMimeTypes.find((type) => type === file.type);
+      const errorKey = !supportsImages
+        ? 'aiChat.imageCodexOnly'
+        : !mimeType
+          ? 'aiChat.imageInvalidType'
+          : !file.size || file.size > AI_CHAT_IMAGE_MAX_BYTES
+            ? 'aiChat.imageInvalidSize'
+            : undefined;
+      if (errorKey) {
+        showToast({ type: 'warn', title: t(errorKey) });
+        return;
+      }
+      if (!mimeType || !onImageChange || loading) return;
+
+      imageReaderRef.current?.abort();
+      const reader = new FileReader();
+      imageReaderRef.current = reader;
+      setReadingImage(true);
+      reader.onload = () => {
+        if (imageReaderRef.current !== reader) return;
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        const data = result.slice(result.indexOf(',') + 1);
+        if (data) {
+          onImageChange({
+            id: crypto.randomUUID(),
+            name: file.name.slice(0, 255) || t('aiChat.imageClipboard'),
+            mimeType,
+            data,
+          });
+        }
+      };
+      reader.onerror = () => {
+        if (imageReaderRef.current === reader) showToast({ type: 'error', title: t('aiChat.imageReadFailed') });
+      };
+      reader.onloadend = () => {
+        if (imageReaderRef.current !== reader) return;
+        imageReaderRef.current = null;
+        setReadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    }, [loading, onImageChange, showToast, supportsImages, t]);
+
     const handlePaste = React.useCallback(
       (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const imageFile = Array.from(event.clipboardData.files).find((file) => file.type.startsWith('image/'))
+          || Array.from(event.clipboardData.items).find((item) => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile();
+        if (imageFile) {
+          event.preventDefault();
+          attachImage(imageFile);
+          return;
+        }
         const pastedText = event.clipboardData.getData('text');
         const sanitizedText = pastedText.trim();
 
@@ -338,7 +405,7 @@ export const AIChatComposer = React.memo(
 
         onPaste?.(event);
       },
-      [activeTextareaRef, onChange, onPaste],
+      [activeTextareaRef, attachImage, onChange, onPaste],
     );
 
     const updateActiveReference = React.useCallback(
@@ -453,11 +520,46 @@ export const AIChatComposer = React.memo(
       syncMirrorScroll();
     }, [syncMirrorScroll, value]);
 
+    React.useEffect(() => {
+      return () => {
+        const reader = imageReaderRef.current;
+        imageReaderRef.current = null;
+        reader?.abort();
+      };
+    }, []);
+
+    React.useEffect(() => {
+      imageReaderRef.current?.abort();
+    }, [imageScope, supportsImages]);
+
     return (
       <div className={styles.composer}>
-        <form className={styles.composerForm} onSubmit={onSubmit}>
+        <form className={styles.composerForm} onSubmit={(event) => {
+          if (readingImage || (image && !supportsImages)) {
+            event.preventDefault();
+            return;
+          }
+          onSubmit(event);
+        }}>
           <div ref={composerInputWrapRef} className={styles.composerInputWrap}>
             <div className={styles.composerField}>
+              {image && (
+                <div className={styles.imageAttachment}>
+                  <AIChatImagePreview image={image} draft />
+                  <span title={image.name}>{image.name}</span>
+                  <button
+                    type="button"
+                    className={styles.contextChipRemove}
+                    aria-label={t('aiChat.removeImage')}
+                    title={t('aiChat.removeImage')}
+                    disabled={loading}
+                    onClick={() => onImageChange?.(undefined)}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              {image && !supportsImages && <span className={styles.imageHint}>{t('aiChat.imageCodexOnly')}</span>}
               {!!contexts.length && (
                 <div className={styles.contextChips}>
                   {contexts.map((context) => (
@@ -639,10 +741,32 @@ export const AIChatComposer = React.memo(
                     </button>
                   )}
 
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    hidden
+                    accept={aiChatImageMimeTypes.join(',')}
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      event.currentTarget.value = '';
+                      if (file) attachImage(file);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.attachButton}
+                    aria-label={t('aiChat.attachImage')}
+                    title={t(!supportsImages ? 'aiChat.imageCodexOnly' : readingImage ? 'aiChat.imageLoading' : 'aiChat.attachImage')}
+                    disabled={!supportsImages || loading || readingImage}
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    <IconPaperclip width={17} height={17} />
+                  </button>
+
                   <button
                     className={loading ? styles.stopButton : styles.sendButton}
                     type={loading ? 'button' : 'submit'}
-                    disabled={!loading && !canSubmit}
+                    disabled={!loading && (!canSubmit || readingImage)}
                     title={loading ? t('aiChat.stopGenerating') : t('aiChat.send')}
                     aria-label={loading ? t('aiChat.stopGenerating') : t('aiChat.send')}
                     onClick={loading ? onStop : undefined}

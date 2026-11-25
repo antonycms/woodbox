@@ -2,7 +2,7 @@ import React from 'react';
 import { ButtonDropdown, type IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
 import { useI18nStore } from '@renderer/stores/I18n';
-import type { IAIChat } from '@shared/types/ai';
+import type { IAIChat, IAIChatImage } from '@shared/types/ai';
 import { useAIStore } from '@renderer/stores/AI';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { IconAI, OptionsIcon, RemoveIcon } from '@renderer/styles/icons';
@@ -19,6 +19,8 @@ import IconMdiClose from '~icons/mdi/close';
 
 interface IAIChatEmptyStateProps {
   value: string;
+  image?: IAIChatImage;
+  onImageChange(image?: IAIChatImage): void;
   contexts?: IAIChatDraftContext[];
   connectionOptions: IAIChatConnectionOption[];
   referenceOptions: IAIChatReferenceOption[];
@@ -40,6 +42,8 @@ interface IAIChatEmptyStateProps {
 export const AIChatEmptyState = React.memo(
   ({
     value,
+    image,
+    onImageChange,
     contexts = [],
     connectionOptions,
     referenceOptions,
@@ -148,8 +152,12 @@ export const AIChatEmptyState = React.memo(
 
         <AIChatComposer
           value={value}
+          image={image}
+          onImageChange={onImageChange}
+          supportsImages={modelSelection.supportsImages}
           canSubmit={
-            (!!value.trim() || !!contexts.length) &&
+            (!!value.trim() || !!contexts.length || !!image) &&
+            (!image || modelSelection.supportsImages) &&
             !!modelSelection.selectedProviderId &&
             !!modelSelection.selectedModel
           }

@@ -33,9 +33,17 @@ export interface IAIProviderInput {
   baseURL?: string;
 }
 
+export interface IAIChatImage {
+  id: string;
+  name: string;
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
+  data?: string;
+}
+
 export interface IAIChatMessageInput {
   role: 'user' | 'assistant';
   content: string;
+  image?: IAIChatImage;
 }
 
 export interface IAIQueryApproval {

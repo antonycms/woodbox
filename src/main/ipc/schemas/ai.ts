@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AI_CHAT_IMAGE_MAX_BASE64_LENGTH, aiChatImageMimeTypes } from '@shared/utils/aiChatImages';
 import { dialect } from './connections';
 
 export const provider = z.object({
@@ -7,8 +8,19 @@ export const provider = z.object({
   models: z.array(z.string()), apiKey: z.string().optional(), baseURL: z.string().optional(),
 });
 
-const messageInput = z.object({ role: z.enum(['user', 'assistant']), content: z.string() });
+export const chatImage = z.object({
+  id: z.uuid(),
+  name: z.string().min(1).max(255),
+  mimeType: z.enum(aiChatImageMimeTypes),
+});
+const chatImageInput = chatImage.extend({
+  data: z.string().min(1).max(AI_CHAT_IMAGE_MAX_BASE64_LENGTH).optional(),
+});
+const messageInput = z.object({
+  role: z.enum(['user', 'assistant']), content: z.string(), image: chatImageInput.optional(),
+});
 const message = messageInput.extend({
+  image: chatImage.optional(),
   id: z.string(), created_at: z.string(),
   queryApprovals: z.array(z.object({
     id: z.string(), connectionId: z.string(), connectionName: z.string(), dialect,
@@ -27,7 +39,7 @@ export const chat = z.object({
 });
 export const chatPatch = chat.omit({ id: true }).partial();
 export const appendMessages = z.object({
-  title: z.string().optional(), summary: z.string().optional(), messages: z.array(message),
+  title: z.string().optional(), summary: z.string().optional(), messages: z.array(message.extend({ image: chatImageInput.optional() })),
 });
 export const chatRequest = z.object({
   requestId: z.string().optional(), providerId: z.string().optional(), model: z.string().optional(),

@@ -13,6 +13,7 @@ export interface IAIStore {
   removeAIChat: WoodboxApi['aiChats']['remove'];
   appendAIChatMessages: WoodboxApi['aiChats']['appendMessages'];
   testAIProvider: WoodboxApi['aiProviders']['test'];
+  readAIChatImage: WoodboxApi['aiChats']['readImage'];
   sendAIChatMessage: WoodboxApi['aiChats']['sendMessage'];
   cancelAIChatMessage: WoodboxApi['aiChats']['cancelMessage'];
   getCodexChatGPTAccount: WoodboxApi['codex']['getAccount'];

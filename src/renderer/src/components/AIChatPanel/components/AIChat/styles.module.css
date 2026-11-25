@@ -150,6 +150,10 @@ p.titleBlock {
   background-color: color-mix(in srgb, var(--ascentColor) 16%, var(--cardBackgroundColor));
 }
 
+.messageImage:not(:last-child) {
+  margin-bottom: 6px;
+}
+
 .tableMessage {
   width: 100%;
   max-width: calc(100% - 22px);

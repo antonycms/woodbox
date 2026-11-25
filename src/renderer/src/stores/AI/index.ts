@@ -58,6 +58,7 @@ export const useAIStore = create<IAIStore>()((set, get) => ({
   },
 
   testAIProvider: (...args) => window.api.aiProviders.test(...args),
+  readAIChatImage: (...args) => window.api.aiChats.readImage(...args),
   sendAIChatMessage: (data) => window.api.aiChats.sendMessage({
     ...data,
     activeThemeColors: snapshotThemeColors(useThemeStore.getState().activeTheme),

@@ -1,3 +1,4 @@
+import type { IAIChatImage } from '@shared/types/ai';
 import type { IButtonDropdownOption } from '@renderer/components/ButtonDropdown';
 import type {
   IAIChatConnectionOption,
@@ -9,6 +10,7 @@ import type {
 export interface IAIChatProps {
   id_chat: string;
   initialMessage?: string;
+  initialImage?: IAIChatImage;
   draftContexts?: IAIChatDraftContext[];
   connectionOptions: IAIChatConnectionOption[];
   referenceOptions: IAIChatReferenceOption[];

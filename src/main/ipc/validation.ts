@@ -3,7 +3,7 @@ import { normalizeConnectionInput } from '../database/connections/connectionInpu
 import type { IpcArgs, IpcChannel } from '@shared/types/ipc';
 import { connection, exportProjects, importConnections, projectExportFormat, projectImportFormat } from './schemas/connections';
 import { project, script, snippet } from './schemas/workspace';
-import { provider, chat, chatPatch, appendMessages, chatRequest } from './schemas/ai';
+import { provider, chat, chatPatch, appendMessages, chatImage, chatRequest } from './schemas/ai';
 import {
   prepareInsertDml, prepareStructureDdl, tableFilters, tableReadFilters, prepareInitialWhere, readInitialWhere, tableData, objectCommand, runSqlOptions, exportPreview, exportData, importTableData, rowChangesIntent, compare,
 } from './schemas/database';
@@ -45,6 +45,7 @@ const schemas = {
   '@post:update_ai_chat': z.tuple([id, chatPatch]),
   '@delete:ai_chat': z.tuple([id]),
   '@post:append_ai_chat_messages': z.tuple([id, appendMessages]),
+  '@get:ai_chat_image': z.tuple([chatImage]),
   '@post:ai_chat_message': z.tuple([chatRequest]),
   '@post:cancel_ai_chat_message': z.tuple([id]),
   '@get:codex_chatgpt_account': z.tuple([]),

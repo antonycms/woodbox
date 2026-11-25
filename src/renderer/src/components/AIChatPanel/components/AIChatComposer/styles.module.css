@@ -233,13 +233,14 @@
 .connectionMenuWrap,
 .modelMenuWrap {
   position: relative;
-  flex: none;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .connectionBadgeButton,
 .modelBadgeButton {
-  max-width: 126px;
+  max-width: min(126px, 100%);
+  overflow: hidden;
   height: 24px;
   padding: 0 6px;
   border: 0;
@@ -261,7 +262,7 @@
 }
 
 .connectionBadgeButton {
-  max-width: 170px;
+  max-width: min(170px, 100%);
 }
 
 .connectionBadgeButton:disabled,
@@ -489,4 +490,53 @@
 
 .stopButton:active {
   transform: scale(0.98);
+}
+
+.imageAttachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--borderColor);
+  border-radius: 5px;
+  color: var(--color);
+  user-select: none;
+}
+
+.imageAttachment span,
+.imageHint {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imageHint {
+  color: var(--color);
+  user-select: none;
+}
+
+.attachButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--borderColor);
+  border-radius: 5px;
+  color: var(--color);
+  background: transparent;
+  cursor: pointer;
+}
+
+.attachButton:hover:not([disabled]) {
+  color: var(--ascentColor);
+}
+
+.attachButton[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

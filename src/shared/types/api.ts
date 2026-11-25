@@ -61,6 +61,7 @@ export interface WoodboxApi {
     edit: (id: string, data: AI.IAIChatPatch) => Promise<void>;
     remove: (id: string) => Promise<void>;
     appendMessages: (id: string, data: AI.IAIChatAppendMessagesInput) => Promise<void>;
+    readImage: (image: Omit<AI.IAIChatImage, 'data'>) => Promise<string>;
     sendMessage: (data: AI.IAIChatRequest) => Promise<AI.IAIChatResponse>;
     cancelMessage: (requestId: string) => Promise<boolean>;
   };

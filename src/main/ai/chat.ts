@@ -39,14 +39,10 @@ const getWoodboxAIInstructions = (language: IAIChatRequest['language']) => {
   ].join('\n');
 };
 
-const normalizeMessages = (messages: IAIChatMessageInput[]) => {
-  return messages
-    .filter((message) => !!message.content.trim())
-    .map((message) => ({
-      role: message.role,
-      content: message.content,
-    }));
-};
+const normalizeMessages = (messages: IAIChatMessageInput[]) =>
+  messages
+    .map(({ role, content, image }) => ({ role, content, image: role === 'user' ? image : undefined }))
+    .filter((message) => message.content.trim() || message.image);
 
 const isQueryExecutionToolOutput = (output: unknown): output is AIQueryExecutionToolOutput => {
   if (!output || typeof output !== 'object') return false;
@@ -108,6 +104,9 @@ export const sendAIChatMessage = async ({
   }
 
   const normalizedMessages = normalizeMessages(messages);
+  if (provider.type !== 'codex-chatgpt' && normalizedMessages.some((message) => message.image)) {
+    throw new Error('O envio de imagens está disponível apenas no provedor Codex com ChatGPT.');
+  }
 
   if (!normalizedMessages.length) {
     throw new Error('Informe uma mensagem para enviar ao assistente.');
@@ -134,21 +133,6 @@ export const sendAIChatMessage = async ({
       : buildAIDatabaseInstructions(mentionedConnectionIds, language),
   ].join('\n\n');
 
-  // Conexao direta usando codex OAuth
-  if (provider.type === 'codex-chatgpt') {
-    return await sendCodexChatGPTMessage(provider, {
-      requestId,
-      providerId,
-      model: selectedModel,
-      mentionedConnectionIds,
-      messages: normalizedMessages,
-      instructions,
-      tools,
-    });
-  }
-
-  const model = resolveAIModel(provider, selectedModel);
-
   const abortController = requestId ? new AbortController() : undefined;
 
   if (requestId && abortController) {
@@ -156,6 +140,20 @@ export const sendAIChatMessage = async ({
   }
 
   try {
+    if (provider.type === 'codex-chatgpt') {
+      return await sendCodexChatGPTMessage(provider, {
+        requestId,
+        providerId,
+        model: selectedModel,
+        mentionedConnectionIds,
+        messages: normalizedMessages,
+        instructions,
+        tools,
+        signal: abortController?.signal,
+      });
+    }
+
+    const model = resolveAIModel(provider, selectedModel);
     const response = await generateText({
       model,
       instructions,

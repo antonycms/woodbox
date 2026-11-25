@@ -35,6 +35,7 @@ export interface IpcRequests {
   '@post:update_ai_chat': WoodboxApi['aiChats']['edit'];
   '@delete:ai_chat': WoodboxApi['aiChats']['remove'];
   '@post:append_ai_chat_messages': WoodboxApi['aiChats']['appendMessages'];
+  '@get:ai_chat_image': WoodboxApi['aiChats']['readImage'];
   '@post:ai_chat_message': WoodboxApi['aiChats']['sendMessage'];
   '@post:cancel_ai_chat_message': WoodboxApi['aiChats']['cancelMessage'];
   '@get:codex_chatgpt_account': WoodboxApi['codex']['getAccount'];

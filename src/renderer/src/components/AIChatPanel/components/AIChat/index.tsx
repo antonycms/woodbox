@@ -1,10 +1,11 @@
 import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { AIChatComposer } from '../AIChatComposer';
+import { AIChatImagePreview } from '../AIChatImagePreview';
 import { ButtonDropdown } from '@renderer/components/ButtonDropdown';
 import { Button } from '@renderer/components/Button';
 import { useI18nStore } from '@renderer/stores/I18n';
-import type { IAIAppAction, IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
+import type { IAIAppAction, IAIChatImage, IAIChatMessage, IAIChatMessageInput, IAIQueryApproval } from '@shared/types/ai';
 import { generateHash } from '@shared/utils/string';
 import { useAIStore } from '@renderer/stores/AI';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
@@ -37,6 +38,7 @@ import IconMdiClose from '~icons/mdi/close';
 const AIChat = ({
   id_chat,
   initialMessage,
+  initialImage,
   draftContexts = [],
   connectionOptions,
   referenceOptions,
@@ -89,13 +91,18 @@ const AIChat = ({
   );
   const { aiChat: aiChatTheme, mainTab: theme } = activeTheme;
   const [draftMessage, setDraftMessage] = React.useState('');
+  const [draftImage, setDraftImage] = React.useState<IAIChatImage>();
   const [localMessages, setLocalMessages] = React.useState<IAIChatMessage[]>([]);
   const [loadingMessage, setLoadingMessage] = React.useState(false);
   const messagesScrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const handledInitialMessageRef = React.useRef<string | undefined>(undefined);
-  const stopGenerationRef = React.useRef(false);
   const activeAssistantMessageIdRef = React.useRef<string | undefined>(undefined);
+  const sentImageDraftRef = React.useRef<{
+    messageId: string;
+    image: IAIChatImage;
+    text: string;
+  } | undefined>(undefined);
   const activeRequestIdRef = React.useRef<string | undefined>(undefined);
   const chat = React.useMemo(() => aiChats.find((item) => item.id === id_chat), [aiChats, id_chat]);
 
@@ -116,7 +123,8 @@ const AIChat = ({
 
   const canSendMessage =
     !!chat &&
-    (!!draftMessage.trim() || !!draftContexts.length) &&
+    (!!draftMessage.trim() || !!draftContexts.length || !!draftImage) &&
+    (!draftImage || modelSelection.supportsImages) &&
     !loadingMessage &&
     !!modelSelection.selectedProviderId &&
     !!modelSelection.selectedModel;
@@ -213,11 +221,19 @@ const AIChat = ({
     ],
   );
 
+  const restoreImageDraft = React.useCallback(() => {
+    const draft = sentImageDraftRef.current;
+    if (!draft || textareaRef.current?.value) return;
+
+    setDraftMessage((current) => current || draft.text);
+    setDraftImage((current) => current || draft.image);
+  }, []);
+
   const submitMessageContent = React.useCallback(
-    async (draftContent: string) => {
+    async (draftContent: string, image?: IAIChatImage) => {
       const content = draftContent.trim();
 
-      if (!content || loadingMessage) return;
+      if ((!content && !image) || loadingMessage || (image && !modelSelection.supportsImages)) return;
 
       const persistedMessages = chat?.messages || [];
       const hasPendingApprovals = persistedMessages.some((message) =>
@@ -251,6 +267,7 @@ const AIChat = ({
         id: generateHash(),
         role: 'user',
         content,
+        image,
         created_at: new Date().toISOString(),
       };
       const assistantMessage: IAIChatMessage = {
@@ -263,12 +280,15 @@ const AIChat = ({
       const assistantMessageId = assistantMessage.id;
       const requestId = generateHash();
 
-      stopGenerationRef.current = false;
       activeAssistantMessageIdRef.current = assistantMessageId;
       activeRequestIdRef.current = requestId;
+      sentImageDraftRef.current = image
+        ? { messageId: userMessage.id, image, text: getAIChatUserContent(content) }
+        : undefined;
       setLocalMessages((prevState) => [...prevState, userMessage, assistantMessage]);
       setDraftMessage('');
-      onClearDraftContexts?.();
+      setDraftImage(undefined);
+      if (!image) onClearDraftContexts?.();
 
       try {
         setLoadingMessage(true);
@@ -282,10 +302,11 @@ const AIChat = ({
           messages: nextMessages.map((message) => ({
             role: message.role,
             content: message.content,
+            image: modelSelection.supportsImages ? message.image : undefined,
           })),
         });
 
-        if (stopGenerationRef.current) return;
+        if (activeRequestIdRef.current !== requestId) return;
 
         const themeResults = await applyAIAppActions(response.appActions);
 
@@ -299,12 +320,12 @@ const AIChat = ({
           ...themeResults,
         ].filter(Boolean).join('\n\n') || t('aiChat.queryApprovalRequiredMessage');
         const isFirstMessage = !chat?.messages.length;
-        const titleContent = getAIChatUserContent(content);
+        const titleContent = getAIChatUserContent(content) || image?.name;
         const nextTitle = isFirstMessage && titleContent ? getExcerpt(titleContent, 64) : undefined;
 
         const completedAt = new Date().toISOString();
 
-        if (stopGenerationRef.current) return;
+        if (activeRequestIdRef.current !== requestId) return;
 
         await appendAIChatMessages(id_chat, {
           title: nextTitle,
@@ -320,27 +341,34 @@ const AIChat = ({
           ],
         });
 
+        if (image && activeRequestIdRef.current === requestId) onClearDraftContexts?.();
         setLocalMessages((prevState) =>
           prevState.filter(
             (message) => ![userMessage.id, assistantMessage.id].includes(message.id),
           ),
         );
       } catch (error) {
-        if (stopGenerationRef.current) return;
+        if (activeRequestIdRef.current !== requestId) return;
 
+        restoreImageDraft();
         setLocalMessages((prevState) =>
-          prevState.filter((message) => message.id !== assistantMessage.id),
+          prevState.filter((message) => message.id !== assistantMessage.id && (!image || message.id !== userMessage.id)),
         );
+        const description = getErrorMessage(error, t('common.unknownError'));
+        const unsupportedImage = image &&
+          /image|vision|multimodal/i.test(description) &&
+          /not support|unsupported|text.only|not allowed|not accept/i.test(description);
         showToast({
           type: 'error',
           title: t('aiChat.sendFailed'),
-          description: getErrorMessage(error, String(error)),
+          description: unsupportedImage ? t('aiChat.imageModelUnsupported') : description,
         });
       } finally {
         if (activeAssistantMessageIdRef.current === assistantMessageId) {
           setLoadingMessage(false);
           activeAssistantMessageIdRef.current = undefined;
           activeRequestIdRef.current = undefined;
+          sentImageDraftRef.current = undefined;
         }
       }
     },
@@ -356,7 +384,9 @@ const AIChat = ({
       localMessages,
       modelSelection.selectedModel,
       modelSelection.selectedProviderId,
+      modelSelection.supportsImages,
       onClearDraftContexts,
+      restoreImageDraft,
       sendAIChatMessage,
       selectedConnectionIds,
       showToast,
@@ -368,13 +398,12 @@ const AIChat = ({
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      await submitMessageContent(buildAIChatMessageContent(draftMessage, draftContexts));
+      await submitMessageContent(buildAIChatMessageContent(draftMessage, draftContexts), draftImage);
     },
-    [draftContexts, draftMessage, submitMessageContent],
+    [draftContexts, draftImage, draftMessage, submitMessageContent],
   );
 
   const stopGeneration = React.useCallback(() => {
-    stopGenerationRef.current = true;
     setLoadingMessage(false);
 
     const requestId = activeRequestIdRef.current;
@@ -388,11 +417,14 @@ const AIChat = ({
     const assistantMessageId = activeAssistantMessageIdRef.current;
     if (!assistantMessageId) return;
 
+    const imageMessageId = sentImageDraftRef.current?.messageId;
+    restoreImageDraft();
     setLocalMessages((prevState) =>
-      prevState.filter((message) => message.id !== assistantMessageId),
+      prevState.filter((message) => message.id !== assistantMessageId && message.id !== imageMessageId),
     );
     activeAssistantMessageIdRef.current = undefined;
-  }, [cancelAIChatMessage]);
+    sentImageDraftRef.current = undefined;
+  }, [cancelAIChatMessage, restoreImageDraft]);
 
   const updateQueryApproval = React.useCallback(
     async (approval: IAIQueryApproval, patch: Partial<IAIQueryApproval>) => {
@@ -500,6 +532,7 @@ const AIChat = ({
             ...modelMessages.map((message) => ({
               role: message.role,
               content: message.content,
+              image: modelSelection.supportsImages ? message.image : undefined,
             })),
             queryResultMessage,
           ],
@@ -560,6 +593,7 @@ const AIChat = ({
       runSql,
       modelSelection.selectedModel,
       modelSelection.selectedProviderId,
+      modelSelection.supportsImages,
       sendAIChatMessage,
       showToast,
       t,
@@ -621,6 +655,8 @@ const AIChat = ({
 
   React.useEffect(() => {
     setLocalMessages([]);
+    setDraftImage(undefined);
+    sentImageDraftRef.current = undefined;
     handledInitialMessageRef.current = undefined;
   }, [id_chat]);
 
@@ -633,14 +669,17 @@ const AIChat = ({
   }, [draftContexts.length]);
 
   React.useEffect(() => {
-    if (!initialMessage || handledInitialMessageRef.current === initialMessage || loadingMessage) {
-      return;
-    }
+    const initialKey = initialImage?.id || initialMessage;
+    if (!initialKey || handledInitialMessageRef.current === initialKey || loadingMessage) return;
 
-    handledInitialMessageRef.current = initialMessage;
-    submitMessageContent(initialMessage);
+    handledInitialMessageRef.current = initialKey;
+    if (initialImage) {
+      setDraftImage(initialImage);
+      setDraftMessage(getAIChatUserContent(initialMessage || ''));
+    }
+    submitMessageContent(initialMessage || '', initialImage);
     onInitialMessageHandled?.();
-  }, [initialMessage, loadingMessage, onInitialMessageHandled, submitMessageContent]);
+  }, [initialImage, initialMessage, loadingMessage, onInitialMessageHandled, submitMessageContent]);
 
   React.useEffect(() => {
     window.requestAnimationFrame(() => {
@@ -758,6 +797,11 @@ const AIChat = ({
                             .filter(Boolean)
                             .join(' ')}
                         >
+                          {message.image && (
+                            <div className={styles.messageImage}>
+                              <AIChatImagePreview image={message.image} />
+                            </div>
+                          )}
                           <MessageContent
                             content={message.content}
                             queryApprovals={message.queryApprovals}
@@ -779,6 +823,10 @@ const AIChat = ({
           <AIChatComposer
             textareaRef={textareaRef}
             value={draftMessage}
+            image={draftImage}
+            imageScope={id_chat}
+            onImageChange={setDraftImage}
+            supportsImages={modelSelection.supportsImages}
             canSubmit={canSendMessage}
             loading={loadingMessage}
             contexts={draftContexts}

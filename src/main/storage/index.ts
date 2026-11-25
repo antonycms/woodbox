@@ -1,5 +1,6 @@
 import * as store from './store';
 import addListener from '../utils/addListener';
+import { readChatImageDataUrl } from './aiChatImages';
 
 // project
 addListener('@get:projects', store.getProjects);
@@ -43,6 +44,7 @@ addListener('@post:update_ai_provider', store.editAIProvider);
 
 // ai chats
 addListener('@get:ai_chats', store.getAIChats);
+addListener('@get:ai_chat_image', readChatImageDataUrl);
 addListener('@post:ai_chats', store.addAIChat);
 addListener('@delete:ai_chat', store.removeAIChat);
 addListener('@post:update_ai_chat', store.editAIChat);

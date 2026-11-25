@@ -3,7 +3,7 @@ import type { Environment } from 'monaco-editor';
 
 declare global {
   interface Window {
-    // Includes typed import/export progress/cancellation, updates, guided row changes and offline/initial table filters.
+    // Includes typed AI chat images, import/export progress/cancellation, updates, guided row changes and offline/initial table filters.
     api: WoodboxApi;
     shiftPressed?: boolean;
     ctrlPressed?: boolean;

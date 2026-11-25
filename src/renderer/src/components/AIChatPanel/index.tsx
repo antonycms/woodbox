@@ -9,7 +9,7 @@ import * as centralSearchConstants from '@renderer/components/CentralSearchModal
 import { useAIChatPanelStore } from '@renderer/stores/AIChatPanel';
 import { useAppTabStore } from '@renderer/stores/AppTab';
 import { useI18nStore } from '@renderer/stores/I18n';
-import type { IAIChat } from '@shared/types/ai';
+import type { IAIChat, IAIChatImage } from '@shared/types/ai';
 import { useAIStore } from '@renderer/stores/AI';
 import { useWorkspaceStore } from '@renderer/stores/Workspace';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -91,6 +91,8 @@ export const AIChatPanel = React.memo(() => {
   const { aiChat: aiChatTheme, mainTab: theme } = useThemeStore((state) => state.activeTheme);
   const [width, _setWidth] = useStorage('ai_chat_panel_width', 430);
   const [emptyDraft, setEmptyDraft] = React.useState('');
+  const [emptyImage, setEmptyImage] = React.useState<IAIChatImage>();
+  const [initialImage, setInitialImage] = React.useState<IAIChatImage>();
   const [initialMessage, setInitialMessage] = React.useState('');
   const [chatDraftContexts, setChatDraftContexts] = React.useState<IAIChatDraftContext[]>([]);
   const [emptyDraftContexts, setEmptyDraftContexts] = React.useState<IAIChatDraftContext[]>([]);
@@ -100,6 +102,7 @@ export const AIChatPanel = React.memo(() => {
   const [emptyAISelection, setEmptyAISelection] = React.useState<IAIChatModelSelection>();
   const [selectedConnectionId, setSelectedConnectionId] = React.useState<string>();
   const [pendingInitialMessage, setPendingInitialMessage] = React.useState(false);
+  const creatingChatRef = React.useRef(false);
   const manualConnectionSelectionRef = React.useRef(false);
   const loadingConnectionRef = React.useRef(new Set<string>());
   const setWidth = useDebounce(_setWidth);
@@ -329,7 +332,9 @@ export const AIChatPanel = React.memo(() => {
     [openChatPanel],
   );
 
-  const createChat = React.useCallback(async () => {
+  const createChat = React.useCallback(async (draft?: { content: string; image?: IAIChatImage }) => {
+    if (creatingChatRef.current) return false;
+    creatingChatRef.current = true;
     try {
       const chat = await addAIChat({
         title: t('aiChat.newTitle'),
@@ -339,14 +344,22 @@ export const AIChatPanel = React.memo(() => {
         connectionId: selectedConnectionId,
       });
 
+      if (draft) {
+        setInitialMessage(draft.content);
+        setInitialImage(draft.image);
+      }
       setEmptyAISelection(undefined);
       selectChat(chat);
+      return true;
     } catch (error) {
       showToast({
         type: 'error',
         title: t('aiChat.createFailed'),
         description: getErrorMessage(error) || String(error),
       });
+      return false;
+    } finally {
+      creatingChatRef.current = false;
     }
   }, [
     addAIChat,
@@ -375,17 +388,23 @@ export const AIChatPanel = React.memo(() => {
     async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (
-        (!emptyDraft.trim() && !emptyDraftContexts.length) ||
+        creatingChatRef.current ||
+        (!emptyDraft.trim() && !emptyDraftContexts.length && !emptyImage) ||
+        (emptyImage && !emptyChatModelSelection.supportsImages) ||
         !emptyChatModelSelection.selectedProviderId ||
         !emptyChatModelSelection.selectedModel
       ) {
         return;
       }
 
-      setInitialMessage(buildAIChatMessageContent(emptyDraft, emptyDraftContexts));
-      await createChat();
-      setEmptyDraft('');
-      setEmptyDraftContexts([]);
+      if (await createChat({
+        content: buildAIChatMessageContent(emptyDraft, emptyDraftContexts),
+        image: emptyImage,
+      })) {
+        setEmptyDraft('');
+        setEmptyImage(undefined);
+        setEmptyDraftContexts([]);
+      }
     },
     [
       createChat,
@@ -393,6 +412,8 @@ export const AIChatPanel = React.memo(() => {
       emptyChatModelSelection.selectedProviderId,
       emptyDraft,
       emptyDraftContexts,
+      emptyChatModelSelection.supportsImages,
+      emptyImage,
     ],
   );
 
@@ -446,11 +467,13 @@ export const AIChatPanel = React.memo(() => {
       id: generateHash(),
     }));
 
-
+    setDraftNewChat(true);
     const { content, draftOnly } = initialMessageRequest;
 
     setInitialMessage(draftOnly ? '' : buildAIChatMessageContent(content, contexts));
+    setInitialImage(undefined);
     setEmptyDraft(content);
+    setEmptyImage(undefined);
     setChatDraftContexts([]);
     setEmptyDraftContexts(contexts);
     setEmptyAISelection(undefined);
@@ -460,6 +483,7 @@ export const AIChatPanel = React.memo(() => {
 
   React.useEffect(() => {
     if (
+      initialMessageRequest ||
       !pendingInitialMessage ||
       !initialMessage ||
       visibleChat ||
@@ -471,12 +495,13 @@ export const AIChatPanel = React.memo(() => {
     }
 
     setPendingInitialMessage(false);
-    createChat().then(() => setEmptyDraft(''));
+    createChat().then((created) => { if (created) setEmptyDraft(''); });
   }, [
     createChat,
     emptyChatModelSelection.selectedModel,
     emptyChatModelSelection.selectedProviderId,
     initialMessage,
+    initialMessageRequest,
     pendingInitialMessage,
     selectedConnectionId,
     visibleChat,
@@ -567,6 +592,7 @@ export const AIChatPanel = React.memo(() => {
                   <AIChat
                     id_chat={visibleChat.id}
                     initialMessage={initialMessage}
+                    initialImage={initialImage}
                     draftContexts={chatDraftContexts}
                     connectionOptions={connectionOptions}
                     referenceOptions={referenceOptions}
@@ -583,7 +609,10 @@ export const AIChatPanel = React.memo(() => {
                         prevState.filter((context) => context.id !== contextId),
                       )
                     }
-                    onInitialMessageHandled={() => setInitialMessage('')}
+                    onInitialMessageHandled={() => {
+                      setInitialMessage('');
+                      setInitialImage(undefined);
+                    }}
                     onNewChat={() => {
                       setDraftNewChat(true);
                       setInitialMessage('');
@@ -595,6 +624,8 @@ export const AIChatPanel = React.memo(() => {
                 ) : (
                   <AIChatEmptyState
                     value={emptyDraft}
+                    image={emptyImage}
+                    onImageChange={setEmptyImage}
                     contexts={emptyDraftContexts}
                     connectionOptions={connectionOptions}
                     referenceOptions={referenceOptions}
