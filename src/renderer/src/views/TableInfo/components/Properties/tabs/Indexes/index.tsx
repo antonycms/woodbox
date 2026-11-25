@@ -25,6 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { formatStructureDefinitions } from '@renderer/stores/TableInfo/ddl';
 import ModalNewIndex from './components/ModalNewIndex';
 import { IIndexInfoSerialized } from './dtos';
@@ -338,6 +339,11 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
     getSelectionKey: getIndexSelectionKey,
   });
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:Indexes', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
       <ContextMenu
@@ -362,6 +368,7 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
 
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterIndexes')}
         value={indexFilterText}
         onChange={setIndexFilterText}
@@ -378,7 +385,8 @@ const Indexes = ({ tableStore }: IIndexesProps) => {
         newRows={newIndexRows}
         newRowsPosition="end"
         removedRows={droppedIndexNames}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

@@ -2,6 +2,7 @@ import React from 'react';
 import Table, { type ITableSelectedCellData } from '@renderer/components/Table';
 import { Button } from '@renderer/components/Button';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { type IColumn, type ISortDirection, type ITableSort } from '@renderer/components/Table/dtos';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { useThemeStore } from '@renderer/stores/Theme';
@@ -88,6 +89,12 @@ const ProcessList = ({ id_connection }: IProcessListProps) => {
     setShowValuePreview((current) => !current);
   }, []);
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['process-list', id_connection],
+    columns,
+    () => setSelectedCell(undefined),
+  );
+
   return (
     <div
       className={styles.container}
@@ -99,6 +106,7 @@ const ProcessList = ({ id_connection }: IProcessListProps) => {
     >
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         value={filter}
         placeholder={t('processList.filterPlaceholder')}
         onChange={setFilter}
@@ -107,7 +115,8 @@ const ProcessList = ({ id_connection }: IProcessListProps) => {
       <div className={styles.content}>
         <div className={styles.tableContainer}>
           <Table
-            columns={columns}
+            columns={visibleColumns}
+            columnVisibilityEnabled={columnVisibility.columns.length > 0}
             rows={filteredRows}
             sort={sort}
             rowKeyExtractor={(row) => `${row.pid}:${row.username}:${row.database}:${row.client}`}

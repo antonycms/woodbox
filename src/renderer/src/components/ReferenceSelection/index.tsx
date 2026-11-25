@@ -11,6 +11,7 @@ import { useThemeStore } from '@renderer/stores/Theme';
 import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/Table/dtos';
 import { getNextSort } from '@renderer/utils/tableSort';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import styles from './styles.module.css';
 
@@ -249,6 +250,11 @@ const ReferenceSelection = ({
     loadPage(1, '', [], true);
   }, [active, hasLoaded, loadPage, reference]);
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['reference-selection', idConnection, reference?.reference_table_schema, reference?.reference_table_name],
+    columns,
+  );
+
   if (!reference) {
     return (
       <div className={styles.emptyState}>
@@ -264,6 +270,7 @@ const ReferenceSelection = ({
     >
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterSelection')}
         value={whereInput}
         suggestions={columnNames}
@@ -275,7 +282,8 @@ const ReferenceSelection = ({
 
       <div className={styles.tableWrapper}>
         <Table
-          columns={columns}
+          columns={visibleColumns}
+          columnVisibilityEnabled={columnVisibility.columns.length > 0}
           rows={items}
           sort={sort}
           loading={loading}

@@ -18,6 +18,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import useEditorCtrlClickNavigate from '@renderer/hooks/useEditorCtrlClickNavigate';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { formatStructureDefinitions } from '@renderer/stores/TableInfo/ddl';
 import { getTriggerRowKey, getTriggerSearchValues, getTriggerSelectionKey } from './utils';
 
@@ -152,6 +153,11 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
     setSelectedTriggers([]);
   }, [triggerFilterText]);
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:Triggers', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <>
       <ContextMenu
@@ -168,6 +174,7 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
 
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterTriggers')}
         value={triggerFilterText}
         onChange={setTriggerFilterText}
@@ -182,7 +189,8 @@ const Triggers = ({ tableStore }: ITriggersProps) => {
         sort={sort}
         onSort={handleSortTriggers}
         onCellLinkClick={handleFunctionLinkClick}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

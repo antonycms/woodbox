@@ -25,6 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { requestStructureDdl, toStructureRestriction } from '@renderer/stores/TableInfo/ddl';
 import ModalNewRestriction from './components/ModalNewRestriction';
 import { getRestrictionSearchValues, getRestrictionSelectionKey } from './utils';
@@ -325,6 +326,11 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
     getSelectionKey: getRestrictionSelectionKey,
   });
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:Restrictions', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
       <ContextMenu
@@ -350,6 +356,7 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
 
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterConstraints')}
         value={restrictionFilterText}
         onChange={setRestrictionFilterText}
@@ -366,7 +373,8 @@ const Restrictions = ({ tableStore }: IRestrictionsProps) => {
         newRows={newRestrictionRows}
         newRowsPosition="end"
         removedRows={droppedConstraintNames}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

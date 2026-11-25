@@ -1,0 +1,111 @@
+.root {
+  position: relative;
+  flex: 0 0 auto;
+  margin-inline: 4px 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--column-menu-border);
+  color: var(--column-menu-color);
+  user-select: none;
+}
+
+.trigger,
+.actions button {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.trigger:hover:not(:disabled),
+.trigger[aria-expanded='true'],
+.trigger[data-customized='true'],
+.actions button:hover:not(:disabled) {
+  border-color: var(--column-menu-border);
+  background: var(--column-menu-field-background);
+}
+
+.trigger span {
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.trigger:disabled,
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(290px, 75vw);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--column-menu-border);
+  border-radius: 6px;
+  background: var(--column-menu-background);
+  font-size: 12px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--column-menu-border);
+}
+
+.actions button {
+  border-color: var(--column-menu-border);
+  text-align: center;
+}
+
+.panel > input {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--column-menu-border);
+  border-radius: 4px;
+  color: inherit;
+  background: var(--column-menu-field-background);
+  user-select: text;
+}
+
+.list {
+  max-height: min(260px, 50vh);
+  overflow: auto;
+}
+
+.list label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.list label:hover {
+  background: var(--column-menu-field-background);
+}
+
+.list label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 6px 2px;
+  opacity: 0.75;
+}

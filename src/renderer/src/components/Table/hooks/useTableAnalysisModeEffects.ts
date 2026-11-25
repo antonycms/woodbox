@@ -12,6 +12,7 @@ interface UseTableAnalysisModeEffectsParams<Row = Record<string, unknown>> {
   analysisRowsRef: TableMutableRef<TableSerializedRow<Row>[]>;
   columnsLength: number;
   columnsSignature: string;
+  preserveAnalysisOnColumnChange?: boolean;
   initialAnalysisMode?: boolean;
   initialAnalysisModeAppliedRef: TableMutableRef<boolean>;
   serializedRows: TableSerializedRow<Row>[];
@@ -31,6 +32,7 @@ export const useTableAnalysisModeEffects = <Row,>({
   analysisRowsRef,
   columnsLength,
   columnsSignature,
+  preserveAnalysisOnColumnChange,
   initialAnalysisMode,
   initialAnalysisModeAppliedRef,
   serializedRows,
@@ -40,8 +42,8 @@ export const useTableAnalysisModeEffects = <Row,>({
   setAnalysisRows,
 }: UseTableAnalysisModeEffectsParams<Row>) => {
   React.useEffect(() => {
-    resetAnalysisMode();
-  }, [columnsSignature, resetAnalysisMode]);
+    if (!preserveAnalysisOnColumnChange) resetAnalysisMode();
+  }, [columnsSignature, preserveAnalysisOnColumnChange, resetAnalysisMode]);
 
   React.useEffect(() => {
     if (

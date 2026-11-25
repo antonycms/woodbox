@@ -22,6 +22,7 @@ import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
 import useFilterHistory from '@renderer/hooks/useFilterHistory';
 import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
 import { DataContextMenu } from './components/DataContextMenu';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { DataToolbar } from './components/DataToolbar';
 import { NoPrimaryKeyModal } from './components/NoPrimaryKeyModal';
 import { useTableDataLoading } from './hooks/useTableDataLoading';
@@ -261,6 +262,16 @@ const Data = ({
   );
 
   const columnNames = React.useMemo(() => columns.map((column) => column.column_name), [columns]);
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    [id_connection, schema, table],
+    columnsSerialized,
+    () => {
+      setSelectedCell(undefined);
+      setValuePreview(undefined);
+      setContextMenuTable(undefined);
+      setSelectedRows([]);
+    },
+  );
 
   const exportSource = React.useMemo(
     () => ({
@@ -442,6 +453,7 @@ const Data = ({
           ...theme.bar,
           inputOpacity: filterLocked ? 0.6 : 1,
         }}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterResults')}
         value={whereInput}
         suggestions={columnNames}
@@ -455,7 +467,8 @@ const Data = ({
       <div className={styles.content}>
         <div className={styles.tableWrapper}>
           <Table
-            columns={columnsSerialized}
+            columns={visibleColumns}
+            columnVisibilityEnabled={columnVisibility.columns.length > 0}
             rows={items}
             sort={sort}
             onSort={handleSort}

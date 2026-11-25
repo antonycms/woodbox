@@ -32,6 +32,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { requestStructureDdl, toStructureColumn, toStructureReference, toStructureRestriction } from '@renderer/stores/TableInfo/ddl';
 import ModalNewColumn from './components/ModalNewColumn';
 import {
@@ -519,6 +520,11 @@ const Columns = ({ tableStore }: IColumnsProps) => {
   });
   const displayedColumnCount = filteredColumnsAndSortedColumns.length;
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:Columns', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <div style={{ display: 'contents' }} onKeyDown={isReadOnlyObject ? undefined : handleKeyDown}>
       <ContextMenu
@@ -548,6 +554,7 @@ const Columns = ({ tableStore }: IColumnsProps) => {
 
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterColumns')}
         value={columnFilterText}
         onChange={setColumnFilterText}
@@ -566,7 +573,8 @@ const Columns = ({ tableStore }: IColumnsProps) => {
         removedRows={droppedColumnNames}
         sort={sort}
         onSort={handleSortColumns}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

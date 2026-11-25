@@ -14,6 +14,7 @@ import type { IColumn, ISortDirection, ITableSort } from '@renderer/components/T
 import { getNextSort } from '@renderer/utils/tableSort';
 import { useFilteredSortedRows } from '../../hooks/useFilteredSortedRows';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { getReferenceRowKey, getReferenceSearchValues } from './utils';
 import { IReferenceRow } from './dtos';
 
@@ -104,10 +105,16 @@ const References = ({ tableStore }: IReferencesProps) => {
     loadTableUsedAsReference(id_connection, { schema, table }, true);
   }, [id_connection, loadTableUsedAsReference, schema, table]);
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:References', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <>
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterReferences')}
         value={referenceFilterText}
         onChange={setReferenceFilterText}
@@ -120,7 +127,8 @@ const References = ({ tableStore }: IReferencesProps) => {
         sort={sort}
         onSort={handleSortReferences}
         onCellLinkClick={handleCellLinkClick}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

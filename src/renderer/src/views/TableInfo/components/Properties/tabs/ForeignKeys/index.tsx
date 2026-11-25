@@ -25,6 +25,7 @@ import { useSelectionReconciliation } from '../../hooks/useSelectionReconciliati
 import { usePropertiesKeyboardShortcuts } from '../../hooks/usePropertiesKeyboardShortcuts';
 import ModalGenerateDDL from '../../components/ModalGenerateDDL';
 import FilterInput from '@renderer/components/FilterInput';
+import { useColumnVisibility } from '@renderer/hooks/useColumnVisibility';
 import { requestStructureDdl, toStructureReference } from '@renderer/stores/TableInfo/ddl';
 import ModalNewReference from './components/ModalNewReference';
 import { useOpenTableTab } from '@renderer/hooks/useOpenTableTab';
@@ -372,6 +373,11 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
     getSelectionKey: getReferenceSelectionKey,
   });
 
+  const { visibleColumns, columnVisibility } = useColumnVisibility(
+    ['properties:ForeignKeys', id_connection, schema, table],
+    tableColumns,
+  );
+
   return (
     <div style={{ display: 'contents' }} onKeyDown={handleKeyDown}>
       <ContextMenu
@@ -398,6 +404,7 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
 
       <FilterInput
         filterBar={theme.bar}
+        columnVisibility={columnVisibility}
         placeholder={t('placeholder.filterKeys')}
         value={referenceFilterText}
         onChange={setReferenceFilterText}
@@ -415,7 +422,8 @@ const ForeignKeys = ({ tableStore }: IForeignKeysProps) => {
         newRows={newReferenceRows}
         newRowsPosition="end"
         removedRows={removedReferenceKeys}
-        columns={tableColumns}
+        columns={visibleColumns}
+        columnVisibilityEnabled={columnVisibility.columns.length > 0}
       />
 
       <Bar backgroundColor={theme.bar.backgroundColor} borderColor={theme.bar.borderColor}>

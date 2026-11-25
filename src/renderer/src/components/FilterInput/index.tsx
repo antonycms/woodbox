@@ -1,4 +1,5 @@
 import React from 'react';
+import { ColumnVisibilityMenu, type ColumnVisibilityMenuProps } from './components/ColumnVisibilityMenu';
 import { useI18nStore } from '@renderer/stores/I18n';
 import { classes } from '@renderer/styles/theme';
 import { isPrimaryShortcutPressed } from '@renderer/utils/keyboard';
@@ -13,6 +14,7 @@ interface IFilterInputProps {
   placeholder?: string;
   disabled?: boolean;
   filterBar?: IFilterInputFilterBarProps;
+  columnVisibility?: ColumnVisibilityMenuProps & { key: string };
   inputClassName?: string;
   inputStyle?: React.CSSProperties;
   dropdownBackgroundColor?: string;
@@ -71,6 +73,7 @@ export default function FilterInput({
   placeholder,
   disabled,
   filterBar,
+  columnVisibility,
   inputClassName,
   inputStyle,
   dropdownBackgroundColor,
@@ -427,9 +430,25 @@ export default function FilterInput({
       style={{
         backgroundColor: filterBar.backgroundColor,
         borderColor: filterBar.borderColor,
-      }}
+        ...(columnVisibility && {
+          '--column-menu-border': filterBar.borderColor,
+          '--column-menu-color': filterBar.color,
+          '--column-menu-background': filterBar.backgroundColor,
+          '--column-menu-field-background': filterBar.fieldBackgroundColor ?? filterBar.backgroundColor,
+        }),
+      } as React.CSSProperties}
     >
       {input}
+      {columnVisibility && (
+        <ColumnVisibilityMenu
+          key={columnVisibility.key}
+          columns={columnVisibility.columns}
+          hiddenColumns={columnVisibility.hiddenColumns}
+          onToggleColumn={columnVisibility.onToggleColumn}
+          onShowAll={columnVisibility.onShowAll}
+          onHideAll={columnVisibility.onHideAll}
+        />
+      )}
     </div>
   );
 }

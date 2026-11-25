@@ -92,6 +92,7 @@ interface ITableProps<Row = Record<string, unknown>> {
   onCellLinkPreviewClick?(attribute: string, value: unknown): void;
   cellLinkClickMode?: 'ctrl' | 'single';
   initialAnalysisMode?: boolean;
+  columnVisibilityEnabled?: boolean;
 }
 
 const rowKeyExtractorDefault = (_: unknown, index: number): React.Key => index;
@@ -119,6 +120,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     onCellLinkPreviewClick,
     cellLinkClickMode = 'ctrl',
     initialAnalysisMode,
+    columnVisibilityEnabled,
   } = props;
 
   const t = useI18nStore((state) => state.t);
@@ -280,6 +282,8 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     () => columns.map((column) => String(column.attribute)).join('\0'),
     [columns],
   );
+
+  const previousColumnsSignature = React.useRef(columnsSignature);
 
   const getResolvedCellValue = React.useCallback(
     (row: TableSerializedRow<Row>, column?: IColumn<Row>) => {
@@ -1291,6 +1295,7 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     analysisRowsRef,
     columnsLength: columns.length,
     columnsSignature,
+    preserveAnalysisOnColumnChange: columnVisibilityEnabled,
     initialAnalysisMode,
     initialAnalysisModeAppliedRef,
     serializedRows,
@@ -1299,6 +1304,34 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     resetAnalysisMode,
     setAnalysisRows,
   });
+
+  React.useLayoutEffect(() => {
+    if (previousColumnsSignature.current === columnsSignature) return;
+    previousColumnsSignature.current = columnsSignature;
+    if (!columnVisibilityEnabled) return;
+
+    setSelectedCells(new Set());
+    setAnalysisSelectedCells(new Set());
+    lastSelectedCellRef.current = null;
+    lastAnalysisSelectedCellRef.current = null;
+    arrowCursorRef.current = null;
+    analysisArrowCursorRef.current = null;
+    dragSelectionRef.current = null;
+    ignoreNextClickRef.current = false;
+    setCellEditingKey(undefined);
+    setCellEditInitialValue(undefined);
+  }, [
+    columnsSignature,
+    columnVisibilityEnabled,
+    setSelectedCells,
+    setAnalysisSelectedCells,
+    lastSelectedCellRef,
+    lastAnalysisSelectedCellRef,
+    arrowCursorRef,
+    analysisArrowCursorRef,
+    dragSelectionRef,
+    ignoreNextClickRef,
+  ]);
 
   React.useEffect(() => {
     onSelectRow?.([...selectedRows.values()]);
@@ -1310,18 +1343,20 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
     restoreDefaultScroll();
   }, [analysisMode, restoreDefaultScroll]);
 
+  const noVisibleColumns = columnVisibilityEnabled && !columns.length;
+
   return (
     <div
       ref={refScrollContainer}
-      onScroll={analysisMode ? undefined : onScroll}
+      onScroll={analysisMode || noVisibleColumns ? undefined : onScroll}
       className={styles.table_outside_container}
-      onContextMenu={handleContextMenu}
+      onContextMenu={noVisibleColumns ? undefined : handleContextMenu}
       style={containerStyle}
-      tabIndex={0}
+      tabIndex={noVisibleColumns ? undefined : 0}
     >
       {!!loading && <MultiplesBarLoading zIndex={7} />}
 
-      {searchState.open && (
+      {searchState.open && !noVisibleColumns && (
         <TableSearchBar
           query={searchState.query}
           replace={searchState.replace}
@@ -1346,7 +1381,11 @@ function Table<Row = Record<string, unknown>>(props: ITableProps<Row>) {
         />
       )}
 
-      {analysisMode ? (
+      {noVisibleColumns ? (
+        <div className={styles.no_visible_columns} role="status">
+          {t('table.noVisibleColumns')}
+        </div>
+      ) : analysisMode ? (
         <TableAnalysisView
           columns={columns}
           rows={analysisRows}

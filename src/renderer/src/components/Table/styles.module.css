@@ -7,6 +7,15 @@
   outline: transparent;
 }
 
+.no_visible_columns {
+  margin: auto;
+  padding: 8px;
+  color: var(--colorHeader);
+  opacity: 0.75;
+  text-align: center;
+  user-select: none;
+}
+
 .table_container {
   position: absolute;
   top: 0;
