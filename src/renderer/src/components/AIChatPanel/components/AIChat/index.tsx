@@ -681,15 +681,11 @@ const AIChat = ({
     onInitialMessageHandled?.();
   }, [initialImage, initialMessage, loadingMessage, onInitialMessageHandled, submitMessageContent]);
 
-  React.useEffect(() => {
-    window.requestAnimationFrame(() => {
-      const scrollElement = messagesScrollRef.current;
-
-      if (!scrollElement) return;
-
-      scrollElement.scrollTop = scrollElement.scrollHeight;
-    });
-  }, [messages.length]);
+  React.useLayoutEffect(() => {
+    // The reversed flex viewport uses zero as the bottom of the conversation.
+    const viewport = messagesScrollRef.current;
+    if (viewport) viewport.scrollTop = 0;
+  }, [id_chat]);
 
   return (
     <div
