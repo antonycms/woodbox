@@ -1,4 +1,4 @@
-import type { ITheme } from '../theme';
+import type { ITheme } from '../types/theme';
 
 const graphiteTheme: ITheme = {
   name: 'woodbox-graphite',

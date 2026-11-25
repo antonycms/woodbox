@@ -119,8 +119,7 @@ const AIChat = ({
     (!!draftMessage.trim() || !!draftContexts.length) &&
     !loadingMessage &&
     !!modelSelection.selectedProviderId &&
-    !!modelSelection.selectedModel &&
-    !!selectedConnectionId;
+    !!modelSelection.selectedModel;
 
   const formatWorkDuration = React.useCallback(
     (startedAt?: string, finishedAt?: string) => {
@@ -167,6 +166,8 @@ const AIChat = ({
 
   const applyAIAppActions = React.useCallback(
     async (actions?: IAIAppAction[]) => {
+      const themeResults: string[] = [];
+
       for (const action of actions || []) {
         try {
           if (action.type === 'refresh_workspace') {
@@ -176,11 +177,21 @@ const AIChat = ({
           } else if (action.type === 'reload_connection') {
             await reloadConnectionInfo(action.connectionId);
           } else if (action.type === 'create_theme') {
-            createThemeFromColors(action.name, action.colors || {}, action.baseThemeName);
+            createThemeFromColors(action.name, action.colors, action.baseThemeName);
+            themeResults.push(t('aiChat.themeApplied'));
           } else if (action.type === 'update_theme_colors') {
-            updateActiveThemeColors(action.colors);
+            const changed = updateActiveThemeColors(action.colors);
+            themeResults.push(changed ? t('aiChat.themeApplied') : t('aiChat.themeColorsUnchanged', {
+              paths: Object.keys(action.colors).map((path) => '`' + path + '`').join(', '),
+            }));
           }
         } catch (error) {
+          if (action.type === 'create_theme' || action.type === 'update_theme_colors') {
+            themeResults.push(t('aiChat.themeApplyFailed', {
+              reason: getErrorMessage(error, t('common.unknownError')),
+            }));
+            continue;
+          }
           showToast({
             type: 'error',
             title: t('aiChat.appActionFailed'),
@@ -188,6 +199,8 @@ const AIChat = ({
           });
         }
       }
+
+      return themeResults;
     },
     [
       createThemeFromColors,
@@ -204,7 +217,7 @@ const AIChat = ({
     async (draftContent: string) => {
       const content = draftContent.trim();
 
-      if (!content || loadingMessage || !selectedConnectionId) return;
+      if (!content || loadingMessage) return;
 
       const persistedMessages = chat?.messages || [];
       const hasPendingApprovals = persistedMessages.some((message) =>
@@ -274,19 +287,17 @@ const AIChat = ({
 
         if (stopGenerationRef.current) return;
 
-        await applyAIAppActions(response.appActions);
+        const themeResults = await applyAIAppActions(response.appActions);
 
         const queryApprovals = getResponseQueryApprovals(
           response,
           selectedConnectionIds,
           connections,
         );
-        const assistantContent =
-          getAssistantContent(
-            response.content,
-            queryApprovals,
-            t('aiChat.queryApprovalRequiredMessage'),
-          ) || t('aiChat.queryApprovalRequiredMessage');
+        const assistantContent = [
+          getAssistantContent(response.content, queryApprovals, t('aiChat.queryApprovalRequiredMessage')),
+          ...themeResults,
+        ].filter(Boolean).join('\n\n') || t('aiChat.queryApprovalRequiredMessage');
         const isFirstMessage = !chat?.messages.length;
         const titleContent = getAIChatUserContent(content);
         const nextTitle = isFirstMessage && titleContent ? getExcerpt(titleContent, 64) : undefined;
@@ -347,7 +358,6 @@ const AIChat = ({
       modelSelection.selectedProviderId,
       onClearDraftContexts,
       sendAIChatMessage,
-      selectedConnectionId,
       selectedConnectionIds,
       showToast,
       t,
@@ -495,7 +505,7 @@ const AIChat = ({
           ],
         });
 
-        await applyAIAppActions(response.appActions);
+        const themeResults = await applyAIAppActions(response.appActions);
 
         const approvedSql = normalizeSqlForComparison(executableApproval.sql);
 
@@ -513,12 +523,10 @@ const AIChat = ({
             {
               ...assistantMessage,
               created_at: completedAt,
-              content:
-                getAssistantContent(
-                  response.content,
-                  queryApprovals,
-                  t('aiChat.queryApprovalRequiredMessage'),
-                ) || t('aiChat.queryApprovalRequiredMessage'),
+              content: [
+                getAssistantContent(response.content, queryApprovals, t('aiChat.queryApprovalRequiredMessage')),
+                ...themeResults,
+              ].filter(Boolean).join('\n\n') || t('aiChat.queryApprovalRequiredMessage'),
               queryApprovals,
               queryResult,
             },

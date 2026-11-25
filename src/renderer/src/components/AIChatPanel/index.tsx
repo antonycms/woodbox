@@ -377,8 +377,7 @@ export const AIChatPanel = React.memo(() => {
       if (
         (!emptyDraft.trim() && !emptyDraftContexts.length) ||
         !emptyChatModelSelection.selectedProviderId ||
-        !emptyChatModelSelection.selectedModel ||
-        !selectedConnectionId
+        !emptyChatModelSelection.selectedModel
       ) {
         return;
       }
@@ -394,7 +393,6 @@ export const AIChatPanel = React.memo(() => {
       emptyChatModelSelection.selectedProviderId,
       emptyDraft,
       emptyDraftContexts,
-      selectedConnectionId,
     ],
   );
 

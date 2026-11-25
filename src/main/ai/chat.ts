@@ -94,6 +94,7 @@ export const sendAIChatMessage = async ({
   model: selectedModel,
   language,
   mentionedConnectionIds,
+  activeThemeColors,
   messages,
 }: IAIChatRequest): Promise<IAIChatResponse> => {
   const provider = getInternalAIProvider(providerId);
@@ -112,11 +113,25 @@ export const sendAIChatMessage = async ({
     throw new Error('Informe uma mensagem para enviar ao assistente.');
   }
 
-  const tools = createAIDatabaseTools(mentionedConnectionIds);
+  const availableTools = createAIDatabaseTools(mentionedConnectionIds, activeThemeColors);
+  const hasNoSelectedConnection = mentionedConnectionIds?.length === 0;
+  const tools = hasNoSelectedConnection
+    ? {
+        list_theme_options: availableTools.list_theme_options,
+        get_active_theme_colors: availableTools.get_active_theme_colors,
+        create_theme: availableTools.create_theme,
+        update_theme_colors: availableTools.update_theme_colors,
+      }
+    : availableTools;
 
   const instructions = [
     getWoodboxAIInstructions(language),
-    buildAIDatabaseInstructions(mentionedConnectionIds, language),
+    language === 'en'
+      ? 'For theme fields you already know, use get_active_theme_colors with exact paths to read or compare current values before editing. Use list_theme_options to discover valid fields and presets. For a whole-app theme, use a matching preset or adapt the main surfaces, not only the editor. For a targeted edit, change only the requested fields. If a theme tool rejects an input, correct it before describing the changes. After preparing a theme edit, briefly describe the requested change without claiming success or adding a disclaimer that it is unconfirmed: Woodbox reports the actual application result separately.'
+      : 'Para ler ou comparar cores de campos conhecidos antes de editar, use get_active_theme_colors com os caminhos exatos. Use list_theme_options para descobrir campos válidos e presets. Para um tema completo, use um preset correspondente ou adapte as superfícies principais, não só o editor. Para um ajuste pontual, altere apenas os campos pedidos. Se a ferramenta rejeitar a entrada, corrija-a antes de descrever as mudanças. Após preparar uma edição de tema, descreva brevemente o ajuste solicitado, sem afirmar sucesso nem acrescentar que falta confirmação: o Woodbox informa separadamente o resultado real da aplicação.',
+    hasNoSelectedConnection
+      ? 'No database connection is selected. Ask the user to select one if the request needs database access.'
+      : buildAIDatabaseInstructions(mentionedConnectionIds, language),
   ].join('\n\n');
 
   // Conexao direta usando codex OAuth

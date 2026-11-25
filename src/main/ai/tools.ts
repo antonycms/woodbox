@@ -13,6 +13,8 @@ import {
 } from '../database/core';
 import { runExplainSql } from '../database/execution';
 import { closeConnection } from '../database/connections';
+import { builtinThemeNames } from '@shared/theme';
+import { parseThemeColors, themeColorPaths } from '@shared/theme/colors';
 import { generateHash } from '@shared/utils/string';
 import {
   addConnectionSaved,
@@ -92,6 +94,11 @@ type AICreateSnippetInput = {
   scope?: string;
   description?: string;
 };
+
+type AIThemeColorLookupInput = { paths?: string[]; prefix?: string };
+type AIThemeColorLookupOutput =
+  | { error: string }
+  | { colors: Record<string, string>; unknownPaths: string[]; unavailablePaths: string[] };
 
 type AIThemeColorsInput = {
   colors: Record<string, string>;
@@ -489,8 +496,8 @@ const themeColorsSchema = {
   properties: {
     colors: {
       type: 'object',
-      description: 'Mapa de caminhos de tema para cores, ex: editor.backgroundColor -> #191622.',
-      additionalProperties: { type: 'string' },
+      description: 'Caminhos exatos de list_theme_options para cores #RRGGBB ou #RRGGBBAA. Ex.: editor.selectionColor -> #594472.',
+      additionalProperties: { type: 'string', pattern: '^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$' },
     },
   },
   required: ['colors'],
@@ -501,7 +508,7 @@ const createThemeSchema = {
   type: 'object',
   properties: {
     name: { type: 'string', description: 'Nome do novo tema.' },
-    baseThemeName: { type: 'string', description: 'Nome do tema base, se souber.' },
+    baseThemeName: { type: 'string', description: 'ID exato de um tema pré-instalado retornado por list_theme_options. Omita para usar o tema ativo.' },
     colors: themeColorsSchema.properties.colors,
   },
   required: ['name', 'colors'],
@@ -564,8 +571,6 @@ export const buildAIDatabaseInstructions = (
       'Application tools:',
       'Use creation/editing/reload tools only when the user explicitly asks.',
       'Do not invent passwords, hosts, ports, databases, projects, or connection names; if required data is missing, ask the user.',
-      'For themes, use dot paths exactly as shown in settings, e.g. editor.backgroundColor, mainTab.backgroundColor, aiChat.sendBackgroundColor.',
-      'When changing current theme colors, the interface preserves predefined themes by creating/applying a custom theme when needed.',
     ].join('\n');
   }
 
@@ -593,12 +598,13 @@ export const buildAIDatabaseInstructions = (
     'Ferramentas de aplicativo:',
     'Use ferramentas de criação/edição/recarregamento apenas quando o usuário pedir explicitamente.',
     'Não invente senha, host, porta, database, projeto ou nome de conexão; se faltar dado obrigatório, peça ao usuário.',
-    'Para temas, use caminhos por ponto iguais aos exibidos nas configurações, ex: editor.backgroundColor, mainTab.backgroundColor, aiChat.sendBackgroundColor.',
-    'Ao alterar cores do tema atual, a interface preserva temas predefinidos criando/aplicando um tema customizado quando necessário.',
   ].join('\n');
 };
 
-export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSet => ({
+export const createAIDatabaseTools = (
+  mentionedConnectionIds?: string[],
+  activeThemeColors?: Record<string, string>,
+): ToolSet => ({
   list_projects: tool({
     description: 'Lista projetos do Woodbox disponíveis para organizar conexões.',
     inputSchema: aiToolSchema<Record<string, never>>({
@@ -752,32 +758,103 @@ export const createAIDatabaseTools = (mentionedConnectionIds?: string[]): ToolSe
     },
   }),
 
+  list_theme_options: tool({
+    description: 'Lista os IDs dos temas pré-instalados e os caminhos de cor aceitos pelas ferramentas de tema.',
+    inputSchema: aiToolSchema<Record<string, never>>({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    }),
+    execute: async () => ({ baseThemeNames: builtinThemeNames, colorPaths: themeColorPaths }),
+  }),
+
+  get_active_theme_colors: tool<AIThemeColorLookupInput, AIThemeColorLookupOutput, AIToolContext>({
+    description: 'Consulta as cores do tema ativo no início da mensagem atual. Use paths para campos exatos ou prefix para uma seção. Uma lista paths não vazia tem prioridade sobre prefix. Não confirma a aplicação de alterações preparadas nesta mesma mensagem.',
+    inputSchema: aiToolSchema<AIThemeColorLookupInput>({
+      type: 'object',
+      properties: {
+        paths: {
+          type: 'array', maxItems: 40, items: { type: 'string', minLength: 1 },
+          description: 'Campos exatos, como tableInfo.properties.tab.borderColor.',
+        },
+        prefix: {
+          type: 'string', minLength: 1,
+          description: 'Seção exata, como tableInfo.properties.tab. Usada apenas quando paths está ausente ou vazio.',
+        },
+      },
+      additionalProperties: false,
+    }),
+    execute: async ({ paths, prefix }) => {
+      if (
+        paths !== undefined && (!Array.isArray(paths) || paths.length > 40 ||
+          paths.some((path) => typeof path !== 'string' || !path.trim()))
+      ) {
+        return { error: 'Informe até 40 caminhos válidos em paths.' };
+      }
+      const section = typeof prefix === 'string' ? prefix.trim() : '';
+      if (!paths?.length && !section) {
+        return { error: 'Informe ao menos um caminho em paths ou uma seção em prefix.' };
+      }
+      if (!activeThemeColors) {
+        return { error: 'As cores do tema ativo não estão disponíveis nesta mensagem.' };
+      }
+
+      const requestedPaths = paths?.length
+        ? [...new Set(paths.map((path) => path.trim()))]
+        : themeColorPaths.filter((path) => path.startsWith(`${section}.`));
+      if (!requestedPaths.length) {
+        return { error: `Seção de tema desconhecida: ${prefix}. Consulte list_theme_options.` };
+      }
+
+      const colors: Record<string, string> = {};
+      const unknownPaths: string[] = [];
+      const unavailablePaths: string[] = [];
+      for (const path of requestedPaths) {
+        if (!themeColorPaths.includes(path)) unknownPaths.push(path);
+        else if (!Object.hasOwn(activeThemeColors, path)) unavailablePaths.push(path);
+        else colors[path] = activeThemeColors[path];
+      }
+      return { colors, unknownPaths, unavailablePaths };
+    },
+  }),
+
   create_theme: tool<AICreateThemeInput, AIAppActionToolOutput, AIToolContext>({
-    description: 'Cria e ativa um tema do Woodbox a partir do tema atual ou de um tema base.',
+    description: 'Cria e ativa um novo tema sem editar o atual. Consulte list_theme_options para escolher a base e usar caminhos válidos. Use um preset correspondente quando existir. Para uma referência que não existe no Woodbox, escolha uma base clara ou escura e adapte a paleta. Para um tema completo, adapte fundos, textos e destaques na barra lateral, nas abas, no editor, nas tabelas e no chat. Uma paleta vazia só serve para copiar explicitamente um preset.',
     inputSchema: aiToolSchema<AICreateThemeInput>(createThemeSchema),
     execute: async ({ name, baseThemeName, colors }) => {
-      const themeName = name.trim();
+      const themeName = typeof name === 'string' ? name.trim() : '';
+      const palette = parseThemeColors(colors);
 
       if (!themeName) throw new Error('Informe o nome do tema.');
+      if (builtinThemeNames.includes(themeName.toLowerCase())) {
+        throw new Error('Escolha um nome novo, diferente do ID de um tema pré-instalado.');
+      }
+      if (baseThemeName !== undefined && !builtinThemeNames.includes(baseThemeName)) {
+        throw new Error('Tema base desconhecido. Use um ID retornado por list_theme_options.');
+      }
+      if (!Object.keys(palette).length && !baseThemeName) {
+        throw new Error('Informe ao menos uma cor ou escolha explicitamente um preset como base.');
+      }
 
       return appActionResult('Tema preparado: ' + themeName, {
         type: 'create_theme',
         name: themeName,
         baseThemeName,
-        colors,
+        colors: palette,
       });
     },
   }),
 
   update_theme_colors: tool<AIThemeColorsInput, AIAppActionToolOutput, AIToolContext>({
-    description: 'Altera cores do tema atual. Use caminhos por ponto, como editor.backgroundColor.',
+    description: 'Altera apenas as cores solicitadas no tema ativo. Consulte list_theme_options e use os caminhos exatos. Para criar um novo tema sem alterar o atual, use create_theme.',
     inputSchema: aiToolSchema<AIThemeColorsInput>(themeColorsSchema),
     execute: async ({ colors }) => {
-      if (!Object.keys(colors).length) throw new Error('Informe ao menos uma cor.');
+      const palette = parseThemeColors(colors);
+      if (!Object.keys(palette).length) throw new Error('Informe ao menos uma cor.');
 
       return appActionResult('Cores do tema preparadas para aplicação.', {
         type: 'update_theme_colors',
-        colors,
+        colors: palette,
       });
     },
   }),

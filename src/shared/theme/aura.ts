@@ -1,4 +1,4 @@
-import type { ITheme } from '../theme';
+import type { ITheme } from '../types/theme';
 
 const defaultTheme: ITheme = {
   name: 'default-theme',

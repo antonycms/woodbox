@@ -1,5 +1,6 @@
 import React from 'react';
-import { toCssProperties, type ITheme } from '@renderer/styles/theme';
+import type { ITheme } from '@shared/types/theme';
+import { toCssProperties } from '@renderer/styles/theme';
 import {
   DEFAULT_COLUMN_SIZE,
   MAX_COLUMN_SIZE,

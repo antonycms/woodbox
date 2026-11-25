@@ -33,4 +33,5 @@ export const chatRequest = z.object({
   requestId: z.string().optional(), providerId: z.string().optional(), model: z.string().optional(),
   language: z.enum(['en', 'pt-BR']).optional(),
   mentionedConnectionIds: z.array(z.string()).optional(), messages: z.array(messageInput),
+  activeThemeColors: z.record(z.string(), z.string()).optional(),
 });

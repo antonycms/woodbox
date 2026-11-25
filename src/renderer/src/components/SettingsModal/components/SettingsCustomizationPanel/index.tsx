@@ -14,7 +14,7 @@ import { type TranslationKey } from '@renderer/stores/I18n/translations';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useToastStore } from '@renderer/stores/Toast';
 import useDebounce from '@renderer/hooks/useDebounce';
-import type { ITheme } from '@renderer/styles/theme';
+import type { ITheme } from '@shared/types/theme';
 import { builtinThemeNames } from '@renderer/styles/theme/builtin';
 import { CancelIcon, ExportIcon, ImportIcon, RemoveIcon, SaveIcon } from '@renderer/styles/icons';
 import { ThemePreviews } from './components/ThemePreviews';

@@ -1,3 +1,3 @@
-import auraTheme from './themes/aura';
+import auraTheme from '@shared/theme/aura';
 
 export default auraTheme;

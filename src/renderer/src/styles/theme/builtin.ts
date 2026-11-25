@@ -1,1 +1,1 @@
-export { builtinThemes, builtinThemeNames } from './themes';
+export { builtinThemes, builtinThemeNames } from '@shared/theme';

@@ -1,6 +1,6 @@
 import { editor } from './monaco';
 import { useThemeStore } from '@renderer/stores/Theme';
-import type { ITheme } from '@renderer/styles/theme/theme';
+import type { ITheme } from '@shared/types/theme';
 import defaultTheme from '@renderer/styles/theme/default';
 
 const isLightHexColor = (color?: string) => {

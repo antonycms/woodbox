@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import defaultTheme from '@renderer/styles/theme/default';
-import type { ITheme } from '@renderer/styles/theme/theme';
-import { builtinThemes } from '@renderer/styles/theme/builtin';
+import type { ITheme } from '@shared/types/theme';
+import { builtinThemeNames, builtinThemes } from '@renderer/styles/theme/builtin';
+import { getThemeColor, parseThemeColors, themeColorPaths } from '@shared/theme/colors';
 import { readStorageValue, writeStorageValue } from '@renderer/utils/storage';
 import { useI18nStore } from '@renderer/stores/I18n';
 
@@ -33,23 +34,26 @@ const availableThemesFrom = (stored: ITheme[]) => {
 const cloneWithColorPaths = (theme: ITheme, colors: Record<string, string>): ITheme => {
   const clonedTheme = JSON.parse(JSON.stringify(theme)) as ITheme;
 
-  for (const [path, value] of Object.entries(colors)) {
-    const keys = path.split('.').filter(Boolean);
+  for (const [path, value] of Object.entries(parseThemeColors(colors))) {
+    const keys = path.split('.');
     const lastKey = keys.pop();
     let target = clonedTheme as unknown as Record<string, unknown>;
 
-    if (!lastKey) continue;
-
     for (const key of keys) {
-      if (!target[key] || typeof target[key] !== 'object') target[key] = {};
+      if (!Object.hasOwn(target, key) || !target[key] || typeof target[key] !== 'object') {
+        throw new Error(useI18nStore.getState().t('theme.colorPathUnavailable', { path }));
+      }
       target = target[key] as Record<string, unknown>;
     }
 
-    target[lastKey] = value;
+    if (lastKey) target[lastKey] = value;
   }
 
   return clonedTheme;
 };
+
+const hasThemeColorChanges = (before: ITheme, after: ITheme) =>
+  themeColorPaths.some((path) => getThemeColor(before, path)?.toLowerCase() !== getThemeColor(after, path)?.toLowerCase());
 
 export const useThemeStore = create<IThemeStore>()((set, get) => {
   let storedThemes = readStoredThemes();
@@ -96,23 +100,39 @@ export const useThemeStore = create<IThemeStore>()((set, get) => {
       writeLocalThemes();
     },
     createThemeFromColors: (themeName, colors, baseThemeName) => {
-      const baseTheme =
-        get().availableThemes.find((theme) => theme.name === baseThemeName) || get().activeTheme;
-      const theme = { ...cloneWithColorPaths(baseTheme, colors), name: themeName };
-      storedThemes = [...storedThemes.filter((item) => item.name !== theme.name), theme];
+      const { activeTheme, availableThemes } = get();
+      const normalizedName = themeName.trim().toLowerCase();
+      const t = useI18nStore.getState().t;
+      if (!normalizedName) throw new Error(t('theme.invalid'));
+      if (
+        normalizedName === currentCustomThemeName.toLowerCase() ||
+        availableThemes.some((theme) => theme.name.toLowerCase() === normalizedName)
+      ) {
+        throw new Error(t('theme.nameAlreadyUsed'));
+      }
+
+      const baseTheme = baseThemeName
+        ? availableThemes.find((theme) => theme.name === baseThemeName)
+        : activeTheme;
+      if (!baseTheme) throw new Error(t('theme.invalid'));
+
+      const theme = { ...cloneWithColorPaths(baseTheme, colors), name: themeName.trim() };
+      if (!hasThemeColorChanges(activeTheme, theme)) throw new Error(t('theme.noColorChanges'));
+      storedThemes = [...storedThemes, theme];
       activeThemeName = theme.name;
       updateThemes();
     },
     updateActiveThemeColors: (colors) => {
       const activeTheme = get().activeTheme;
-      const builtinThemeNames = new Set(builtinThemes.map((theme) => theme.name));
-      const themeName = builtinThemeNames.has(activeTheme.name)
+      const themeName = builtinThemeNames.includes(activeTheme.name)
         ? currentCustomThemeName
         : activeTheme.name;
       const theme = { ...cloneWithColorPaths(activeTheme, colors), name: themeName };
+      if (!hasThemeColorChanges(activeTheme, theme)) return false;
       storedThemes = [...storedThemes.filter((item) => item.name !== theme.name), theme];
       activeThemeName = theme.name;
       updateThemes();
+      return true;
     },
   };
 });

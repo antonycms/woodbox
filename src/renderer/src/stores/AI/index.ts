@@ -1,3 +1,5 @@
+import { snapshotThemeColors } from '@shared/theme/colors';
+import { useThemeStore } from '@renderer/stores/Theme';
 import { create } from 'zustand';
 import { runPromiseOnce } from '@renderer/utils/promise';
 import type { IAIStore } from './types';
@@ -56,7 +58,10 @@ export const useAIStore = create<IAIStore>()((set, get) => ({
   },
 
   testAIProvider: (...args) => window.api.aiProviders.test(...args),
-  sendAIChatMessage: (...args) => window.api.aiChats.sendMessage(...args),
+  sendAIChatMessage: (data) => window.api.aiChats.sendMessage({
+    ...data,
+    activeThemeColors: snapshotThemeColors(useThemeStore.getState().activeTheme),
+  }),
   cancelAIChatMessage: (...args) => window.api.aiChats.cancelMessage(...args),
   getCodexChatGPTAccount: (...args) => window.api.codex.getAccount(...args),
   startCodexChatGPTLogin: (...args) => window.api.codex.startLogin(...args),

@@ -1,5 +1,5 @@
 import type { DependencyList } from 'react';
-import type { ITheme } from '@renderer/styles/theme/theme';
+import type { ITheme } from '@shared/types/theme';
 import { useThemeStore } from '@renderer/stores/Theme';
 import { useCssProperties } from './useCssProperties';
 

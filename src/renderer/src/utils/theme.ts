@@ -1,4 +1,4 @@
-import type { ITheme } from '@renderer/styles/theme';
+import type { ITheme } from '@shared/types/theme';
 import type { TranslateFn, TranslateTextFn } from '@renderer/stores/I18n/types';
 
 export const currentCustomThemeName = 'Personalizado atual';

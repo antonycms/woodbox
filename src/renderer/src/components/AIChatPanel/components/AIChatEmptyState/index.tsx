@@ -151,8 +151,7 @@ export const AIChatEmptyState = React.memo(
           canSubmit={
             (!!value.trim() || !!contexts.length) &&
             !!modelSelection.selectedProviderId &&
-            !!modelSelection.selectedModel &&
-            !!selectedConnectionId
+            !!modelSelection.selectedModel
           }
           contexts={contexts}
           connectionOptions={connectionOptions}

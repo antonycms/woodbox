@@ -104,6 +104,7 @@ export interface IAIChatRequest {
   model?: string;
   language?: 'en' | 'pt-BR';
   mentionedConnectionIds?: string[];
+  activeThemeColors?: Record<string, string>;
   messages: IAIChatMessageInput[];
 }
 
@@ -115,7 +116,7 @@ export type IAIAppAction =
       type: 'create_theme';
       name: string;
       baseThemeName?: string;
-      colors?: Record<string, string>;
+      colors: Record<string, string>;
     }
   | { type: 'update_theme_colors'; colors: Record<string, string> };
 
