@@ -4,9 +4,9 @@ import { useInsertDmlPreview } from '@renderer/hooks/useInsertDmlPreview';
 import ModalGenerateDDL from '@renderer/views/TableInfo/components/Properties/components/ModalGenerateDDL';
 import type { Dialect } from '@shared/types/connections';
 import { useI18nStore } from '@renderer/stores/I18n';
-import { copyToClipboard } from '@renderer/utils/methods';
 import type { IQueryResult } from '@renderer/views/QueryEditor/dtos';
 import type { IContextMenuTable } from '@renderer/views/TableInfo/components/Data';
+import { getResultCopyOptions } from '../../../../utils/resultCopyOptions';
 
 interface ResultContextMenuProps {
   contextMenuTable?: IContextMenuTable;
@@ -41,18 +41,7 @@ export const ResultContextMenu = ({
 
   const contextMenuOptions = React.useMemo<IContextMenuOption[]>(() => {
     return [
-      {
-        text: t('common.copy'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getCellsText() || ''),
-      },
-      {
-        text: t('context.copyRow'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsText() || ''),
-      },
-      {
-        text: t('context.copyRowJson'),
-        onClick: () => copyToClipboard(contextMenuTable?.data?.getRowsJson() || ''),
-      },
+      ...getResultCopyOptions(t, contextMenuTable?.data),
       {
         text: t('modal.exportData'),
         onClick: onOpenExportModal,
