@@ -1,5 +1,9 @@
 export const en = {
   'query.executionResults': 'Results',
+  'query.executionSql': 'Executed SQL',
+  'query.copyExecutionResults': 'Copy all results',
+  'query.executionResultsCopied': 'Results copied as JSON',
+  'query.executionResultsCopyFailed': 'Failed to copy results',
   'query.executionResult': 'Result',
   'filter.invalidValue': 'This value cannot be used in this filter.',
   'filter.insufficientPrecision': 'This value has insufficient precision for this comparison.',

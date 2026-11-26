@@ -1,6 +1,8 @@
 .sql {
   composes: queryText from '../../../../styles.module.css';
-  margin: 8px 10px 6px;
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .sql summary {
@@ -44,6 +46,7 @@
   display: flex;
   min-width: 0;
   min-height: 0;
-  margin: 0 10px 6px;
+  border: 1px solid var(--execution-border);
+  border-radius: 4px;
   overflow: hidden;
 }

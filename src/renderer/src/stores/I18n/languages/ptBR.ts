@@ -2,6 +2,10 @@ import type { TranslationKey } from './en';
 
 export const ptBR: Record<TranslationKey, string> = {
   'query.executionResults': 'Resultados',
+  'query.executionSql': 'SQL executado',
+  'query.copyExecutionResults': 'Copiar todos os resultados',
+  'query.executionResultsCopied': 'Resultados copiados em JSON',
+  'query.executionResultsCopyFailed': 'Falha ao copiar resultados',
   'query.executionResult': 'Resultado',
   'filter.invalidValue': 'O valor não pode ser usado neste filtro.',
   'filter.insufficientPrecision': 'O valor não tem precisão suficiente para esta comparação.',
